@@ -1,14 +1,20 @@
-pub fn add(left: usize, right: usize) -> usize {
-  left + right
-}
+#![allow(dead_code)]
+
+mod either;
+mod err;
+mod lexer;
+mod parse;
+mod token;
 
 #[cfg(test)]
-mod tests {
-  use super::*;
+mod t {
+  use crate::lexer::Lexer;
+  use crate::parse::line::Line;
+  use crate::parse::Parser;
 
-  #[test]
-  fn it_works() {
-    let result = add(2, 2);
-    assert_eq!(result, 4);
+  pub fn line_test(input: &str) -> (Line, Parser<&[u8]>) {
+    let lexer = Lexer::<&[u8]>::new_from(input);
+    let mut parser = Parser::new(lexer);
+    (parser.read_line().unwrap(), parser)
   }
 }
