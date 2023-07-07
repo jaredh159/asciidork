@@ -29,6 +29,10 @@ impl LineBlock {
     self.lines.front()
   }
 
+  pub fn is_empty(&self) -> bool {
+    self.lines.len() == 0
+  }
+
   pub fn current_line_starts_with(&self, token_type: TokenType) -> bool {
     match self.current_line() {
       Some(line) => line

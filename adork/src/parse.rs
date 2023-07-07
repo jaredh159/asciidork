@@ -3,6 +3,7 @@ use std::io::BufRead;
 
 mod ast;
 mod author;
+mod doc_attrs;
 mod doc_header;
 mod inline;
 pub(super) mod line;
@@ -14,12 +15,12 @@ use crate::lexer::Lexer;
 use crate::parse::ast::*;
 use crate::parse::line::Line;
 use crate::parse::line_block::LineBlock;
-use crate::token::TokenType;
+use crate::token::{Token, TokenType};
 
 type Result<T> = std::result::Result<T, ParseErr>;
 
 pub struct Parser<R: BufRead> {
-  pub lexer: Lexer<R>,
+  lexer: Lexer<R>,
   document: Document,
 }
 
@@ -48,6 +49,14 @@ impl<R: BufRead> Parser<R> {
       self.document.header = Some(doc_header);
     }
     Ok(self.document)
+  }
+
+  pub(crate) fn lexeme_string(&self, token: &Token) -> String {
+    self.lexer.string(token)
+  }
+
+  pub(crate) fn lexeme_str(&self, token: &Token) -> &str {
+    self.lexer.lexeme(token)
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line> {
@@ -103,8 +112,8 @@ impl<R: BufRead> Parser<R> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::either::Either;
   use crate::parse::inline::Inline;
+  use crate::t::*;
   use indoc::indoc;
   use std::collections::HashMap;
 
@@ -123,50 +132,24 @@ mod tests {
 
     let expected_header = DocHeader {
       title: Some(DocTitle {
-        heading: vec![Inline::Text(String::from("Document Title"))],
+        heading: vec![Inline::Text(s("Document Title"))],
         subtitle: None,
       }),
       authors: vec![Author {
-        first_name: String::from("Kismet"),
-        middle_name: Some(String::from("R.")),
-        last_name: String::from("Lee"),
-        email: Some(String::from("kismet@asciidoctor.org")),
+        first_name: s("Kismet"),
+        middle_name: Some(s("R.")),
+        last_name: s("Lee"),
+        email: Some(s("kismet@asciidoctor.org")),
       }],
       revision: None,
-      // TODO: next...
-      attrs: HashMap::new(),
-      // attrs: HashMap::from([
-      //   (
-      //     "description".to_string(),
-      //     Either::Left("The document's description.".to_string()),
-      //   ),
-      //   ("setanchors".to_string(), Either::Right(true)),
-      //   (
-      //     "url-repo".to_string(),
-      //     Either::Left("https://my-git-repo.com".to_string()),
-      //   ),
-      // ]),
+      attrs: HashMap::from([
+        (s("description"), s("The document's description.")),
+        (s("sectanchors"), s("")),
+        (s("url-repo"), s("https://my-git-repo.com")),
+      ]),
     };
 
     let document = Parser::<&[u8]>::parse_str(input).unwrap();
     assert_eq!(document.header, Some(expected_header));
   }
-
-  // #[test]
-  fn test_parse() {
-    let document = Parser::<&[u8]>::parse_str("body only\n").unwrap();
-    assert_eq!(
-      document,
-      Document {
-        doctype: DocType::Article,
-        header: None,
-        content: DocContent::Blocks(vec![Block::Paragraph(ParagraphBlock { inlines: vec![] })])
-      }
-    );
-  }
 }
-
-// #[cfg(test)]
-// pub(crate) fn text(text: &str) -> Inline {
-//   Inline::Text(text.to_string())
-// }

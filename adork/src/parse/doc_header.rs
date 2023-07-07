@@ -17,13 +17,15 @@ impl<R: BufRead> Parser<R> {
       attrs: HashMap::new(),
     };
 
-    self.parse_doc_title_author_revision(block, &mut doc_header)?;
+    self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;
+    // TODO: revision line https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/
+    self.parse_doc_attrs(&mut block, &mut doc_header.attrs)?;
     Ok(doc_header)
   }
 
   fn parse_doc_title_author_revision(
     &self,
-    mut block: LineBlock,
+    block: &mut LineBlock,
     doc_header: &mut DocHeader,
   ) -> Result<()> {
     let first_line = block.current_line().expect("non-empty doc header");
@@ -52,7 +54,7 @@ pub fn is_doc_header(block: &LineBlock) -> bool {
   for line in &block.lines {
     if line.is_header(1) {
       return true;
-    } else if line.starts_with(&[Colon, Word, Colon]) {
+    } else if line.starts_with_seq(&[Colon, Word, Colon]) {
       return true;
     }
   }

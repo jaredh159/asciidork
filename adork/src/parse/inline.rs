@@ -18,18 +18,18 @@ impl<R: BufRead> Parser<R> {
     let mut inlines = Vec::new();
     loop {
       match line.consume_current() {
-        Some(token) if token.is(Word) => inlines.push(self.gather_text(&token, &mut line)),
+        Some(token) if token.is(Word) => inlines.push(self.gather_words(&token, &mut line)),
         _ => break,
       };
     }
     inlines
   }
 
-  fn gather_text(&self, first: &Token, line: &mut Line) -> Inline {
-    let mut text = self.lexer.lexeme(first).to_string();
+  fn gather_words(&self, first: &Token, line: &mut Line) -> Inline {
+    let mut text = self.lexeme_string(first);
     loop {
       match line.current_token() {
-        Some(token) if token.is(Word) => text.push_str(self.lexer.lexeme(token)),
+        Some(token) if token.is(Word) => text.push_str(self.lexeme_str(token)),
         Some(token) if token.is(Whitespace) => text.push_str(" "),
         _ => break,
       };

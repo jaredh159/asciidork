@@ -36,13 +36,13 @@ impl<R: BufRead> Parser<R> {
       ));
     }
 
-    let first_name = self.lexer.string(&name_parts[0]);
-    let last_name = self.lexer.string(name_parts.last().unwrap());
+    let first_name = self.lexeme_string(&name_parts[0]);
+    let last_name = self.lexeme_string(name_parts.last().unwrap());
     let middle_name = if name_parts.len() > 2 {
-      let mut middle = self.lexer.string(&name_parts[1]);
+      let mut middle = self.lexeme_string(&name_parts[1]);
       for i in 2..name_parts.len() - 1 {
         middle.push(' ');
-        middle.push_str(&self.lexer.string(&name_parts[i]));
+        middle.push_str(&self.lexeme_string(&name_parts[i]));
       }
       Some(middle)
     } else {
@@ -56,9 +56,9 @@ impl<R: BufRead> Parser<R> {
       email: None,
     };
 
-    if line.starts_with(&[LessThan, Word, GreaterThan]) {
+    if line.starts_with_seq(&[LessThan, Word, GreaterThan]) {
       line.consume_current();
-      author.email = Some(self.lexer.string(&line.consume_current().unwrap()));
+      author.email = Some(self.lexeme_string(&line.consume_current().unwrap()));
       line.consume_current();
     }
 
@@ -73,7 +73,7 @@ impl<R: BufRead> Parser<R> {
 #[cfg(test)]
 mod tests {
   use crate::parse::ast::Author;
-  use crate::t;
+  use crate::t::*;
 
   #[test]
   fn test_parse_author_lines() {
@@ -102,15 +102,14 @@ mod tests {
     ];
 
     for (input, authors) in cases {
-      let with_nl = format!("{}\n", input);
-      let (line, parser) = t::line_test(with_nl.as_str());
+      let (line, parser) = line_test(input);
       let expected_authors = authors
         .iter()
         .map(|(first, middle, last, email)| Author {
-          first_name: first.to_string(),
-          middle_name: middle.map(|s| s.to_string()),
-          last_name: last.to_string(),
-          email: email.map(|s| s.to_string()),
+          first_name: s(first),
+          middle_name: middle.map(s),
+          last_name: s(last),
+          email: email.map(s),
         })
         .collect::<Vec<Author>>();
       let mut authors = Vec::new();

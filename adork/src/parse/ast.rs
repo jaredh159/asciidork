@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crate::either::Either;
 use crate::parse::inline::Inline;
 
 // A document represents the top-level block element in AsciiDoc. It consists of an optional document header and either a) one or more sections preceded by an optional preamble or b) a sequence of top-level blocks only.
@@ -28,7 +27,7 @@ pub struct DocHeader {
   pub title: Option<DocTitle>,
   pub authors: Vec<Author>,
   pub revision: Option<Revision>,
-  pub attrs: HashMap<String, Either<String, bool>>,
+  pub attrs: HashMap<String, String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

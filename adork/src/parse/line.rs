@@ -28,6 +28,10 @@ impl Line {
     self.tokens.len() == 0
   }
 
+  pub fn is_emptyish(&self) -> bool {
+    self.tokens.len() == 0 || (self.tokens.len() == 1 && self.tokens[0].is(Newlines))
+  }
+
   pub fn remove_all(&mut self, token_type: TokenType) {
     self.tokens.retain(|token| !token.is(token_type))
   }
@@ -67,6 +71,10 @@ impl Line {
     self.tokens.get(n)
   }
 
+  pub fn current_is(&self, token_type: TokenType) -> bool {
+    self.starts(token_type)
+  }
+
   pub fn starts(&self, token_type: TokenType) -> bool {
     if self.tokens.len() == 0 {
       return false;
@@ -83,7 +91,7 @@ impl Line {
     false
   }
 
-  pub fn starts_with(&self, token_types: &[TokenType]) -> bool {
+  pub fn starts_with_seq(&self, token_types: &[TokenType]) -> bool {
     if token_types.len() == 0 {
       return false;
     }
@@ -99,7 +107,7 @@ impl Line {
   }
 
   pub fn is_header(&self, len: usize) -> bool {
-    if !self.starts_with(&[EqualSigns, Whitespace]) {
+    if !self.starts_with_seq(&[EqualSigns, Whitespace]) {
       return false;
     }
     return self.current_token().unwrap().len() == len;
