@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use super::line::Line;
 use crate::token::TokenType;
 
+#[derive(Debug)]
 pub struct LineBlock {
   pub lines: VecDeque<Line>,
 }

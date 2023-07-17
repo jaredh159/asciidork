@@ -13,7 +13,7 @@ pub enum TokenType {
   EqualSigns,
   GreaterThan,
   LessThan,
-  Newlines,
+  Newline,
   SemiColon,
   Whitespace,
   Word,
@@ -43,7 +43,7 @@ impl Token {
   pub fn ends_block(&self) -> bool {
     match self {
       Token {
-        token_type: TokenType::Newlines,
+        token_type: TokenType::Newline,
         start,
         end,
       } if end - start > 1 => true,

@@ -3,6 +3,7 @@ use std::io::BufRead;
 
 mod ast;
 mod author;
+mod display_err;
 mod doc_attrs;
 mod doc_header;
 mod inline;
@@ -15,7 +16,7 @@ use crate::lexer::Lexer;
 use crate::parse::ast::*;
 use crate::parse::line::Line;
 use crate::parse::line_block::LineBlock;
-use crate::token::{Token, TokenType};
+use crate::token::Token;
 
 type Result<T> = std::result::Result<T, ParseErr>;
 
@@ -34,6 +35,11 @@ impl<R: BufRead> Parser<R> {
         content: DocContent::Blocks(vec![]),
       },
     }
+  }
+
+  pub fn from(reader: R) -> Parser<R> {
+    let lexer = Lexer::new(reader);
+    Parser::new(lexer)
   }
 
   pub fn parse_str(input: &str) -> Result<Document> {
@@ -63,30 +69,30 @@ impl<R: BufRead> Parser<R> {
     if self.lexer.is_eof() {
       return None;
     }
+
     let mut tokens = vec![];
-    while let Some(token) = self.lexer.next() {
-      let token_type = token.token_type;
-      tokens.push(token);
-      if token_type == TokenType::Newlines {
-        break;
-      }
+    while !self.lexer.current_is(b'\n') && !self.lexer.is_eof() {
+      tokens.push(self.lexer.next().unwrap());
     }
-    debug_assert!(tokens.len() > 0);
+    self.lexer.consume_newline();
+
     Some(Line::new(tokens))
   }
 
   fn read_block(&mut self) -> Option<LineBlock> {
+    self.lexer.consume_empty_lines();
     if self.lexer.is_eof() {
       return None;
     }
+
     let mut lines = VecDeque::new();
     while let Some(line) = self.read_line() {
-      let end_of_block = line.last_token().unwrap().ends_block();
       lines.push_back(line);
-      if end_of_block {
+      if self.lexer.current_is(b'\n') {
         break;
       }
     }
+
     Some(LineBlock::new(lines))
   }
 
@@ -98,58 +104,48 @@ impl<R: BufRead> Parser<R> {
       Ok(Either::Right(self.parse_doc_header(first_block)?))
     }
   }
-
-  #[cfg(test)]
-  pub(crate) fn line_test(input: &str) -> (Line, Parser<&[u8]>) {
-    let lexer = Lexer::<&[u8]>::new_from(input);
-    let mut parser = Parser::new(lexer);
-    (parser.read_line().unwrap(), parser)
-  }
 }
 
 // tests
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::parse::inline::Inline;
   use crate::t::*;
-  use indoc::indoc;
-  use std::collections::HashMap;
 
   #[test]
-  fn test_parse_example_doc_header() {
-    let input = indoc! {"
-      // this comment line is ignored
-      = Document Title
-      Kismet R. Lee <kismet@asciidoctor.org>
-      :description: The document's description.
-      :sectanchors:
-      :url-repo: https://my-git-repo.com
+  fn test_read_line() {
+    let input = "hello world\ngoodbye\n\nfoo\n";
+    let mut parser = parser_of(input);
 
-      The document body starts here.
-    "};
+    let hello_world = parser.read_line().unwrap();
+    assert_eq!(parser.lexeme_str(&hello_world.tokens[0]), "hello");
+    assert_eq!(hello_world.tokens.len(), 3);
 
-    let expected_header = DocHeader {
-      title: Some(DocTitle {
-        heading: vec![Inline::Text(s("Document Title"))],
-        subtitle: None,
-      }),
-      authors: vec![Author {
-        first_name: s("Kismet"),
-        middle_name: Some(s("R.")),
-        last_name: s("Lee"),
-        email: Some(s("kismet@asciidoctor.org")),
-      }],
-      revision: None,
-      attrs: HashMap::from([
-        (s("description"), s("The document's description.")),
-        (s("sectanchors"), s("")),
-        (s("url-repo"), s("https://my-git-repo.com")),
-      ]),
-    };
+    let goodbye = parser.read_line().unwrap();
+    assert_eq!(parser.lexeme_str(&goodbye.tokens[0]), "goodbye");
+    assert_eq!(goodbye.tokens.len(), 1);
 
-    let document = Parser::<&[u8]>::parse_str(input).unwrap();
-    assert_eq!(document.header, Some(expected_header));
+    assert_eq!(parser.read_line().unwrap().tokens.len(), 0); // empty line
+
+    let foo = parser.read_line().unwrap();
+    assert_eq!(parser.lexeme_str(&foo.tokens[0]), "foo");
+    assert_eq!(foo.tokens.len(), 1);
+
+    assert!(parser.read_line().is_none()); // eof
+  }
+
+  #[test]
+  fn test_read_blocks() {
+    let input = "hello\n\ngoodbye\n";
+    let mut parser = parser_of(input);
+    assert!(parser.read_block().is_some());
+    assert!(parser.read_block().is_some());
+    assert!(parser.read_block().is_none());
+
+    let input = "// comment\nhello\n\ngoodbye\n";
+    let mut parser = parser_of(input);
+    assert!(parser.read_block().is_some());
+    assert!(parser.read_block().is_some());
+    assert!(parser.read_block().is_none());
   }
 }

@@ -62,7 +62,7 @@ impl<R: BufRead> Parser<R> {
       line.consume_current();
     }
 
-    if line.starts_with_one_of(&[SemiColon, Newlines]) {
+    if line.starts(SemiColon) {
       line.consume_current();
     }
 

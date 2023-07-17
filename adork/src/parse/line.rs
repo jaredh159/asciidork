@@ -1,12 +1,13 @@
 use std::collections::VecDeque;
 
 use super::Result;
-use crate::err::ParseErr;
+use crate::err::{ParseErr, ParseErrLoc};
 use crate::token::{Token, TokenType, TokenType::*};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Line {
   pub tokens: VecDeque<Token>,
+  current_token_loc: Option<(usize, usize)>,
 }
 
 impl Iterator for Line {
@@ -19,9 +20,12 @@ impl Iterator for Line {
 
 impl Line {
   pub fn new(tokens: Vec<Token>) -> Line {
-    assert!(tokens.len() > 0);
     let tokens = VecDeque::from(tokens);
-    Line { tokens }
+    let current_token_loc = tokens.front().map(|token| (token.start, token.end));
+    Line {
+      tokens,
+      current_token_loc,
+    }
   }
 
   pub fn is_empty(&self) -> bool {
@@ -29,7 +33,7 @@ impl Line {
   }
 
   pub fn is_emptyish(&self) -> bool {
-    self.tokens.len() == 0 || (self.tokens.len() == 1 && self.tokens[0].is(Newlines))
+    self.tokens.len() == 0 || (self.tokens.len() == 1 && self.tokens[0].is(Newline))
   }
 
   pub fn remove_all(&mut self, token_type: TokenType) {
@@ -41,7 +45,12 @@ impl Line {
   }
 
   pub fn consume_current(&mut self) -> Option<Token> {
-    self.tokens.pop_front()
+    if let Some(token) = self.tokens.pop_front() {
+      self.current_token_loc = Some((token.start, token.end));
+      Some(token)
+    } else {
+      None
+    }
   }
 
   pub fn consume_if(&mut self, token_type: TokenType) -> Option<Token> {
@@ -51,11 +60,25 @@ impl Line {
     }
   }
 
-  pub fn consume_expecting(&mut self, token_type: TokenType) -> Result<Token> {
-    match self.consume_current() {
-      Some(token) if token.is(token_type) => Ok(token),
-      Some(token) => Err(ParseErr::UnexpectedToken(Some(token))),
-      None => Err(ParseErr::UnexpectedToken(None)),
+  pub fn consume_expecting_seq(&mut self, token_types: &[TokenType], msg: &str) -> Result<()> {
+    for token_type in token_types {
+      self.consume_expecting(*token_type, msg)?;
+    }
+    Ok(())
+  }
+
+  pub fn consume_expecting(&mut self, token_type: TokenType, msg: &str) -> Result<Token> {
+    match (self.consume_current(), self.current_token_loc) {
+      (Some(token), _) if token.is(token_type) => Ok(token),
+      (Some(token), _) => Err(ParseErr::ExpectedTokenNotFound(
+        ParseErrLoc::from(token),
+        msg.to_string(),
+      )),
+      (None, Some(loc)) => Err(ParseErr::ExpectedTokenNotFound(
+        ParseErrLoc::new(loc.0, loc.1),
+        msg.to_string(),
+      )),
+      (None, None) => todo!(),
     }
   }
 

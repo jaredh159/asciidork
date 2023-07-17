@@ -21,17 +21,16 @@ impl<R: BufRead> Parser<R> {
   }
 
   fn parse_doc_attr(&self, line: &mut Line) -> Result<(String, String)> {
-    line.consume_expecting(Colon)?;
-    let key = self.lexeme_string(&line.consume_expecting(Word)?);
-    line.consume_expecting(Colon)?;
+    line.consume_expecting(Colon, "doc attr starting with `:`")?;
+    let key = self.lexeme_string(&line.consume_expecting(Word, "doc attr name")?);
+    line.consume_expecting(Colon, "`:` to end doc attr")?;
     line.consume_if(Whitespace);
 
     let mut value = String::new();
-    while !line.current_is(Newlines) {
+    while !line.is_empty() {
       value.push_str(self.lexeme_str(&line.consume_current().unwrap()));
     }
 
-    line.consume_expecting(Newlines)?;
     Ok((key, value))
   }
 }

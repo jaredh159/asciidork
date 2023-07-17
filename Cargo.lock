@@ -13,6 +13,9 @@ dependencies = [
 [[package]]
 name = "adork-cli"
 version = "0.1.0"
+dependencies = [
+ "adork",
+]
 
 [[package]]
 name = "indoc"

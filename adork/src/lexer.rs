@@ -57,8 +57,74 @@ impl<R: Read> Lexer<R> {
     self.lexeme(token).to_string()
   }
 
+  #[cfg(test)]
+  pub fn print_peek(&self) {
+    match self.peek {
+      Some(byte) => println!("peek: `{}`", byte.escape_ascii()),
+      None => println!("peek: None"),
+    }
+  }
+
   pub fn is_eof(&self) -> bool {
     self.current.is_none()
+  }
+
+  pub fn current_is(&self, ch: u8) -> bool {
+    match self.current {
+      Some(current) => current == ch,
+      None => false,
+    }
+  }
+
+  pub fn consume_newline(&mut self) -> bool {
+    if self.current_is(b'\n') {
+      self.advance();
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn consume_empty_lines(&mut self) {
+    while self.consume_newline() {}
+  }
+
+  pub fn line_number(&self, location: usize) -> usize {
+    let mut line_number = 1;
+    for byte in &self.source[0..location] {
+      if *byte == b'\n' {
+        line_number += 1;
+      }
+    }
+    line_number
+  }
+
+  pub fn line_of(&self, location: usize) -> &str {
+    let mut start = location;
+    let mut end = location;
+
+    loop {
+      if start == 0 {
+        break;
+      }
+      if self.source[start] == b'\n' && start != location {
+        start += 1;
+        break;
+      }
+      start -= 1;
+    }
+
+    loop {
+      if end == self.source.len() {
+        break;
+      }
+      if self.source[end] == b'\n' {
+        break;
+      }
+      end += 1;
+    }
+
+    unsafe { str::from_utf8_unchecked(&self.source[start..end]) }
   }
 
   fn ensure_buffer(&mut self) -> bool {
@@ -189,9 +255,9 @@ impl<R: Read> Iterator for Lexer<R> {
     }
     let token = match self.current.unwrap() {
       b'=' => self.repeating(b'=', EqualSigns),
-      b'\n' => self.repeating(b'\n', Newlines),
       b' ' | b'\t' => self.whitespace(),
       b'/' if self.starts_comment() => self.comment(),
+      b'\n' => self.single(Newline),
       b':' => self.single(Colon),
       b';' => self.single(SemiColon),
       b'<' => self.single(LessThan),
@@ -242,7 +308,10 @@ mod tests {
         "foo;bar",
         vec![(Word, "foo"), (SemiColon, ";"), (Word, "bar")],
       ),
-      ("Foobar\n\n", vec![(Word, "Foobar"), (Newlines, "\n\n")]),
+      (
+        "Foobar\n\n",
+        vec![(Word, "Foobar"), (Newline, "\n"), (Newline, "\n")],
+      ),
       (
         "== Title",
         vec![(EqualSigns, "=="), (Whitespace, " "), (Word, "Title")],
@@ -260,13 +329,13 @@ mod tests {
         "},
         vec![
           (CommentLine, "// this comment line is ignored"),
-          (Newlines, "\n"),
+          (Newline, "\n"),
           (EqualSigns, "="),
           (Whitespace, " "),
           (Word, "Document"),
           (Whitespace, " "),
           (Word, "Title"),
-          (Newlines, "\n"),
+          (Newline, "\n"),
           (Word, "Kismet"),
           (Whitespace, " "),
           (Word, "R."),
@@ -276,7 +345,7 @@ mod tests {
           (LessThan, "<"),
           (Word, "kismet@asciidoctor.org"),
           (GreaterThan, ">"),
-          (Newlines, "\n"),
+          (Newline, "\n"),
           (Colon, ":"),
           (Word, "description"),
           (Colon, ":"),
@@ -286,11 +355,11 @@ mod tests {
           (Word, "document's"),
           (Whitespace, " "),
           (Word, "description."),
-          (Newlines, "\n"),
+          (Newline, "\n"),
           (Colon, ":"),
           (Word, "sectanchors"),
           (Colon, ":"),
-          (Newlines, "\n"),
+          (Newline, "\n"),
           (Colon, ":"),
           (Word, "url-repo"),
           (Colon, ":"),
@@ -298,7 +367,8 @@ mod tests {
           (Word, "https"),
           (Colon, ":"),
           (Word, "//my-git-repo.com"),
-          (Newlines, "\n\n"),
+          (Newline, "\n"),
+          (Newline, "\n"),
           (Word, "The"),
           (Whitespace, " "),
           (Word, "document"),
@@ -308,12 +378,11 @@ mod tests {
           (Word, "starts"),
           (Whitespace, " "),
           (Word, "here."),
-          (Newlines, "\n"),
+          (Newline, "\n"),
         ],
       ),
     ];
     for (input, expected) in cases {
-      println!();
       let mut lexer = Lexer::<&[u8]>::new_from(input);
       let mut index = 0;
       for (token_type, lexeme) in expected {
@@ -347,5 +416,52 @@ mod tests {
       }
       assert_eq!(lexer.next(), None);
     }
+  }
+
+  #[test]
+  fn test_consume_empty_lines() {
+    let input = "\n\n\n\n\n";
+    let mut lexer = Lexer::<&[u8]>::new_from(input);
+    lexer.consume_empty_lines();
+    assert!(lexer.is_eof());
+  }
+
+  #[test]
+  fn test_line_of() {
+    let input = "foo\nbar\n\nbaz\n";
+    let mut lexer = Lexer::<&[u8]>::new_from(input);
+    while lexer.next().is_some() {}
+    assert_eq!(lexer.line_of(1), "foo");
+    assert_eq!(lexer.line_of(2), "foo");
+    assert_eq!(lexer.line_of(3), "foo"); // newline
+    assert_eq!(lexer.line_of(4), "bar");
+    assert_eq!(lexer.line_of(7), "bar");
+    assert_eq!(lexer.line_of(8), ""); // empty line
+    assert_eq!(lexer.line_of(9), "baz");
+  }
+
+  #[test]
+  fn test_line_num() {
+    let input = indoc! {"
+      = :
+      foo
+
+      ;
+    "};
+    let mut lexer = Lexer::<&[u8]>::new_from(input);
+
+    assert_next_token_line(&mut lexer, 1, EqualSigns);
+    assert_next_token_line(&mut lexer, 1, Whitespace);
+    assert_next_token_line(&mut lexer, 1, Colon);
+    assert_next_token_line(&mut lexer, 1, Newline);
+    assert_next_token_line(&mut lexer, 2, Word);
+    assert_next_token_line(&mut lexer, 2, Newline);
+    assert_next_token_line(&mut lexer, 3, Newline);
+  }
+
+  fn assert_next_token_line(lexer: &mut Lexer<&[u8]>, line: usize, expected_type: TokenType) {
+    let token = lexer.next().unwrap();
+    assert_eq!(token.token_type, expected_type);
+    assert_eq!(lexer.line_number(token.start), line);
   }
 }
