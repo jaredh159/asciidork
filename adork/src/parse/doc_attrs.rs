@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::BufRead;
 
 use super::line::Line;
 use super::Result;
@@ -7,16 +6,10 @@ use crate::parse::line_block::LineBlock;
 use crate::parse::Parser;
 use crate::token::TokenType::*;
 
-// get rid of genric on lexer
-// pub fn read(&mut self, buf: &mut [u8]) -> Result<usize>
 // stop propagating errors, push them into parser
 // maybe some way of optionally turning reported errors into Err, based on cli flag
 
-// devices review
-// macapp release (till 4pm)
-// marketing -- reach out to changelog
-
-impl<R: BufRead> Parser<R> {
+impl Parser {
   pub(super) fn parse_doc_attrs(
     &self,
     block: &mut LineBlock,

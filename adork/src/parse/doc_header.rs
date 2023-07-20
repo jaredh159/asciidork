@@ -1,12 +1,11 @@
 use std::collections::HashMap;
-use std::io::BufRead;
 
 use super::{ast::*, Result};
 use crate::parse::line_block::LineBlock;
 use crate::parse::Parser;
 use crate::token::TokenType::*;
 
-impl<R: BufRead> Parser<R> {
+impl Parser {
   pub(super) fn parse_doc_header(&self, mut block: LineBlock) -> Result<DocHeader> {
     block.remove_all(CommentLine);
 
@@ -105,7 +104,7 @@ mod tests {
       ]),
     };
 
-    let document = Parser::<&[u8]>::parse_str(input).unwrap().document;
+    let document = Parser::parse_str(input).unwrap().document;
     assert_eq!(document.header, Some(expected_header));
   }
 }

@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::io::{self, BufReader};
+use std::io;
 use std::result::Result;
 use std::{env, fmt, fs};
 
@@ -25,7 +25,7 @@ fn main() {
 
 // adork print-ast [file]
 fn print_ast(file: &str) -> Result<(), CliErr> {
-  let file = BufReader::new(fs::File::open(file)?);
+  let file = fs::File::open(file)?;
   let _parser = Parser::from(file);
   // let result = parser.parse();
   // if let Err(err) = result {

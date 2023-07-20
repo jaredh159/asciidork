@@ -1,5 +1,3 @@
-use std::io::BufRead;
-
 use crate::err::SourceLocation;
 use crate::parse::Parser;
 use crate::token::TokenType;
@@ -15,7 +13,7 @@ pub struct Diagnostic {
   pub token_type: Option<TokenType>,
 }
 
-impl<R: BufRead> Parser<R> {
+impl Parser {
   fn err_expected_token(&self, location: SourceLocation, detail: &str) -> Diagnostic {
     let (line_num, message_offset) = self.lexer.line_number_with_offset(location.start);
     Diagnostic {

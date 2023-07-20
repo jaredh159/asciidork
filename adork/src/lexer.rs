@@ -1,32 +1,25 @@
+use std::{fmt, fs::File, str};
+
+use crate::reader::Reader;
 use crate::token::Token;
 use crate::token::TokenType::{self, *};
-use std::io::Read;
-use std::{fmt, str};
 
 const BUFFER_SIZE: usize = 4096;
 
-pub struct Lexer<R: Read> {
+pub struct Lexer {
   buffer: [u8; BUFFER_SIZE],
   buffer_index: usize,
   buffer_size: usize,
   index: usize,
-  reader: R,
+  reader: Reader,
   source: Vec<u8>,
   prev: u8,
   current: Option<u8>,
   peek: Option<u8>,
 }
 
-impl<R: Read> Lexer<R> {
-  pub fn new(reader: R) -> Lexer<R> {
-    Lexer::with_capacity(reader, BUFFER_SIZE)
-  }
-
-  pub fn new_from(input: &str) -> Lexer<&[u8]> {
-    Lexer::with_capacity(input.as_bytes(), input.len())
-  }
-
-  pub fn with_capacity(reader: R, capacity: usize) -> Lexer<R> {
+impl Lexer {
+  pub fn with_capacity(reader: Reader, capacity: usize) -> Lexer {
     let mut lexer = Lexer {
       buffer: [0; BUFFER_SIZE],
       buffer_index: 0,
@@ -253,7 +246,7 @@ impl<R: Read> Lexer<R> {
   }
 }
 
-impl<R: Read> Iterator for Lexer<R> {
+impl Iterator for Lexer {
   type Item = Token;
 
   fn next(&mut self) -> Option<Self::Item> {
@@ -275,7 +268,7 @@ impl<R: Read> Iterator for Lexer<R> {
   }
 }
 
-impl<R: Read> fmt::Debug for Lexer<R> {
+impl fmt::Debug for Lexer {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(
       f,
@@ -295,6 +288,31 @@ impl<R: Read> fmt::Debug for Lexer<R> {
       self.current.map(|c| c as char),
       self.peek.map(|c| c as char),
     )
+  }
+}
+
+impl From<Reader> for Lexer {
+  fn from(reader: Reader) -> Self {
+    let capacity = reader.capacity_hint().unwrap_or(BUFFER_SIZE);
+    Lexer::with_capacity(reader, capacity)
+  }
+}
+
+impl From<String> for Lexer {
+  fn from(string: String) -> Self {
+    Lexer::from(Reader::from(string))
+  }
+}
+
+impl From<&'static str> for Lexer {
+  fn from(static_str: &'static str) -> Self {
+    Lexer::from(Reader::from(static_str))
+  }
+}
+
+impl From<File> for Lexer {
+  fn from(file: File) -> Self {
+    Lexer::from(Reader::from(file))
   }
 }
 
@@ -390,7 +408,7 @@ mod tests {
       ),
     ];
     for (input, expected) in cases {
-      let mut lexer = Lexer::<&[u8]>::new_from(input);
+      let mut lexer = Lexer::from(input);
       let mut index = 0;
       for (token_type, lexeme) in expected {
         let start = index;
@@ -416,7 +434,7 @@ mod tests {
       ),
     ];
     for (input, expected) in cases {
-      let mut lexer = Lexer::<&[u8]>::new_from(input);
+      let mut lexer = Lexer::from(input);
       for (expected_token, lexeme) in &expected {
         assert_eq!(lexer.next(), Some(expected_token.clone()));
         assert_eq!(lexer.lexeme(expected_token), *lexeme);
@@ -428,7 +446,7 @@ mod tests {
   #[test]
   fn test_consume_empty_lines() {
     let input = "\n\n\n\n\n";
-    let mut lexer = Lexer::<&[u8]>::new_from(input);
+    let mut lexer = Lexer::from(input);
     lexer.consume_empty_lines();
     assert!(lexer.is_eof());
   }
@@ -436,7 +454,7 @@ mod tests {
   #[test]
   fn test_line_of() {
     let input = "foo\nbar\n\nbaz\n";
-    let mut lexer = Lexer::<&[u8]>::new_from(input);
+    let mut lexer = Lexer::from(input);
     while lexer.next().is_some() {}
     assert_eq!(lexer.line_of(1), "foo");
     assert_eq!(lexer.line_of(2), "foo");
@@ -455,7 +473,7 @@ mod tests {
 
       ;
     "};
-    let mut lexer = Lexer::<&[u8]>::new_from(input);
+    let mut lexer = Lexer::from(input);
 
     assert_next_token_line(&mut lexer, 1, EqualSigns);
     assert_next_token_line(&mut lexer, 1, Whitespace);
@@ -466,7 +484,7 @@ mod tests {
     assert_next_token_line(&mut lexer, 3, Newline);
   }
 
-  fn assert_next_token_line(lexer: &mut Lexer<&[u8]>, line: usize, expected_type: TokenType) {
+  fn assert_next_token_line(lexer: &mut Lexer, line: usize, expected_type: TokenType) {
     let token = lexer.next().unwrap();
     assert_eq!(token.token_type, expected_type);
     assert_eq!(lexer.line_number(token.start), line);

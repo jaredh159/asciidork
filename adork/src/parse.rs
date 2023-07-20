@@ -1,6 +1,6 @@
 use core::result::Result as CoreResult;
 use std::collections::VecDeque;
-use std::io::BufRead;
+use std::fs::File;
 
 mod ast;
 mod author;
@@ -22,8 +22,8 @@ use crate::token::Token;
 
 type Result<T> = std::result::Result<T, ParseErr>;
 
-pub struct Parser<R: BufRead> {
-  lexer: Lexer<R>,
+pub struct Parser {
+  lexer: Lexer,
   document: Document,
 }
 
@@ -39,8 +39,8 @@ impl From<ParseErr> for Vec<Diagnostic> {
   }
 }
 
-impl<R: BufRead> Parser<R> {
-  pub fn new(lexer: Lexer<R>) -> Parser<R> {
+impl Parser {
+  pub fn new(lexer: Lexer) -> Parser {
     Parser {
       lexer,
       document: Document {
@@ -51,14 +51,8 @@ impl<R: BufRead> Parser<R> {
     }
   }
 
-  pub fn from(reader: R) -> Parser<R> {
-    let lexer = Lexer::new(reader);
-    Parser::new(lexer)
-  }
-
-  pub fn parse_str(input: &str) -> CoreResult<ParseResult, Vec<Diagnostic>> {
-    let lexer = Lexer::<&[u8]>::new_from(input);
-    let parser = Parser::new(lexer);
+  pub fn parse_str(input: &'static str) -> CoreResult<ParseResult, Vec<Diagnostic>> {
+    let parser = Parser::from(input);
     parser.parse()
   }
 
@@ -124,16 +118,34 @@ impl<R: BufRead> Parser<R> {
   }
 }
 
+impl From<&'static str> for Parser {
+  fn from(static_str: &'static str) -> Self {
+    Parser::new(Lexer::from(static_str))
+  }
+}
+
+impl From<String> for Parser {
+  fn from(string: String) -> Self {
+    Parser::new(Lexer::from(string))
+  }
+}
+
+impl From<File> for Parser {
+  fn from(file: File) -> Self {
+    Parser::new(Lexer::from(file))
+  }
+}
+
 // tests
 
 #[cfg(test)]
 mod tests {
-  use crate::t::*;
+  use super::*;
 
   #[test]
   fn test_read_line() {
     let input = "hello world\ngoodbye\n\nfoo\n";
-    let mut parser = parser_of(input);
+    let mut parser = Parser::from(input);
 
     let hello_world = parser.read_line().unwrap();
     assert_eq!(parser.lexeme_str(&hello_world.tokens[0]), "hello");
@@ -155,13 +167,13 @@ mod tests {
   #[test]
   fn test_read_blocks() {
     let input = "hello\n\ngoodbye\n";
-    let mut parser = parser_of(input);
+    let mut parser = Parser::from(input);
     assert!(parser.read_block().is_some());
     assert!(parser.read_block().is_some());
     assert!(parser.read_block().is_none());
 
     let input = "// comment\nhello\n\ngoodbye\n";
-    let mut parser = parser_of(input);
+    let mut parser = Parser::from(input);
     assert!(parser.read_block().is_some());
     assert!(parser.read_block().is_some());
     assert!(parser.read_block().is_none());

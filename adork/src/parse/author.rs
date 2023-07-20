@@ -1,5 +1,3 @@
-use std::io::BufRead;
-
 use super::line::Line;
 use super::{ast::*, Result};
 use crate::err::ParseErr;
@@ -7,7 +5,7 @@ use crate::parse::Parser;
 use crate::token::{Token, TokenType::*};
 use smallvec::SmallVec;
 
-impl<R: BufRead> Parser<R> {
+impl Parser {
   pub(super) fn parse_author_line(&self, mut line: Line, authors: &mut Vec<Author>) -> Result<()> {
     line.remove_all(Whitespace);
     while let Some(author) = self.parse_single_author(&mut line)? {
