@@ -2,10 +2,5 @@
 
 - [ ] revision line for header
 - [ ] h1 subtitle
-
-- [ ] new_item
-- [ ] new_item
-- [ ] new_item
-- [ ] new_item
-- [ ] new_item
-- [ ] new_item
+- [ ] soon: multi-file non corner painting
+- [ ] would be nice if it could report ALL parse errors (maybe sync on new block)

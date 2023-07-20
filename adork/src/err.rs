@@ -7,29 +7,38 @@ pub enum AsciiDorkError {
   Parse(ParseErr),
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum ParseErr {
+  ExpectedTokenNotFound(SourceLocation, &'static str),
+  Error(String, Option<Token>),
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct ParseErrLoc {
+pub struct SourceLocation {
   pub start: usize,
   pub end: usize,
   pub token_type: Option<TokenType>,
+  pub is_exact: bool,
 }
 
-impl From<Token> for ParseErrLoc {
+impl From<Token> for SourceLocation {
   fn from(token: Token) -> Self {
-    ParseErrLoc {
+    SourceLocation {
       start: token.start,
       end: token.end,
       token_type: Some(token.token_type),
+      is_exact: true,
     }
   }
 }
 
-impl ParseErrLoc {
+impl SourceLocation {
   pub fn new(start: usize, end: usize) -> Self {
-    ParseErrLoc {
+    SourceLocation {
       start,
       end,
       token_type: None,
+      is_exact: true,
     }
   }
 }
@@ -42,18 +51,13 @@ impl fmt::Display for AsciiDorkError {
   }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum ParseErr {
-  ExpectedTokenNotFound(ParseErrLoc, String),
-  Error(String, Option<Token>),
-}
-
 impl fmt::Display for ParseErr {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match self {
-      ParseErr::ExpectedTokenNotFound(_, msg) => write!(f, "Expected token not found: {:?}", msg),
-      ParseErr::Error(msg, token) => write!(f, "{}: {:?}", msg, token),
-    }
+  fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
+    todo!()
+    // match self {
+    //   ParseErr::ExpectedTokenNotFound(_, msg) => write!(f, "Expected token not found: {:?}", msg),
+    //   ParseErr::Error(msg, token) => write!(f, "{}: {:?}", msg, token),
+    // }
   }
 }
 

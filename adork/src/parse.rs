@@ -1,9 +1,10 @@
+use core::result::Result as CoreResult;
 use std::collections::VecDeque;
 use std::io::BufRead;
 
 mod ast;
 mod author;
-mod display_err;
+pub(super) mod diagnostic;
 mod doc_attrs;
 mod doc_header;
 mod inline;
@@ -14,6 +15,7 @@ use crate::either::Either;
 use crate::err::ParseErr;
 use crate::lexer::Lexer;
 use crate::parse::ast::*;
+use crate::parse::diagnostic::Diagnostic;
 use crate::parse::line::Line;
 use crate::parse::line_block::LineBlock;
 use crate::token::Token;
@@ -23,6 +25,18 @@ type Result<T> = std::result::Result<T, ParseErr>;
 pub struct Parser<R: BufRead> {
   lexer: Lexer<R>,
   document: Document,
+}
+
+pub struct ParseResult {
+  pub document: Document,
+  pub warnings: Vec<Diagnostic>,
+}
+
+impl From<ParseErr> for Vec<Diagnostic> {
+  fn from(_parse_err: ParseErr) -> Self {
+    // switch on the type, convert...
+    todo!()
+  }
 }
 
 impl<R: BufRead> Parser<R> {
@@ -42,19 +56,23 @@ impl<R: BufRead> Parser<R> {
     Parser::new(lexer)
   }
 
-  pub fn parse_str(input: &str) -> Result<Document> {
+  pub fn parse_str(input: &str) -> CoreResult<ParseResult, Vec<Diagnostic>> {
     let lexer = Lexer::<&[u8]>::new_from(input);
     let parser = Parser::new(lexer);
     parser.parse()
   }
 
-  pub fn parse(mut self) -> Result<Document> {
+  // std::Result<(Document, Vec<Warning>), RichParseErr>
+  pub fn parse(mut self) -> CoreResult<ParseResult, Vec<Diagnostic>> {
     let header_result = self.parse_document_header()?;
     if header_result.is_right() {
       let doc_header = header_result.take_right().unwrap();
       self.document.header = Some(doc_header);
     }
-    Ok(self.document)
+    Ok(ParseResult {
+      document: self.document,
+      warnings: vec![],
+    })
   }
 
   pub(crate) fn lexeme_string(&self, token: &Token) -> String {

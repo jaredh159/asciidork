@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use super::Result;
-use crate::err::{ParseErr, ParseErrLoc};
+use crate::err::{ParseErr, SourceLocation};
 use crate::token::{Token, TokenType, TokenType::*};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -60,23 +60,27 @@ impl Line {
     }
   }
 
-  pub fn consume_expecting_seq(&mut self, token_types: &[TokenType], msg: &str) -> Result<()> {
+  pub fn consume_expecting_seq(
+    &mut self,
+    token_types: &[TokenType],
+    msg: &'static str,
+  ) -> Result<()> {
     for token_type in token_types {
       self.consume_expecting(*token_type, msg)?;
     }
     Ok(())
   }
 
-  pub fn consume_expecting(&mut self, token_type: TokenType, msg: &str) -> Result<Token> {
+  pub fn consume_expecting(&mut self, token_type: TokenType, msg: &'static str) -> Result<Token> {
     match (self.consume_current(), self.current_token_loc) {
       (Some(token), _) if token.is(token_type) => Ok(token),
       (Some(token), _) => Err(ParseErr::ExpectedTokenNotFound(
-        ParseErrLoc::from(token),
-        msg.to_string(),
+        SourceLocation::from(token),
+        msg,
       )),
       (None, Some(loc)) => Err(ParseErr::ExpectedTokenNotFound(
-        ParseErrLoc::new(loc.0, loc.1),
-        msg.to_string(),
+        SourceLocation::new(loc.0, loc.1),
+        msg,
       )),
       (None, None) => todo!(),
     }

@@ -26,14 +26,27 @@ fn main() {
 // adork print-ast [file]
 fn print_ast(file: &str) -> Result<(), CliErr> {
   let file = BufReader::new(fs::File::open(file)?);
-  let parser = Parser::from(file);
-  match parser.parse() {
-    Err(err) => Err(err.into()),
-    Ok(document) => {
-      println!("{:#?}", document);
-      Ok(())
-    }
-  }
+  let _parser = Parser::from(file);
+  // let result = parser.parse();
+  // if let Err(err) = result {
+  //   let loc = parser.display_err(err);
+  //   dbg!(loc);
+  //   panic!("err: {:?}", err);
+  // } else {
+  //   println!("{:#?}", result.unwrap());
+  // }
+  // match parser.parse() {
+  //   Err(err) => {
+  //     let loc = parser.display_err(err);
+  //     dbg!(loc);
+  //     panic!("err: {:?}", err);
+  //   }
+  //   Ok(document) => {
+  //     println!("{:#?}", document);
+  //     Ok(())
+  //   }
+  // }
+  todo!()
 }
 
 // askidork729

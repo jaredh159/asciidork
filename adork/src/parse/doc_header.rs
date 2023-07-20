@@ -105,7 +105,7 @@ mod tests {
       ]),
     };
 
-    let document = Parser::<&[u8]>::parse_str(input).unwrap();
+    let document = Parser::<&[u8]>::parse_str(input).unwrap().document;
     assert_eq!(document.header, Some(expected_header));
   }
 }

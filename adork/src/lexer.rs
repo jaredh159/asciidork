@@ -90,13 +90,20 @@ impl<R: Read> Lexer<R> {
   }
 
   pub fn line_number(&self, location: usize) -> usize {
+    let (line_number, _) = self.line_number_with_offset(location);
+    line_number
+  }
+
+  pub fn line_number_with_offset(&self, location: usize) -> (usize, usize) {
     let mut line_number = 1;
+    let mut offset = 0;
     for byte in &self.source[0..location] {
       if *byte == b'\n' {
+        offset += 1;
         line_number += 1;
       }
     }
-    line_number
+    (line_number, offset)
   }
 
   pub fn line_of(&self, location: usize) -> &str {
