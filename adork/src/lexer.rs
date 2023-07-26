@@ -1,5 +1,6 @@
 use std::{fmt, fs::File, str};
 
+use crate::err::SourceLocation;
 use crate::reader::Reader;
 use crate::token::Token;
 use crate::token::TokenType::{self, *};
@@ -60,6 +61,15 @@ impl Lexer {
 
   pub fn is_eof(&self) -> bool {
     self.current.is_none()
+  }
+
+  pub fn current_location(&self) -> SourceLocation {
+    SourceLocation {
+      start: self.index,
+      end: self.index,
+      token_type: None,
+      is_exact: false,
+    }
   }
 
   pub fn current_is(&self, ch: u8) -> bool {

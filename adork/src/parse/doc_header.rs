@@ -6,7 +6,16 @@ use crate::parse::Parser;
 use crate::token::TokenType::*;
 
 impl Parser {
-  pub(super) fn parse_doc_header(&self, mut block: LineBlock) -> Result<DocHeader> {
+  pub(super) fn parse_document_header(&mut self) -> Result<Option<DocHeader>> {
+    let Some(mut block) = self.read_block() else {
+      return Ok(None)
+    };
+
+    if !is_doc_header(&block) {
+      self.restore_block(block);
+      return Ok(None);
+    }
+
     block.remove_all(CommentLine);
 
     let mut doc_header = DocHeader {
@@ -19,11 +28,11 @@ impl Parser {
     self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;
     // TODO: revision line https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/
     self.parse_doc_attrs(&mut block, &mut doc_header.attrs)?;
-    Ok(doc_header)
+    Ok(Some(doc_header))
   }
 
   fn parse_doc_title_author_revision(
-    &self,
+    &mut self,
     block: &mut LineBlock,
     doc_header: &mut DocHeader,
   ) -> Result<()> {
@@ -33,10 +42,15 @@ impl Parser {
     }
 
     let mut header_line = block.consume_current().unwrap();
-    header_line.consume_expecting_seq(
-      &[EqualSigns, Whitespace],
-      "level-0 document header starting `= `",
+    let h0 = self.expect_group(
+      [EqualSigns, Whitespace],
+      "level-0 document header starting `'`",
+      &mut header_line,
     )?;
+
+    if h0.is_none() {
+      return Ok(());
+    }
 
     doc_header.title = Some(DocTitle {
       heading: self.parse_inlines(header_line),

@@ -1,6 +1,5 @@
 use super::line::Line;
 use super::{ast::*, Result};
-use crate::err::ParseErr;
 use crate::parse::Parser;
 use crate::token::{Token, TokenType::*};
 use smallvec::SmallVec;
@@ -25,13 +24,14 @@ impl Parser {
     }
 
     if name_parts.len() < 2 {
-      return Err(ParseErr::Error(
-        "author name must have at least first and last name".to_string(),
-        name_parts
-          .first()
-          .map(|token| token.clone())
-          .or_else(|| line.current_token().cloned()),
-      ));
+      // return Err(ParseErr::Error(
+      //   "author name must have at least first and last name".to_string(),
+      //   name_parts
+      //     .first()
+      //     .map(|token| token.clone())
+      //     .or_else(|| line.current_token().cloned()),
+      // ));
+      todo!()
     }
 
     let first_name = self.lexeme_string(&name_parts[0]);

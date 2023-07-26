@@ -18,11 +18,11 @@ pub struct SourceLocation {
   pub start: usize,
   pub end: usize,
   pub token_type: Option<TokenType>,
-  pub is_exact: bool,
+  pub is_exact: bool, // TODO: maybe not so much?
 }
 
-impl From<Token> for SourceLocation {
-  fn from(token: Token) -> Self {
+impl From<&Token> for SourceLocation {
+  fn from(token: &Token) -> Self {
     SourceLocation {
       start: token.start,
       end: token.end,

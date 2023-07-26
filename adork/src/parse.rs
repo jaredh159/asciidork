@@ -9,22 +9,25 @@ mod doc_attrs;
 mod doc_header;
 mod inline;
 pub(super) mod line;
-mod line_block;
+pub(super) mod line_block;
 
-use crate::either::Either;
-use crate::err::ParseErr;
 use crate::lexer::Lexer;
 use crate::parse::ast::*;
 use crate::parse::diagnostic::Diagnostic;
 use crate::parse::line::Line;
 use crate::parse::line_block::LineBlock;
-use crate::token::Token;
+use crate::token::{Token, TokenType};
 
-type Result<T> = std::result::Result<T, ParseErr>;
+type Result<T> = std::result::Result<T, Diagnostic>;
 
+#[derive(Debug)]
 pub struct Parser {
   lexer: Lexer,
   document: Document,
+  peeked_block: Option<LineBlock>,
+  errors: Vec<Diagnostic>,
+  warnings: Vec<Diagnostic>,
+  bail: bool, // todo: naming...
 }
 
 pub struct ParseResult {
@@ -32,10 +35,9 @@ pub struct ParseResult {
   pub warnings: Vec<Diagnostic>,
 }
 
-impl From<ParseErr> for Vec<Diagnostic> {
-  fn from(_parse_err: ParseErr) -> Self {
-    // switch on the type, convert...
-    todo!()
+impl From<Diagnostic> for Vec<Diagnostic> {
+  fn from(diagnostic: Diagnostic) -> Self {
+    vec![diagnostic]
   }
 }
 
@@ -48,6 +50,10 @@ impl Parser {
         header: None,
         content: DocContent::Blocks(vec![]),
       },
+      peeked_block: None,
+      errors: vec![],
+      warnings: vec![],
+      bail: true,
     }
   }
 
@@ -56,13 +62,8 @@ impl Parser {
     parser.parse()
   }
 
-  // std::Result<(Document, Vec<Warning>), RichParseErr>
   pub fn parse(mut self) -> CoreResult<ParseResult, Vec<Diagnostic>> {
-    let header_result = self.parse_document_header()?;
-    if header_result.is_right() {
-      let doc_header = header_result.take_right().unwrap();
-      self.document.header = Some(doc_header);
-    }
+    self.document.header = self.parse_document_header()?;
     Ok(ParseResult {
       document: self.document,
       warnings: vec![],
@@ -75,6 +76,60 @@ impl Parser {
 
   pub(crate) fn lexeme_str(&self, token: &Token) -> &str {
     self.lexer.lexeme(token)
+  }
+
+  pub(crate) fn expect_group<const N: usize>(
+    &mut self,
+    expected: [TokenType; N],
+    msg: &'static str,
+    line: &mut Line,
+  ) -> Result<Option<[Token; N]>> {
+    for (i, token_type) in expected.into_iter().enumerate() {
+      match line.nth_token(i) {
+        Some(token) if token.token_type == token_type => {}
+        _ => {
+          self.err_expected_token(line.nth_token(0), msg)?;
+          return Ok(None);
+        }
+      }
+    }
+
+    let tokens: [Token; N] = std::array::from_fn(|_| line.consume_current().unwrap());
+    Ok(Some(tokens))
+  }
+
+  pub(crate) fn expect_each<const N: usize>(
+    &mut self,
+    expected: [(TokenType, &'static str); N],
+    line: &mut Line,
+  ) -> Result<Option<[Token; N]>> {
+    for (i, (token_type, msg)) in expected.into_iter().enumerate() {
+      match line.nth_token(i) {
+        Some(token) if token.token_type == token_type => {}
+        token => {
+          self.err_expected_token(token.or(line.nth_token(i.saturating_sub(1))), msg)?;
+          return Ok(None);
+        }
+      }
+    }
+
+    let tokens: [Token; N] = std::array::from_fn(|_| line.consume_current().unwrap());
+    Ok(Some(tokens))
+  }
+
+  pub(crate) fn expect(
+    &mut self,
+    token_type: TokenType,
+    line: &mut Line,
+    msg: &str,
+  ) -> Result<Option<Token>> {
+    match line.current_token() {
+      Some(token) if token.token_type == token_type => Ok(Some(line.consume_current().unwrap())),
+      token => {
+        self.err_expected_token(token, msg)?;
+        Ok(None)
+      }
+    }
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line> {
@@ -91,7 +146,11 @@ impl Parser {
     Some(Line::new(tokens))
   }
 
-  fn read_block(&mut self) -> Option<LineBlock> {
+  pub(crate) fn read_block(&mut self) -> Option<LineBlock> {
+    if let Some(block) = self.peeked_block.take() {
+      return Some(block);
+    }
+
     self.lexer.consume_empty_lines();
     if self.lexer.is_eof() {
       return None;
@@ -105,16 +164,12 @@ impl Parser {
       }
     }
 
+    debug_assert!(!lines.is_empty());
     Some(LineBlock::new(lines))
   }
 
-  fn parse_document_header(&mut self) -> Result<Either<LineBlock, DocHeader>> {
-    let first_block = self.read_block().expect("non-empty document");
-    if !doc_header::is_doc_header(&first_block) {
-      Ok(Either::Left(first_block))
-    } else {
-      Ok(Either::Right(self.parse_doc_header(first_block)?))
-    }
+  fn restore_block(&mut self, block: LineBlock) {
+    self.peeked_block = Some(block);
   }
 }
 

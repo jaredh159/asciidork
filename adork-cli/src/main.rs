@@ -3,6 +3,8 @@ use std::io;
 use std::result::Result;
 use std::{env, fmt, fs};
 
+use colored::Colorize;
+
 use adork::err::{AsciiDorkError, ParseErr};
 use adork::parse::Parser;
 
@@ -26,30 +28,31 @@ fn main() {
 // adork print-ast [file]
 fn print_ast(file: &str) -> Result<(), CliErr> {
   let file = fs::File::open(file)?;
-  let _parser = Parser::from(file);
-  // let result = parser.parse();
-  // if let Err(err) = result {
-  //   let loc = parser.display_err(err);
-  //   dbg!(loc);
-  //   panic!("err: {:?}", err);
-  // } else {
-  //   println!("{:#?}", result.unwrap());
-  // }
-  // match parser.parse() {
-  //   Err(err) => {
-  //     let loc = parser.display_err(err);
-  //     dbg!(loc);
-  //     panic!("err: {:?}", err);
-  //   }
-  //   Ok(document) => {
-  //     println!("{:#?}", document);
-  //     Ok(())
-  //   }
-  // }
-  todo!()
+  let parser = Parser::from(file);
+  match parser.parse() {
+    Err(diagnostics) => {
+      for diagnostic in diagnostics {
+        println!(
+          "\n{}{} {}",
+          diagnostic.line_num.to_string().dimmed(),
+          ":".dimmed(),
+          diagnostic.line
+        );
+        println!(
+          "{}{} {}\n",
+          " ".repeat(diagnostic.message_offset),
+          "^".red().bold(),
+          diagnostic.message.red().bold()
+        );
+      }
+      Ok(())
+    }
+    Ok(parse_result) => {
+      println!("{:#?}", parse_result.document);
+      Ok(())
+    }
+  }
 }
-
-// askidork729
 
 impl fmt::Display for CliErr {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

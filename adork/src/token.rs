@@ -28,6 +28,14 @@ impl Token {
     }
   }
 
+  pub fn empty() -> Token {
+    Token {
+      token_type: TokenType::Whitespace,
+      start: 0,
+      end: 0,
+    }
+  }
+
   pub fn len(&self) -> usize {
     self.end - self.start
   }

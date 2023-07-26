@@ -1,12 +1,11 @@
 use std::collections::VecDeque;
 
-use super::Result;
-use crate::err::{ParseErr, SourceLocation};
 use crate::token::{Token, TokenType, TokenType::*};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Line {
   pub tokens: VecDeque<Token>,
+  // TODO: probaby can ditch this...
   current_token_loc: Option<(usize, usize)>,
 }
 
@@ -57,32 +56,6 @@ impl Line {
     match self.current_token() {
       Some(token) if token.is(token_type) => self.consume_current(),
       _ => None,
-    }
-  }
-
-  pub fn consume_expecting_seq(
-    &mut self,
-    token_types: &[TokenType],
-    msg: &'static str,
-  ) -> Result<()> {
-    for token_type in token_types {
-      self.consume_expecting(*token_type, msg)?;
-    }
-    Ok(())
-  }
-
-  pub fn consume_expecting(&mut self, token_type: TokenType, msg: &'static str) -> Result<Token> {
-    match (self.consume_current(), self.current_token_loc) {
-      (Some(token), _) if token.is(token_type) => Ok(token),
-      (Some(token), _) => Err(ParseErr::ExpectedTokenNotFound(
-        SourceLocation::from(token),
-        msg,
-      )),
-      (None, Some(loc)) => Err(ParseErr::ExpectedTokenNotFound(
-        SourceLocation::new(loc.0, loc.1),
-        msg,
-      )),
-      (None, None) => todo!(),
     }
   }
 
