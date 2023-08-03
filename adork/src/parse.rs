@@ -10,6 +10,7 @@ mod doc_header;
 mod inline;
 pub(super) mod line;
 pub(super) mod line_block;
+mod revision_line;
 
 use crate::lexer::Lexer;
 use crate::parse::ast::*;

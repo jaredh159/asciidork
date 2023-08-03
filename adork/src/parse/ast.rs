@@ -46,9 +46,9 @@ pub struct Author {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Revision {
-  number: String,
-  date: String,
-  remark: String,
+  pub version: String,
+  pub date: Option<String>,
+  pub remark: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

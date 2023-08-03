@@ -8,6 +8,7 @@ pub struct Token {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenType {
   Colon,
+  Comma,
   CommentBlock,
   CommentLine,
   EqualSigns,

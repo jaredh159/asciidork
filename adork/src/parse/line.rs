@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use crate::parse::Parser;
 use crate::token::{Token, TokenType, TokenType::*};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -43,6 +44,10 @@ impl Line {
     self.tokens.front()
   }
 
+  pub fn consume<const N: usize>(&mut self) -> [Option<Token>; N] {
+    std::array::from_fn(|_| self.consume_current())
+  }
+
   pub fn consume_current(&mut self) -> Option<Token> {
     if let Some(token) = self.tokens.pop_front() {
       self.current_token_loc = Some((token.start, token.end));
@@ -59,6 +64,13 @@ impl Line {
     }
   }
 
+  pub fn consume_if_not(&mut self, token_type: TokenType) -> Option<Token> {
+    match self.current_token() {
+      Some(token) if !token.is(token_type) => self.consume_current(),
+      _ => None,
+    }
+  }
+
   pub fn peek_token(&self) -> Option<&Token> {
     self.tokens.get(1)
   }
@@ -71,6 +83,20 @@ impl Line {
     self.tokens.get(n)
   }
 
+  pub fn nth_token_is(&self, n: usize, token_type: TokenType) -> bool {
+    match self.tokens.get(n) {
+      Some(token) => token.is(token_type),
+      None => false,
+    }
+  }
+
+  pub fn nth_token_one_of(&self, n: usize, token_types: &[TokenType]) -> bool {
+    match self.tokens.get(n) {
+      Some(token) => token_types.contains(&token.token_type),
+      None => false,
+    }
+  }
+
   pub fn current_is(&self, token_type: TokenType) -> bool {
     self.starts(token_type)
   }
@@ -80,6 +106,26 @@ impl Line {
       return false;
     }
     self.tokens[0].token_type == token_type
+  }
+
+  pub fn contains(&self, token_type: TokenType) -> bool {
+    for token in &self.tokens {
+      if token.token_type == token_type {
+        return true;
+      }
+    }
+    false
+  }
+
+  pub fn contains_any(&self, token_types: &[TokenType]) -> bool {
+    for token in &self.tokens {
+      for token_type in token_types {
+        if token.token_type == *token_type {
+          return true;
+        }
+      }
+    }
+    false
   }
 
   pub fn starts_with_one_of(&self, token_types: &[TokenType]) -> bool {
@@ -110,6 +156,28 @@ impl Line {
     if !self.starts_with_seq(&[EqualSigns, Whitespace]) {
       return false;
     }
-    return self.current_token().unwrap().len() == len;
+    self.current_token().unwrap().len() == len
+  }
+
+  pub fn to_string(&mut self, parser: &Parser) -> String {
+    let mut s = String::with_capacity(self.len());
+    while let Some(token) = self.consume_current() {
+      s.push_str(parser.lexeme_str(&token));
+    }
+    s
+  }
+
+  pub fn to_string_until(&mut self, token_type: TokenType, parser: &Parser) -> String {
+    let mut s = String::new();
+    while let Some(token) = self.consume_if_not(token_type) {
+      s.push_str(parser.lexeme_str(&token));
+    }
+    s
+  }
+
+  pub fn len(&self) -> usize {
+    let end = self.tokens.back().map(|token| token.end).unwrap_or(0);
+    let start = self.tokens.front().map(|token| token.start).unwrap_or(0);
+    end.saturating_sub(start)
   }
 }

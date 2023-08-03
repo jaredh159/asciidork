@@ -7,4 +7,6 @@ edition = "2021"
 
 [dependencies]
 indoc = "2.0.2"
+regex = "1.9.1"
+regex-macro = "0.2.0"
 smallvec = "1.11.0"
