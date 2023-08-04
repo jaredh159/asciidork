@@ -14,13 +14,13 @@ pub struct Diagnostic {
 }
 
 impl Parser {
-  pub(crate) fn err_expected_token(&mut self, token: Option<&Token>, detail: &str) -> Result<()> {
+  pub(crate) fn err(&mut self, msg: impl Into<String>, token: Option<&Token>) -> Result<()> {
     let location = token.map_or(self.lexer.current_location(), SourceLocation::from);
     let (line_num, message_offset) = self.lexer.line_number_with_offset(location.start);
     let error = Diagnostic {
       line_num,
       line: self.lexer.line_of(location.start).to_string(),
-      message: format!("Expected {}", detail),
+      message: msg.into(),
       message_offset: message_offset + token.map_or(0, Token::len),
       source_start: location.start,
       source_end: location.end,
@@ -32,5 +32,9 @@ impl Parser {
       self.errors.push(error);
       Ok(())
     }
+  }
+
+  pub(crate) fn err_expected_token(&mut self, token: Option<&Token>, detail: &str) -> Result<()> {
+    self.err(format!("Expected {}", detail), token)
   }
 }

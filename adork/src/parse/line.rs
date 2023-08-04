@@ -71,6 +71,24 @@ impl Line {
     }
   }
 
+  pub fn discard_until(&mut self, token_type: TokenType) {
+    while let Some(token) = self.current_token() {
+      if token.is(token_type) {
+        break;
+      }
+      self.consume_current();
+    }
+  }
+
+  pub fn discard_until_one_of(&mut self, token_types: &[TokenType]) {
+    while let Some(token) = self.current_token() {
+      if token_types.contains(&token.token_type) {
+        break;
+      }
+      self.consume_current();
+    }
+  }
+
   pub fn peek_token(&self) -> Option<&Token> {
     self.tokens.get(1)
   }

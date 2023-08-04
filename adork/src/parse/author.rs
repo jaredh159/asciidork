@@ -5,33 +5,50 @@ use crate::token::{Token, TokenType::*};
 use smallvec::SmallVec;
 
 impl Parser {
-  pub(super) fn parse_author_line(&self, mut line: Line, authors: &mut Vec<Author>) -> Result<()> {
-    line.remove_all(Whitespace);
+  /// if this function is called, the following invaraints hold:
+  /// - the line is not empty
+  /// - the line starts with a word
+  /// - we are considering the line _directly_ below the doc title
+  ///
+  /// Therefore, it would be an error for this line to not be an author line
+  pub(super) fn parse_author_line(
+    &mut self,
+    mut line: Line,
+    authors: &mut Vec<Author>,
+  ) -> Result<()> {
+    debug_assert!(!line.is_empty());
+    debug_assert!(line.starts(Word));
+
     while let Some(author) = self.parse_single_author(&mut line)? {
       authors.push(author);
     }
+
     Ok(())
   }
 
-  fn parse_single_author(&self, line: &mut Line) -> Result<Option<Author>> {
+  fn parse_single_author(&mut self, line: &mut Line) -> Result<Option<Author>> {
     if line.is_empty() {
       return Ok(None);
     }
 
-    let mut name_parts = SmallVec::<[Token; 3]>::new();
-    while let Some(name) = line.consume_if(Word) {
-      name_parts.push(name);
+    let mut name_parts = SmallVec::<[&Token; 3]>::new();
+    for token in &line.tokens {
+      match token {
+        token if token.is(Word) => name_parts.push(token),
+        token if token.is(SemiColon) => break,
+        token if token.is(LessThan) => break,
+        _ => {}
+      }
     }
 
     if name_parts.len() < 2 {
-      // return Err(ParseErr::Error(
-      //   "author name must have at least first and last name".to_string(),
-      //   name_parts
-      //     .first()
-      //     .map(|token| token.clone())
-      //     .or_else(|| line.current_token().cloned()),
-      // ));
-      todo!()
+      self.err(
+        "author name must have at least first and last name",
+        name_parts
+          .first()
+          .map(|token| *token)
+          .or_else(|| line.current_token()),
+      )?;
     }
 
     let first_name = self.lexeme_string(&name_parts[0]);
@@ -47,12 +64,16 @@ impl Parser {
       None
     };
 
+    drop(name_parts);
+
     let mut author = Author {
       first_name,
       middle_name,
       last_name,
       email: None,
     };
+
+    line.discard_until_one_of(&[LessThan, SemiColon]);
 
     if line.starts_with_seq(&[LessThan, Word, GreaterThan]) {
       line.consume_current();
@@ -100,7 +121,7 @@ mod tests {
     ];
 
     for (input, authors) in cases {
-      let (line, parser) = line_test(input);
+      let (line, mut parser) = line_test(input);
       let expected_authors = authors
         .iter()
         .map(|(first, middle, last, email)| Author {

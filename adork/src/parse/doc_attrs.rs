@@ -32,7 +32,7 @@ impl Parser {
     )?;
 
     let Some([_, key, _]) = expected else {
-      // restore block
+      // restore block?
       return Ok(None);
     };
 
