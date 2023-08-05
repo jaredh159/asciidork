@@ -43,6 +43,10 @@ impl Lexer {
     lexer
   }
 
+  pub fn from_file(file: File, path: Option<impl Into<String>>) -> Self {
+    Lexer::from(Reader::from_file(file, path))
+  }
+
   pub fn lexeme(&self, token: &Token) -> &str {
     unsafe { std::str::from_utf8_unchecked(&self.source[token.start..token.end]) }
   }
@@ -318,12 +322,6 @@ impl From<String> for Lexer {
 impl From<&'static str> for Lexer {
   fn from(static_str: &'static str) -> Self {
     Lexer::from(Reader::from(static_str))
-  }
-}
-
-impl From<File> for Lexer {
-  fn from(file: File) -> Self {
-    Lexer::from(Reader::from(file))
   }
 }
 

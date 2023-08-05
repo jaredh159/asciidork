@@ -2,16 +2,23 @@ use std::fs::File;
 use std::io::{self, Read};
 
 enum Source {
-  File(io::BufReader<File>),
-  Bytes { bytes: Vec<u8>, location: usize },
+  File {
+    file: io::BufReader<File>,
+    path: Option<String>,
+  },
+  Bytes {
+    bytes: Vec<u8>,
+    location: usize,
+  },
+  Collection(Vec<Source>),
 }
 
 pub struct Reader(Source);
 
-impl Reader {
+impl Source {
   pub fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-    match self.0 {
-      Source::File(ref mut file) => file.read(buf),
+    match self {
+      Source::File { ref mut file, .. } => file.read(buf),
       Source::Bytes {
         ref bytes,
         ref mut location,
@@ -22,20 +29,44 @@ impl Reader {
         *location += len;
         Ok(len)
       }
+      Source::Collection(ref mut sources) => {
+        let Some(source) = sources.last_mut() else {
+          return Ok(0);
+        };
+        match source.read(buf)? {
+          0 => {
+            sources.pop();
+            self.read(buf)
+          }
+          n => Ok(n),
+        }
+      }
     }
   }
 
   pub fn capacity_hint(&self) -> Option<usize> {
-    match self.0 {
-      Source::File(ref file) => file.get_ref().metadata().ok().map(|m| m.len() as usize),
+    match &self {
+      Source::File { ref file, .. } => file.get_ref().metadata().ok().map(|m| m.len() as usize),
       Source::Bytes { ref bytes, .. } => Some(bytes.len()),
+      Source::Collection(sources) => sources.iter().map(|s| s.capacity_hint()).sum(),
     }
   }
 }
 
-impl From<File> for Reader {
-  fn from(file: File) -> Self {
-    Reader(Source::File(io::BufReader::new(file)))
+impl Reader {
+  pub fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+    self.0.read(buf)
+  }
+
+  pub fn capacity_hint(&self) -> Option<usize> {
+    self.0.capacity_hint()
+  }
+
+  pub fn from_file(file: File, path: Option<impl Into<String>>) -> Self {
+    Reader(Source::File {
+      file: io::BufReader::new(file),
+      path: path.map(Into::into),
+    })
   }
 }
 

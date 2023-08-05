@@ -58,6 +58,10 @@ impl Parser {
     }
   }
 
+  pub fn from_file(file: File, path: Option<impl Into<String>>) -> Self {
+    Parser::new(Lexer::from_file(file, path))
+  }
+
   pub fn parse_str(input: &'static str) -> CoreResult<ParseResult, Vec<Diagnostic>> {
     let parser = Parser::from(input);
     parser.parse()
@@ -183,12 +187,6 @@ impl From<&'static str> for Parser {
 impl From<String> for Parser {
   fn from(string: String) -> Self {
     Parser::new(Lexer::from(string))
-  }
-}
-
-impl From<File> for Parser {
-  fn from(file: File) -> Self {
-    Parser::new(Lexer::from(file))
   }
 }
 

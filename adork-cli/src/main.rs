@@ -26,9 +26,9 @@ fn main() {
 }
 
 // adork print-ast [file]
-fn print_ast(file: &str) -> Result<(), CliErr> {
-  let file = fs::File::open(file)?;
-  let parser = Parser::from(file);
+fn print_ast(path: &str) -> Result<(), CliErr> {
+  let file = fs::File::open(path)?;
+  let parser = Parser::from_file(file, Some(path));
   match parser.parse() {
     Err(diagnostics) => {
       for diagnostic in diagnostics {
