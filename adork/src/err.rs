@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::token::{Token, TokenType};
+use crate::tok::{Token, TokenType};
 
 #[derive(Debug)]
 pub enum AsciiDorkError {

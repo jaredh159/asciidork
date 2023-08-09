@@ -5,6 +5,6 @@
       `{docdate}` example
 - [ ] h1 subtitle
 - [ ] unsetting doc attrs, e.g. `:version-label!:`
-- [ ] soon: multi-file non corner painting
+- [•] soon: multi-file non corner painting
 - [√] would be nice if it could report ALL parse errors (maybe sync on new block)
 - [√] revision line for header

@@ -1,6 +1,6 @@
 use crate::err::SourceLocation;
 use crate::parse::{Parser, Result};
-use crate::token::{Token, TokenType};
+use crate::tok::{Token, TokenType};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Diagnostic {

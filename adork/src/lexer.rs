@@ -2,8 +2,8 @@ use std::{fmt, fs::File, str};
 
 use crate::err::SourceLocation;
 use crate::reader::Reader;
-use crate::token::Token;
-use crate::token::TokenType::{self, *};
+use crate::tok::Token;
+use crate::tok::TokenType::{self, *};
 
 const BUFFER_SIZE: usize = 4096;
 

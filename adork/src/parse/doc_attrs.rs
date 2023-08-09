@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use super::Result;
-use crate::parse::line_block::LineBlock;
 use crate::parse::Parser;
-use crate::token::TokenType::*;
+use crate::tok;
+use crate::tok::TokenType::*;
 
 impl Parser {
   pub(super) fn parse_doc_attrs(
     &mut self,
-    block: &mut LineBlock, // do i need this?
+    block: &mut tok::Block,
     attrs: &mut HashMap<String, String>,
   ) -> Result<()> {
     while let Some((key, value)) = self.parse_doc_attr(block)? {
@@ -17,7 +17,7 @@ impl Parser {
     Ok(())
   }
 
-  fn parse_doc_attr(&mut self, block: &mut LineBlock) -> Result<Option<(String, String)>> {
+  fn parse_doc_attr(&mut self, block: &mut tok::Block) -> Result<Option<(String, String)>> {
     let Some(ref mut line) = block.consume_current() else {
       return Ok(None);
     };

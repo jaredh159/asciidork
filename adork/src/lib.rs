@@ -1,28 +1,33 @@
 #![allow(dead_code)]
 
+mod ast;
 mod either;
 pub mod err;
 mod lexer;
 pub mod parse;
 mod reader;
-mod token;
+mod tok;
 
 #[cfg(test)]
 mod t {
-  use crate::parse::line::Line;
-  use crate::parse::line_block::LineBlock;
+  use crate::ast::Document;
   use crate::parse::Parser;
+  use crate::tok;
 
-  pub fn line_test(input: &'static str) -> (Line, Parser) {
+  pub fn line_test(input: &'static str) -> (tok::Line, Parser) {
     let mut parser = Parser::from(input);
     let line = parser.read_line().unwrap();
     (line, parser)
   }
 
-  pub fn block_test(input: &'static str) -> (LineBlock, Parser) {
+  pub fn block_test(input: &'static str) -> (tok::Block, Parser) {
     let mut parser = Parser::from(input);
     let block = parser.read_block().unwrap();
     (block, parser)
+  }
+
+  pub fn doc_test(input: &'static str) -> Document {
+    Parser::from(input).parse().unwrap().document
   }
 
   /// test helper, converts &str -> String

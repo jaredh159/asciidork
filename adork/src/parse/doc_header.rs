@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use super::{ast::*, Result};
-use crate::parse::line_block::LineBlock;
+use super::Result;
+use crate::ast;
 use crate::parse::Parser;
-use crate::token::TokenType::*;
+use crate::tok::{self, TokenType::*};
 
 impl Parser {
-  pub(super) fn parse_document_header(&mut self) -> Result<Option<DocHeader>> {
+  pub(super) fn parse_document_header(&mut self) -> Result<Option<ast::DocHeader>> {
     let Some(mut block) = self.read_block() else {
       return Ok(None)
     };
@@ -18,7 +18,7 @@ impl Parser {
 
     block.remove_all(CommentLine);
 
-    let mut doc_header = DocHeader {
+    let mut doc_header = ast::DocHeader {
       title: None,
       authors: vec![],
       revision: None,
@@ -33,8 +33,8 @@ impl Parser {
 
   fn parse_doc_title_author_revision(
     &mut self,
-    block: &mut LineBlock,
-    doc_header: &mut DocHeader,
+    block: &mut tok::Block,
+    doc_header: &mut ast::DocHeader,
   ) -> Result<()> {
     let first_line = block.current_line().expect("non-empty doc header");
     if !first_line.is_header(1) {
@@ -52,7 +52,7 @@ impl Parser {
       return Ok(());
     }
 
-    doc_header.title = Some(DocTitle {
+    doc_header.title = Some(ast::DocTitle {
       heading: self.parse_inlines(header_line),
       subtitle: None, // todo
     });
@@ -69,7 +69,7 @@ impl Parser {
   }
 }
 
-pub fn is_doc_header(block: &LineBlock) -> bool {
+pub fn is_doc_header(block: &tok::Block) -> bool {
   for line in &block.lines {
     if line.is_header(1) {
       return true;
@@ -84,8 +84,7 @@ pub fn is_doc_header(block: &LineBlock) -> bool {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::parse::inline::Inline;
+  use crate::ast;
   use crate::t::*;
   use indoc::indoc;
   use std::collections::HashMap;
@@ -103,12 +102,12 @@ mod tests {
       The document body starts here.
     "};
 
-    let expected_header = DocHeader {
-      title: Some(DocTitle {
-        heading: vec![Inline::Text(s("Document Title"))],
+    let expected_header = ast::DocHeader {
+      title: Some(ast::DocTitle {
+        heading: vec![ast::Inline::Text(s("Document Title"))],
         subtitle: None,
       }),
-      authors: vec![Author {
+      authors: vec![ast::Author {
         first_name: s("Kismet"),
         middle_name: Some(s("R.")),
         last_name: s("Lee"),
@@ -122,7 +121,7 @@ mod tests {
       ]),
     };
 
-    let document = Parser::parse_str(input).unwrap().document;
+    let document = doc_test(input);
     assert_eq!(document.header, Some(expected_header));
   }
 }

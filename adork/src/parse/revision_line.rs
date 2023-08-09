@@ -2,15 +2,14 @@ use std::borrow::Cow;
 
 use regex_macro::regex;
 
-use super::ast::*;
-use crate::parse::line_block::LineBlock;
+use crate::ast::Revision;
 use crate::parse::Parser;
-use crate::token::TokenType::*;
+use crate::tok::{self, TokenType::*};
 
 impl Parser {
   pub(super) fn parse_revision_line(
     &mut self,
-    block: &mut LineBlock,
+    block: &mut tok::Block,
     revision: &mut Option<Revision>,
   ) {
     let Some(line) = block.current_line() else {

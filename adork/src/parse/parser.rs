@@ -2,37 +2,26 @@ use core::result::Result as CoreResult;
 use std::collections::VecDeque;
 use std::fs::File;
 
-mod ast;
-mod author;
-pub(super) mod diagnostic;
-mod doc_attrs;
-mod doc_header;
-mod inline;
-pub(super) mod line;
-pub(super) mod line_block;
-mod revision_line;
-
+use crate::ast;
+use crate::ast::DocContent;
 use crate::lexer::Lexer;
-use crate::parse::ast::*;
-use crate::parse::diagnostic::Diagnostic;
-use crate::parse::line::Line;
-use crate::parse::line_block::LineBlock;
-use crate::token::{Token, TokenType};
+use crate::tok::{self, Token, TokenType};
 
-type Result<T> = std::result::Result<T, Diagnostic>;
+use super::diagnostic::Diagnostic;
+use super::Result;
 
 #[derive(Debug)]
 pub struct Parser {
-  lexer: Lexer,
-  document: Document,
-  peeked_block: Option<LineBlock>,
-  errors: Vec<Diagnostic>,
-  warnings: Vec<Diagnostic>,
-  bail: bool, // todo: naming...
+  pub(super) lexer: Lexer,
+  pub(super) document: ast::Document,
+  pub(super) peeked_block: Option<tok::Block>,
+  pub(super) errors: Vec<Diagnostic>,
+  pub(super) warnings: Vec<Diagnostic>,
+  pub(super) bail: bool, // todo: naming...
 }
 
 pub struct ParseResult {
-  pub document: Document,
+  pub document: ast::Document,
   pub warnings: Vec<Diagnostic>,
 }
 
@@ -46,8 +35,7 @@ impl Parser {
   pub fn new(lexer: Lexer) -> Parser {
     Parser {
       lexer,
-      document: Document {
-        doctype: DocType::Article,
+      document: ast::Document {
         header: None,
         content: DocContent::Blocks(vec![]),
       },
@@ -62,17 +50,26 @@ impl Parser {
     Parser::new(Lexer::from_file(file, path))
   }
 
-  pub fn parse_str(input: &'static str) -> CoreResult<ParseResult, Vec<Diagnostic>> {
-    let parser = Parser::from(input);
-    parser.parse()
-  }
-
   pub fn parse(mut self) -> CoreResult<ParseResult, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
+
+    // while let Some(block) = self.read_block() {
+    //   if block.starts_section() {
+    //     self.document.content.ensure_sectioned();
+    //     self.parse_section(block)?;
+    //   } else {
+    //     self.parse_block(block)?;
+    //   }
+    // }
+
     Ok(ParseResult {
       document: self.document,
       warnings: vec![],
     })
+  }
+
+  pub fn parse_section(&mut self, _first_block: tok::Block) -> Result<ast::Section> {
+    todo!("parse section")
   }
 
   pub(crate) fn lexeme_string(&self, token: &Token) -> String {
@@ -83,11 +80,11 @@ impl Parser {
     self.lexer.lexeme(token)
   }
 
-  pub(crate) fn expect_group<const N: usize>(
+  pub(super) fn expect_group<const N: usize>(
     &mut self,
     expected: [TokenType; N],
     msg: &'static str,
-    line: &mut Line,
+    line: &mut tok::Line,
   ) -> Result<Option<[Token; N]>> {
     for (i, token_type) in expected.into_iter().enumerate() {
       match line.nth_token(i) {
@@ -103,10 +100,10 @@ impl Parser {
     Ok(Some(tokens))
   }
 
-  pub(crate) fn expect_each<const N: usize>(
+  pub(super) fn expect_each<const N: usize>(
     &mut self,
     expected: [(TokenType, &'static str); N],
-    line: &mut Line,
+    line: &mut tok::Line,
   ) -> Result<Option<[Token; N]>> {
     for (i, (token_type, msg)) in expected.into_iter().enumerate() {
       match line.nth_token(i) {
@@ -122,10 +119,10 @@ impl Parser {
     Ok(Some(tokens))
   }
 
-  pub(crate) fn expect(
+  pub(super) fn expect(
     &mut self,
     token_type: TokenType,
-    line: &mut Line,
+    line: &mut tok::Line,
     msg: &str,
   ) -> Result<Option<Token>> {
     match line.current_token() {
@@ -137,7 +134,7 @@ impl Parser {
     }
   }
 
-  pub(crate) fn read_line(&mut self) -> Option<Line> {
+  pub(crate) fn read_line(&mut self) -> Option<tok::Line> {
     if self.lexer.is_eof() {
       return None;
     }
@@ -148,10 +145,10 @@ impl Parser {
     }
     self.lexer.consume_newline();
 
-    Some(Line::new(tokens))
+    Some(tok::Line::new(tokens))
   }
 
-  pub(crate) fn read_block(&mut self) -> Option<LineBlock> {
+  pub(crate) fn read_block(&mut self) -> Option<tok::Block> {
     if let Some(block) = self.peeked_block.take() {
       return Some(block);
     }
@@ -170,10 +167,10 @@ impl Parser {
     }
 
     debug_assert!(!lines.is_empty());
-    Some(LineBlock::new(lines))
+    Some(tok::Block::new(lines))
   }
 
-  fn restore_block(&mut self, block: LineBlock) {
+  pub(super) fn restore_block(&mut self, block: tok::Block) {
     self.peeked_block = Some(block);
   }
 }

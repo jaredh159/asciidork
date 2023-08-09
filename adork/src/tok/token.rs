@@ -48,17 +48,6 @@ impl Token {
   pub fn is_len(&self, token_type: TokenType, len: usize) -> bool {
     self.token_type == token_type && self.end - self.start == len
   }
-
-  pub fn ends_block(&self) -> bool {
-    match self {
-      Token {
-        token_type: TokenType::Newline,
-        start,
-        end,
-      } if end - start > 1 => true,
-      _ => false,
-    }
-  }
 }
 
 // export const TOKEN = {

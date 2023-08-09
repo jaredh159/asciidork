@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::parse::Parser;
-use crate::token::{Token, TokenType, TokenType::*};
+use crate::tok::{Token, TokenType, TokenType::*};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Line {

@@ -1,14 +1,18 @@
 use std::collections::VecDeque;
 
 use super::line::Line;
-use crate::token::TokenType;
+use crate::tok::TokenType;
+
+// tuesday jared 👍
+// move Line, Block into tok::Line, tok::Block
+// move parse into parse/mod.rs, extract `core`
 
 #[derive(Debug)]
-pub struct LineBlock {
+pub struct Block {
   pub lines: VecDeque<Line>,
 }
 
-impl Iterator for LineBlock {
+impl Iterator for Block {
   type Item = Line;
 
   fn next(&mut self) -> Option<Self::Item> {
@@ -16,10 +20,10 @@ impl Iterator for LineBlock {
   }
 }
 
-impl LineBlock {
-  pub fn new(lines: VecDeque<Line>) -> LineBlock {
+impl Block {
+  pub fn new(lines: VecDeque<Line>) -> Block {
     assert!(lines.len() > 0);
-    LineBlock { lines }
+    Block { lines }
   }
 
   pub fn remove_all(&mut self, token_type: TokenType) {
@@ -28,6 +32,10 @@ impl LineBlock {
 
   pub fn current_line(&self) -> Option<&Line> {
     self.lines.front()
+  }
+
+  pub fn starts_section(&self) -> bool {
+    false // TODO
   }
 
   pub fn is_empty(&self) -> bool {

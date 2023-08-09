@@ -1,8 +1,9 @@
-use super::line::Line;
-use super::{ast::*, Result};
-use crate::parse::Parser;
-use crate::token::{Token, TokenType::*};
 use smallvec::SmallVec;
+
+use super::Result;
+use crate::ast;
+use crate::parse::Parser;
+use crate::tok::{self, Token, TokenType::*};
 
 impl Parser {
   /// if this function is called, the following invaraints hold:
@@ -13,8 +14,8 @@ impl Parser {
   /// Therefore, it would be an error for this line to not be an author line
   pub(super) fn parse_author_line(
     &mut self,
-    mut line: Line,
-    authors: &mut Vec<Author>,
+    mut line: tok::Line,
+    authors: &mut Vec<ast::Author>,
   ) -> Result<()> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
@@ -26,7 +27,7 @@ impl Parser {
     Ok(())
   }
 
-  fn parse_single_author(&mut self, line: &mut Line) -> Result<Option<Author>> {
+  fn parse_single_author(&mut self, line: &mut tok::Line) -> Result<Option<ast::Author>> {
     if line.is_empty() {
       return Ok(None);
     }
@@ -66,7 +67,7 @@ impl Parser {
 
     drop(name_parts);
 
-    let mut author = Author {
+    let mut author = ast::Author {
       first_name,
       middle_name,
       last_name,
@@ -91,7 +92,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-  use crate::parse::ast::Author;
+  use crate::ast;
   use crate::t::*;
 
   #[test]
@@ -124,13 +125,13 @@ mod tests {
       let (line, mut parser) = line_test(input);
       let expected_authors = authors
         .iter()
-        .map(|(first, middle, last, email)| Author {
+        .map(|(first, middle, last, email)| ast::Author {
           first_name: s(first),
           middle_name: middle.map(s),
           last_name: s(last),
           email: email.map(s),
         })
-        .collect::<Vec<Author>>();
+        .collect::<Vec<ast::Author>>();
       let mut authors = Vec::new();
       parser.parse_author_line(line, &mut authors).unwrap();
       assert_eq!(authors, expected_authors);

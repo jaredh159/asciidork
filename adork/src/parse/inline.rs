@@ -1,19 +1,9 @@
-use crate::parse::line::Line;
+use crate::ast;
 use crate::parse::Parser;
-use crate::token::{Token, TokenType::*};
-
-// An inline element is a span of content within a block element or one of its attributes (e.g., a block title). Inline elements include formatted text (italic, bold, etc), inline macros, and element references. What fills in the gap between these elements is unsubstituted text. Inline elements are less structured than block elements as they are more geared towards substitutions than a tree structure.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Inline {
-  Text(String),
-  Bold(Vec<Inline>),
-  Italic(Vec<Inline>),
-  Mono(String),
-  LitMono(String),
-}
+use crate::tok::{self, Token, TokenType::*};
 
 impl Parser {
-  pub(super) fn parse_inlines(&self, mut line: Line) -> Vec<Inline> {
+  pub(super) fn parse_inlines(&self, mut line: tok::Line) -> Vec<ast::Inline> {
     let mut inlines = Vec::new();
     loop {
       match line.consume_current() {
@@ -24,7 +14,7 @@ impl Parser {
     inlines
   }
 
-  fn gather_words(&self, first: &Token, line: &mut Line) -> Inline {
+  fn gather_words(&self, first: &Token, line: &mut tok::Line) -> ast::Inline {
     let mut text = self.lexeme_string(first);
     loop {
       match line.current_token() {
@@ -34,18 +24,19 @@ impl Parser {
       };
       line.next();
     }
-    Inline::Text(text)
+    ast::Inline::Text(text)
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::{parse::inline::Inline, t};
+  use crate::ast;
+  use crate::t;
 
   #[test]
   fn test_parse_inlines() {
     let (line, parser) = t::line_test("foo   bar\n");
     let inlines = parser.parse_inlines(line);
-    assert_eq!(inlines, vec![Inline::Text("foo bar".to_string())]);
+    assert_eq!(inlines, vec![ast::Inline::Text("foo bar".to_string())]);
   }
 }
