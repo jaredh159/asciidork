@@ -244,7 +244,9 @@ impl Lexer {
 
   fn word(&mut self) -> Token {
     let start = self.index;
-    self.advance_until_one_of(&[b' ', b'\t', b'\n', b':', b';', b'<', b'>', b',']);
+    self.advance_until_one_of(&[
+      b' ', b'\t', b'\n', b':', b';', b'<', b'>', b',', b'^', b'_', b'~', b'*',
+    ]);
     self.advance();
     Token::new(Word, start, self.index)
   }
@@ -277,6 +279,10 @@ impl Iterator for Lexer {
       b'<' => self.single(LessThan),
       b'>' => self.single(GreaterThan),
       b',' => self.single(Comma),
+      b'^' => self.single(Caret),
+      b'~' => self.single(Tilde),
+      b'_' => self.single(Underscore),
+      b'*' => self.single(Star),
       _ => self.word(),
     };
     Some(token)
@@ -339,8 +345,18 @@ mod tests {
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
       (
-        "foo;bar,",
-        vec![(Word, "foo"), (SemiColon, ";"), (Word, "bar"), (Comma, ",")],
+        "foo;bar,lol^~_*",
+        vec![
+          (Word, "foo"),
+          (SemiColon, ";"),
+          (Word, "bar"),
+          (Comma, ","),
+          (Word, "lol"),
+          (Caret, "^"),
+          (Tilde, "~"),
+          (Underscore, "_"),
+          (Star, "*"),
+        ],
       ),
       (
         "Foobar\n\n",
@@ -425,7 +441,6 @@ mod tests {
         let expected_token = Token::new(token_type, start, end);
         assert_eq!(lexer.next(), Some(expected_token.clone()));
         assert_eq!(lexer.lexeme(&expected_token), lexeme);
-        print!("{}", lexeme);
         index = end;
       }
       assert_eq!(lexer.next(), None);

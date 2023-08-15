@@ -1,4 +1,4 @@
-use super::{Block, Section};
+use super::{Block, BlockContext, Section};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocContent {
@@ -10,6 +10,22 @@ pub enum DocContent {
 }
 
 impl DocContent {
+  pub fn push_block(&mut self, block: Block) {
+    match block.context {
+      BlockContext::Section(section) => {
+        self.ensure_sectioned();
+        match self {
+          DocContent::Sectioned { sections, .. } => sections.push(section),
+          _ => unreachable!(),
+        }
+      }
+      _ => match self {
+        DocContent::Blocks(blocks) => blocks.push(block),
+        _ => unreachable!(),
+      },
+    }
+  }
+
   pub fn is_sectioned(&self) -> bool {
     match self {
       DocContent::Sectioned { .. } => true,

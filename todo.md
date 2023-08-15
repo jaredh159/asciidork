@@ -1,5 +1,8 @@
 ## todo
 
+- [ ] basic multi-byte char test
+- [ ] poc, non-corner-painting backend/interpreter
+- [ ] poc, non-corner-painting wasm
 - [ ] attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example

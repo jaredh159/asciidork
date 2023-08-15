@@ -120,8 +120,14 @@ mod tests {
         (s("url-repo"), s("https://my-git-repo.com")),
       ]),
     };
+    let expected_body = vec![ast::Block {
+      context: ast::BlockContext::Paragraph(vec![ast::Inline::Text(s(
+        "The document body starts here.",
+      ))]),
+    }];
 
     let document = doc_test(input);
     assert_eq!(document.header, Some(expected_header));
+    assert_eq!(document.content, ast::DocContent::Blocks(expected_body));
   }
 }

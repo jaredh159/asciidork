@@ -7,6 +7,7 @@ pub struct Token {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenType {
+  Caret,
   Colon,
   Comma,
   CommentBlock,
@@ -16,6 +17,9 @@ pub enum TokenType {
   LessThan,
   Newline,
   SemiColon,
+  Star,
+  Tilde,
+  Underscore,
   Whitespace,
   Word,
 }

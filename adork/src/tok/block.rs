@@ -75,3 +75,9 @@ impl Block {
     self.lines.get(n)
   }
 }
+
+impl From<Line> for Block {
+  fn from(line: Line) -> Self {
+    Block::new(vec![line].into())
+  }
+}

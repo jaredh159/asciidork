@@ -1,4 +1,4 @@
-use super::Section;
+use super::{Inline, Section};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Block {
@@ -20,7 +20,7 @@ pub enum BlockContext {
   OrderedList,
   Open,
   PageBreak,
-  Paragraph,
+  Paragraph(Vec<Inline>),
   Passthrough,
   BlockQuote,
   Section(Section),

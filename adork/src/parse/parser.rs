@@ -53,14 +53,9 @@ impl Parser {
   pub fn parse(mut self) -> CoreResult<ParseResult, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
 
-    // while let Some(block) = self.read_block() {
-    //   if block.starts_section() {
-    //     self.document.content.ensure_sectioned();
-    //     self.parse_section(block)?;
-    //   } else {
-    //     self.parse_block(block)?;
-    //   }
-    // }
+    while let Some(block) = self.parse_block()? {
+      self.document.content.push_block(block);
+    }
 
     Ok(ParseResult {
       document: self.document,

@@ -10,7 +10,7 @@ mod tok;
 
 #[cfg(test)]
 mod t {
-  use crate::ast::Document;
+  use crate::ast;
   use crate::parse::Parser;
   use crate::tok;
 
@@ -26,12 +26,17 @@ mod t {
     (block, parser)
   }
 
-  pub fn doc_test(input: &'static str) -> Document {
+  pub fn doc_test(input: &'static str) -> ast::Document {
     Parser::from(input).parse().unwrap().document
   }
 
   /// test helper, converts &str -> String
   pub fn s(input: &str) -> String {
     input.to_string()
+  }
+
+  /// test helper, converts &str -> Inline::Text
+  pub fn t(input: &str) -> ast::Inline {
+    ast::Inline::Text(s(input))
   }
 }

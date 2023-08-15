@@ -36,6 +36,38 @@ impl Line {
     self.tokens.len() == 0 || (self.tokens.len() == 1 && self.tokens[0].is(Newline))
   }
 
+  /// true if there is no whitespace until token type, and token type is found
+  pub fn is_continuous_thru(&self, token_type: TokenType) -> bool {
+    for token in &self.tokens {
+      println!(
+        "is_continuous_thru: token: {:?} {}",
+        token.token_type,
+        self.tokens.len()
+      );
+      if token.is(token_type) {
+        return true;
+      } else if token.is(Whitespace) {
+        return false;
+      } else {
+        continue;
+      }
+    }
+    false
+  }
+
+  pub fn extract_until(&mut self, token_type: TokenType) -> Line {
+    let mut tokens = VecDeque::new();
+    while let Some(token) = self.consume_current() {
+      if token.is(token_type) {
+        self.tokens.push_front(token);
+        break;
+      } else {
+        tokens.push_back(token);
+      }
+    }
+    Line::new(tokens.into())
+  }
+
   pub fn remove_all(&mut self, token_type: TokenType) {
     self.tokens.retain(|token| !token.is(token_type))
   }
