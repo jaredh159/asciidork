@@ -3,10 +3,6 @@ use std::collections::VecDeque;
 use super::line::Line;
 use crate::tok::TokenType;
 
-// tuesday jared 👍
-// move Line, Block into tok::Line, tok::Block
-// move parse into parse/mod.rs, extract `core`
-
 #[derive(Debug)]
 pub struct Block {
   pub lines: VecDeque<Line>,
@@ -22,7 +18,7 @@ impl Iterator for Block {
 
 impl Block {
   pub fn new(lines: VecDeque<Line>) -> Block {
-    assert!(lines.len() > 0);
+    assert!(!lines.is_empty());
     Block { lines }
   }
 
@@ -34,8 +30,8 @@ impl Block {
     self.lines.front()
   }
 
-  pub fn starts_section(&self) -> bool {
-    false // TODO
+  pub fn current_line_mut(&mut self) -> Option<&mut Line> {
+    self.lines.front_mut()
   }
 
   pub fn is_empty(&self) -> bool {

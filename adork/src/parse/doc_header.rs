@@ -71,13 +71,11 @@ impl Parser {
 
 pub fn is_doc_header(block: &tok::Block) -> bool {
   for line in &block.lines {
-    if line.is_header(1) {
-      return true;
-    } else if line.starts_with_seq(&[Colon, Word, Colon]) {
+    if line.is_header(1) || line.starts_with_seq(&[Colon, Word, Colon]) {
       return true;
     }
   }
-  return false;
+  false
 }
 
 // tests

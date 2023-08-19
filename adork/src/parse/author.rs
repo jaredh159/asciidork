@@ -45,20 +45,17 @@ impl Parser {
     if name_parts.len() < 2 {
       self.err(
         "author name must have at least first and last name",
-        name_parts
-          .first()
-          .map(|token| *token)
-          .or_else(|| line.current_token()),
+        name_parts.first().copied(),
       )?;
     }
 
-    let first_name = self.lexeme_string(&name_parts[0]);
+    let first_name = self.lexeme_string(name_parts[0]);
     let last_name = self.lexeme_string(name_parts.last().unwrap());
     let middle_name = if name_parts.len() > 2 {
-      let mut middle = self.lexeme_string(&name_parts[1]);
+      let mut middle = self.lexeme_string(name_parts[1]);
       for i in 2..name_parts.len() - 1 {
         middle.push(' ');
-        middle.push_str(&self.lexeme_string(&name_parts[i]));
+        middle.push_str(&self.lexeme_string(name_parts[i]));
       }
       Some(middle)
     } else {
@@ -97,6 +94,7 @@ mod tests {
 
   #[test]
   fn test_parse_author_lines() {
+    #[allow(clippy::type_complexity)]
     let cases: Vec<(&str, Vec<(&str, Option<&str>, &str, Option<&str>)>)> = vec![
       ("Bob L. Foo", vec![("Bob", Some("L."), "Foo", None)]),
       ("Bob Foo", vec![("Bob", None, "Foo", None)]),

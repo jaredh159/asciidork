@@ -26,11 +26,7 @@ pub enum TokenType {
 
 impl Token {
   pub fn new(token_type: TokenType, start: usize, end: usize) -> Token {
-    Token {
-      token_type,
-      start,
-      end,
-    }
+    Token { token_type, start, end }
   }
 
   pub fn empty() -> Token {
@@ -51,6 +47,19 @@ impl Token {
 
   pub fn is_len(&self, token_type: TokenType, len: usize) -> bool {
     self.token_type == token_type && self.end - self.start == len
+  }
+
+  pub fn print(&self, parser: &crate::parse::Parser) {
+    println!(
+      "token lexeme: `{}` type: {:?}",
+      parser.lexeme_str(self),
+      self.token_type
+    );
+  }
+
+  pub fn print_with(&self, prefix: &str, parser: &crate::parse::Parser) {
+    print!("{} ", prefix);
+    self.print(parser);
   }
 }
 

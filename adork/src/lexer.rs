@@ -253,12 +253,9 @@ impl Lexer {
 
   fn starts_comment(&self) -> bool {
     if self.prev != b'\n' && self.prev != b'\0' {
-      false
-    } else if self.peek != Some(b'/') {
-      false
-    } else {
-      true
+      return false;
     }
+    self.peek == Some(b'/')
   }
 }
 
@@ -266,10 +263,7 @@ impl Iterator for Lexer {
   type Item = Token;
 
   fn next(&mut self) -> Option<Self::Item> {
-    if self.current.is_none() {
-      return None;
-    }
-    let token = match self.current.unwrap() {
+    let token = match self.current? {
       b'=' => self.repeating(b'=', EqualSigns),
       b' ' | b'\t' => self.whitespace(),
       b'/' if self.starts_comment() => self.comment(),

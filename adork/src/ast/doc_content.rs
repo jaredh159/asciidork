@@ -27,10 +27,7 @@ impl DocContent {
   }
 
   pub fn is_sectioned(&self) -> bool {
-    match self {
-      DocContent::Sectioned { .. } => true,
-      _ => false,
-    }
+    matches!(self, DocContent::Sectioned { .. })
   }
 
   pub fn ensure_sectioned(&mut self) {

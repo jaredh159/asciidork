@@ -54,7 +54,7 @@ impl Parser {
       *revision = Some(Revision {
         version,
         date: None,
-        remark: Some(line.to_string(self)),
+        remark: Some(line.consume_to_string(self)),
       });
       return;
     }
@@ -63,20 +63,20 @@ impl Parser {
     if !line.contains(Colon) {
       *revision = Some(Revision {
         version,
-        date: Some(line.to_string(self)),
+        date: Some(line.consume_to_string(self)),
         remark: None,
       });
       return;
     }
 
     // version, date, and remark
-    let date = line.to_string_until(Colon, self);
+    let date = line.consume_to_string_until(Colon, self);
     line.consume_current(); // colon
     line.consume_if(Whitespace);
     *revision = Some(Revision {
       version,
       date: Some(date),
-      remark: Some(line.to_string(self)),
+      remark: Some(line.consume_to_string(self)),
     });
   }
 }

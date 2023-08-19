@@ -19,10 +19,7 @@ impl Source {
   pub fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
     match self {
       Source::File { ref mut file, .. } => file.read(buf),
-      Source::Bytes {
-        ref bytes,
-        ref mut location,
-      } => {
+      Source::Bytes { ref bytes, ref mut location } => {
         let bytes = &bytes[*location..];
         let len = bytes.len().min(buf.len());
         buf[..len].copy_from_slice(&bytes[..len]);

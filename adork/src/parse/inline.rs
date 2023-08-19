@@ -1,27 +1,56 @@
-use crate::ast::Inline;
+use crate::ast::Inline::{self, *};
 use crate::parse::Parser;
 use crate::tok::{self, Token, TokenType::*};
 
 impl Parser {
-  pub(super) fn parse_inlines<B>(&self, block: B) -> Vec<Inline>
-  where
-    B: Into<tok::Block>,
-  {
-    let mut block: tok::Block = block.into();
+  fn parse_inlines_until<const N: usize>(
+    &self,
+    block: &mut tok::Block,
+    stop_tokens: [tok::TokenType; N],
+  ) -> Vec<Inline> {
     let mut inlines = Vec::new();
     let mut text = Text::new();
 
     while let Some(mut line) = block.consume_current() {
       loop {
+        if line.starts_with_seq(&stop_tokens) {
+          line.consume::<N>();
+          text.commit(&mut inlines);
+          if !line.is_empty() {
+            block.lines.push_front(line);
+          }
+          return inlines;
+        }
+
         match line.consume_current() {
           Some(token) if token.is(Whitespace) => text.push_str(" "),
+
           Some(token) if token.is(Caret) && line.is_continuous_thru(Caret) => {
             text.commit(&mut inlines);
-            let superscript = line.extract_until(Caret);
-            inlines.push(Inline::Superscript(self.parse_inlines(superscript)));
-            line.consume_current(); // consume the second caret
+            block.lines.push_front(line);
+            inlines.push(Superscript(self.parse_inlines_until(block, [Caret])));
+            break;
           }
+
+          Some(token) if token.is(Tilde) && line.is_continuous_thru(Tilde) => {
+            text.commit(&mut inlines);
+            block.lines.push_front(line);
+            inlines.push(Subscript(self.parse_inlines_until(block, [Tilde])));
+            break;
+          }
+
+          Some(token) if token.is(Underscore) && line.current_is(Underscore) => {
+            line.consume_current();
+            text.commit(&mut inlines);
+            block.lines.push_front(line);
+            inlines.push(Italic(
+              self.parse_inlines_until(block, [Underscore, Underscore]),
+            ));
+            break;
+          }
+
           Some(token) => text.push_token(&token, self),
+
           None => {
             text.push_str(" "); // join lines with space
             break;
@@ -36,12 +65,20 @@ impl Parser {
     inlines
   }
 
+  pub(super) fn parse_inlines<B>(&self, block: B) -> Vec<Inline>
+  where
+    B: Into<tok::Block>,
+  {
+    let mut block: tok::Block = block.into();
+    self.parse_inlines_until(&mut block, [])
+  }
+
   fn gather_words(&self, first: &Token, line: &mut tok::Line) -> Inline {
     let mut text = self.lexeme_string(first);
     loop {
       match line.current_token() {
         Some(token) if token.is(Word) => text.push_str(self.lexeme_str(token)),
-        Some(token) if token.is(Whitespace) => text.push_str(" "),
+        Some(token) if token.is(Whitespace) => text.push(' '),
         _ => break,
       };
       line.next();
@@ -91,9 +128,18 @@ mod tests {
   #[test]
   fn test_parse_inlines() {
     let cases = vec![
+      // ("foo _bar_", vec![t("foo "), Italic(vec![t("bar")])]),
+      (
+        "foo __ba__r",
+        vec![t("foo "), Italic(vec![t("ba")]), t("r")],
+      ),
       ("foo ^bar^", vec![t("foo "), Superscript(vec![t("bar")])]),
       ("foo ^bar", vec![t("foo ^bar")]),
       ("foo bar^", vec![t("foo bar^")]),
+      (
+        "foo ~bar~ baz",
+        vec![t("foo "), Subscript(vec![t("bar")]), t(" baz")],
+      ),
       ("foo   bar\n", vec![t("foo bar")]),
       ("foo bar", vec![t("foo bar")]),
       ("foo   bar\nbaz", vec![t("foo bar baz")]),

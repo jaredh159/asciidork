@@ -12,7 +12,7 @@ impl Parser {
     // is it some kind of compound, delimited block?
     //   --> return self.parse_X()
 
-    return self.parse_paragraph();
+    self.parse_paragraph()
   }
 
   fn parse_paragraph(&mut self) -> Result<Option<ast::Block>> {
