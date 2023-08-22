@@ -34,8 +34,16 @@ impl Block {
     self.lines.front_mut()
   }
 
+  pub fn restore(&mut self, line: Line) {
+    self.lines.push_front(line);
+  }
+
   pub fn is_empty(&self) -> bool {
     self.lines.len() == 0
+  }
+
+  pub fn contains_seq(&self, token_types: &[TokenType]) -> bool {
+    self.lines.iter().any(|line| line.contains_seq(token_types))
   }
 
   pub fn current_line_starts_with(&self, token_type: TokenType) -> bool {

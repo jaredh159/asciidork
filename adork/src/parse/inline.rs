@@ -1,12 +1,20 @@
 use crate::ast::Inline::{self, *};
 use crate::parse::Parser;
-use crate::tok::{self, Token, TokenType::*};
+use crate::tok::{self, Token, TokenType, TokenType::*};
 
 impl Parser {
+  pub(super) fn parse_inlines<B>(&self, block: B) -> Vec<Inline>
+  where
+    B: Into<tok::Block>,
+  {
+    let mut block: tok::Block = block.into();
+    self.parse_inlines_until(&mut block, [])
+  }
+
   fn parse_inlines_until<const N: usize>(
     &self,
     block: &mut tok::Block,
-    stop_tokens: [tok::TokenType; N],
+    stop_tokens: [TokenType; N],
   ) -> Vec<Inline> {
     let mut inlines = Vec::new();
     let mut text = Text::new();
@@ -17,7 +25,7 @@ impl Parser {
           line.consume::<N>();
           text.commit(&mut inlines);
           if !line.is_empty() {
-            block.lines.push_front(line);
+            block.restore(line);
           }
           return inlines;
         }
@@ -27,25 +35,45 @@ impl Parser {
 
           Some(token) if token.is(Caret) && line.is_continuous_thru(Caret) => {
             text.commit(&mut inlines);
-            block.lines.push_front(line);
+            block.restore(line);
             inlines.push(Superscript(self.parse_inlines_until(block, [Caret])));
             break;
           }
 
           Some(token) if token.is(Tilde) && line.is_continuous_thru(Tilde) => {
             text.commit(&mut inlines);
-            block.lines.push_front(line);
+            block.restore(line);
             inlines.push(Subscript(self.parse_inlines_until(block, [Tilde])));
             break;
           }
 
-          Some(token) if token.is(Underscore) && line.current_is(Underscore) => {
-            line.consume_current();
-            text.commit(&mut inlines);
-            block.lines.push_front(line);
-            inlines.push(Italic(
-              self.parse_inlines_until(block, [Underscore, Underscore]),
-            ));
+          Some(token) if starts_unconstrained(Underscore, &token, &line, block) => {
+            self.parse_unconstrained(Underscore, Italic, &mut text, &mut inlines, line, block);
+            break;
+          }
+
+          Some(token) if starts_constrained(Underscore, &token, &line) => {
+            self.parse_constrained(Underscore, Italic, &mut text, &mut inlines, line, block);
+            break;
+          }
+
+          Some(token) if starts_unconstrained(Star, &token, &line, block) => {
+            self.parse_unconstrained(Star, Bold, &mut text, &mut inlines, line, block);
+            break;
+          }
+
+          Some(token) if starts_constrained(Star, &token, &line) => {
+            self.parse_constrained(Star, Bold, &mut text, &mut inlines, line, block);
+            break;
+          }
+
+          Some(token) if starts_unconstrained(Backtick, &token, &line, block) => {
+            self.parse_unconstrained(Backtick, Mono, &mut text, &mut inlines, line, block);
+            break;
+          }
+
+          Some(token) if starts_constrained(Backtick, &token, &line) => {
+            self.parse_constrained(Backtick, Mono, &mut text, &mut inlines, line, block);
             break;
           }
 
@@ -65,26 +93,49 @@ impl Parser {
     inlines
   }
 
-  pub(super) fn parse_inlines<B>(&self, block: B) -> Vec<Inline>
-  where
-    B: Into<tok::Block>,
-  {
-    let mut block: tok::Block = block.into();
-    self.parse_inlines_until(&mut block, [])
+  fn parse_unconstrained(
+    &self,
+    token_type: TokenType,
+    wrap: fn(Vec<Inline>) -> Inline,
+    text: &mut Text,
+    inlines: &mut Vec<Inline>,
+    mut line: tok::Line,
+    block: &mut tok::Block,
+  ) {
+    line.consume::<1>(); // second token
+    text.commit(inlines);
+    block.restore(line);
+    inlines.push(wrap(self.parse_inlines_until(block, [token_type; 2])));
   }
 
-  fn gather_words(&self, first: &Token, line: &mut tok::Line) -> Inline {
-    let mut text = self.lexeme_string(first);
-    loop {
-      match line.current_token() {
-        Some(token) if token.is(Word) => text.push_str(self.lexeme_str(token)),
-        Some(token) if token.is(Whitespace) => text.push(' '),
-        _ => break,
-      };
-      line.next();
-    }
-    Inline::Text(text)
+  fn parse_constrained(
+    &self,
+    token_type: TokenType,
+    wrap: fn(Vec<Inline>) -> Inline,
+    text: &mut Text,
+    inlines: &mut Vec<Inline>,
+    line: tok::Line,
+    block: &mut tok::Block,
+  ) {
+    text.commit(inlines);
+    block.restore(line);
+    inlines.push(wrap(self.parse_inlines_until(block, [token_type; 1])));
   }
+}
+
+fn starts_constrained(token_type: TokenType, token: &Token, line: &tok::Line) -> bool {
+  token.is(token_type) && line.ends_constrained_inline(token_type)
+}
+
+fn starts_unconstrained(
+  token_type: TokenType,
+  token: &Token,
+  line: &tok::Line,
+  block: &tok::Block,
+) -> bool {
+  token.is(token_type)
+    && line.current_is(token_type)
+    && (line.contains_seq(&[token_type; 2]) || block.contains_seq(&[token_type; 2]))
 }
 
 struct Text(Option<String>);
@@ -128,11 +179,20 @@ mod tests {
   #[test]
   fn test_parse_inlines() {
     let cases = vec![
-      // ("foo _bar_", vec![t("foo "), Italic(vec![t("bar")])]),
+      (
+        "`*_foo_*`",
+        vec![Mono(vec![Bold(vec![Italic(vec![t("foo")])])])],
+      ),
+      ("foo _bar_", vec![t("foo "), Italic(vec![t("bar")])]),
+      ("foo *bar*", vec![t("foo "), Bold(vec![t("bar")])]),
+      ("foo `bar`", vec![t("foo "), Mono(vec![t("bar")])]),
       (
         "foo __ba__r",
         vec![t("foo "), Italic(vec![t("ba")]), t("r")],
       ),
+      ("foo **ba**r", vec![t("foo "), Bold(vec![t("ba")]), t("r")]),
+      ("foo ``ba``r", vec![t("foo "), Mono(vec![t("ba")]), t("r")]),
+      ("foo __bar", vec![t("foo __bar")]),
       ("foo ^bar^", vec![t("foo "), Superscript(vec![t("bar")])]),
       ("foo ^bar", vec![t("foo ^bar")]),
       ("foo bar^", vec![t("foo bar^")]),

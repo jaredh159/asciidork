@@ -1,6 +1,12 @@
 _default:
   @just --choose
 
+check:
+  @cargo check
+  @cargo clippy
+  @cargo fmt -- --check
+  @cargo test --all --no-fail-fast
+  @cargo build
 
 watch-print-ast file:
   @watchexec --no-vcs-ignore --restart --clear --watch adork/src --watch adork-cli/src --watch {{file}} cargo run print-ast {{file}}

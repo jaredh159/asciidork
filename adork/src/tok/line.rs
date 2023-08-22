@@ -169,6 +169,45 @@ impl Line {
     false
   }
 
+  pub fn contains_seq(&self, token_types: &[TokenType]) -> bool {
+    if self.tokens.len() < token_types.len() {
+      return false;
+    }
+    let Some(first_type) = token_types.first() else {
+      return false;
+    };
+    'outer: for (i, token) in self.tokens.iter().enumerate() {
+      if token.token_type == *first_type {
+        if self.tokens.len() - i < token_types.len() {
+          return false;
+        }
+        for (j, token_type) in token_types.iter().skip(1).enumerate() {
+          if self.tokens[i + j + 1].token_type != *token_type {
+            continue 'outer;
+          }
+        }
+        return true;
+      }
+    }
+    false
+  }
+
+  pub fn ends_constrained_inline(&self, token_type: TokenType) -> bool {
+    if self.tokens.is_empty() {
+      return false;
+    }
+    for (i, token) in self.tokens.iter().enumerate() {
+      if token.token_type == token_type {
+        return match self.tokens.get(i + 1) {
+          Some(token) if !token.is(Word) => true,
+          None => true,
+          _ => false,
+        };
+      }
+    }
+    false
+  }
+
   pub fn starts_with_one_of(&self, token_types: &[TokenType]) -> bool {
     for token_type in token_types {
       if self.starts(*token_type) {
@@ -233,5 +272,30 @@ impl Line {
   pub fn print_with(&self, prefix: &str, parser: &Parser) {
     print!("{} ", prefix);
     self.print(parser);
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::t::*;
+
+  #[test]
+  fn test_line_contains_seq() {
+    let cases: Vec<(&str, &[TokenType], bool)> = vec![
+      ("_bar__r", &[Underscore, Underscore], true),
+      ("foo bar_:", &[Word, Whitespace], true),
+      ("foo bar_:", &[Word, Whitespace, Word], true),
+      ("foo bar_:", &[Word], true),
+      ("foo bar_:", &[], false),
+      ("foo bar_:", &[Underscore, Colon], true),
+      ("foo bar_:", &[Underscore, Word], false),
+      ("foo bar_:", &[Whitespace, Word, Underscore], true),
+      ("foo ", &[Word, Whitespace, Underscore, Colon], false),
+    ];
+    for (input, token_types, expected) in cases {
+      let (line, _) = line_test(input);
+      assert_eq!(line.contains_seq(token_types), expected);
+    }
   }
 }

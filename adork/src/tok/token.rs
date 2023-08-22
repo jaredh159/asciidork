@@ -7,11 +7,14 @@ pub struct Token {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenType {
+  Backtick,
+  Bang,
   Caret,
   Colon,
   Comma,
   CommentBlock,
   CommentLine,
+  Dot,
   EqualSigns,
   GreaterThan,
   LessThan,
