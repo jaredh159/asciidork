@@ -246,7 +246,7 @@ impl Lexer {
     let start = self.index;
     // TODO: dot should end word, but breaks tests currently
     self.advance_until_one_of(&[
-      b' ', b'\t', b'\n', b':', b';', b'<', b'>', b',', b'^', b'_', b'~', b'*', b'!', b'`',
+      b' ', b'\t', b'\n', b':', b';', b'<', b'>', b',', b'^', b'_', b'~', b'*', b'!', b'`', b'+',
     ]);
     self.advance();
     Token::new(Word, start, self.index)
@@ -281,6 +281,7 @@ impl Iterator for Lexer {
       b'.' => self.single(Dot),
       b'!' => self.single(Bang),
       b'`' => self.single(Backtick),
+      b'+' => self.single(Plus),
       _ => self.word(),
     };
     Some(token)
@@ -343,7 +344,7 @@ mod tests {
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
       (
-        "foo;bar,lol^~_*.!`",
+        "foo;bar,lol^~_*.!`+",
         vec![
           (Word, "foo"),
           (SemiColon, ";"),
@@ -357,6 +358,7 @@ mod tests {
           (Dot, "."),
           (Bang, "!"),
           (Backtick, "`"),
+          (Plus, "+"),
         ],
       ),
       (

@@ -19,6 +19,7 @@ pub enum TokenType {
   GreaterThan,
   LessThan,
   Newline,
+  Plus,
   SemiColon,
   Star,
   Tilde,

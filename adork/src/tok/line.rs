@@ -28,11 +28,6 @@ impl Line {
   /// true if there is no whitespace until token type, and token type is found
   pub fn is_continuous_thru(&self, token_type: TokenType) -> bool {
     for token in &self.tokens {
-      println!(
-        "is_continuous_thru: token: {:?} {}",
-        token.token_type,
-        self.tokens.len()
-      );
       if token.is(token_type) {
         return true;
       } else if token.is(Whitespace) {
@@ -84,6 +79,12 @@ impl Line {
     match self.current_token() {
       Some(token) if !token.is(token_type) => self.consume_current(),
       _ => None,
+    }
+  }
+
+  pub fn discard(&mut self, n: usize) {
+    for _ in 0..n {
+      self.consume_current();
     }
   }
 

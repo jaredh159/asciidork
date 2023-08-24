@@ -22,7 +22,7 @@ impl Parser {
     while let Some(mut line) = block.consume_current() {
       loop {
         if line.starts_with_seq(&stop_tokens) {
-          line.consume::<N>();
+          line.discard(N);
           text.commit(&mut inlines);
           if !line.is_empty() {
             block.restore(line);
@@ -44,6 +44,18 @@ impl Parser {
             text.commit(&mut inlines);
             block.restore(line);
             inlines.push(Subscript(self.parse_inlines_until(block, [Tilde])));
+            break;
+          }
+
+          Some(token)
+            if token.is(Backtick)
+              && line.current_is(Plus)
+              && contains_seq(&[Plus, Backtick], &line, block) =>
+          {
+            line.discard(1);
+            text.commit(&mut inlines);
+            block.restore(line);
+            inlines.push(LitMono(self.unsubstituted_until(block, &[Plus, Backtick])));
             break;
           }
 
@@ -121,6 +133,27 @@ impl Parser {
     block.restore(line);
     inlines.push(wrap(self.parse_inlines_until(block, [token_type; 1])));
   }
+
+  fn unsubstituted_until(&self, block: &mut tok::Block, stop_tokens: &[TokenType]) -> String {
+    let mut unsubstituted = String::new();
+    while let Some(mut line) = block.consume_current() {
+      loop {
+        if line.starts_with_seq(stop_tokens) {
+          line.discard(stop_tokens.len());
+          if !line.is_empty() {
+            block.restore(line);
+          }
+          return unsubstituted;
+        }
+
+        match line.consume_current() {
+          Some(token) => unsubstituted.push_str(self.lexeme_str(&token)),
+          None => unsubstituted.push('\n'),
+        }
+      }
+    }
+    unsubstituted
+  }
 }
 
 fn starts_constrained(token_type: TokenType, token: &Token, line: &tok::Line) -> bool {
@@ -133,9 +166,11 @@ fn starts_unconstrained(
   line: &tok::Line,
   block: &tok::Block,
 ) -> bool {
-  token.is(token_type)
-    && line.current_is(token_type)
-    && (line.contains_seq(&[token_type; 2]) || block.contains_seq(&[token_type; 2]))
+  token.is(token_type) && line.current_is(token_type) && contains_seq(&[token_type; 2], line, block)
+}
+
+fn contains_seq(seq: &[TokenType], line: &tok::Line, block: &tok::Block) -> bool {
+  line.contains_seq(seq) || block.contains_seq(seq)
 }
 
 struct Text(Option<String>);
@@ -203,6 +238,8 @@ mod tests {
       ("foo   bar\n", vec![t("foo bar")]),
       ("foo bar", vec![t("foo bar")]),
       ("foo   bar\nbaz", vec![t("foo bar baz")]),
+      ("`+{name}+`", vec![LitMono(s("{name}"))]),
+      ("`+_foo_+`", vec![LitMono(s("_foo_"))]),
     ];
     for (input, expected) in cases {
       let (block, parser) = block_test(input);
