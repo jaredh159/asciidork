@@ -48,11 +48,15 @@ impl Lexer {
   }
 
   pub fn lexeme(&self, token: &Token) -> &str {
-    unsafe { std::str::from_utf8_unchecked(&self.source[token.start..token.end]) }
+    unsafe { str::from_utf8_unchecked(&self.source[token.start..token.end]) }
   }
 
   pub fn string(&self, token: &Token) -> String {
     self.lexeme(token).to_string()
+  }
+
+  pub fn get_str(&self, start: usize, end: usize) -> &str {
+    unsafe { str::from_utf8_unchecked(&self.source[start..end]) }
   }
 
   #[cfg(test)]
@@ -244,9 +248,9 @@ impl Lexer {
 
   fn word(&mut self) -> Token {
     let start = self.index;
-    // TODO: dot should end word, but breaks tests currently
     self.advance_until_one_of(&[
       b' ', b'\t', b'\n', b':', b';', b'<', b'>', b',', b'^', b'_', b'~', b'*', b'!', b'`', b'+',
+      b'.',
     ]);
     self.advance();
     Token::new(Word, start, self.index)
@@ -391,12 +395,15 @@ mod tests {
           (Newline, "\n"),
           (Word, "Kismet"),
           (Whitespace, " "),
-          (Word, "R."),
+          (Word, "R"),
+          (Dot, "."),
           (Whitespace, " "),
           (Word, "Lee"),
           (Whitespace, " "),
           (LessThan, "<"),
-          (Word, "kismet@asciidoctor.org"),
+          (Word, "kismet@asciidoctor"),
+          (Dot, "."),
+          (Word, "org"),
           (GreaterThan, ">"),
           (Newline, "\n"),
           (Colon, ":"),
@@ -407,7 +414,8 @@ mod tests {
           (Whitespace, " "),
           (Word, "document's"),
           (Whitespace, " "),
-          (Word, "description."),
+          (Word, "description"),
+          (Dot, "."),
           (Newline, "\n"),
           (Colon, ":"),
           (Word, "sectanchors"),
@@ -419,7 +427,9 @@ mod tests {
           (Whitespace, " "),
           (Word, "https"),
           (Colon, ":"),
-          (Word, "//my-git-repo.com"),
+          (Word, "//my-git-repo"),
+          (Dot, "."),
+          (Word, "com"),
           (Newline, "\n"),
           (Newline, "\n"),
           (Word, "The"),
@@ -430,7 +440,8 @@ mod tests {
           (Whitespace, " "),
           (Word, "starts"),
           (Whitespace, " "),
-          (Word, "here."),
+          (Word, "here"),
+          (Dot, "."),
           (Newline, "\n"),
         ],
       ),

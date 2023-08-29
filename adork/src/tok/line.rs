@@ -106,6 +106,15 @@ impl Line {
     }
   }
 
+  pub fn discard_leading_whitespace(&mut self) {
+    while let Some(token) = self.current_token() {
+      if token.is(Whitespace) {
+        self.consume_current();
+      } else {
+        break;
+      }
+    }
+  }
   pub fn peek_token_is(&self, token_type: TokenType) -> bool {
     match self.peek_token() {
       Some(token) => token.is(token_type),
@@ -274,12 +283,153 @@ impl Line {
     print!("{} ", prefix);
     self.print(parser);
   }
+
+  fn clump_at<'a>(
+    &'a self,
+    starting_token_index: usize,
+    stop_tokens: &[TokenType],
+    parser: &'a Parser,
+  ) -> Option<(Clump, usize)> {
+    let Some(first_token) = self.tokens.get(starting_token_index) else {
+        return None;
+      };
+    debug_assert!(first_token.token_type != Whitespace);
+    let start = first_token.start;
+    let mut end = first_token.end;
+    let mut token_index = starting_token_index + 1;
+    let mut num_tokens = 1;
+    loop {
+      match self.tokens.get(token_index) {
+        Some(token) if stop_tokens.contains(&token.token_type) => {
+          token_index += 1;
+          break;
+        }
+        Some(token) if token.token_type == Whitespace => {
+          token_index += 1;
+          break;
+        }
+        Some(token) => {
+          end = token.end;
+          token_index += 1;
+          num_tokens += 1;
+        }
+        None => break,
+      }
+    }
+
+    Some((
+      Clump::new(
+        parser.get_str(start, end),
+        starting_token_index,
+        starting_token_index + num_tokens,
+      ),
+      token_index,
+    ))
+  }
+
+  pub(crate) fn clump_until<'a>(
+    &'a self,
+    stop_tokens: &[TokenType],
+    parser: &'a Parser,
+  ) -> Option<Clump> {
+    if let Some((clump, _)) = self.clump_at(0, stop_tokens, parser) {
+      Some(clump)
+    } else {
+      None
+    }
+  }
+
+  pub(crate) fn clumps<'a>(&'a self, parser: &'a Parser) -> Vec<Clump> {
+    let mut token_index = 0;
+
+    // skip leading whitespace
+    loop {
+      match self.tokens.get(token_index) {
+        Some(token) if token.token_type == Whitespace => token_index += 1,
+        _ => break,
+      }
+    }
+
+    let mut clumps = Vec::new();
+    while let Some((clump, next_start)) = self.clump_at(token_index, &[], parser) {
+      clumps.push(clump);
+      token_index = next_start;
+    }
+
+    clumps
+  }
+
+  pub(crate) fn discard_clump(&mut self, clump: &Clump) {
+    self.tokens.drain(clump.start..clump.end);
+  }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Clump<'a> {
+  pub str: &'a str,
+  pub start: usize,
+  pub end: usize,
+}
+
+impl<'a> Clump<'a> {
+  fn new(str: &'a str, start: usize, end: usize) -> Self {
+    Self { str, start, end }
+  }
+
+  pub fn starts_with(&self, c: char) -> bool {
+    self.str.starts_with(c)
+  }
+
+  pub fn ends_with(&self, c: char) -> bool {
+    self.str.ends_with(c)
+  }
+
+  pub fn string(&self) -> String {
+    self.str.to_string()
+  }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
   use crate::t::*;
+
+  #[test]
+  fn test_clump_until() {
+    let cases: Vec<(&str, &[TokenType], Clump<'static>)> = vec![
+      ("foo bar", &[Comma], Clump::new("foo", 0, 1)),
+      ("foo; bar", &[Comma], Clump::new("foo;", 0, 2)),
+      ("foo, bar", &[Comma], Clump::new("foo", 0, 1)),
+      ("foo; bar", &[Comma, SemiColon], Clump::new("foo", 0, 1)),
+    ];
+    for (input, stop, expected) in cases {
+      let (line, parser) = line_test(input);
+      assert_eq!(line.clump_until(stop, &parser).unwrap(), expected);
+    }
+  }
+
+  #[test]
+  fn test_clumps() {
+    let cases: Vec<(&str, Vec<Clump<'static>>)> = vec![
+      (
+        "foo bar",
+        vec![Clump::new("foo", 0, 1), Clump::new("bar", 2, 3)],
+      ),
+      (
+        "foo b.r",
+        vec![Clump::new("foo", 0, 1), Clump::new("b.r", 2, 5)],
+      ),
+      (
+        " foo bar",
+        vec![Clump::new("foo", 1, 2), Clump::new("bar", 3, 4)],
+      ),
+      (" ", vec![]),
+    ];
+    for (input, expected) in cases {
+      let (line, parser) = line_test(input);
+      assert_eq!(line.clumps(&parser), expected);
+    }
+  }
 
   #[test]
   fn test_line_contains_seq() {

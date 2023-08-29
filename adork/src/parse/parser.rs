@@ -75,6 +75,10 @@ impl Parser {
     self.lexer.lexeme(token)
   }
 
+  pub(crate) fn get_str(&self, start: usize, end: usize) -> &str {
+    self.lexer.get_str(start, end)
+  }
+
   pub(super) fn expect_group<const N: usize>(
     &mut self,
     expected: [TokenType; N],

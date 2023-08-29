@@ -3,7 +3,7 @@ use smallvec::SmallVec;
 use super::Result;
 use crate::ast;
 use crate::parse::Parser;
-use crate::tok::{self, Token, TokenType::*};
+use crate::tok::{self, TokenType::*};
 
 impl Parser {
   /// if this function is called, the following invaraints hold:
@@ -32,37 +32,45 @@ impl Parser {
       return Ok(None);
     }
 
-    let mut name_parts = SmallVec::<[&Token; 3]>::new();
-    for token in &line.tokens {
-      match token {
-        token if token.is(Word) => name_parts.push(token),
-        token if token.is(SemiColon) => break,
-        token if token.is(LessThan) => break,
-        _ => {}
+    let clumps = line.clumps(self);
+    let mut name_parts = SmallVec::<[&tok::Clump; 6]>::new();
+    let mut remove_semicolon = false;
+    for clump in &clumps {
+      if clump.starts_with('<') {
+        break;
+      }
+      name_parts.push(clump);
+      if clump.ends_with(';') {
+        remove_semicolon = true;
+        break;
       }
     }
 
     if name_parts.len() < 2 {
+      drop(name_parts);
       self.err(
         "author name must have at least first and last name",
-        name_parts.first().copied(),
+        line.current_token(),
       )?;
+      return Ok(None); // TODO: is this correct?
     }
 
-    let first_name = self.lexeme_string(name_parts[0]);
-    let last_name = self.lexeme_string(name_parts.last().unwrap());
+    let first_name = name_parts[0].string();
+    let last_name_part = name_parts.last().unwrap();
+    let end_of_name = last_name_part.end;
+    let mut last_name = last_name_part.string();
+    if remove_semicolon {
+      last_name.pop();
+    }
     let middle_name = if name_parts.len() > 2 {
-      let mut middle = self.lexeme_string(name_parts[1]);
+      let mut middle = name_parts[1].string();
       for i in 2..name_parts.len() - 1 {
-        middle.push(' ');
-        middle.push_str(&self.lexeme_string(name_parts[i]));
+        middle.push_str(name_parts[i].str);
       }
       Some(middle)
     } else {
       None
     };
-
-    drop(name_parts);
 
     let mut author = ast::Author {
       first_name,
@@ -71,14 +79,17 @@ impl Parser {
       email: None,
     };
 
-    line.discard_until_one_of(&[LessThan, SemiColon]);
+    drop(name_parts);
+    line.discard(end_of_name);
+    line.discard_leading_whitespace();
 
-    if line.starts_with_seq(&[LessThan, Word, GreaterThan]) {
-      line.consume_current();
-      author.email = Some(self.lexeme_string(&line.consume_current().unwrap()));
-      line.consume_current();
+    if line.starts_with_seq(&[LessThan, Word]) && line.contains(GreaterThan) {
+      line.discard(1); // `<`
+      author.email = Some(line.consume_to_string_until(GreaterThan, self));
+      line.discard(1); // `>`
     }
 
+    line.print(self);
     if line.starts(SemiColon) {
       line.consume_current();
     }

@@ -4,7 +4,7 @@ use regex_macro::regex;
 
 use crate::ast::Revision;
 use crate::parse::Parser;
-use crate::tok::{self, TokenType::*};
+use crate::tok::{self, Clump, TokenType::*};
 
 impl Parser {
   pub(super) fn parse_revision_line(
@@ -16,22 +16,19 @@ impl Parser {
       return ;
     };
 
-    let Some(first_token) = line.current_token() else {
-      return ;
-    };
-
-    if !first_token.is(Word) {
+    if !line.current_is(Word) {
       return;
     }
 
-    let second_token = line.peek_token();
+    let Some(first_clump) = line.clump_until(&[Comma, Colon], self) else {
+      return ;
+    };
 
     // single word prefixed with 'v' is revision number
-    if second_token.is_none() {
-      let version = self.lexeme_str(first_token);
-      if version.starts_with('v') {
+    if line.tokens.len() == first_clump.end {
+      if first_clump.starts_with('v') {
         *revision = Some(Revision {
-          version: trim_version(version).to_string(),
+          version: first_clump.to_version(),
           date: None,
           remark: None,
         });
@@ -40,14 +37,18 @@ impl Parser {
       return;
     }
 
-    if !line.nth_token_one_of(1, &[Colon, Comma]) || !line.nth_token_is(2, Whitespace) {
+    if !line.nth_token_one_of(first_clump.end, &[Colon, Comma])
+      || !line.nth_token_is(first_clump.end + 1, Whitespace)
+    {
       return;
     }
 
-    // we know we have a valid revision live, consume the line
+    let version = first_clump.to_version();
+    let delimiter_offset = first_clump.end;
+    // we know we have a valid revision line, consume the line
     let mut line = block.consume_current().unwrap();
-    let version = trim_version(self.lexeme_str(&line.consume_current().unwrap())).to_string();
-    let [first_delimiter, _] = line.consume::<2>().map(|t| t.unwrap());
+    line.discard(delimiter_offset);
+    let [first_delimiter, _whitespace] = line.consume::<2>().map(|t| t.unwrap());
 
     // version and remark
     if first_delimiter.is(Colon) {
@@ -78,6 +79,16 @@ impl Parser {
       date: Some(date),
       remark: Some(line.consume_to_string(self)),
     });
+  }
+}
+
+impl<'a> Clump<'a> {
+  fn to_version(&self) -> String {
+    if self.starts_with('v') {
+      trim_version(&self.str[1..]).to_string()
+    } else {
+      trim_version(self.str).to_string()
+    }
   }
 }
 
