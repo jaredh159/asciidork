@@ -32,6 +32,13 @@ fn print_ast(path: &str) -> Result<(), CliErr> {
   match parser.parse() {
     Err(diagnostics) => {
       for diagnostic in diagnostics {
+        let line_num_pad = match diagnostic.line_num {
+          n if n < 10 => 3,
+          n if n < 100 => 4,
+          n if n < 1000 => 5,
+          n if n < 10000 => 6,
+          _ => 7,
+        };
         println!(
           "\n{}{} {}",
           diagnostic.line_num.to_string().dimmed(),
@@ -40,8 +47,8 @@ fn print_ast(path: &str) -> Result<(), CliErr> {
         );
         println!(
           "{}{} {}\n",
-          " ".repeat(diagnostic.message_offset),
-          "^".red().bold(),
+          " ".repeat(diagnostic.underline_start + line_num_pad),
+          "^".repeat(diagnostic.underline_width).red().bold(),
           diagnostic.message.red().bold()
         );
       }

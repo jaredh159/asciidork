@@ -53,7 +53,7 @@ impl Parser {
     }
 
     doc_header.title = Some(ast::DocTitle {
-      heading: self.parse_inlines(header_line),
+      heading: self.parse_inlines(header_line)?,
       subtitle: None, // todo
     });
 

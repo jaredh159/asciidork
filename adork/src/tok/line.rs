@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::parse::Parser;
-use crate::tok::{Token, TokenType, TokenType::*};
+use crate::tok::{token::TokenIs, Token, TokenType, TokenType::*};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Line {
@@ -60,6 +60,7 @@ impl Line {
     self.tokens.front()
   }
 
+  #[must_use]
   pub fn consume<const N: usize>(&mut self) -> [Option<Token>; N] {
     std::array::from_fn(|_| self.consume_current())
   }
@@ -282,6 +283,17 @@ impl Line {
   pub fn print_with(&self, prefix: &str, parser: &Parser) {
     print!("{} ", prefix);
     self.print(parser);
+  }
+
+  pub fn first_nonescaped(&self, token_type: TokenType) -> Option<&Token> {
+    let mut prev_type = None;
+    for token in &self.tokens {
+      if token.is(token_type) && prev_type.is_not(Backslash) {
+        return Some(token);
+      }
+      prev_type = Some(token);
+    }
+    None
   }
 
   fn clump_at<'a>(

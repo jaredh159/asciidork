@@ -1,9 +1,10 @@
 use crate::ast::Inline::{self, *};
-use crate::parse::Parser;
+use crate::parse::utils::Text;
+use crate::parse::{Parser, Result};
 use crate::tok::{self, Token, TokenType, TokenType::*};
 
 impl Parser {
-  pub(super) fn parse_inlines<B>(&self, block: B) -> Vec<Inline>
+  pub(super) fn parse_inlines<B>(&mut self, block: B) -> Result<Vec<Inline>>
   where
     B: Into<tok::Block>,
   {
@@ -12,10 +13,10 @@ impl Parser {
   }
 
   fn parse_inlines_until<const N: usize>(
-    &self,
+    &mut self,
     block: &mut tok::Block,
     stop_tokens: [TokenType; N],
-  ) -> Vec<Inline> {
+  ) -> Result<Vec<Inline>> {
     let mut inlines = Vec::new();
     let mut text = Text::new();
 
@@ -23,27 +24,40 @@ impl Parser {
       loop {
         if line.starts_with_seq(&stop_tokens) {
           line.discard(N);
-          text.commit(&mut inlines);
+          text.commit_inlines(&mut inlines);
           if !line.is_empty() {
             block.restore(line);
           }
-          return inlines;
+          return Ok(inlines);
         }
 
         match line.consume_current() {
           Some(token) if token.is(Whitespace) => text.push_str(" "),
 
-          Some(token) if token.is(Caret) && line.is_continuous_thru(Caret) => {
-            text.commit(&mut inlines);
+          Some(token) if token.is(OpenBracket) && line.contains_seq(&[CloseBracket, Hash]) => {
+            text.commit_inlines(&mut inlines);
+            let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
+            debug_assert!(line.current_is(Hash));
+            line.discard(1); // `#`
             block.restore(line);
-            inlines.push(Superscript(self.parse_inlines_until(block, [Caret])));
+            inlines.push(TextSpan(
+              attr_list,
+              self.parse_inlines_until(block, [Hash])?,
+            ));
+            break;
+          }
+
+          Some(token) if token.is(Caret) && line.is_continuous_thru(Caret) => {
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            inlines.push(Superscript(self.parse_inlines_until(block, [Caret])?));
             break;
           }
 
           Some(token) if token.is(Tilde) && line.is_continuous_thru(Tilde) => {
-            text.commit(&mut inlines);
+            text.commit_inlines(&mut inlines);
             block.restore(line);
-            inlines.push(Subscript(self.parse_inlines_until(block, [Tilde])));
+            inlines.push(Subscript(self.parse_inlines_until(block, [Tilde])?));
             break;
           }
 
@@ -53,39 +67,39 @@ impl Parser {
               && contains_seq(&[Plus, Backtick], &line, block) =>
           {
             line.discard(1);
-            text.commit(&mut inlines);
+            text.commit_inlines(&mut inlines);
             block.restore(line);
             inlines.push(LitMono(self.unsubstituted_until(block, &[Plus, Backtick])));
             break;
           }
 
           Some(token) if starts_unconstrained(Underscore, &token, &line, block) => {
-            self.parse_unconstrained(Underscore, Italic, &mut text, &mut inlines, line, block);
+            self.parse_unconstrained(Underscore, Italic, &mut text, &mut inlines, line, block)?;
             break;
           }
 
           Some(token) if starts_constrained(Underscore, &token, &line) => {
-            self.parse_constrained(Underscore, Italic, &mut text, &mut inlines, line, block);
+            self.parse_constrained(Underscore, Italic, &mut text, &mut inlines, line, block)?;
             break;
           }
 
           Some(token) if starts_unconstrained(Star, &token, &line, block) => {
-            self.parse_unconstrained(Star, Bold, &mut text, &mut inlines, line, block);
+            self.parse_unconstrained(Star, Bold, &mut text, &mut inlines, line, block)?;
             break;
           }
 
           Some(token) if starts_constrained(Star, &token, &line) => {
-            self.parse_constrained(Star, Bold, &mut text, &mut inlines, line, block);
+            self.parse_constrained(Star, Bold, &mut text, &mut inlines, line, block)?;
             break;
           }
 
           Some(token) if starts_unconstrained(Backtick, &token, &line, block) => {
-            self.parse_unconstrained(Backtick, Mono, &mut text, &mut inlines, line, block);
+            self.parse_unconstrained(Backtick, Mono, &mut text, &mut inlines, line, block)?;
             break;
           }
 
           Some(token) if starts_constrained(Backtick, &token, &line) => {
-            self.parse_constrained(Backtick, Mono, &mut text, &mut inlines, line, block);
+            self.parse_constrained(Backtick, Mono, &mut text, &mut inlines, line, block)?;
             break;
           }
 
@@ -100,38 +114,40 @@ impl Parser {
     }
 
     text.trim_end(); // remove last space from EOL
-    text.commit(&mut inlines);
+    text.commit_inlines(&mut inlines);
 
-    inlines
+    Ok(inlines)
   }
 
   fn parse_unconstrained(
-    &self,
+    &mut self,
     token_type: TokenType,
     wrap: fn(Vec<Inline>) -> Inline,
     text: &mut Text,
     inlines: &mut Vec<Inline>,
     mut line: tok::Line,
     block: &mut tok::Block,
-  ) {
-    line.consume::<1>(); // second token
-    text.commit(inlines);
+  ) -> Result<()> {
+    line.discard(1); // second token
+    text.commit_inlines(inlines);
     block.restore(line);
-    inlines.push(wrap(self.parse_inlines_until(block, [token_type; 2])));
+    inlines.push(wrap(self.parse_inlines_until(block, [token_type; 2])?));
+    Ok(())
   }
 
   fn parse_constrained(
-    &self,
+    &mut self,
     token_type: TokenType,
     wrap: fn(Vec<Inline>) -> Inline,
     text: &mut Text,
     inlines: &mut Vec<Inline>,
     line: tok::Line,
     block: &mut tok::Block,
-  ) {
-    text.commit(inlines);
+  ) -> Result<()> {
+    text.commit_inlines(inlines);
     block.restore(line);
-    inlines.push(wrap(self.parse_inlines_until(block, [token_type; 1])));
+    inlines.push(wrap(self.parse_inlines_until(block, [token_type; 1])?));
+    Ok(())
   }
 
   fn unsubstituted_until(&self, block: &mut tok::Block, stop_tokens: &[TokenType]) -> String {
@@ -173,47 +189,35 @@ fn contains_seq(seq: &[TokenType], line: &tok::Line, block: &tok::Block) -> bool
   line.contains_seq(seq) || block.contains_seq(seq)
 }
 
-struct Text(Option<String>);
-
 impl Text {
-  fn new() -> Text {
-    Text(Some(String::new()))
-  }
-
-  fn push_str(&mut self, s: &str) {
-    self.0.as_mut().unwrap().push_str(s);
-  }
-
-  fn push_token(&mut self, token: &Token, parser: &Parser) {
-    self.push_str(parser.lexeme_str(token));
-  }
-
-  fn trim_end(&mut self) {
-    if self.0.as_ref().unwrap().ends_with(' ') {
-      self.0.as_mut().unwrap().pop();
-    }
-  }
-
-  fn is_empty(&self) -> bool {
-    self.0.as_ref().unwrap().len() == 0
-  }
-
-  fn commit(&mut self, inlines: &mut Vec<Inline>) {
+  fn commit_inlines(&mut self, inlines: &mut Vec<Inline>) {
     if !self.is_empty() {
-      let text = self.0.replace(String::new()).unwrap();
-      inlines.push(Inline::Text(text));
+      inlines.push(Inline::Text(self.take()));
     }
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::Inline::*;
+  use crate::ast::{AttrList, Inline::*};
   use crate::t::*;
 
   #[test]
   fn test_parse_inlines() {
     let cases = vec![
+      (
+        "foo [.nowrap]#bar#",
+        vec![
+          t("foo "),
+          TextSpan(
+            AttrList {
+              roles: vec![s("nowrap")],
+              ..AttrList::new()
+            },
+            vec![t("bar")],
+          ),
+        ],
+      ),
       (
         "`*_foo_*`",
         vec![Mono(vec![Bold(vec![Italic(vec![t("foo")])])])],
@@ -242,8 +246,8 @@ mod tests {
       ("`+_foo_+`", vec![LitMono(s("_foo_"))]),
     ];
     for (input, expected) in cases {
-      let (block, parser) = block_test(input);
-      let inlines = parser.parse_inlines(block);
+      let (block, mut parser) = block_test(input);
+      let inlines = parser.parse_inlines(block).unwrap();
       assert_eq!(inlines, expected);
     }
   }

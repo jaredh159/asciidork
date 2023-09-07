@@ -20,7 +20,7 @@ impl Parser {
       return Ok(None);
     };
     Ok(Some(ast::Block {
-      context: ast::BlockContext::Paragraph(self.parse_inlines(block)),
+      context: ast::BlockContext::Paragraph(self.parse_inlines(block)?),
     }))
   }
 }

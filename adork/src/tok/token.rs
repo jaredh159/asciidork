@@ -8,19 +8,26 @@ pub struct Token {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenType {
   Backtick,
+  Backslash,
   Bang,
   Caret,
+  CloseBracket,
   Colon,
   Comma,
   CommentBlock,
   CommentLine,
+  DoubleQuote,
   Dot,
   EqualSigns,
   GreaterThan,
+  Hash,
   LessThan,
   Newline,
+  OpenBracket,
+  Percent,
   Plus,
   SemiColon,
+  SingleQuote,
   Star,
   Tilde,
   Underscore,
@@ -64,6 +71,19 @@ impl Token {
   pub fn print_with(&self, prefix: &str, parser: &crate::parse::Parser) {
     print!("{} ", prefix);
     self.print(parser);
+  }
+}
+
+pub trait TokenIs {
+  fn is(&self, token_type: TokenType) -> bool;
+  fn is_not(&self, token_type: TokenType) -> bool {
+    !self.is(token_type)
+  }
+}
+
+impl TokenIs for Option<&Token> {
+  fn is(&self, token_type: TokenType) -> bool {
+    self.map_or(false, |t| t.is(token_type))
   }
 }
 

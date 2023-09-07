@@ -107,14 +107,16 @@ impl Lexer {
 
   pub fn line_number_with_offset(&self, location: usize) -> (usize, usize) {
     let mut line_number = 1;
-    let mut offset = 0;
+    let mut offset: usize = 0;
     for byte in &self.source[0..location] {
       if *byte == b'\n' {
-        offset += 1;
+        offset = 0;
         line_number += 1;
+      } else {
+        offset += 1;
       }
     }
-    (line_number, offset)
+    (line_number, offset.saturating_sub(1))
   }
 
   pub fn line_of(&self, location: usize) -> &str {
@@ -248,9 +250,10 @@ impl Lexer {
 
   fn word(&mut self) -> Token {
     let start = self.index;
+    // TODO: maybe should be inverted, for alpha numeric
     self.advance_until_one_of(&[
       b' ', b'\t', b'\n', b':', b';', b'<', b'>', b',', b'^', b'_', b'~', b'*', b'!', b'`', b'+',
-      b'.',
+      b'.', b'[', b']', b'=', b'"', b'\'', b'\\', b'%', b'#',
     ]);
     self.advance();
     Token::new(Word, start, self.index)
@@ -286,6 +289,13 @@ impl Iterator for Lexer {
       b'!' => self.single(Bang),
       b'`' => self.single(Backtick),
       b'+' => self.single(Plus),
+      b'[' => self.single(OpenBracket),
+      b']' => self.single(CloseBracket),
+      b'#' => self.single(Hash),
+      b'%' => self.single(Percent),
+      b'"' => self.single(DoubleQuote),
+      b'\'' => self.single(SingleQuote),
+      b'\\' => self.single(Backslash),
       _ => self.word(),
     };
     Some(token)
@@ -348,7 +358,7 @@ mod tests {
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
       (
-        "foo;bar,lol^~_*.!`+",
+        "foo;bar,lol^~_*.!`+[]#'\"\\%",
         vec![
           (Word, "foo"),
           (SemiColon, ";"),
@@ -363,6 +373,13 @@ mod tests {
           (Bang, "!"),
           (Backtick, "`"),
           (Plus, "+"),
+          (OpenBracket, "["),
+          (CloseBracket, "]"),
+          (Hash, "#"),
+          (SingleQuote, "'"),
+          (DoubleQuote, "\""),
+          (Backslash, "\\"),
+          (Percent, "%"),
         ],
       ),
       (
@@ -412,7 +429,9 @@ mod tests {
           (Whitespace, " "),
           (Word, "The"),
           (Whitespace, " "),
-          (Word, "document's"),
+          (Word, "document"),
+          (SingleQuote, "'"),
+          (Word, "s"),
           (Whitespace, " "),
           (Word, "description"),
           (Dot, "."),

@@ -108,7 +108,7 @@ impl Parser {
       match line.nth_token(i) {
         Some(token) if token.token_type == token_type => {}
         token => {
-          self.err_expected_token(token.or_else(|| line.nth_token(i.saturating_sub(1))), msg)?;
+          self.err_token_end_opt(msg, token.or_else(|| line.nth_token(i.saturating_sub(1))))?;
           return Ok(None);
         }
       }

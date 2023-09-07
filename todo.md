@@ -1,5 +1,7 @@
 ## todo
 
+- [ ] look into cleaning up errors with a macro
+- [ ] maybe move diagnostics into a RefCell, remove lots of mut parser
 - [ ] basic multi-byte char test
 - [ ] poc, non-corner-painting backend/interpreter
 - [ ] poc, non-corner-painting wasm
