@@ -73,12 +73,19 @@ impl Parser {
             break;
           }
 
+          Some(token) if token.is(Hash) && contains_seq(&[Hash], &line, block) => {
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            inlines.push(Highlight(self.parse_inlines_until(block, [Hash])?));
+            break;
+          }
+
           Some(token) if starts_unconstrained(Underscore, &token, &line, block) => {
             self.parse_unconstrained(Underscore, Italic, &mut text, &mut inlines, line, block)?;
             break;
           }
 
-          Some(token) if starts_constrained(Underscore, &token, &line) => {
+          Some(token) if starts_constrained(Underscore, &token, &line, block) => {
             self.parse_constrained(Underscore, Italic, &mut text, &mut inlines, line, block)?;
             break;
           }
@@ -88,7 +95,7 @@ impl Parser {
             break;
           }
 
-          Some(token) if starts_constrained(Star, &token, &line) => {
+          Some(token) if starts_constrained(Star, &token, &line, block) => {
             self.parse_constrained(Star, Bold, &mut text, &mut inlines, line, block)?;
             break;
           }
@@ -98,7 +105,7 @@ impl Parser {
             break;
           }
 
-          Some(token) if starts_constrained(Backtick, &token, &line) => {
+          Some(token) if starts_constrained(Backtick, &token, &line, block) => {
             self.parse_constrained(Backtick, Mono, &mut text, &mut inlines, line, block)?;
             break;
           }
@@ -172,8 +179,14 @@ impl Parser {
   }
 }
 
-fn starts_constrained(token_type: TokenType, token: &Token, line: &tok::Line) -> bool {
-  token.is(token_type) && line.ends_constrained_inline(token_type)
+fn starts_constrained(
+  token_type: TokenType,
+  token: &Token,
+  line: &tok::Line,
+  block: &mut tok::Block,
+) -> bool {
+  token.is(token_type)
+    && (line.ends_constrained_inline(token_type) || block.ends_constrained_inline(token_type))
 }
 
 fn starts_unconstrained(
@@ -223,6 +236,13 @@ mod tests {
         vec![Mono(vec![Bold(vec![Italic(vec![t("foo")])])])],
       ),
       ("foo _bar_", vec![t("foo "), Italic(vec![t("bar")])]),
+      ("foo _bar baz_", vec![t("foo "), Italic(vec![t("bar baz")])]),
+      (
+        "foo _bar\nbaz_",
+        vec![t("foo "), Italic(vec![t("bar baz")])],
+      ),
+      ("foo 'bar'", vec![t("foo 'bar'")]),
+      ("foo \"bar\"", vec![t("foo \"bar\"")]),
       ("foo *bar*", vec![t("foo "), Bold(vec![t("bar")])]),
       ("foo `bar`", vec![t("foo "), Mono(vec![t("bar")])]),
       (
@@ -233,6 +253,7 @@ mod tests {
       ("foo ``ba``r", vec![t("foo "), Mono(vec![t("ba")]), t("r")]),
       ("foo __bar", vec![t("foo __bar")]),
       ("foo ^bar^", vec![t("foo "), Superscript(vec![t("bar")])]),
+      ("foo #bar#", vec![t("foo "), Highlight(vec![t("bar")])]),
       ("foo ^bar", vec![t("foo ^bar")]),
       ("foo bar^", vec![t("foo bar^")]),
       (

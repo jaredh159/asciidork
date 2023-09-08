@@ -1,6 +1,6 @@
 ## todo
 
-- [ ] look into cleaning up errors with a macro
+- [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] maybe move diagnostics into a RefCell, remove lots of mut parser
 - [ ] basic multi-byte char test
 - [ ] poc, non-corner-painting backend/interpreter

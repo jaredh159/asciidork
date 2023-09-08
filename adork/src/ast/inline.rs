@@ -4,6 +4,7 @@ use super::AttrList;
 #[derive(Debug, PartialEq, Eq)]
 pub enum Inline {
   Bold(Vec<Inline>),
+  Highlight(Vec<Inline>),
   Italic(Vec<Inline>),
   LitMono(String),
   Mono(Vec<Inline>),
