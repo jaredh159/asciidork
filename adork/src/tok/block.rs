@@ -46,11 +46,11 @@ impl Block {
     self.lines.iter().any(|line| line.contains_seq(token_types))
   }
 
-  pub fn ends_constrained_inline(&self, token_type: TokenType) -> bool {
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenType]) -> bool {
     self
       .lines
       .iter()
-      .any(|line| line.ends_constrained_inline(token_type))
+      .any(|line| line.terminates_constrained(stop_tokens))
   }
 
   pub fn current_line_starts_with(&self, token_type: TokenType) -> bool {

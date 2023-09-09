@@ -62,6 +62,34 @@ impl Parser {
           }
 
           Some(token)
+            if token.is(DoubleQuote)
+              && line.current_is(Backtick)
+              && starts_constrained(&[Backtick, DoubleQuote], &token, &line, block) =>
+          {
+            line.discard(1); // backtick
+            text.push_str("“");
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            let mut quoted = self.parse_inlines_until(block, [Backtick, DoubleQuote])?;
+            merge_appending(&mut inlines, &mut quoted, "”");
+            break;
+          }
+
+          Some(token)
+            if token.is(SingleQuote)
+              && line.current_is(Backtick)
+              && starts_constrained(&[Backtick, SingleQuote], &token, &line, block) =>
+          {
+            line.discard(1); // backtick
+            text.push_str("‘");
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            let mut quoted = self.parse_inlines_until(block, [Backtick, SingleQuote])?;
+            merge_appending(&mut inlines, &mut quoted, "’");
+            break;
+          }
+
+          Some(token)
             if token.is(Backtick)
               && line.current_is(Plus)
               && contains_seq(&[Plus, Backtick], &line, block) =>
@@ -85,7 +113,7 @@ impl Parser {
             break;
           }
 
-          Some(token) if starts_constrained(Underscore, &token, &line, block) => {
+          Some(token) if starts_constrained(&[Underscore], &token, &line, block) => {
             self.parse_constrained(Underscore, Italic, &mut text, &mut inlines, line, block)?;
             break;
           }
@@ -95,7 +123,7 @@ impl Parser {
             break;
           }
 
-          Some(token) if starts_constrained(Star, &token, &line, block) => {
+          Some(token) if starts_constrained(&[Star], &token, &line, block) => {
             self.parse_constrained(Star, Bold, &mut text, &mut inlines, line, block)?;
             break;
           }
@@ -105,7 +133,7 @@ impl Parser {
             break;
           }
 
-          Some(token) if starts_constrained(Backtick, &token, &line, block) => {
+          Some(token) if starts_constrained(&[Backtick], &token, &line, block) => {
             self.parse_constrained(Backtick, Mono, &mut text, &mut inlines, line, block)?;
             break;
           }
@@ -180,13 +208,14 @@ impl Parser {
 }
 
 fn starts_constrained(
-  token_type: TokenType,
+  stop_tokens: &[TokenType],
   token: &Token,
   line: &tok::Line,
   block: &mut tok::Block,
 ) -> bool {
-  token.is(token_type)
-    && (line.ends_constrained_inline(token_type) || block.ends_constrained_inline(token_type))
+  debug_assert!(!stop_tokens.is_empty());
+  token.is(*stop_tokens.last().unwrap())
+    && (line.terminates_constrained(stop_tokens) || block.terminates_constrained(stop_tokens))
 }
 
 fn starts_unconstrained(
@@ -200,6 +229,19 @@ fn starts_unconstrained(
 
 fn contains_seq(seq: &[TokenType], line: &tok::Line, block: &tok::Block) -> bool {
   line.contains_seq(seq) || block.contains_seq(seq)
+}
+
+fn merge_appending(a: &mut Vec<Inline>, b: &mut Vec<Inline>, append: &str) {
+  if let (Some(Inline::Text(a_text)), Some(Inline::Text(b_text))) = (a.last_mut(), b.first_mut()) {
+    a_text.push_str(b_text);
+    b.remove(0);
+  }
+  a.append(b);
+  if let Some(Inline::Text(text)) = a.last_mut() {
+    text.push_str(append);
+  } else {
+    a.push(Inline::Text(append.to_string()));
+  }
 }
 
 impl Text {
@@ -243,6 +285,12 @@ mod tests {
       ),
       ("foo 'bar'", vec![t("foo 'bar'")]),
       ("foo \"bar\"", vec![t("foo \"bar\"")]),
+      ("foo \"`bar`\"", vec![t("foo “bar”")]),
+      ("foo \"`bar baz`\"", vec![t("foo “bar baz”")]),
+      ("foo \"`bar\nbaz`\"", vec![t("foo “bar baz”")]),
+      ("foo '`bar`'", vec![t("foo ‘bar’")]),
+      ("foo '`bar baz`'", vec![t("foo ‘bar baz’")]),
+      ("foo '`bar\nbaz`'", vec![t("foo ‘bar baz’")]),
       ("foo *bar*", vec![t("foo "), Bold(vec![t("bar")])]),
       ("foo `bar`", vec![t("foo "), Mono(vec![t("bar")])]),
       (
@@ -266,6 +314,7 @@ mod tests {
       ("`+{name}+`", vec![LitMono(s("{name}"))]),
       ("`+_foo_+`", vec![LitMono(s("_foo_"))]),
     ];
+
     for (input, expected) in cases {
       let (block, mut parser) = block_test(input);
       let inlines = parser.parse_inlines(block).unwrap();

@@ -181,42 +181,41 @@ impl Line {
   }
 
   pub fn contains_seq(&self, token_types: &[TokenType]) -> bool {
+    self.index_of_seq(token_types).is_some()
+  }
+
+  pub fn index_of_seq(&self, token_types: &[TokenType]) -> Option<usize> {
     if self.tokens.len() < token_types.len() {
-      return false;
+      return None;
     }
     let Some(first_type) = token_types.first() else {
-      return false;
+      return None;
     };
     'outer: for (i, token) in self.tokens.iter().enumerate() {
       if token.token_type == *first_type {
         if self.tokens.len() - i < token_types.len() {
-          return false;
+          return None;
         }
         for (j, token_type) in token_types.iter().skip(1).enumerate() {
           if self.tokens[i + j + 1].token_type != *token_type {
             continue 'outer;
           }
         }
-        return true;
+        return Some(i);
       }
     }
-    false
+    None
   }
 
-  pub fn ends_constrained_inline(&self, token_type: TokenType) -> bool {
-    if self.tokens.is_empty() {
-      return false;
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenType]) -> bool {
+    match self.index_of_seq(stop_tokens) {
+      // constrained sequences can't immediately terminate
+      // or else `foo __bar` would include an empty italic node
+      // TODO: maybe that's only true for _single_ tok sequences?
+      Some(n) if n == 0 => false,
+      Some(n) if self.nth_token(n).is_not(Word) => true,
+      _ => false,
     }
-    for (i, token) in self.tokens.iter().enumerate() {
-      if token.token_type == token_type {
-        return match self.tokens.get(i + 1) {
-          Some(token) if !token.is(Word) => true,
-          None => true,
-          _ => false,
-        };
-      }
-    }
-    false
   }
 
   pub fn starts_with_one_of(&self, token_types: &[TokenType]) -> bool {
@@ -228,19 +227,20 @@ impl Line {
     false
   }
 
-  pub fn starts_with_seq(&self, token_types: &[TokenType]) -> bool {
-    if token_types.is_empty() {
-      return false;
-    }
-    if self.tokens.len() < token_types.len() {
+  pub fn has_seq_at(&self, token_types: &[TokenType], pos: usize) -> bool {
+    if token_types.is_empty() || self.tokens.len() < pos + token_types.len() {
       return false;
     }
     for (i, token_type) in token_types.iter().enumerate() {
-      if self.tokens[i].token_type != *token_type {
+      if self.tokens[i + pos].token_type != *token_type {
         return false;
       }
     }
     true
+  }
+
+  pub fn starts_with_seq(&self, token_types: &[TokenType]) -> bool {
+    self.has_seq_at(token_types, 0)
   }
 
   pub fn is_header(&self, len: usize) -> bool {
@@ -440,6 +440,21 @@ mod tests {
     for (input, expected) in cases {
       let (line, parser) = line_test(input);
       assert_eq!(line.clumps(&parser), expected);
+    }
+  }
+
+  #[test]
+  fn test_line_has_seq_at() {
+    let cases: Vec<(&str, &[TokenType], usize, bool)> = vec![
+      ("foo bar_:", &[Word, Whitespace], 0, true),
+      ("foo bar_:", &[Word, Whitespace], 1, false),
+      ("foo bar", &[Whitespace, Word], 1, true),
+      ("foo bar_:", &[Word, Underscore, Colon], 2, true),
+      ("foo bar_:", &[Word, Underscore, Colon], 0, false),
+    ];
+    for (input, token_types, pos, expected) in cases {
+      let (line, _) = line_test(input);
+      assert_eq!(line.has_seq_at(token_types, pos), expected);
     }
   }
 
