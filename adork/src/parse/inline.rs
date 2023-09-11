@@ -38,12 +38,14 @@ impl Parser {
             text.commit_inlines(&mut inlines);
             let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
             debug_assert!(line.current_is(Hash));
+            line.print(self);
             line.discard(1); // `#`
-            block.restore(line);
-            inlines.push(TextSpan(
-              attr_list,
-              self.parse_inlines_until(block, [Hash])?,
-            ));
+            let wrap = |inlines| TextSpan(attr_list, inlines);
+            if starts_unconstrained(Hash, line.current_token().unwrap(), &line, block) {
+              self.parse_unconstrained(Hash, wrap, &mut text, &mut inlines, line, block)?;
+            } else {
+              self.parse_constrained(Hash, wrap, &mut text, &mut inlines, line, block)?;
+            };
             break;
           }
 
@@ -157,7 +159,7 @@ impl Parser {
   fn parse_unconstrained(
     &mut self,
     token_type: TokenType,
-    wrap: fn(Vec<Inline>) -> Inline,
+    wrap: impl FnOnce(Vec<Inline>) -> Inline,
     text: &mut Text,
     inlines: &mut Vec<Inline>,
     mut line: tok::Line,
@@ -173,7 +175,7 @@ impl Parser {
   fn parse_constrained(
     &mut self,
     token_type: TokenType,
-    wrap: fn(Vec<Inline>) -> Inline,
+    wrap: impl FnOnce(Vec<Inline>) -> Inline,
     text: &mut Text,
     inlines: &mut Vec<Inline>,
     line: tok::Line,
@@ -264,13 +266,22 @@ mod tests {
         "foo [.nowrap]#bar#",
         vec![
           t("foo "),
-          TextSpan(
-            AttrList {
-              roles: vec![s("nowrap")],
-              ..AttrList::new()
-            },
-            vec![t("bar")],
-          ),
+          TextSpan(AttrList::role("nowrap"), vec![t("bar")]),
+        ],
+      ),
+      (
+        "[.big]##O##nce upon an infinite loop",
+        vec![
+          TextSpan(AttrList::role("big"), vec![t("O")]),
+          t("nce upon an infinite loop"),
+        ],
+      ),
+      (
+        "Do werewolves believe in [.small]#small print#?",
+        vec![
+          t("Do werewolves believe in "),
+          TextSpan(AttrList::role("small"), vec![t("small print")]),
+          t("?"),
         ],
       ),
       (
@@ -319,6 +330,15 @@ mod tests {
       let (block, mut parser) = block_test(input);
       let inlines = parser.parse_inlines(block).unwrap();
       assert_eq!(inlines, expected);
+    }
+  }
+
+  impl AttrList {
+    fn role(role: &'static str) -> AttrList {
+      AttrList {
+        roles: vec![role.to_string()],
+        ..AttrList::default()
+      }
     }
   }
 }
