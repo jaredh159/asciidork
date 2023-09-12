@@ -15,9 +15,20 @@ pub struct Parser {
   pub(super) lexer: Lexer,
   pub(super) document: ast::Document,
   pub(super) peeked_block: Option<tok::Block>,
+  pub(super) ctx: Context,
   pub(super) errors: Vec<Diagnostic>,
-  pub(super) warnings: Vec<Diagnostic>,
   pub(super) bail: bool, // todo: naming...
+}
+
+#[derive(Debug)]
+pub(crate) struct Context {
+  pub(crate) subs: Substitutions,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Substitutions {
+  pub(crate) special_chars: bool,
+  pub(crate) inline_formatting: bool,
 }
 
 pub struct ParseResult {
@@ -40,8 +51,13 @@ impl Parser {
         content: DocContent::Blocks(vec![]),
       },
       peeked_block: None,
+      ctx: Context {
+        subs: Substitutions {
+          special_chars: true,
+          inline_formatting: true,
+        },
+      },
       errors: vec![],
-      warnings: vec![],
       bail: true,
     }
   }

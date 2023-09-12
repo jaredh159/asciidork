@@ -7,6 +7,7 @@ pub struct Token {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenType {
+  Ampersand,
   Backtick,
   Backslash,
   Bang,

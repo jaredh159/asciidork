@@ -253,7 +253,7 @@ impl Lexer {
     // TODO: maybe should be inverted, for alpha numeric
     self.advance_until_one_of(&[
       b' ', b'\t', b'\n', b':', b';', b'<', b'>', b',', b'^', b'_', b'~', b'*', b'!', b'`', b'+',
-      b'.', b'[', b']', b'=', b'"', b'\'', b'\\', b'%', b'#',
+      b'.', b'[', b']', b'=', b'"', b'\'', b'\\', b'%', b'#', b'&',
     ]);
     self.advance();
     Token::new(Word, start, self.index)
@@ -296,6 +296,7 @@ impl Iterator for Lexer {
       b'"' => self.single(DoubleQuote),
       b'\'' => self.single(SingleQuote),
       b'\\' => self.single(Backslash),
+      b'&' => self.single(Ampersand),
       _ => self.word(),
     };
     Some(token)
@@ -358,10 +359,11 @@ mod tests {
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
       (
-        "foo;bar,lol^~_*.!`+[]#'\"\\%",
+        "foo;&bar,lol^~_*.!`+[]#'\"\\%",
         vec![
           (Word, "foo"),
           (SemiColon, ";"),
+          (Ampersand, "&"),
           (Word, "bar"),
           (Comma, ","),
           (Word, "lol"),
