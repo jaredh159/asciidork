@@ -202,6 +202,22 @@ impl From<String> for Parser {
   }
 }
 
+impl Substitutions {
+  pub fn new() -> Self {
+    Self {
+      special_chars: true,
+      inline_formatting: true,
+    }
+  }
+
+  pub fn none() -> Self {
+    Self {
+      special_chars: false,
+      inline_formatting: false,
+    }
+  }
+}
+
 // tests
 
 #[cfg(test)]

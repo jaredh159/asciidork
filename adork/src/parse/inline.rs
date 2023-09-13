@@ -1,5 +1,6 @@
 use crate::ast::Inline::{self, *};
 use crate::ast::Inlines;
+use crate::parse::parser::Substitutions;
 use crate::parse::utils::Text;
 use crate::parse::{Parser, Result};
 use crate::tok::{self, Token, TokenType, TokenType::*};
@@ -113,9 +114,24 @@ impl Parser {
             block.restore(line);
             self.ctx.subs.inline_formatting = false;
             let inner = self.parse_inlines_until(block, &[Plus, Backtick])?;
-            self.ctx.subs.inline_formatting = true;
+            self.ctx.subs = subs;
             debug_assert!(inner.len() == 1 && matches!(inner[0], Text(_)));
             inlines.push(LitMono(inner.into_string()));
+            break;
+          }
+
+          Some(token)
+            if token.is(Plus)
+              && line.starts_with_seq(&[Plus, Plus])
+              && contains_seq(&[Plus, Plus, Plus], &line, block) =>
+          {
+            line.discard(2); // `++`
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            self.ctx.subs = Substitutions::none();
+            let mut passthrough = self.parse_inlines_until(block, &[Plus, Plus, Plus])?;
+            self.ctx.subs = subs;
+            merge_appending(&mut inlines, &mut passthrough, None);
             break;
           }
 
@@ -130,7 +146,7 @@ impl Parser {
             block.restore(line);
             self.ctx.subs.inline_formatting = false;
             let mut passthrough = self.parse_inlines_until(block, &[Plus, Plus])?;
-            self.ctx.subs.inline_formatting = true;
+            self.ctx.subs = subs;
             merge_appending(&mut inlines, &mut passthrough, None);
             break;
           }
@@ -144,7 +160,7 @@ impl Parser {
             block.restore(line);
             self.ctx.subs.inline_formatting = false;
             let mut passthrough = self.parse_inlines_until(block, &[Plus])?;
-            self.ctx.subs.inline_formatting = true;
+            self.ctx.subs = subs;
             merge_appending(&mut inlines, &mut passthrough, None);
             break;
           }
@@ -389,6 +405,7 @@ mod tests {
       ("rofl +_foo_+ lol", vec![Text(s("rofl _foo_ lol"))]),
       ("++_foo_++bar", vec![Text(s("_foo_bar"))]),
       ("lol ++_foo_++bar", vec![Text(s("lol _foo_bar"))]),
+      ("+++_<foo>&_+++", vec![Text(s("_<foo>&_"))]),
     ];
 
     for (input, expected) in cases {
