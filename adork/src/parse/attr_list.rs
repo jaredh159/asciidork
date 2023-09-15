@@ -55,6 +55,10 @@ impl Parser {
     debug_assert!(!line.current_is(OpenBracket));
     debug_assert!(line.contains(CloseBracket));
 
+    if line.current_is(CloseBracket) {
+      return Ok(AttrList::new());
+    }
+
     use AttrKind::*;
     use Quotes::*;
     let parse_start = line.current_token().unwrap().start;

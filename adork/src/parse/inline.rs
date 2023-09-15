@@ -1,5 +1,5 @@
 use crate::ast::Inline::{self, *};
-use crate::ast::Inlines;
+use crate::ast::{Inlines, Macro};
 use crate::parse::parser::Substitutions;
 use crate::parse::utils::Text;
 use crate::parse::{Parser, Result};
@@ -36,6 +36,34 @@ impl Parser {
 
         match line.consume_current() {
           Some(token) if token.is(Whitespace) => text.push_str(" "),
+
+          Some(token) if subs.macros && token.is(MacroName) && line.continues_inline_macro() => {
+            match self.lexeme_str(&token) {
+              "image" => {
+                line.discard(1); // `:`
+                let target = line.consume_to_string_until(OpenBracket, self);
+                debug_assert!(line.current_is(OpenBracket));
+                line.discard(1); // `[`
+                let attr_list = self.parse_attr_list(&mut line)?;
+                text.commit_inlines(&mut inlines);
+                inlines.push(Macro(Macro::Image(target, attr_list)));
+              }
+              "footnote" => {
+                line.discard(1); // `:`
+                let id = match line.current_is(OpenBracket) {
+                  true => None,
+                  false => Some(line.consume_to_string_until(CloseBracket, self)),
+                };
+                debug_assert!(line.current_is(OpenBracket));
+                line.discard(1); // `[`
+                let attr_list = self.parse_attr_list(&mut line)?;
+                text.commit_inlines(&mut inlines);
+                inlines.push(Macro(Macro::Footnote(id, attr_list)));
+              }
+              _ => text.push_token(&token, self),
+            }
+            break;
+          }
 
           Some(token)
             if subs.inline_formatting
@@ -328,7 +356,7 @@ impl Text {
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::{AttrList, Inline::*};
+  use crate::ast::{AttrList, Inline::*, Macro};
   use crate::t::*;
 
   #[test]
@@ -406,6 +434,20 @@ mod tests {
       ("++_foo_++bar", vec![Text(s("_foo_bar"))]),
       ("lol ++_foo_++bar", vec![Text(s("lol _foo_bar"))]),
       ("+++_<foo>&_+++", vec![Text(s("_<foo>&_"))]),
+      (
+        "foo image:sunset.jpg[]",
+        vec![
+          Text(s("foo ")),
+          Macro(Macro::Image(s("sunset.jpg"), AttrList::new())),
+        ],
+      ),
+      (
+        "doublefootnote:[ymmv]",
+        vec![
+          Text(s("double")),
+          Macro(Macro::Footnote(None, AttrList::positional("ymmv"))),
+        ],
+      ),
     ];
 
     for (input, expected) in cases {
@@ -419,6 +461,12 @@ mod tests {
     fn role(role: &'static str) -> AttrList {
       AttrList {
         roles: vec![role.to_string()],
+        ..AttrList::default()
+      }
+    }
+    fn positional(role: &'static str) -> AttrList {
+      AttrList {
+        positional: vec![role.to_string()],
         ..AttrList::default()
       }
     }

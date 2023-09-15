@@ -23,6 +23,7 @@ pub enum TokenType {
   GreaterThan,
   Hash,
   LessThan,
+  MacroName,
   Newline,
   OpenBracket,
   Percent,

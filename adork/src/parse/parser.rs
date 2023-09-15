@@ -29,6 +29,7 @@ pub(crate) struct Context {
 pub(crate) struct Substitutions {
   pub(crate) special_chars: bool,
   pub(crate) inline_formatting: bool,
+  pub(crate) macros: bool,
 }
 
 pub struct ParseResult {
@@ -51,12 +52,7 @@ impl Parser {
         content: DocContent::Blocks(vec![]),
       },
       peeked_block: None,
-      ctx: Context {
-        subs: Substitutions {
-          special_chars: true,
-          inline_formatting: true,
-        },
-      },
+      ctx: Context { subs: Substitutions::all() },
       errors: vec![],
       bail: true,
     }
@@ -203,10 +199,11 @@ impl From<String> for Parser {
 }
 
 impl Substitutions {
-  pub fn new() -> Self {
+  pub fn all() -> Self {
     Self {
       special_chars: true,
       inline_formatting: true,
+      macros: true,
     }
   }
 
@@ -214,6 +211,7 @@ impl Substitutions {
     Self {
       special_chars: false,
       inline_formatting: false,
+      macros: false,
     }
   }
 }

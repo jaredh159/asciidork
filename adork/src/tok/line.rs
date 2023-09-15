@@ -218,6 +218,20 @@ impl Line {
     }
   }
 
+  pub fn continues_short_inline_macro(&self) -> bool {
+    self.starts_with_seq(&[Colon, OpenBracket]) && self.contains(CloseBracket)
+  }
+
+  pub fn continues_inline_macro(&self) -> bool {
+    self.current_is(Colon) && self.is_continuous_thru(OpenBracket) && self.contains(CloseBracket)
+  }
+
+  pub fn continues_block_macro(&self) -> bool {
+    self.starts_with_seq(&[Colon, Colon])
+      && self.is_continuous_thru(OpenBracket)
+      && self.contains(CloseBracket)
+  }
+
   pub fn starts_with_one_of(&self, token_types: &[TokenType]) -> bool {
     for token_type in token_types {
       if self.starts(*token_type) {

@@ -17,6 +17,7 @@ pub struct Lexer {
   prev: u8,
   current: Option<u8>,
   peek: Option<u8>,
+  peeked_token: Option<Token>,
 }
 
 impl Lexer {
@@ -31,6 +32,7 @@ impl Lexer {
       prev: b'\0',
       current: None,
       peek: None,
+      peeked_token: None,
     };
 
     // fill current and peek
@@ -256,7 +258,28 @@ impl Lexer {
       b'.', b'[', b']', b'=', b'"', b'\'', b'\\', b'%', b'#', b'&',
     ]);
     self.advance();
+    if self.current_is(b':') {
+      let bytes = &self.source[start..self.index];
+      if self.is_macro_name(bytes) {
+        return Token::new(MacroName, start, self.index);
+      } else if self.source.get(self.index - 1) == Some(&b'e') && bytes.ends_with(b"footnote") {
+        self.peeked_token = Some(Token::new(MacroName, self.index - 8, self.index));
+        return Token::new(Word, start, self.index - 8);
+      }
+    }
     Token::new(Word, start, self.index)
+  }
+
+  fn is_macro_name(&self, bytes: &[u8]) -> bool {
+    match bytes[0] {
+      b'k' => bytes == b"kbd",
+      b'i' => bytes == b"image" || bytes == b"irc" || bytes == b"icon",
+      b'l' => bytes == b"link",
+      b'h' => bytes == b"http" || bytes == b"https",
+      b'f' => bytes == b"ftp" || bytes == b"footnote",
+      b'm' => bytes == b"mailto",
+      _ => false,
+    }
   }
 
   fn starts_comment(&self) -> bool {
@@ -271,6 +294,9 @@ impl Iterator for Lexer {
   type Item = Token;
 
   fn next(&mut self) -> Option<Self::Item> {
+    if let Some(token) = self.peeked_token.take() {
+      return Some(token);
+    }
     let token = match self.current? {
       b'=' => self.repeating(b'=', EqualSigns),
       b' ' | b'\t' => self.whitespace(),
@@ -355,14 +381,21 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      (
+        "roflfootnote:",
+        vec![(Word, "rofl"), (MacroName, "footnote"), (Colon, ":")],
+      ),
+      ("footnote:", vec![(MacroName, "footnote"), (Colon, ":")]),
       ("==", vec![(EqualSigns, "==")]),
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
       (
-        "foo;&bar,lol^~_*.!`+[]#'\"\\%",
+        "foo;image:&bar,lol^~_*.!`+[]#'\"\\%",
         vec![
           (Word, "foo"),
           (SemiColon, ";"),
+          (MacroName, "image"),
+          (Colon, ":"),
           (Ampersand, "&"),
           (Word, "bar"),
           (Comma, ","),
@@ -446,7 +479,7 @@ mod tests {
           (Word, "url-repo"),
           (Colon, ":"),
           (Whitespace, " "),
-          (Word, "https"),
+          (MacroName, "https"),
           (Colon, ":"),
           (Word, "//my-git-repo"),
           (Dot, "."),
