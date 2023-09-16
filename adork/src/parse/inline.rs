@@ -40,29 +40,26 @@ impl Parser {
           Some(token) if subs.macros && token.is(MacroName) && line.continues_inline_macro() => {
             match self.lexeme_str(&token) {
               "image" => {
-                line.discard(1); // `:`
-                let target = line.consume_to_string_until(OpenBracket, self);
-                debug_assert!(line.current_is(OpenBracket));
-                line.discard(1); // `[`
+                let target = line.consume_macro_target(self);
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
                 inlines.push(Macro(Macro::Image(target, attr_list)));
               }
+              "kbd" => {
+                // let target = line.consume_macro_target(self);
+                line.discard(2); // `:[`
+                let attr_list = self.parse_attr_list(&mut line)?;
+                text.commit_inlines(&mut inlines);
+                inlines.push(Macro(Macro::Keyboard(attr_list)));
+              }
               "footnote" => {
-                line.discard(1); // `:`
-                let id = match line.current_is(OpenBracket) {
-                  true => None,
-                  false => Some(line.consume_to_string_until(CloseBracket, self)),
-                };
-                debug_assert!(line.current_is(OpenBracket));
-                line.discard(1); // `[`
+                let id = line.consume_optional_macro_target(self);
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
                 inlines.push(Macro(Macro::Footnote(id, attr_list)));
               }
               _ => text.push_token(&token, self),
             }
-            break;
           }
 
           Some(token)
@@ -442,11 +439,16 @@ mod tests {
         ],
       ),
       (
-        "doublefootnote:[ymmv]",
+        "doublefootnote:[ymmv]bar",
         vec![
           Text(s("double")),
           Macro(Macro::Footnote(None, AttrList::positional("ymmv"))),
+          Text(s("bar")),
         ],
+      ),
+      (
+        "kbd:[F11]",
+        vec![Macro(Macro::Keyboard(AttrList::positional("F11")))],
       ),
     ];
 

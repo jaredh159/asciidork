@@ -53,9 +53,10 @@ impl Parser {
 
   fn parse_attrs(&mut self, line: &mut tok::Line, formatted_text: bool) -> Result<AttrList> {
     debug_assert!(!line.current_is(OpenBracket));
-    debug_assert!(line.contains(CloseBracket));
+    debug_assert!(line.contains_nonescaped(CloseBracket));
 
     if line.current_is(CloseBracket) {
+      line.discard(1); // `]`
       return Ok(AttrList::new());
     }
 
@@ -70,6 +71,9 @@ impl Parser {
         CloseBracket if state.quotes == Default && !state.escaping => {
           state.commit_prev(self)?;
           break;
+        }
+        Backslash if line.current_is(Whitespace) => {
+          state.attr.push_token(&token, self);
         }
         Backslash if state.quotes == Default => {
           state.escaping = true;
@@ -179,6 +183,20 @@ mod tests {
         "[foo]",
         AttrList {
           positional: vec![s("foo")],
+          ..AttrList::new()
+        },
+      ),
+      (
+        "[\\ ]", // keyboard macro
+        AttrList {
+          positional: vec![s("\\")],
+          ..AttrList::new()
+        },
+      ),
+      (
+        "[Ctrl+\\]]",
+        AttrList {
+          positional: vec![s("Ctrl+]")],
           ..AttrList::new()
         },
       ),

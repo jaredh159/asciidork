@@ -219,11 +219,13 @@ impl Line {
   }
 
   pub fn continues_short_inline_macro(&self) -> bool {
-    self.starts_with_seq(&[Colon, OpenBracket]) && self.contains(CloseBracket)
+    self.starts_with_seq(&[Colon, OpenBracket]) && self.contains_nonescaped(CloseBracket)
   }
 
   pub fn continues_inline_macro(&self) -> bool {
-    self.current_is(Colon) && self.is_continuous_thru(OpenBracket) && self.contains(CloseBracket)
+    self.current_is(Colon)
+      && self.is_continuous_thru(OpenBracket)
+      && self.contains_nonescaped(CloseBracket)
   }
 
   pub fn continues_block_macro(&self) -> bool {
@@ -280,6 +282,23 @@ impl Line {
     s
   }
 
+  pub fn consume_macro_target(&mut self, parser: &Parser) -> String {
+    self.discard(1); // `:`
+    let target = self.consume_to_string_until(OpenBracket, parser);
+    self.discard(1); // `[`
+    target
+  }
+
+  pub fn consume_optional_macro_target(&mut self, parser: &Parser) -> Option<String> {
+    self.discard(1); // `:`
+    let target = match self.current_is(OpenBracket) {
+      true => None,
+      false => Some(self.consume_to_string_until(CloseBracket, parser)),
+    };
+    self.discard(1); // `[`
+    target
+  }
+
   pub fn len(&self) -> usize {
     let end = self.tokens.back().map(|token| token.end).unwrap_or(0);
     let start = self.tokens.front().map(|token| token.start).unwrap_or(0);
@@ -297,6 +316,10 @@ impl Line {
   pub fn print_with(&self, prefix: &str, parser: &Parser) {
     print!("{} ", prefix);
     self.print(parser);
+  }
+
+  pub fn contains_nonescaped(&self, token_type: TokenType) -> bool {
+    self.first_nonescaped(token_type).is_some()
   }
 
   pub fn first_nonescaped(&self, token_type: TokenType) -> Option<&Token> {
