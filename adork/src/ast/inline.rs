@@ -2,7 +2,7 @@ use super::AttrList;
 use super::Macro;
 
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Inline {
   Bold(Vec<Inline>),
   Highlight(Vec<Inline>),

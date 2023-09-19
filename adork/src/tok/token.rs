@@ -1,3 +1,6 @@
+use crate::ast::UrlScheme;
+use crate::parse::Parser;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
   pub token_type: TokenType,
@@ -62,7 +65,27 @@ impl Token {
     self.token_type == token_type && self.end - self.start == len
   }
 
-  pub fn print(&self, parser: &crate::parse::Parser) {
+  pub fn to_url_scheme(&self, parser: &Parser) -> Option<UrlScheme> {
+    match self.token_type {
+      TokenType::MacroName => {
+        let macro_name = parser.lexeme_str(self);
+        match macro_name {
+          "https" => Some(UrlScheme::Https),
+          "http" => Some(UrlScheme::Http),
+          "ftp" => Some(UrlScheme::Ftp),
+          "irc" => Some(UrlScheme::Irc),
+          "mailto" => Some(UrlScheme::Mailto),
+          _ => None,
+        }
+      }
+      _ => None,
+    }
+  }
+  pub fn is_url_scheme(&self, parser: &Parser) -> bool {
+    self.to_url_scheme(parser).is_some()
+  }
+
+  pub fn print(&self, parser: &Parser) {
     println!(
       "token lexeme: `{}` type: {:?}",
       parser.lexeme_str(self),
@@ -70,7 +93,7 @@ impl Token {
     );
   }
 
-  pub fn print_with(&self, prefix: &str, parser: &crate::parse::Parser) {
+  pub fn print_with(&self, prefix: &str, parser: &Parser) {
     print!("{} ", prefix);
     self.print(parser);
   }

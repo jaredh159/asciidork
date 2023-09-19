@@ -61,6 +61,10 @@ impl Lexer {
     unsafe { str::from_utf8_unchecked(&self.source[start..end]) }
   }
 
+  pub fn get_string(&self, start: usize, end: usize) -> String {
+    self.get_str(start, end).to_string()
+  }
+
   #[cfg(test)]
   pub fn print_peek(&self) {
     match self.peek {

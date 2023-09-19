@@ -1,5 +1,5 @@
 use crate::ast::Inline::{self, *};
-use crate::ast::{Inlines, Macro};
+use crate::ast::{AttrList, Inlines, Macro};
 use crate::parse::parser::Substitutions;
 use crate::parse::utils::Text;
 use crate::parse::{Parser, Result};
@@ -46,7 +46,6 @@ impl Parser {
                 inlines.push(Macro(Macro::Image(target, attr_list)));
               }
               "kbd" => {
-                // let target = line.consume_macro_target(self);
                 line.discard(2); // `:[`
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
@@ -60,6 +59,15 @@ impl Parser {
               }
               _ => text.push_token(&token, self),
             }
+          }
+
+          Some(token) if subs.macros && token.is_url_scheme(self) && line.starts(Colon) => {
+            text.commit_inlines(&mut inlines);
+            inlines.push(Macro(Macro::Link(
+              token.to_url_scheme(self).unwrap(),
+              line.consume_url(Some(&token), self),
+              AttrList::role("bare"),
+            )));
           }
 
           Some(token)
@@ -353,11 +361,16 @@ impl Text {
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::{AttrList, Inline::*, Macro};
+  use crate::ast::{AttrList, Inline::*, Macro, UrlScheme};
   use crate::t::*;
 
   #[test]
   fn test_parse_inlines() {
+    let bare_example_com = Macro(Macro::Link(
+      UrlScheme::Https,
+      s("https://example.com"),
+      AttrList::role("bare"),
+    ));
     let cases = vec![
       (
         "foo [.nowrap]#bar#",
@@ -450,7 +463,22 @@ mod tests {
         "kbd:[F11]",
         vec![Macro(Macro::Keyboard(AttrList::positional("F11")))],
       ),
+      (
+        "foo https://example.com",
+        vec![Text(s("foo ")), bare_example_com.clone()],
+      ),
+      (
+        "foo https://example.com.",
+        vec![Text(s("foo ")), bare_example_com.clone(), Text(s("."))],
+      ),
+      (
+        "foo https://example.com bar",
+        vec![Text(s("foo ")), bare_example_com.clone(), Text(s(" bar"))],
+      ),
     ];
+
+    // repeated passes necessary?
+    // yikes: `link:pass:[My Documents/report.pdf][Get Report]`
 
     for (input, expected) in cases {
       let (block, mut parser) = block_test(input);
@@ -460,12 +488,6 @@ mod tests {
   }
 
   impl AttrList {
-    fn role(role: &'static str) -> AttrList {
-      AttrList {
-        roles: vec![role.to_string()],
-        ..AttrList::default()
-      }
-    }
     fn positional(role: &'static str) -> AttrList {
       AttrList {
         positional: vec![role.to_string()],

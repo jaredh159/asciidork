@@ -234,6 +234,33 @@ impl Line {
       && self.contains(CloseBracket)
   }
 
+  #[must_use]
+  pub fn consume_url(&mut self, start: Option<&Token>, parser: &Parser) -> String {
+    let start = start
+      .map(|t| t.start)
+      .unwrap_or(self.current_token().map(|t| t.start).unwrap_or(0));
+    let last_token_end = self.last_token().map(|t| t.end).unwrap_or(start);
+    let mut num_tokens = 0;
+
+    for token in &self.tokens {
+      match token.token_type {
+        Whitespace => break,
+        _ => num_tokens += 1,
+      }
+    }
+
+    if num_tokens > 0 && self.tokens.get(num_tokens - 1).is(Dot) {
+      num_tokens -= 1;
+    }
+    self.discard(num_tokens);
+    let end = self
+      .current_token()
+      .map(|t| t.start)
+      .unwrap_or(last_token_end);
+
+    parser.get_string(start, end)
+  }
+
   pub fn starts_with_one_of(&self, token_types: &[TokenType]) -> bool {
     for token_type in token_types {
       if self.starts(*token_type) {
