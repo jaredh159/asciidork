@@ -100,6 +100,7 @@ impl Token {
 }
 
 pub trait TokenIs {
+  fn is_url_scheme(&self, parser: &Parser) -> bool;
   fn is(&self, token_type: TokenType) -> bool;
   fn is_not(&self, token_type: TokenType) -> bool {
     !self.is(token_type)
@@ -109,6 +110,9 @@ pub trait TokenIs {
 impl TokenIs for Option<&Token> {
   fn is(&self, token_type: TokenType) -> bool {
     self.map_or(false, |t| t.is(token_type))
+  }
+  fn is_url_scheme(&self, parser: &Parser) -> bool {
+    self.map_or(false, |t| t.is_url_scheme(parser))
   }
 }
 

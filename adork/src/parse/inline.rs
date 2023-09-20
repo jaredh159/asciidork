@@ -3,7 +3,7 @@ use crate::ast::{AttrList, Inlines, Macro};
 use crate::parse::parser::Substitutions;
 use crate::parse::utils::Text;
 use crate::parse::{Parser, Result};
-use crate::tok::{self, Token, TokenType, TokenType::*};
+use crate::tok::{self, Token, TokenIs, TokenType, TokenType::*};
 
 impl Parser {
   pub(super) fn parse_inlines<B>(&mut self, block: B) -> Result<Vec<Inline>>
@@ -59,6 +59,19 @@ impl Parser {
               }
               _ => text.push_token(&token, self),
             }
+          }
+
+          Some(token)
+            if subs.macros && token.is(LessThan) && line.current_token().is_url_scheme(self) =>
+          {
+            let scheme = line.consume_current().unwrap();
+            text.commit_inlines(&mut inlines);
+            inlines.push(Macro(Macro::Link(
+              scheme.to_url_scheme(self).unwrap(),
+              line.consume_url(Some(&scheme), self),
+              AttrList::role("bare"),
+            )));
+            line.discard(1); // `>`
           }
 
           Some(token) if subs.macros && token.is_url_scheme(self) => {
@@ -475,10 +488,10 @@ mod tests {
         "foo https://example.com bar",
         vec![Text(s("foo ")), bare_example_com.clone(), Text(s(" bar"))],
       ),
-      // (
-      //   "foo <https://example.com> bar",
-      //   vec![Text(s("foo ")), bare_example_com.clone(), Text(s(" bar"))],
-      // ),
+      (
+        "foo <https://example.com> bar",
+        vec![Text(s("foo ")), bare_example_com.clone(), Text(s(" bar"))],
+      ),
     ];
 
     // repeated passes necessary?

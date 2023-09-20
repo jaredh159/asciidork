@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::parse::Parser;
-use crate::tok::{token::TokenIs, Token, TokenType, TokenType::*};
+use crate::tok::{Token, TokenIs, TokenType, TokenType::*};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Line {
@@ -241,6 +241,7 @@ impl Line {
     for token in &self.tokens {
       match token.token_type {
         Whitespace => break,
+        GreaterThan => break,
         _ => num_tokens += 1,
       }
     }
