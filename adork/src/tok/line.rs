@@ -219,19 +219,15 @@ impl Line {
   }
 
   pub fn continues_short_inline_macro(&self) -> bool {
-    self.starts_with_seq(&[Colon, OpenBracket]) && self.contains_nonescaped(CloseBracket)
+    self.starts(OpenBracket) && self.contains_nonescaped(CloseBracket)
   }
 
   pub fn continues_inline_macro(&self) -> bool {
-    self.current_is(Colon)
-      && self.is_continuous_thru(OpenBracket)
-      && self.contains_nonescaped(CloseBracket)
+    self.is_continuous_thru(OpenBracket) && self.contains_nonescaped(CloseBracket)
   }
 
   pub fn continues_block_macro(&self) -> bool {
-    self.starts_with_seq(&[Colon, Colon])
-      && self.is_continuous_thru(OpenBracket)
-      && self.contains(CloseBracket)
+    self.starts(Colon) && self.is_continuous_thru(OpenBracket) && self.contains(CloseBracket)
   }
 
   #[must_use]
@@ -310,14 +306,12 @@ impl Line {
   }
 
   pub fn consume_macro_target(&mut self, parser: &Parser) -> String {
-    self.discard(1); // `:`
     let target = self.consume_to_string_until(OpenBracket, parser);
     self.discard(1); // `[`
     target
   }
 
   pub fn consume_optional_macro_target(&mut self, parser: &Parser) -> Option<String> {
-    self.discard(1); // `:`
     let target = match self.current_is(OpenBracket) {
       true => None,
       false => Some(self.consume_to_string_until(CloseBracket, parser)),

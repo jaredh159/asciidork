@@ -39,19 +39,19 @@ impl Parser {
 
           Some(token) if subs.macros && token.is(MacroName) && line.continues_inline_macro() => {
             match self.lexeme_str(&token) {
-              "image" => {
+              "image:" => {
                 let target = line.consume_macro_target(self);
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
                 inlines.push(Macro(Macro::Image(target, attr_list)));
               }
-              "kbd" => {
-                line.discard(2); // `:[`
+              "kbd:" => {
+                line.discard(1); // `[`
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
                 inlines.push(Macro(Macro::Keyboard(attr_list)));
               }
-              "footnote" => {
+              "footnote:" => {
                 let id = line.consume_optional_macro_target(self);
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
@@ -61,7 +61,7 @@ impl Parser {
             }
           }
 
-          Some(token) if subs.macros && token.is_url_scheme(self) && line.starts(Colon) => {
+          Some(token) if subs.macros && token.is_url_scheme(self) => {
             text.commit_inlines(&mut inlines);
             inlines.push(Macro(Macro::Link(
               token.to_url_scheme(self).unwrap(),
@@ -475,6 +475,10 @@ mod tests {
         "foo https://example.com bar",
         vec![Text(s("foo ")), bare_example_com.clone(), Text(s(" bar"))],
       ),
+      // (
+      //   "foo <https://example.com> bar",
+      //   vec![Text(s("foo ")), bare_example_com.clone(), Text(s(" bar"))],
+      // ),
     ];
 
     // repeated passes necessary?

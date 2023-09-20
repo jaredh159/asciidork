@@ -265,10 +265,12 @@ impl Lexer {
     if self.current_is(b':') {
       let bytes = &self.source[start..self.index];
       if self.is_macro_name(bytes) {
+        self.advance(); // `:`
         return Token::new(MacroName, start, self.index);
       } else if self.source.get(self.index - 1) == Some(&b'e') && bytes.ends_with(b"footnote") {
-        self.peeked_token = Some(Token::new(MacroName, self.index - 8, self.index));
-        return Token::new(Word, start, self.index - 8);
+        self.advance(); // `:`
+        self.peeked_token = Some(Token::new(MacroName, self.index - 9, self.index));
+        return Token::new(Word, start, self.index - 9);
       }
     }
     Token::new(Word, start, self.index)
@@ -387,9 +389,9 @@ mod tests {
     let cases = vec![
       (
         "roflfootnote:",
-        vec![(Word, "rofl"), (MacroName, "footnote"), (Colon, ":")],
+        vec![(Word, "rofl"), (MacroName, "footnote:")],
       ),
-      ("footnote:", vec![(MacroName, "footnote"), (Colon, ":")]),
+      ("footnote:", vec![(MacroName, "footnote:")]),
       ("==", vec![(EqualSigns, "==")]),
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
@@ -398,8 +400,7 @@ mod tests {
         vec![
           (Word, "foo"),
           (SemiColon, ";"),
-          (MacroName, "image"),
-          (Colon, ":"),
+          (MacroName, "image:"),
           (Ampersand, "&"),
           (Word, "bar"),
           (Comma, ","),
@@ -483,8 +484,7 @@ mod tests {
           (Word, "url-repo"),
           (Colon, ":"),
           (Whitespace, " "),
-          (MacroName, "https"),
-          (Colon, ":"),
+          (MacroName, "https:"),
           (Word, "//my-git-repo"),
           (Dot, "."),
           (Word, "com"),

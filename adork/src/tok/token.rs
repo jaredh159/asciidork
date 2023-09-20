@@ -70,11 +70,11 @@ impl Token {
       TokenType::MacroName => {
         let macro_name = parser.lexeme_str(self);
         match macro_name {
-          "https" => Some(UrlScheme::Https),
-          "http" => Some(UrlScheme::Http),
-          "ftp" => Some(UrlScheme::Ftp),
-          "irc" => Some(UrlScheme::Irc),
-          "mailto" => Some(UrlScheme::Mailto),
+          "https:" => Some(UrlScheme::Https),
+          "http:" => Some(UrlScheme::Http),
+          "ftp:" => Some(UrlScheme::Ftp),
+          "irc:" => Some(UrlScheme::Irc),
+          "mailto:" => Some(UrlScheme::Mailto),
           _ => None,
         }
       }
