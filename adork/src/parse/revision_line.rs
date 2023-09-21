@@ -8,7 +8,7 @@ use crate::tok::{self, Clump, TokenType::*};
 
 impl Parser {
   pub(super) fn parse_revision_line(
-    &mut self,
+    &self,
     block: &mut tok::Block,
     revision: &mut Option<Revision>,
   ) {
@@ -159,7 +159,7 @@ mod tests {
     ];
 
     for (input, expected) in cases {
-      let (mut block, mut parser) = block_test(input);
+      let (mut block, parser) = block_test(input);
       let mut revision = None;
       parser.parse_revision_line(&mut block, &mut revision);
       assert_eq!(revision, expected);

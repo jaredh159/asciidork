@@ -36,7 +36,7 @@ impl Parser {
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(super) fn parse_attr_list(&mut self, line: &mut tok::Line) -> Result<AttrList> {
+  pub(super) fn parse_attr_list(&self, line: &mut tok::Line) -> Result<AttrList> {
     self.parse_attrs(line, false)
   }
 
@@ -44,14 +44,11 @@ impl Parser {
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(super) fn parse_formatted_text_attr_list(
-    &mut self,
-    line: &mut tok::Line,
-  ) -> Result<AttrList> {
+  pub(super) fn parse_formatted_text_attr_list(&self, line: &mut tok::Line) -> Result<AttrList> {
     self.parse_attrs(line, true)
   }
 
-  fn parse_attrs(&mut self, line: &mut tok::Line, formatted_text: bool) -> Result<AttrList> {
+  fn parse_attrs(&self, line: &mut tok::Line, formatted_text: bool) -> Result<AttrList> {
     debug_assert!(!line.current_is(OpenBracket));
     debug_assert!(line.contains_nonescaped(CloseBracket));
 
@@ -130,7 +127,7 @@ impl AttrState {
     }
   }
 
-  fn err_if_formatted(&mut self, parser: &mut Parser) -> Result<()> {
+  fn err_if_formatted(&self, parser: &Parser) -> Result<()> {
     if self.formatted_text {
       parser.err_at(
         "formatted text only supports attribute shorthand: id, roles, & options",
@@ -141,7 +138,7 @@ impl AttrState {
     Ok(())
   }
 
-  fn commit_prev(&mut self, parser: &mut Parser) -> Result<()> {
+  fn commit_prev(&mut self, parser: &Parser) -> Result<()> {
     use AttrKind::*;
     if !self.attr.is_empty() {
       match &self.kind {
@@ -314,7 +311,7 @@ mod tests {
       ),
     ];
     for (input, expected) in cases {
-      let (mut line, mut parser) = line_test(input);
+      let (mut line, parser) = line_test(input);
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
       assert_eq!(attr_list, expected);
@@ -336,7 +333,7 @@ mod tests {
       ),
     ];
     for (input, formatted, expected, start, width) in cases {
-      let (mut line, mut parser) = line_test(input);
+      let (mut line, parser) = line_test(input);
       line.discard(1); // `[`
       let result = parser.parse_attrs(&mut line, formatted);
       if let Err(diag) = result {

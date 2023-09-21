@@ -1,4 +1,5 @@
 use core::result::Result as CoreResult;
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fs::File;
 
@@ -16,7 +17,7 @@ pub struct Parser {
   pub(super) document: ast::Document,
   pub(super) peeked_block: Option<tok::Block>,
   pub(super) ctx: Context,
-  pub(super) errors: Vec<Diagnostic>,
+  pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
 }
 
@@ -53,7 +54,7 @@ impl Parser {
       },
       peeked_block: None,
       ctx: Context { subs: Substitutions::all() },
-      errors: vec![],
+      errors: RefCell::new(vec![]),
       bail: true,
     }
   }
@@ -75,7 +76,7 @@ impl Parser {
     })
   }
 
-  pub fn parse_section(&mut self, _first_block: tok::Block) -> Result<ast::Section> {
+  pub fn parse_section(&self, _first_block: tok::Block) -> Result<ast::Section> {
     todo!("parse section")
   }
 
@@ -96,7 +97,7 @@ impl Parser {
   }
 
   pub(super) fn expect_group<const N: usize>(
-    &mut self,
+    &self,
     expected: [TokenType; N],
     msg: &'static str,
     line: &mut tok::Line,
@@ -116,7 +117,7 @@ impl Parser {
   }
 
   pub(super) fn expect_each<const N: usize>(
-    &mut self,
+    &self,
     expected: [(TokenType, &'static str); N],
     line: &mut tok::Line,
   ) -> Result<Option<[Token; N]>> {
@@ -135,7 +136,7 @@ impl Parser {
   }
 
   pub(super) fn expect(
-    &mut self,
+    &self,
     token_type: TokenType,
     line: &mut tok::Line,
     msg: &str,

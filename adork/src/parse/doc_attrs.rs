@@ -7,7 +7,7 @@ use crate::tok::TokenType::*;
 
 impl Parser {
   pub(super) fn parse_doc_attrs(
-    &mut self,
+    &self,
     block: &mut tok::Block,
     attrs: &mut HashMap<String, String>,
   ) -> Result<()> {
@@ -17,7 +17,7 @@ impl Parser {
     Ok(())
   }
 
-  fn parse_doc_attr(&mut self, block: &mut tok::Block) -> Result<Option<(String, String)>> {
+  fn parse_doc_attr(&self, block: &mut tok::Block) -> Result<Option<(String, String)>> {
     let Some(ref mut line) = block.consume_current() else {
       return Ok(None);
     };
@@ -59,7 +59,7 @@ mod tests {
       (":foo-bar: baz, rofl, lol", ("foo-bar", "baz, rofl, lol")),
     ];
     for (input, authors) in cases {
-      let (mut block, mut parser) = block_test(input);
+      let (mut block, parser) = block_test(input);
       let attr = parser.parse_doc_attr(&mut block).unwrap().unwrap();
       assert_eq!(attr, (s(authors.0), s(authors.1)));
     }

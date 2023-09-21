@@ -12,7 +12,7 @@ pub struct Diagnostic {
 }
 
 impl Parser {
-  pub(crate) fn err_at(&mut self, message: &'static str, start: usize, end: usize) -> Result<()> {
+  pub(crate) fn err_at(&self, message: &'static str, start: usize, end: usize) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
     self.handle_err(Diagnostic {
       line_num,
@@ -23,7 +23,7 @@ impl Parser {
     })
   }
 
-  pub(crate) fn err_token_start(&mut self, message: &'static str, token: &Token) -> Result<()> {
+  pub(crate) fn err_token_start(&self, message: &'static str, token: &Token) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(token.start);
     self.handle_err(Diagnostic {
       line_num,
@@ -34,7 +34,7 @@ impl Parser {
     })
   }
 
-  pub(crate) fn err_token_end(&mut self, message: &'static str, token: &Token) -> Result<()> {
+  pub(crate) fn err_token_end(&self, message: &'static str, token: &Token) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(token.start);
     self.handle_err(Diagnostic {
       line_num,
@@ -46,7 +46,7 @@ impl Parser {
   }
 
   pub(crate) fn err_token_end_opt(
-    &mut self,
+    &self,
     message: &'static str,
     token: Option<&Token>,
   ) -> Result<()> {
@@ -61,7 +61,7 @@ impl Parser {
     })
   }
 
-  pub(crate) fn err(&mut self, message: impl Into<String>, token: Option<&Token>) -> Result<()> {
+  pub(crate) fn err(&self, message: impl Into<String>, token: Option<&Token>) -> Result<()> {
     let location = token.map_or_else(|| self.lexer.current_location(), SourceLocation::from);
     let (line_num, offset) = self.lexer.line_number_with_offset(location.start);
     self.handle_err(Diagnostic {
@@ -73,15 +73,15 @@ impl Parser {
     })
   }
 
-  pub(crate) fn err_expected_token(&mut self, token: Option<&Token>, detail: &str) -> Result<()> {
+  pub(crate) fn err_expected_token(&self, token: Option<&Token>, detail: &str) -> Result<()> {
     self.err(format!("Expected {}", detail), token)
   }
 
-  fn handle_err(&mut self, err: Diagnostic) -> Result<()> {
+  fn handle_err(&self, err: Diagnostic) -> Result<()> {
     if self.bail {
       Err(err)
     } else {
-      self.errors.push(err);
+      self.errors.borrow_mut().push(err);
       Ok(())
     }
   }

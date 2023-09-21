@@ -13,7 +13,7 @@ impl Parser {
   ///
   /// Therefore, it would be an error for this line to not be an author line
   pub(super) fn parse_author_line(
-    &mut self,
+    &self,
     mut line: tok::Line,
     authors: &mut Vec<ast::Author>,
   ) -> Result<()> {
@@ -27,7 +27,7 @@ impl Parser {
     Ok(())
   }
 
-  fn parse_single_author(&mut self, line: &mut tok::Line) -> Result<Option<ast::Author>> {
+  fn parse_single_author(&self, line: &mut tok::Line) -> Result<Option<ast::Author>> {
     if line.is_empty() {
       return Ok(None);
     }
@@ -131,7 +131,7 @@ mod tests {
     ];
 
     for (input, authors) in cases {
-      let (line, mut parser) = line_test(input);
+      let (line, parser) = line_test(input);
       let expected_authors = authors
         .iter()
         .map(|(first, middle, last, email)| ast::Author {
