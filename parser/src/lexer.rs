@@ -1,10 +1,9 @@
 use std::str::Chars;
 
-use bumpalo::collections::String;
 use bumpalo::Bump;
 
 use super::source_location::SourceLocation;
-use super::token::{Token, TokenKind, TokenKind::*, TokenValue};
+use super::token::{Token, TokenKind, TokenKind::*};
 
 pub struct Lexer<'alloc> {
   allocator: &'alloc Bump,
@@ -55,7 +54,7 @@ impl<'alloc> Lexer<'alloc> {
       None => Token {
         kind: Eof,
         loc: SourceLocation::new(self.offset(), self.offset()),
-        value: TokenValue::None,
+        lexeme: "",
       },
     }
   }
@@ -69,11 +68,12 @@ impl<'alloc> Lexer<'alloc> {
   }
 
   fn single(&self, kind: TokenKind) -> Token {
-    let offset = self.offset();
+    let end = self.offset();
+    let start = end - 1;
     Token {
       kind,
-      loc: SourceLocation::new(offset - 1, offset),
-      value: TokenValue::None,
+      loc: SourceLocation::new(start, end),
+      lexeme: &self.src[start..end],
     }
   }
 
@@ -84,11 +84,10 @@ impl<'alloc> Lexer<'alloc> {
       '=', '"', '\'', '\\', '%', '#', '&',
     ]);
     let end = self.offset();
-    let word = &self.src[start..end];
     Token {
       kind: Word,
       loc: SourceLocation::new(start, end),
-      value: TokenValue::String(String::from_str_in(word, self.allocator)),
+      lexeme: &self.src[start..end],
     }
   }
 
@@ -109,15 +108,8 @@ impl<'alloc> Lexer<'alloc> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{
-    source_location::SourceLocation,
-    token::{TokenKind, TokenValue},
-  };
-  use bumpalo::collections::String;
-
-  // retrieve a line, do i actually need to hold the str?
-  // render an err message (not sure seq)
-  // lol evaluator
+  use crate::source_location::SourceLocation;
+  use crate::token::TokenKind;
 
   #[test]
   fn test_tokens() {
@@ -130,7 +122,7 @@ mod tests {
       Token {
         kind: TokenKind::Ampersand,
         loc: SourceLocation::new(0, 1),
-        value: TokenValue::None,
+        lexeme: "&",
       }
     );
     assert_eq!(
@@ -138,7 +130,7 @@ mod tests {
       Token {
         kind: TokenKind::Caret,
         loc: SourceLocation::new(1, 2),
-        value: TokenValue::None,
+        lexeme: "^",
       }
     );
     assert_eq!(
@@ -146,7 +138,7 @@ mod tests {
       Token {
         kind: TokenKind::Word,
         loc: SourceLocation::new(2, 8),
-        value: TokenValue::String(String::from_str_in("foobar", bump)),
+        lexeme: "foobar",
       }
     );
     assert_eq!(
@@ -154,7 +146,7 @@ mod tests {
       Token {
         kind: TokenKind::OpenBracket,
         loc: SourceLocation::new(8, 9),
-        value: TokenValue::None,
+        lexeme: "[",
       }
     );
     assert_eq!(
@@ -162,7 +154,7 @@ mod tests {
       Token {
         kind: TokenKind::Eof,
         loc: SourceLocation::new(9, 9),
-        value: TokenValue::None,
+        lexeme: "",
       }
     );
   }

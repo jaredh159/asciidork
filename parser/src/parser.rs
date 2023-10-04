@@ -24,22 +24,20 @@ impl<'alloc> Parser<'alloc> {
   }
 
   pub fn parse(&mut self) -> Node<'alloc> {
-    let mut node_loc = self.lexer.loc();
-    let mut text = String::new_in(self.allocator);
+    let mut node = Node {
+      loc: self.lexer.loc(),
+      text: String::new_in(self.allocator),
+    };
     loop {
       match self.lexer.next_token() {
-        Token { kind: Word, loc, value } => {
-          node_loc.extend(loc);
-          text.push_str(value.as_string());
-        }
         Token { kind: Eof, .. } => break,
-        Token { loc, .. } => {
-          node_loc.extend(loc);
-          text.push_str("•");
+        Token { loc, lexeme, .. } => {
+          node.loc.extend(loc);
+          node.text.push_str(lexeme);
         }
       }
     }
-    Node { loc: node_loc, text }
+    node
   }
 }
 
@@ -53,7 +51,7 @@ mod tests {
     let input = "hello:world";
     let mut parser = Parser::new(bump, input);
     let node = parser.parse();
-    assert_eq!(node.text, "hello•world");
+    assert_eq!(node.text, "hello:world");
     assert_eq!(node.loc, SourceLocation::new(0, 11));
   }
 }

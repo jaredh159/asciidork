@@ -1,5 +1,3 @@
-use bumpalo::collections::String;
-
 use super::source_location::SourceLocation;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -35,32 +33,11 @@ pub enum TokenKind {
   Word,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TokenValue<'alloc> {
-  None,
-  String(String<'alloc>),
-}
-
-impl<'alloc> TokenValue<'alloc> {
-  pub fn as_string(&self) -> &String<'alloc> {
-    match self {
-      Self::String(s) => s,
-      Self::None => panic!("expected string"),
-    }
-  }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Token<'alloc> {
   pub kind: TokenKind,
   pub loc: SourceLocation,
-  pub value: TokenValue<'alloc>,
-}
-
-impl<'alloc> Default for TokenValue<'alloc> {
-  fn default() -> Self {
-    Self::None
-  }
+  pub lexeme: &'alloc str,
 }
 
 impl Default for TokenKind {
