@@ -4,4 +4,7 @@ members = [
   "adork-cli",
   "adork",
   "test-utils",
+  "parser",
 ]
+
+resolver = "2"

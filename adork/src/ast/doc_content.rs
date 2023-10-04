@@ -36,7 +36,7 @@ impl DocContent {
         preamble: match self {
           DocContent::Blocks(blocks) => match blocks.is_empty() {
             true => None,
-            false => Some(blocks.drain(..).collect()),
+            false => Some(std::mem::take(blocks)),
           },
           _ => None,
         },

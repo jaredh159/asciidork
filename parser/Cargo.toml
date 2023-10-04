@@ -1,0 +1,10 @@
+[package]
+name = "parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bumpalo = { version = "3.14.0", features = ["collections"] }
+
+[lib]
+doctest = false

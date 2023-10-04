@@ -14,3 +14,6 @@ watch-print-ast file:
 
 watch-test isolate="":
   @watchexec --restart --clear --watch adork/src --watch adork-cli/src --watch test-utils/src cargo test {{isolate}}
+
+test-new isolate="":
+  @cd parser && watchexec --restart --clear --watch . cargo test {{isolate}}
