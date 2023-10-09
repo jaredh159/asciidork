@@ -2,6 +2,6 @@
 
 mod evaluator;
 mod lexer;
-mod parser;
+pub mod parser;
 mod source_location;
 mod token;

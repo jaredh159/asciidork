@@ -1,5 +1,6 @@
 ## todo
 
+- [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
 - [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] basic multi-byte char test
 - [ ] poc, non-corner-painting backend/interpreter

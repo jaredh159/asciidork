@@ -4,7 +4,7 @@ use crate::lexer::Lexer;
 use crate::source_location::SourceLocation;
 use crate::token::{Token, TokenKind::*};
 
-// temp
+#[derive(Debug)]
 pub struct Node<'alloc> {
   pub loc: SourceLocation,
   pub text: String<'alloc>,
