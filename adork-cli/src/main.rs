@@ -2,7 +2,6 @@ use std::io::Read;
 use std::result::Result;
 use std::{env, fs};
 
-use bumpalo::collections::String as BumpString;
 use bumpalo::Bump;
 
 use parser::parser::Parser;
@@ -20,9 +19,8 @@ fn print_ast(path: &str) -> Result<(), GenericError> {
   let mut file = fs::File::open(path)?;
   let mut src = String::new();
   file.read_to_string(&mut src)?;
-  let bump = &Bump::with_capacity(src.len() * 2);
-  let src = BumpString::from_str_in(&src, bump).into_bump_str();
-  let mut parser = Parser::new(bump, src);
+  let bump = &Bump::with_capacity(src.len());
+  let mut parser = Parser::new(bump, &src);
   let node = parser.parse();
   println!("{:#?}", node);
   Ok(())

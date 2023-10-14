@@ -13,7 +13,7 @@ impl Parser {
     revision: &mut Option<Revision>,
   ) {
     let Some(line) = block.current_line() else {
-      return ;
+      return;
     };
 
     if !line.current_is(Word) {
@@ -21,7 +21,7 @@ impl Parser {
     }
 
     let Some(first_clump) = line.clump_until(&[Comma, Colon], self) else {
-      return ;
+      return;
     };
 
     // single word prefixed with 'v' is revision number

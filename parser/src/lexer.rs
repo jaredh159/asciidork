@@ -1,48 +1,63 @@
 use std::str::Chars;
 
+use bumpalo::collections::Vec as BumpVec;
 use bumpalo::Bump;
 
-use super::source_location::SourceLocation;
-use super::token::{Token, TokenKind, TokenKind::*};
+use crate::line::Line;
+use crate::source_location::SourceLocation;
+use crate::token::{Token, TokenKind, TokenKind::*};
 
 #[derive(Debug)]
-pub struct Lexer<'alloc> {
-  allocator: &'alloc Bump,
-  src: &'alloc str,
-  chars: Chars<'alloc>,
+pub struct Lexer<'src> {
+  src: &'src str,
+  chars: Chars<'src>,
   peek: Option<char>,
 }
 
-impl<'alloc> Lexer<'alloc> {
-  pub fn new(allocator: &'alloc Bump, src: &'alloc str) -> Lexer<'alloc> {
-    let mut lexer = Lexer {
-      allocator,
-      src,
-      chars: src.chars(),
-      peek: None,
-    };
+impl<'src> Lexer<'src> {
+  pub fn new(src: &'src str) -> Lexer<'src> {
+    let mut lexer = Lexer { src, chars: src.chars(), peek: None };
     lexer.peek = lexer.chars.next();
     lexer
   }
 
-  fn advance(&mut self) -> Option<char> {
-    std::mem::replace(&mut self.peek, self.chars.next())
-  }
-
-  fn advance_if(&mut self, c: char) -> bool {
-    if self.peek == Some(c) {
+  pub fn consume_empty_lines(&mut self) {
+    while self.peek == Some('\n') {
       self.advance();
-      true
-    } else {
-      false
     }
   }
 
-  fn advance_while(&mut self, c: char) {
-    while self.advance_if(c) {}
+  pub fn loc(&self) -> SourceLocation {
+    SourceLocation::from(self.offset())
   }
 
-  pub fn next_token(&mut self) -> Token {
+  pub fn is_eof(&self) -> bool {
+    self.peek.is_none()
+  }
+
+  pub fn peek_is(&self, c: char) -> bool {
+    self.peek == Some(c)
+  }
+
+  pub fn consume_line<'alloc>(&mut self, allocator: &'alloc Bump) -> Option<Line<'alloc, 'src>> {
+    if self.is_eof() {
+      return None;
+    }
+    let start = self.offset();
+    let mut end = start;
+    let mut tokens = BumpVec::new_in(allocator);
+    while !self.peek_is('\n') && !self.is_eof() {
+      let token = self.next_token();
+      end = token.loc.end;
+      tokens.push(token);
+    }
+    if self.peek_is('\n') {
+      self.advance();
+    }
+    Some(Line::new(tokens, &self.src[start..end]))
+  }
+
+  pub fn next_token(&mut self) -> Token<'src> {
     match self.advance() {
       Some('=') => self.repeating('=', EqualSigns),
       Some(' ') | Some('\t') => self.whitespace(),
@@ -82,11 +97,24 @@ impl<'alloc> Lexer<'alloc> {
     self.src.len() - self.chars.as_str().len() - self.peek.is_some() as usize // O(1) √
   }
 
-  pub fn loc(&self) -> SourceLocation {
-    SourceLocation::from(self.offset())
+  fn advance(&mut self) -> Option<char> {
+    std::mem::replace(&mut self.peek, self.chars.next())
   }
 
-  fn single(&self, kind: TokenKind) -> Token {
+  fn advance_if(&mut self, c: char) -> bool {
+    if self.peek == Some(c) {
+      self.advance();
+      true
+    } else {
+      false
+    }
+  }
+
+  fn advance_while(&mut self, c: char) {
+    while self.advance_if(c) {}
+  }
+
+  fn single(&self, kind: TokenKind) -> Token<'src> {
     let end = self.offset();
     let start = end - 1;
     Token {
@@ -96,7 +124,7 @@ impl<'alloc> Lexer<'alloc> {
     }
   }
 
-  fn repeating(&mut self, c: char, kind: TokenKind) -> Token {
+  fn repeating(&mut self, c: char, kind: TokenKind) -> Token<'src> {
     let start = self.offset() - 1;
     self.advance_while(c);
     let end = self.offset();
@@ -107,7 +135,7 @@ impl<'alloc> Lexer<'alloc> {
     }
   }
 
-  fn word(&mut self) -> Token {
+  fn word(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
     self.advance_until_one_of(&[
       ' ', '\t', '\n', ':', ';', '<', '>', ',', '^', '_', '~', '*', '!', '`', '+', '.', '[', ']',
@@ -183,7 +211,7 @@ impl<'alloc> Lexer<'alloc> {
     }
   }
 
-  fn comment(&mut self) -> Token {
+  fn comment(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
     // TODO: block comments, testing if we have 2 more slashes
     self.advance_until('\n');
@@ -195,7 +223,7 @@ impl<'alloc> Lexer<'alloc> {
     }
   }
 
-  fn whitespace(&mut self) -> Token<'_> {
+  fn whitespace(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
     self.advance_while_one_of(&[' ', '\t']);
     let end = self.offset();
@@ -225,6 +253,15 @@ mod tests {
   use super::*;
   use crate::source_location::SourceLocation;
   use crate::token::TokenKind;
+
+  #[test]
+  fn test_consume_line() {
+    let bump = &Bump::new();
+    let mut lexer = Lexer::new("foo bar\nso baz\n");
+    assert_eq!(lexer.consume_line(bump).unwrap().src, "foo bar");
+    assert_eq!(lexer.consume_line(bump).unwrap().src, "so baz");
+    assert!(lexer.consume_line(bump).is_none());
+  }
 
   #[test]
   fn test_tokens() {
@@ -355,8 +392,7 @@ The document body starts here.
       ),
     ];
     for (input, expected) in cases {
-      let bump = &Bump::new();
-      let mut lexer = Lexer::new(bump, input);
+      let mut lexer = Lexer::new(input);
       let mut index = 0;
       for (token_type, lexeme) in expected {
         let start = index;
@@ -375,9 +411,8 @@ The document body starts here.
 
   #[test]
   fn test_tokens_full() {
-    let bump = &Bump::new();
     let input = "&^foobar[";
-    let mut lexer = Lexer::new(bump, input);
+    let mut lexer = Lexer::new(input);
     assert_eq!(lexer.src, input);
     assert_eq!(
       lexer.next_token(),

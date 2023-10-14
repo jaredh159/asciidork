@@ -8,7 +8,7 @@ use crate::tok::{self, TokenType::*};
 impl Parser {
   pub(super) fn parse_document_header(&mut self) -> Result<Option<ast::DocHeader>> {
     let Some(mut block) = self.read_block() else {
-      return Ok(None)
+      return Ok(None);
     };
 
     if !is_doc_header(&block) {

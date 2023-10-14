@@ -362,8 +362,8 @@ impl Line {
     parser: &'a Parser,
   ) -> Option<(Clump, usize)> {
     let Some(first_token) = self.tokens.get(starting_token_index) else {
-        return None;
-      };
+      return None;
+    };
     debug_assert!(first_token.token_type != Whitespace);
     let start = first_token.start;
     let mut end = first_token.end;

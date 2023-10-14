@@ -1,5 +1,7 @@
+use bumpalo::collections::Vec as BumpVec;
 use bumpalo::{collections::String, Bump};
 
+use crate::block::Block;
 use crate::lexer::Lexer;
 use crate::source_location::SourceLocation;
 use crate::token::{Token, TokenKind::*};
@@ -10,17 +12,30 @@ pub struct Node<'alloc> {
   pub text: String<'alloc>,
 }
 
-pub struct Parser<'alloc> {
+pub struct Parser<'alloc, 'src> {
   allocator: &'alloc Bump,
-  lexer: Lexer<'alloc>,
+  lexer: Lexer<'src>,
 }
 
-impl<'alloc> Parser<'alloc> {
-  pub fn new(allocator: &'alloc Bump, src: &'alloc str) -> Parser<'alloc> {
-    Parser {
-      allocator,
-      lexer: Lexer::new(allocator, src),
+impl<'alloc, 'src> Parser<'alloc, 'src> {
+  pub fn new(allocator: &'alloc Bump, src: &'src str) -> Parser<'alloc, 'src> {
+    Parser { allocator, lexer: Lexer::new(src) }
+  }
+
+  pub(crate) fn read_block(&mut self) -> Option<Block<'alloc, 'src>> {
+    self.lexer.consume_empty_lines();
+    if self.lexer.is_eof() {
+      return None;
     }
+    let mut lines = BumpVec::new_in(self.allocator);
+    while let Some(line) = self.lexer.consume_line(self.allocator) {
+      lines.push(line);
+      if self.lexer.peek_is('\n') {
+        break;
+      }
+    }
+    debug_assert!(!lines.is_empty());
+    Some(Block::new(lines))
   }
 
   pub fn parse(&mut self) -> Node<'alloc> {
