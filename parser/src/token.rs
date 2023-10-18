@@ -40,6 +40,16 @@ pub struct Token<'alloc> {
   pub lexeme: &'alloc str,
 }
 
+impl<'alloc> Token<'alloc> {
+  pub fn is(&self, kind: TokenKind) -> bool {
+    self.kind == kind
+  }
+
+  pub fn is_not(&self, kind: TokenKind) -> bool {
+    self.kind != kind
+  }
+}
+
 impl Default for TokenKind {
   fn default() -> Self {
     Self::Eof
