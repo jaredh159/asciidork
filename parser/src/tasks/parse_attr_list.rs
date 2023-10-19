@@ -86,7 +86,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
         Hash if state.quotes == Default => {
           state.commit_prev(self)?;
           if state.attr_list.id.is_some() {
-            // self.err("more than one id attribute", Some(&token))?
+            self.err("more than one id attribute", Some(&token))?
           }
           state.kind = Id;
         }
@@ -129,15 +129,14 @@ impl<'alloc> AttrState<'alloc> {
     }
   }
 
-  fn err_if_formatted(&self, _parser: &Parser) -> Result<()> {
-    // if self.formatted_text {
-    //   parser.err_at(
-    //     "formatted text only supports attribute shorthand: id, roles, & options",
-    //     self.parse_range.0,
-    //     self.parse_range.1,
-    //   )?;
-    // }
-    // TODO: reimpl
+  fn err_if_formatted(&self, parser: &Parser) -> Result<()> {
+    if self.formatted_text {
+      parser.err_at(
+        "formatted text only supports attribute shorthand: id, roles, & options",
+        self.parse_range.0,
+        self.parse_range.1,
+      )?;
+    }
     Ok(())
   }
 
@@ -329,6 +328,37 @@ mod tests {
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
       assert_eq!(attr_list, expected);
+    }
+  }
+
+  #[test]
+  fn test_parse_attr_list_errs() {
+    let cases = vec![
+      ("[#foo#bar]", false, "more than one id", 5, 1),
+      ("[#foo#bar]", true, "more than one id", 5, 1),
+      ("[foobar]", true, "only supports attribute shorthand", 1, 6),
+      (
+        "[#lol,rofl=copter]",
+        true,
+        "only supports attribute shorthand",
+        1,
+        16,
+      ),
+    ];
+
+    let b = &Bump::new();
+    for (input, formatted, expected, start, width) in cases {
+      let mut parser = Parser::new(b, input);
+      let mut line = parser.read_line().unwrap();
+      line.discard(1); // `[`
+      let result = parser.parse_attrs(&mut line, formatted);
+      if let Err(diag) = result {
+        assert!(diag.message.contains(expected));
+        assert_eq!(diag.underline_start, start);
+        assert_eq!(diag.underline_width, width);
+      } else {
+        panic!("expected error, got {:?}", result.unwrap());
+      }
     }
   }
 }

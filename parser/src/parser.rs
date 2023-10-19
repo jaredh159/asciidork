@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use bumpalo::collections::Vec as BumpVec;
 use bumpalo::{collections::String, Bump};
 
@@ -6,6 +8,7 @@ use crate::lexer::Lexer;
 use crate::line::Line;
 use crate::source_location::SourceLocation;
 use crate::token::{Token, TokenKind::*};
+use crate::Diagnostic;
 
 #[derive(Debug)]
 pub struct Node<'alloc> {
@@ -14,13 +17,20 @@ pub struct Node<'alloc> {
 }
 
 pub struct Parser<'alloc, 'src> {
-  pub(crate) allocator: &'alloc Bump,
-  lexer: Lexer<'src>,
+  pub(super) allocator: &'alloc Bump,
+  pub(super) lexer: Lexer<'src>,
+  pub(super) errors: RefCell<Vec<Diagnostic>>,
+  pub(super) bail: bool, // todo: naming...
 }
 
 impl<'alloc, 'src> Parser<'alloc, 'src> {
   pub fn new(allocator: &'alloc Bump, src: &'src str) -> Parser<'alloc, 'src> {
-    Parser { allocator, lexer: Lexer::new(src) }
+    Parser {
+      allocator,
+      lexer: Lexer::new(src),
+      errors: RefCell::new(Vec::new()),
+      bail: true,
+    }
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'alloc, 'src>> {

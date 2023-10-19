@@ -39,6 +39,48 @@ impl<'src> Lexer<'src> {
     self.peek == Some(c)
   }
 
+  pub fn line_of(&self, location: usize) -> &'src str {
+    let mut start = location;
+    let mut end = location;
+
+    for c in self.src.chars().rev().skip(self.src.len() - location) {
+      if start == 0 || c == '\n' {
+        break;
+      } else {
+        start -= 1;
+      }
+    }
+
+    for c in self.src.chars().skip(location) {
+      if c == '\n' {
+        break;
+      } else {
+        end += 1;
+      }
+    }
+
+    &self.src[start..end]
+  }
+
+  pub fn line_number(&self, location: usize) -> usize {
+    let (line_number, _) = self.line_number_with_offset(location);
+    line_number
+  }
+
+  pub fn line_number_with_offset(&self, location: usize) -> (usize, usize) {
+    let mut line_number = 1;
+    let mut offset: usize = 0;
+    for c in self.src.chars().take(location) {
+      if c == '\n' {
+        offset = 0;
+        line_number += 1;
+      } else {
+        offset += 1;
+      }
+    }
+    (line_number, offset.saturating_sub(1))
+  }
+
   pub fn consume_line<'alloc>(&mut self, allocator: &'alloc Bump) -> Option<Line<'alloc, 'src>> {
     if self.is_eof() {
       return None;
@@ -454,5 +496,51 @@ The document body starts here.
         lexeme: "",
       }
     );
+  }
+
+  #[test]
+  fn test_line_of() {
+    let input = "foo\nbar\n\nbaz\n";
+    let lexer = Lexer::new(input);
+    assert_eq!(lexer.line_of(1), "foo");
+    assert_eq!(lexer.line_of(2), "foo");
+    assert_eq!(lexer.line_of(3), "foo"); // newline
+
+    assert_eq!(lexer.line_of(4), "bar");
+    assert_eq!(lexer.line_of(7), "bar");
+    assert_eq!(lexer.line_of(8), ""); // empty line
+    assert_eq!(lexer.line_of(9), "baz");
+  }
+
+  #[test]
+  fn test_line_num() {
+    let input = "= :
+foo
+
+;
+";
+    let mut lexer = Lexer::new(input);
+
+    assert_next_token_line(&mut lexer, 1, EqualSigns);
+    assert_next_token_line(&mut lexer, 1, Whitespace);
+    assert_next_token_line(&mut lexer, 1, Colon);
+    assert_next_token_line(&mut lexer, 1, Newline);
+    assert_next_token_line(&mut lexer, 2, Word);
+    assert_next_token_line(&mut lexer, 2, Newline);
+    assert_next_token_line(&mut lexer, 3, Newline);
+  }
+
+  fn assert_next_token_line(lexer: &mut Lexer, line: usize, expected_kind: TokenKind) {
+    let token = lexer.next_token();
+    assert_eq!(token.kind, expected_kind);
+    assert_eq!(lexer.line_number(token.loc.start), line);
+  }
+
+  #[test]
+  fn test_consume_empty_lines() {
+    let input = "\n\n\n\n\n";
+    let mut lexer = Lexer::new(input);
+    lexer.consume_empty_lines();
+    assert!(lexer.is_eof());
   }
 }
