@@ -39,7 +39,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(super) fn parse_attr_list(&self, line: &mut Line) -> Result<AttrList> {
+  pub(super) fn parse_attr_list(&self, line: &mut Line) -> Result<AttrList<'alloc>> {
     self.parse_attrs(line, false)
   }
 
@@ -47,11 +47,11 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(super) fn parse_formatted_text_attr_list(&self, line: &mut Line) -> Result<AttrList> {
+  pub(super) fn parse_formatted_text_attr_list(&self, line: &mut Line) -> Result<AttrList<'alloc>> {
     self.parse_attrs(line, true)
   }
 
-  fn parse_attrs(&self, line: &mut Line, formatted_text: bool) -> Result<AttrList> {
+  fn parse_attrs(&self, line: &mut Line, formatted_text: bool) -> Result<AttrList<'alloc>> {
     debug_assert!(!line.current_is(OpenBracket));
     debug_assert!(line.contains_nonescaped(CloseBracket));
 

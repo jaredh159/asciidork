@@ -81,6 +81,7 @@ impl Token {
       _ => None,
     }
   }
+
   pub fn is_url_scheme(&self, parser: &Parser) -> bool {
     self.to_url_scheme(parser).is_some()
   }

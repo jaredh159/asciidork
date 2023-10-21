@@ -16,11 +16,25 @@ pub struct Node<'alloc> {
   pub text: String<'alloc>,
 }
 
+#[derive(Debug)]
 pub struct Parser<'alloc, 'src> {
   pub(super) allocator: &'alloc Bump,
   pub(super) lexer: Lexer<'src>,
+  pub(super) ctx: Context,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
+}
+
+#[derive(Debug)]
+pub(crate) struct Context {
+  pub(crate) subs: Substitutions,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Substitutions {
+  pub(crate) special_chars: bool,
+  pub(crate) inline_formatting: bool,
+  pub(crate) macros: bool,
 }
 
 impl<'alloc, 'src> Parser<'alloc, 'src> {
@@ -28,6 +42,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     Parser {
       allocator,
       lexer: Lexer::new(src),
+      ctx: Context { subs: Substitutions::all() },
       errors: RefCell::new(Vec::new()),
       bail: true,
     }
@@ -68,6 +83,24 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
       }
     }
     node
+  }
+}
+
+impl Substitutions {
+  pub fn all() -> Self {
+    Self {
+      special_chars: true,
+      inline_formatting: true,
+      macros: true,
+    }
+  }
+
+  pub fn none() -> Self {
+    Self {
+      special_chars: false,
+      inline_formatting: false,
+      macros: false,
+    }
   }
 }
 

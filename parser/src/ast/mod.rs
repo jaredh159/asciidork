@@ -3,4 +3,5 @@ mod inline;
 mod r#macro;
 
 pub use attr_list::{AttrList, Named};
+pub use inline::Inline;
 pub use r#macro::*;

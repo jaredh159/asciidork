@@ -215,7 +215,7 @@ impl<'src> Lexer<'src> {
   fn is_macro_name(&self, lexeme: &str) -> bool {
     matches!(
       lexeme,
-      "footnote" | "image" | "irc" | "icon" | "link" | "http" | "https" | "ftp" | "mailto"
+      "footnote" | "image" | "irc" | "icon" | "kbd" | "link" | "http" | "https" | "ftp" | "mailto"
     )
   }
 
