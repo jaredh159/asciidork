@@ -20,6 +20,7 @@ pub struct Node<'alloc> {
 pub struct Parser<'alloc, 'src> {
   pub(super) allocator: &'alloc Bump,
   pub(super) lexer: Lexer<'src>,
+  pub(super) peeked_block: Option<Block<'alloc, 'src>>,
   pub(super) ctx: Context,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
@@ -42,6 +43,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     Parser {
       allocator,
       lexer: Lexer::new(src),
+      peeked_block: None,
       ctx: Context { subs: Substitutions::all() },
       errors: RefCell::new(Vec::new()),
       bail: true,
@@ -53,6 +55,9 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   }
 
   pub(crate) fn read_block(&mut self) -> Option<Block<'alloc, 'src>> {
+    if let Some(block) = self.peeked_block.take() {
+      return Some(block);
+    }
     self.lexer.consume_empty_lines();
     if self.lexer.is_eof() {
       return None;

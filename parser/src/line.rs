@@ -1,6 +1,7 @@
 use bumpalo::collections::{String, Vec};
-use bumpalo::Bump;
+use bumpalo::{vec, Bump};
 
+use crate::block::Block;
 use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
 
 #[derive(Debug)]
@@ -33,6 +34,13 @@ impl<'alloc, 'src> Line<'alloc, 'src> {
 
   pub fn is_empty(&self) -> bool {
     self.pos >= self.all_tokens.len()
+  }
+
+  pub fn is_header(&self, len: usize) -> bool {
+    if !self.starts_with_seq(&[EqualSigns, Whitespace]) {
+      return false;
+    }
+    self.current_token().unwrap().lexeme.len() == len
   }
 
   pub fn discard(&mut self, n: usize) {
@@ -70,6 +78,14 @@ impl<'alloc, 'src> Line<'alloc, 'src> {
       }
     }
     true
+  }
+
+  pub fn contains(&self, kind: TokenKind) -> bool {
+    self.tokens().any(|t| t.kind == kind)
+  }
+
+  pub fn starts(&self, kind: TokenKind) -> bool {
+    self.current_is(kind)
   }
 
   pub fn starts_with_seq(&self, kinds: &[TokenKind]) -> bool {
@@ -204,6 +220,10 @@ impl<'alloc, 'src> Line<'alloc, 'src> {
     self.pos += 1;
     self.src = &self.src[token.lexeme.len()..];
     Some(token)
+  }
+
+  pub fn into_block_in(self, allocator: &'alloc Bump) -> Block<'alloc, 'src> {
+    Block::new(vec![in allocator; self])
   }
 }
 
