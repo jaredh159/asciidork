@@ -26,7 +26,6 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
       r"([^\s<]+\b)(\s+([^<;]+\b))*(\s*([^\s<;]+))(?:\s+<([^\s>@]+@[^\s>]+)>)?(\s*;\s*)?";
     let re = Regex::new(pattern).unwrap();
 
-    let num_bytes = line.src.bytes().len();
     let mut first_start = usize::MAX;
     let mut last_end = 0;
     for captures in re.captures_iter(line.src) {
@@ -39,6 +38,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
       authors.push(self.author_from(captures));
     }
 
+    let num_bytes = line.src.bytes().len();
     if first_start == usize::MAX {
       self.err("invalid author line", line.current_token())
     } else if first_start > 0 {

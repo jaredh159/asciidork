@@ -56,9 +56,9 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     if block.current_line_starts_with(Word) {
       self.parse_author_line(block.consume_current().unwrap(), &mut doc_header.authors)?;
       // revision line can only follow an author line (and requires a doc header)
-      // if !doc_header.authors.is_empty() {
-      //   self.parse_revision_line(block, &mut doc_header.revision);
-      // }
+      if !doc_header.authors.is_empty() {
+        self.parse_revision_line(block, &mut doc_header.revision);
+      }
     }
 
     Ok(())
