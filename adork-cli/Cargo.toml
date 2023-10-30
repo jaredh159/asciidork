@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-adork = { path = "../adork" }
 parser = { path = "../parser" }
 colored = "2.0.4"
 bumpalo = { version = "3.14.0", features = ["collections"] }

@@ -18,3 +18,6 @@
 - [√] would be nice if it could report ALL parse errors (maybe sync on new block)
 - [√] revision line for header
 - [√] (tired) maybe move diagnostics into a RefCell, remove lots of mut parser
+
+^ NB: commit `b035118` is useful if you want to find anything from the first, non
+bump-allocated version
