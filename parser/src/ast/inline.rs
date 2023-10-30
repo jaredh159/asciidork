@@ -5,15 +5,15 @@ use super::Macro;
 
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Inline<'alloc> {
-  Bold(Vec<'alloc, Inline<'alloc>>),
-  Highlight(Vec<'alloc, Inline<'alloc>>),
-  Macro(Macro<'alloc>),
-  Italic(Vec<'alloc, Inline<'alloc>>),
-  LitMono(String<'alloc>),
-  Mono(Vec<'alloc, Inline<'alloc>>),
-  Superscript(Vec<'alloc, Inline<'alloc>>),
-  Subscript(Vec<'alloc, Inline<'alloc>>),
-  Text(String<'alloc>),
-  TextSpan(AttrList<'alloc>, Vec<'alloc, Inline<'alloc>>),
+pub enum Inline<'bmp> {
+  Bold(Vec<'bmp, Inline<'bmp>>),
+  Highlight(Vec<'bmp, Inline<'bmp>>),
+  Macro(Macro<'bmp>),
+  Italic(Vec<'bmp, Inline<'bmp>>),
+  LitMono(String<'bmp>),
+  Mono(Vec<'bmp, Inline<'bmp>>),
+  Superscript(Vec<'bmp, Inline<'bmp>>),
+  Subscript(Vec<'bmp, Inline<'bmp>>),
+  Text(String<'bmp>),
+  TextSpan(AttrList<'bmp>, Vec<'bmp, Inline<'bmp>>),
 }

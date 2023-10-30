@@ -3,12 +3,12 @@ use bumpalo::collections::Vec;
 use super::{node::Section, Inline};
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Block<'alloc> {
-  pub context: BlockContext<'alloc>,
+pub struct Block<'bmp> {
+  pub context: BlockContext<'bmp>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum BlockContext<'alloc> {
+pub enum BlockContext<'bmp> {
   Admonition,
   Audio,
   CalloutList,
@@ -22,10 +22,10 @@ pub enum BlockContext<'alloc> {
   OrderedList,
   Open,
   PageBreak,
-  Paragraph(Vec<'alloc, Inline<'alloc>>),
+  Paragraph(Vec<'bmp, Inline<'bmp>>),
   Passthrough,
   BlockQuote,
-  Section(Section<'alloc>),
+  Section(Section<'bmp>),
   Sidebar,
   Table,
   TableCell,

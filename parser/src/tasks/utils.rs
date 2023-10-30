@@ -4,16 +4,16 @@ use bumpalo::Bump;
 use crate::token::Token;
 
 #[derive(Debug)]
-pub(super) struct Text<'alloc> {
-  allocator: &'alloc Bump,
-  string: Option<String<'alloc>>,
+pub(super) struct Text<'bmp> {
+  bump: &'bmp Bump,
+  string: Option<String<'bmp>>,
 }
 
-impl<'alloc> Text<'alloc> {
-  pub fn new_in(allocator: &'alloc Bump) -> Self {
+impl<'bmp> Text<'bmp> {
+  pub fn new_in(bump: &'bmp Bump) -> Self {
     Text {
-      string: Some(String::new_in(allocator)),
-      allocator,
+      string: Some(String::new_in(bump)),
+      bump,
     }
   }
 
@@ -35,11 +35,11 @@ impl<'alloc> Text<'alloc> {
     self.string.as_ref().unwrap().len() == 0
   }
 
-  pub fn take(&mut self) -> String<'alloc> {
-    self.string.replace(String::new_in(self.allocator)).unwrap()
+  pub fn take(&mut self) -> String<'bmp> {
+    self.string.replace(String::new_in(self.bump)).unwrap()
   }
 
-  pub fn replace(&mut self, s: String<'alloc>) -> String {
+  pub fn replace(&mut self, s: String<'bmp>) -> String {
     self.string.replace(s).unwrap()
   }
 }

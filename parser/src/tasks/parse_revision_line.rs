@@ -6,11 +6,11 @@ use crate::block::Block;
 use crate::token::TokenKind::*;
 use crate::Parser;
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_revision_line(
     &self,
     block: &mut Block,
-    revision: &mut Option<Revision<'alloc>>,
+    revision: &mut Option<Revision<'bmp>>,
   ) {
     let Some(line) = block.current_line() else {
       return;
@@ -35,7 +35,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
 
     let vre = Regex::new(r"\d.*$").unwrap();
     let version = vre.captures(raw_version).unwrap().get(0).unwrap().as_str();
-    let version = String::from_str_in(version, self.allocator);
+    let version = String::from_str_in(version, self.bump);
 
     // only revision, must start with `v` then digit
     if captures.get(2).is_none() && captures.get(3).is_none() {
@@ -52,7 +52,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
       *revision = Some(Revision {
         version,
         date: None,
-        remark: Some(String::from_str_in(remark, self.allocator)),
+        remark: Some(String::from_str_in(remark, self.bump)),
       });
       block.consume_current();
       return;
@@ -63,7 +63,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
       let date = captures.get(2).unwrap().as_str();
       *revision = Some(Revision {
         version,
-        date: Some(String::from_str_in(date, self.allocator)),
+        date: Some(String::from_str_in(date, self.bump)),
         remark: None,
       });
       block.consume_current();
@@ -74,8 +74,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     let remark = captures.get(3).unwrap().as_str();
     *revision = Some(Revision {
       version,
-      date: Some(String::from_str_in(date, self.allocator)),
-      remark: Some(String::from_str_in(remark, self.allocator)),
+      date: Some(String::from_str_in(date, self.bump)),
+      remark: Some(String::from_str_in(remark, self.bump)),
     });
     block.consume_current();
   }

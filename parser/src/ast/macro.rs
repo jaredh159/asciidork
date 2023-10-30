@@ -4,11 +4,11 @@ use bumpalo::collections::String;
 use super::AttrList;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Macro<'alloc> {
-  Footnote(Option<String<'alloc>>, AttrList<'alloc>),
-  Image(String<'alloc>, AttrList<'alloc>),
-  Keyboard(AttrList<'alloc>),
-  Link(UrlScheme, String<'alloc>, AttrList<'alloc>),
+pub enum Macro<'bmp> {
+  Footnote(Option<String<'bmp>>, AttrList<'bmp>),
+  Image(String<'bmp>, AttrList<'bmp>),
+  Keyboard(AttrList<'bmp>),
+  Link(UrlScheme, String<'bmp>, AttrList<'bmp>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -10,7 +10,7 @@ pub struct Diagnostic {
   pub underline_width: usize,
 }
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn err_at(&self, message: &'static str, start: usize, end: usize) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
     self.handle_err(Diagnostic {

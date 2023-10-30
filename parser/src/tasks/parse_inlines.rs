@@ -8,21 +8,21 @@ use crate::tasks::utils::Text;
 use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
 use crate::{Parser, Result};
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_inlines(
     &mut self,
-    mut block: Block<'alloc, 'src>,
-  ) -> Result<Vec<'alloc, Inline<'alloc>>> {
+    mut block: Block<'bmp, 'src>,
+  ) -> Result<Vec<'bmp, Inline<'bmp>>> {
     self.parse_inlines_until(&mut block, &[])
   }
 
   fn parse_inlines_until(
     &mut self,
-    block: &mut Block<'alloc, 'src>,
+    block: &mut Block<'bmp, 'src>,
     stop_tokens: &[TokenKind],
-  ) -> Result<Vec<'alloc, Inline<'alloc>>> {
-    let mut inlines = Vec::new_in(self.allocator);
-    let mut text = Text::new_in(self.allocator);
+  ) -> Result<Vec<'bmp, Inline<'bmp>>> {
+    let mut inlines = Vec::new_in(self.bump);
+    let mut text = Text::new_in(self.bump);
     let subs = self.ctx.subs;
     while let Some(mut line) = block.consume_current() {
       loop {
@@ -41,7 +41,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
           Some(token) if subs.macros && token.is(MacroName) && line.continues_inline_macro() => {
             match token.lexeme {
               "image:" => {
-                let target = line.consume_macro_target(self.allocator);
+                let target = line.consume_macro_target(self.bump);
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
                 inlines.push(Macro(Macro::Image(target, attr_list)));
@@ -53,7 +53,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
                 inlines.push(Macro(Macro::Keyboard(attr_list)));
               }
               "footnote:" => {
-                let id = line.consume_optional_macro_target(self.allocator);
+                let id = line.consume_optional_macro_target(self.bump);
                 let attr_list = self.parse_attr_list(&mut line)?;
                 text.commit_inlines(&mut inlines);
                 inlines.push(Macro(Macro::Footnote(id, attr_list)));
@@ -69,8 +69,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
             text.commit_inlines(&mut inlines);
             inlines.push(Macro(Macro::Link(
               scheme.to_url_scheme().unwrap(),
-              line.consume_url(Some(&scheme), self.allocator),
-              AttrList::role("bare", self.allocator),
+              line.consume_url(Some(&scheme), self.bump),
+              AttrList::role("bare", self.bump),
             )));
             line.discard(1); // `>`
           }
@@ -79,8 +79,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
             text.commit_inlines(&mut inlines);
             inlines.push(Macro(Macro::Link(
               token.to_url_scheme().unwrap(),
-              line.consume_url(Some(&token), self.allocator),
-              AttrList::role("bare", self.allocator),
+              line.consume_url(Some(&token), self.bump),
+              AttrList::role("bare", self.bump),
             )));
           }
 
@@ -297,11 +297,11 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   fn parse_unconstrained(
     &mut self,
     kind: TokenKind,
-    wrap: impl FnOnce(Vec<'alloc, Inline<'alloc>>) -> Inline<'alloc>,
-    text: &mut Text<'alloc>,
-    inlines: &mut Vec<'alloc, Inline<'alloc>>,
-    mut line: Line<'alloc, 'src>,
-    block: &mut Block<'alloc, 'src>,
+    wrap: impl FnOnce(Vec<'bmp, Inline<'bmp>>) -> Inline<'bmp>,
+    text: &mut Text<'bmp>,
+    inlines: &mut Vec<'bmp, Inline<'bmp>>,
+    mut line: Line<'bmp, 'src>,
+    block: &mut Block<'bmp, 'src>,
   ) -> Result<()> {
     line.discard(1); // second token
     text.commit_inlines(inlines);
@@ -313,11 +313,11 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   fn parse_constrained(
     &mut self,
     kind: TokenKind,
-    wrap: impl FnOnce(Vec<'alloc, Inline<'alloc>>) -> Inline<'alloc>,
-    text: &mut Text<'alloc>,
-    inlines: &mut Vec<'alloc, Inline<'alloc>>,
-    line: Line<'alloc, 'src>,
-    block: &mut Block<'alloc, 'src>,
+    wrap: impl FnOnce(Vec<'bmp, Inline<'bmp>>) -> Inline<'bmp>,
+    text: &mut Text<'bmp>,
+    inlines: &mut Vec<'bmp, Inline<'bmp>>,
+    line: Line<'bmp, 'src>,
+    block: &mut Block<'bmp, 'src>,
   ) -> Result<()> {
     text.commit_inlines(inlines);
     block.restore(line);
@@ -327,8 +327,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
 
   fn merge_inlines(
     &self,
-    a: &mut Vec<'alloc, Inline<'alloc>>,
-    b: &mut Vec<'alloc, Inline<'alloc>>,
+    a: &mut Vec<'bmp, Inline<'bmp>>,
+    b: &mut Vec<'bmp, Inline<'bmp>>,
     append: Option<&str>,
   ) {
     if let (Some(Text(a_text)), Some(Text(b_text))) = (a.last_mut(), b.first_mut()) {
@@ -338,7 +338,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     a.append(b);
     match (append, a.last_mut()) {
       (Some(append), Some(Text(text))) => text.push_str(append),
-      (Some(append), _) => a.push(Text(String::from_str_in(append, self.allocator))),
+      (Some(append), _) => a.push(Text(String::from_str_in(append, self.bump))),
       _ => {}
     }
   }
@@ -363,8 +363,8 @@ fn contains_seq(seq: &[TokenKind], line: &Line, block: &Block) -> bool {
   line.contains_seq(seq) || block.contains_seq(seq)
 }
 
-impl<'alloc> Text<'alloc> {
-  fn commit_inlines(&mut self, inlines: &mut Vec<'alloc, Inline<'alloc>>) {
+impl<'bmp> Text<'bmp> {
+  fn commit_inlines(&mut self, inlines: &mut Vec<'bmp, Inline<'bmp>>) {
     match (self.is_empty(), inlines.last_mut()) {
       (false, Some(Inline::Text(text))) => text.push_str(&self.take()),
       (false, _) => inlines.push(Inline::Text(self.take())),
@@ -555,11 +555,11 @@ mod tests {
     }
   }
 
-  impl<'alloc> AttrList<'alloc> {
-    pub fn positional(role: &'static str, allocator: &'alloc Bump) -> AttrList<'alloc> {
+  impl<'bmp> AttrList<'bmp> {
+    pub fn positional(role: &'static str, bump: &'bmp Bump) -> AttrList<'bmp> {
       AttrList {
-        positional: bvec![in allocator; String::from_str_in(role, allocator)],
-        ..AttrList::new_in(allocator)
+        positional: bvec![in bump; String::from_str_in(role, bump)],
+        ..AttrList::new_in(bump)
       }
     }
   }

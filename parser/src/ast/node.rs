@@ -3,29 +3,29 @@ use bumpalo::collections::Vec;
 use super::{block::Block, doc_content::DocContent, DocHeader, Inline};
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Section<'alloc> {
+pub struct Section<'bmp> {
   level: u8,
-  heading: Heading<'alloc>,
-  blocks: Vec<'alloc, Block<'alloc>>,
+  heading: Heading<'bmp>,
+  blocks: Vec<'bmp, Block<'bmp>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Heading<'alloc> {
-  inlines: Vec<'alloc, Inline<'alloc>>,
+pub struct Heading<'bmp> {
+  inlines: Vec<'bmp, Inline<'bmp>>,
 }
 
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#document
 #[derive(Debug, PartialEq, Eq)]
-pub struct Document<'alloc> {
-  pub header: Option<DocHeader<'alloc>>,
-  pub content: DocContent<'alloc>,
+pub struct Document<'bmp> {
+  pub header: Option<DocHeader<'bmp>>,
+  pub content: DocContent<'bmp>,
 }
 
-impl<'alloc> Document<'alloc> {
-  pub fn new_in(allocator: &'alloc bumpalo::Bump) -> Self {
+impl<'bmp> Document<'bmp> {
+  pub fn new_in(bump: &'bmp bumpalo::Bump) -> Self {
     Self {
       header: None,
-      content: DocContent::Blocks(bumpalo::vec![in allocator]),
+      content: DocContent::Blocks(bumpalo::vec![in bump]),
     }
   }
 }

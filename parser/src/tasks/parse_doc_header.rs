@@ -7,8 +7,8 @@ use crate::block::Block;
 use crate::token::TokenKind::*;
 use crate::{Parser, Result};
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
-  pub(crate) fn parse_document_header(&mut self) -> Result<Option<DocHeader<'alloc>>> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
+  pub(crate) fn parse_document_header(&mut self) -> Result<Option<DocHeader<'bmp>>> {
     let Some(mut block) = self.read_block() else {
       return Ok(None);
     };
@@ -23,7 +23,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
 
     let mut doc_header = DocHeader {
       title: None,
-      authors: bump_vec![in self.allocator],
+      authors: bump_vec![in self.bump],
       revision: None,
       attrs: HashMap::new(),
     };
@@ -35,8 +35,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
 
   fn parse_doc_title_author_revision(
     &mut self,
-    block: &mut Block<'alloc, 'src>,
-    doc_header: &mut DocHeader<'alloc>,
+    block: &mut Block<'bmp, 'src>,
+    doc_header: &mut DocHeader<'bmp>,
   ) -> Result<()> {
     let first_line = block.current_line().expect("non-empty doc header");
     if !first_line.is_header(1) {
@@ -49,7 +49,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     header_line.discard(2);
 
     doc_header.title = Some(DocTitle {
-      heading: self.parse_inlines(header_line.into_block_in(self.allocator))?,
+      heading: self.parse_inlines(header_line.into_block_in(self.bump))?,
       subtitle: None, // todo
     });
 

@@ -81,13 +81,13 @@ impl<'src> Lexer<'src> {
     (line_number, offset.saturating_sub(1))
   }
 
-  pub fn consume_line<'alloc>(&mut self, allocator: &'alloc Bump) -> Option<Line<'alloc, 'src>> {
+  pub fn consume_line<'bmp>(&mut self, bump: &'bmp Bump) -> Option<Line<'bmp, 'src>> {
     if self.is_eof() {
       return None;
     }
     let start = self.offset();
     let mut end = start;
-    let mut tokens = BumpVec::new_in(allocator);
+    let mut tokens = BumpVec::new_in(bump);
     while !self.peek_is('\n') && !self.is_eof() {
       let token = self.next_token();
       end = token.loc.end;

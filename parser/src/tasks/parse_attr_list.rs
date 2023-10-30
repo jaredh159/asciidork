@@ -23,23 +23,23 @@ enum Quotes {
 }
 
 #[derive(Debug)]
-struct AttrState<'alloc> {
-  attr_list: AttrList<'alloc>,
+struct AttrState<'bmp> {
+  attr_list: AttrList<'bmp>,
   quotes: Quotes,
-  attr: Text<'alloc>,
-  name: Text<'alloc>,
+  attr: Text<'bmp>,
+  name: Text<'bmp>,
   kind: AttrKind,
   escaping: bool,
   parse_range: (usize, usize),
   formatted_text: bool,
 }
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
   /// Parse an attribute list.
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(super) fn parse_attr_list(&self, line: &mut Line) -> Result<AttrList<'alloc>> {
+  pub(super) fn parse_attr_list(&self, line: &mut Line) -> Result<AttrList<'bmp>> {
     self.parse_attrs(line, false)
   }
 
@@ -47,24 +47,24 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(super) fn parse_formatted_text_attr_list(&self, line: &mut Line) -> Result<AttrList<'alloc>> {
+  pub(super) fn parse_formatted_text_attr_list(&self, line: &mut Line) -> Result<AttrList<'bmp>> {
     self.parse_attrs(line, true)
   }
 
-  fn parse_attrs(&self, line: &mut Line, formatted_text: bool) -> Result<AttrList<'alloc>> {
+  fn parse_attrs(&self, line: &mut Line, formatted_text: bool) -> Result<AttrList<'bmp>> {
     debug_assert!(!line.current_is(OpenBracket));
     debug_assert!(line.contains_nonescaped(CloseBracket));
 
     if line.current_is(CloseBracket) {
       line.discard(1); // `]`
-      return Ok(AttrList::new_in(self.allocator));
+      return Ok(AttrList::new_in(self.bump));
     }
 
     use AttrKind::*;
     use Quotes::*;
     let parse_start = line.current_token().unwrap().loc.start;
     let parse_end = line.first_nonescaped(CloseBracket).unwrap().loc.end - 1;
-    let mut state = AttrState::new_in(self.allocator, formatted_text, (parse_start, parse_end));
+    let mut state = AttrState::new_in(self.bump, formatted_text, (parse_start, parse_end));
 
     while let Some(token) = line.consume_current() {
       match token.kind {
@@ -115,13 +115,13 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   }
 }
 
-impl<'alloc> AttrState<'alloc> {
-  fn new_in(allocator: &Bump, formatted_text: bool, parse_range: (usize, usize)) -> AttrState {
+impl<'bmp> AttrState<'bmp> {
+  fn new_in(bump: &Bump, formatted_text: bool, parse_range: (usize, usize)) -> AttrState {
     AttrState {
-      attr_list: AttrList::new_in(allocator),
+      attr_list: AttrList::new_in(bump),
       quotes: Quotes::Default,
-      attr: Text::new_in(allocator),
-      name: Text::new_in(allocator),
+      attr: Text::new_in(bump),
+      name: Text::new_in(bump),
       kind: AttrKind::Positional,
       escaping: false,
       parse_range,

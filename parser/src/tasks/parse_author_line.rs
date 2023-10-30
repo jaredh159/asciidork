@@ -6,7 +6,7 @@ use crate::line::Line;
 use crate::token::TokenKind::*;
 use crate::{Parser, Result};
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
   /// if this function is called, the following invaraints hold:
   /// - the line is not empty
   /// - the line starts with a word
@@ -15,8 +15,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   /// Therefore, it would be an error for this line to not be an author line
   pub(super) fn parse_author_line(
     &self,
-    line: Line<'alloc, 'src>,
-    authors: &mut Vec<'alloc, Author<'alloc>>,
+    line: Line<'bmp, 'src>,
+    authors: &mut Vec<'bmp, Author<'bmp>>,
   ) -> Result<()> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
@@ -52,16 +52,16 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     }
   }
 
-  pub(crate) fn author_from(&self, captures: regex::Captures<'alloc>) -> Author<'alloc> {
+  pub(crate) fn author_from(&self, captures: regex::Captures<'bmp>) -> Author<'bmp> {
     let first_name = captures.get(1).unwrap().as_str();
     let middle_name = captures.get(3).map(|m| m.as_str().trim_end());
     let last_name = captures.get(5).unwrap().as_str();
     let email = captures.get(6).map(|m| m.as_str());
     return Author {
-      first_name: String::from_str_in(first_name, self.allocator),
-      middle_name: middle_name.map(|m| String::from_str_in(m, self.allocator)),
-      last_name: String::from_str_in(last_name, self.allocator),
-      email: email.map(|e| String::from_str_in(e, self.allocator)),
+      first_name: String::from_str_in(first_name, self.bump),
+      middle_name: middle_name.map(|m| String::from_str_in(m, self.bump)),
+      last_name: String::from_str_in(last_name, self.bump),
+      email: email.map(|e| String::from_str_in(e, self.bump)),
     };
   }
 }

@@ -3,19 +3,19 @@ use bumpalo::collections::Vec as BumpVec;
 use crate::{line::Line, token::TokenIs, token::TokenKind};
 
 #[derive(Debug)]
-pub struct Block<'alloc, 'src> {
+pub struct Block<'bmp, 'src> {
   // NB: lines kept in reverse, as there is no VeqDeque in bumpalo
   // and we almost always want to consume from the front, so fake it
-  pub(crate) lines: BumpVec<'alloc, Line<'alloc, 'src>>,
+  pub(crate) lines: BumpVec<'bmp, Line<'bmp, 'src>>,
 }
 
-impl<'alloc, 'src> Block<'alloc, 'src> {
-  pub fn new(mut lines: BumpVec<'alloc, Line<'alloc, 'src>>) -> Self {
+impl<'bmp, 'src> Block<'bmp, 'src> {
+  pub fn new(mut lines: BumpVec<'bmp, Line<'bmp, 'src>>) -> Self {
     lines.reverse();
     Block { lines }
   }
 
-  pub fn current_line(&self) -> Option<&Line<'alloc, 'src>> {
+  pub fn current_line(&self) -> Option<&Line<'bmp, 'src>> {
     self.lines.last()
   }
 
@@ -23,11 +23,11 @@ impl<'alloc, 'src> Block<'alloc, 'src> {
     self.lines.is_empty()
   }
 
-  pub fn consume_current(&mut self) -> Option<Line<'alloc, 'src>> {
+  pub fn consume_current(&mut self) -> Option<Line<'bmp, 'src>> {
     self.lines.pop()
   }
 
-  pub fn restore(&mut self, line: Line<'alloc, 'src>) {
+  pub fn restore(&mut self, line: Line<'bmp, 'src>) {
     self.lines.push(line);
   }
 

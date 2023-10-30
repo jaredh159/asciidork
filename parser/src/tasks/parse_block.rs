@@ -1,8 +1,8 @@
 use crate::ast;
 use crate::{Parser, Result};
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
-  pub(crate) fn parse_block(&mut self) -> Result<Option<ast::Block<'alloc>>> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
+  pub(crate) fn parse_block(&mut self) -> Result<Option<ast::Block<'bmp>>> {
     // parse block attr list `[...]`
 
     // if it starts a section, delegate somewhere else?
@@ -14,7 +14,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     self.parse_paragraph()
   }
 
-  fn parse_paragraph(&mut self) -> Result<Option<ast::Block<'alloc>>> {
+  fn parse_paragraph(&mut self) -> Result<Option<ast::Block<'bmp>>> {
     let Some(block) = self.read_block() else {
       return Ok(None);
     };

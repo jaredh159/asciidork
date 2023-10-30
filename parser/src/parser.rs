@@ -11,24 +11,24 @@ use crate::source_location::SourceLocation;
 use crate::Diagnostic;
 
 #[derive(Debug)]
-pub struct Node<'alloc> {
+pub struct Node<'bmp> {
   pub loc: SourceLocation,
-  pub text: String<'alloc>,
+  pub text: String<'bmp>,
 }
 
 #[derive(Debug)]
-pub struct Parser<'alloc, 'src> {
-  pub(super) allocator: &'alloc Bump,
+pub struct Parser<'bmp, 'src> {
+  pub(super) bump: &'bmp Bump,
   pub(super) lexer: Lexer<'src>,
-  pub(super) document: Document<'alloc>,
-  pub(super) peeked_block: Option<Block<'alloc, 'src>>,
+  pub(super) document: Document<'bmp>,
+  pub(super) peeked_block: Option<Block<'bmp, 'src>>,
   pub(super) ctx: Context,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
 }
 
-pub struct ParseResult<'alloc> {
-  pub document: Document<'alloc>,
+pub struct ParseResult<'bmp> {
+  pub document: Document<'bmp>,
   pub warnings: Vec<Diagnostic>,
 }
 
@@ -44,12 +44,12 @@ pub(crate) struct Substitutions {
   pub(crate) macros: bool,
 }
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
-  pub fn new(allocator: &'alloc Bump, src: &'src str) -> Parser<'alloc, 'src> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
+  pub fn new(bump: &'bmp Bump, src: &'src str) -> Parser<'bmp, 'src> {
     Parser {
-      allocator,
+      bump,
       lexer: Lexer::new(src),
-      document: Document::new_in(allocator),
+      document: Document::new_in(bump),
       peeked_block: None,
       ctx: Context { subs: Substitutions::all() },
       errors: RefCell::new(Vec::new()),
@@ -57,11 +57,11 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     }
   }
 
-  pub(crate) fn read_line(&mut self) -> Option<Line<'alloc, 'src>> {
-    self.lexer.consume_line(self.allocator)
+  pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
+    self.lexer.consume_line(self.bump)
   }
 
-  pub(crate) fn read_block(&mut self) -> Option<Block<'alloc, 'src>> {
+  pub(crate) fn read_block(&mut self) -> Option<Block<'bmp, 'src>> {
     if let Some(block) = self.peeked_block.take() {
       return Some(block);
     }
@@ -69,8 +69,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     if self.lexer.is_eof() {
       return None;
     }
-    let mut lines = BumpVec::new_in(self.allocator);
-    while let Some(line) = self.lexer.consume_line(self.allocator) {
+    let mut lines = BumpVec::new_in(self.bump);
+    while let Some(line) = self.lexer.consume_line(self.bump) {
       lines.push(line);
       if self.lexer.peek_is('\n') {
         break;
@@ -80,7 +80,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     Some(Block::new(lines))
   }
 
-  pub fn parse(mut self) -> std::result::Result<ParseResult<'alloc>, Vec<Diagnostic>> {
+  pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
 
     while let Some(block) = self.parse_block()? {

@@ -5,11 +5,11 @@ use regex::Regex;
 
 use crate::{block::Block, Parser, Result};
 
-impl<'alloc, 'src> Parser<'alloc, 'src> {
+impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attrs(
     &self,
-    block: &mut Block<'alloc, 'src>,
-    attrs: &mut HashMap<String<'alloc>, String<'alloc>>,
+    block: &mut Block<'bmp, 'src>,
+    attrs: &mut HashMap<String<'bmp>, String<'bmp>>,
   ) -> Result<()> {
     while let Some((key, value)) = self.parse_doc_attr(block)? {
       attrs.insert(key, value);
@@ -17,7 +17,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     Ok(())
   }
 
-  fn parse_doc_attr(&self, block: &mut Block) -> Result<Option<(String<'alloc>, String<'alloc>)>> {
+  fn parse_doc_attr(&self, block: &mut Block) -> Result<Option<(String<'bmp>, String<'bmp>)>> {
     let Some(line) = block.current_line() else {
       return Ok(None);
     };
@@ -30,8 +30,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     };
 
     block.consume_current();
-    let key = String::from_str_in(captures.get(1).unwrap().as_str(), self.allocator);
-    let value = String::from_str_in(captures.get(2).map_or("", |m| m.as_str()), self.allocator);
+    let key = String::from_str_in(captures.get(1).unwrap().as_str(), self.bump);
+    let value = String::from_str_in(captures.get(2).map_or("", |m| m.as_str()), self.bump);
     Ok(Some((key, value)))
   }
 }

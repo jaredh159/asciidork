@@ -5,14 +5,14 @@ use crate::block::Block;
 use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
 
 #[derive(Debug)]
-pub struct Line<'alloc, 'src> {
+pub struct Line<'bmp, 'src> {
   pub src: &'src str,
-  all_tokens: Vec<'alloc, Token<'src>>,
+  all_tokens: Vec<'bmp, Token<'src>>,
   pos: usize,
 }
 
-impl<'alloc, 'src> Line<'alloc, 'src> {
-  pub fn new(tokens: Vec<'alloc, Token<'src>>, src: &'src str) -> Self {
+impl<'bmp, 'src> Line<'bmp, 'src> {
+  pub fn new(tokens: Vec<'bmp, Token<'src>>, src: &'src str) -> Self {
     Line { all_tokens: tokens, src, pos: 0 }
   }
 
@@ -148,12 +148,8 @@ impl<'alloc, 'src> Line<'alloc, 'src> {
     }
   }
 
-  pub fn consume_to_string_until(
-    &mut self,
-    kind: TokenKind,
-    allocator: &'alloc Bump,
-  ) -> String<'alloc> {
-    let mut s = String::new_in(allocator);
+  pub fn consume_to_string_until(&mut self, kind: TokenKind, bump: &'bmp Bump) -> String<'bmp> {
+    let mut s = String::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
       s.push_str(token.lexeme);
     }
@@ -167,26 +163,23 @@ impl<'alloc, 'src> Line<'alloc, 'src> {
     }
   }
 
-  pub fn consume_macro_target(&mut self, allocator: &'alloc Bump) -> String<'alloc> {
-    let target = self.consume_to_string_until(OpenBracket, allocator);
+  pub fn consume_macro_target(&mut self, bump: &'bmp Bump) -> String<'bmp> {
+    let target = self.consume_to_string_until(OpenBracket, bump);
     self.discard(1); // `[`
     target
   }
 
-  pub fn consume_optional_macro_target(
-    &mut self,
-    allocator: &'alloc Bump,
-  ) -> Option<String<'alloc>> {
+  pub fn consume_optional_macro_target(&mut self, bump: &'bmp Bump) -> Option<String<'bmp>> {
     let target = match self.current_is(OpenBracket) {
       true => None,
-      false => Some(self.consume_to_string_until(CloseBracket, allocator)),
+      false => Some(self.consume_to_string_until(CloseBracket, bump)),
     };
     self.discard(1); // `[`
     target
   }
 
   #[must_use]
-  pub fn consume_url(&mut self, start: Option<&Token>, allocator: &'alloc Bump) -> String<'alloc> {
+  pub fn consume_url(&mut self, start: Option<&Token>, bump: &'bmp Bump) -> String<'bmp> {
     let mut num_tokens = 0;
 
     for token in self.tokens() {
@@ -201,7 +194,7 @@ impl<'alloc, 'src> Line<'alloc, 'src> {
       num_tokens -= 1;
     }
 
-    let mut s = String::new_in(allocator);
+    let mut s = String::new_in(bump);
     if let Some(start) = start {
       s.push_str(start.lexeme);
     }
@@ -222,8 +215,8 @@ impl<'alloc, 'src> Line<'alloc, 'src> {
     Some(token)
   }
 
-  pub fn into_block_in(self, allocator: &'alloc Bump) -> Block<'alloc, 'src> {
-    Block::new(vec![in allocator; self])
+  pub fn into_block_in(self, bump: &'bmp Bump) -> Block<'bmp, 'src> {
+    Block::new(vec![in bump; self])
   }
 }
 
