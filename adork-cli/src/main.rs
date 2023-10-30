@@ -3,6 +3,7 @@ use std::result::Result;
 use std::{env, fs};
 
 use bumpalo::Bump;
+use colored::*;
 
 use parser::parser::Parser;
 
@@ -20,13 +21,43 @@ fn print_ast(path: &str) -> Result<(), GenericError> {
   let mut src = String::new();
   file.read_to_string(&mut src)?;
   let bump = &Bump::with_capacity(src.len());
-  let mut parser = Parser::new(bump, &src);
-  let node = parser.parse();
-  println!("{:#?}", node);
-  Ok(())
+  let parser = Parser::new(bump, &src);
+  let result = parser.parse();
+  match result {
+    Err(diagnostics) => {
+      for diagnostic in diagnostics {
+        let line_num_pad = match diagnostic.line_num {
+          n if n < 10 => 3,
+          n if n < 100 => 4,
+          n if n < 1000 => 5,
+          n if n < 10000 => 6,
+          _ => 7,
+        };
+        println!(
+          "\n{}{} {}",
+          diagnostic.line_num.to_string().dimmed(),
+          ":".dimmed(),
+          diagnostic.line
+        );
+        println!(
+          "{}{} {}\n",
+          " ".repeat(diagnostic.underline_start + line_num_pad),
+          "^".repeat(diagnostic.underline_width).red().bold(),
+          diagnostic.message.red().bold()
+        );
+      }
+      Ok(())
+    }
+    Ok(parse_result) => {
+      println!("{:#?}", parse_result.document);
+      Ok(())
+    }
+  }
+  // println!("{:#?}", node);
+  // Ok(())
 }
 
-// 👍 this shows how to read the file right into a bump vec
+// this shows how to read the file right into a bump vec
 // fn print_ast(path: &str) -> Result<(), GenericError> {
 //   let file_size = file.metadata()?.len() as usize;
 //   let file = fs::File::open(path)?;

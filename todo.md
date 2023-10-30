@@ -1,5 +1,7 @@
 ## todo
 
+- [ ] need to track locations in nodes, like inline at least, maybe doc header
+- [ ] shared test macros (duplication of s!)
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
 - [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] basic multi-byte char test

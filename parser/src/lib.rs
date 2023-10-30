@@ -3,7 +3,6 @@
 mod ast; // will be it's own crate at some point...
 mod block;
 mod diagnostic;
-mod evaluator;
 mod lexer;
 mod line;
 pub mod parser;

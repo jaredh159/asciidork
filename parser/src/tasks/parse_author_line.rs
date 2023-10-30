@@ -53,7 +53,6 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
   }
 
   pub(crate) fn author_from(&self, captures: regex::Captures<'alloc>) -> Author<'alloc> {
-    println!("captures: {:?}", captures);
     let first_name = captures.get(1).unwrap().as_str();
     let middle_name = captures.get(3).map(|m| m.as_str().trim_end());
     let last_name = captures.get(5).unwrap().as_str();

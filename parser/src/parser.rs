@@ -3,11 +3,11 @@ use std::cell::RefCell;
 use bumpalo::collections::Vec as BumpVec;
 use bumpalo::{collections::String, Bump};
 
+use crate::ast::Document;
 use crate::block::Block;
 use crate::lexer::Lexer;
 use crate::line::Line;
 use crate::source_location::SourceLocation;
-use crate::token::{Token, TokenKind::*};
 use crate::Diagnostic;
 
 #[derive(Debug)]
@@ -20,10 +20,16 @@ pub struct Node<'alloc> {
 pub struct Parser<'alloc, 'src> {
   pub(super) allocator: &'alloc Bump,
   pub(super) lexer: Lexer<'src>,
+  pub(super) document: Document<'alloc>,
   pub(super) peeked_block: Option<Block<'alloc, 'src>>,
   pub(super) ctx: Context,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
+}
+
+pub struct ParseResult<'alloc> {
+  pub document: Document<'alloc>,
+  pub warnings: Vec<Diagnostic>,
 }
 
 #[derive(Debug)]
@@ -43,6 +49,7 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     Parser {
       allocator,
       lexer: Lexer::new(src),
+      document: Document::new_in(allocator),
       peeked_block: None,
       ctx: Context { subs: Substitutions::all() },
       errors: RefCell::new(Vec::new()),
@@ -73,21 +80,17 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     Some(Block::new(lines))
   }
 
-  pub fn parse(&mut self) -> Node<'alloc> {
-    let mut node = Node {
-      loc: self.lexer.loc(),
-      text: String::new_in(self.allocator),
-    };
-    loop {
-      match self.lexer.next_token() {
-        Token { kind: Eof, .. } => break,
-        Token { loc, lexeme, .. } => {
-          node.loc.extend(loc);
-          node.text.push_str(lexeme);
-        }
-      }
+  pub fn parse(mut self) -> std::result::Result<ParseResult<'alloc>, Vec<Diagnostic>> {
+    self.document.header = self.parse_document_header()?;
+
+    while let Some(block) = self.parse_block()? {
+      self.document.content.push_block(block);
     }
-    node
+
+    Ok(ParseResult {
+      document: self.document,
+      warnings: vec![],
+    })
   }
 }
 
@@ -109,17 +112,8 @@ impl Substitutions {
   }
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn test_parser() {
-    let bump = &Bump::new();
-    let input = "hello:world";
-    let mut parser = Parser::new(bump, input);
-    let node = parser.parse();
-    assert_eq!(node.text, "hello:world");
-    assert_eq!(node.loc, SourceLocation::new(0, 11));
+impl From<Diagnostic> for Vec<Diagnostic> {
+  fn from(diagnostic: Diagnostic) -> Self {
+    vec![diagnostic]
   }
 }

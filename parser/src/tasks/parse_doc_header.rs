@@ -8,7 +8,7 @@ use crate::token::TokenKind::*;
 use crate::{Parser, Result};
 
 impl<'alloc, 'src> Parser<'alloc, 'src> {
-  pub(super) fn parse_document_header(&mut self) -> Result<Option<DocHeader>> {
+  pub(crate) fn parse_document_header(&mut self) -> Result<Option<DocHeader<'alloc>>> {
     let Some(mut block) = self.read_block() else {
       return Ok(None);
     };
@@ -29,8 +29,8 @@ impl<'alloc, 'src> Parser<'alloc, 'src> {
     };
 
     self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;
-
-    todo!()
+    self.parse_doc_attrs(&mut block, &mut doc_header.attrs)?;
+    Ok(Some(doc_header))
   }
 
   fn parse_doc_title_author_revision(
