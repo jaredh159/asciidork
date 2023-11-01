@@ -3,8 +3,8 @@ use std::str::Chars;
 use bumpalo::collections::Vec as BumpVec;
 use bumpalo::Bump;
 
+use crate::ast::SourceLocation;
 use crate::line::Line;
-use crate::source_location::SourceLocation;
 use crate::token::{Token, TokenKind, TokenKind::*};
 
 #[derive(Debug)]
@@ -293,7 +293,7 @@ impl<'src> Lexer<'src> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::source_location::SourceLocation;
+  use crate::ast::SourceLocation;
   use crate::token::TokenKind;
 
   #[test]

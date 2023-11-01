@@ -4,10 +4,10 @@ use bumpalo::collections::Vec as BumpVec;
 use bumpalo::{collections::String, Bump};
 
 use crate::ast::Document;
+use crate::ast::SourceLocation;
 use crate::block::Block;
 use crate::lexer::Lexer;
 use crate::line::Line;
-use crate::source_location::SourceLocation;
 use crate::Diagnostic;
 
 #[derive(Debug)]

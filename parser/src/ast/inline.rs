@@ -2,6 +2,7 @@ use bumpalo::collections::{String, Vec};
 
 use super::AttrList;
 use super::Macro;
+use super::SourceLocation;
 
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
 #[derive(Debug, PartialEq, Eq, Clone)]

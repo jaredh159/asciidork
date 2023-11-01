@@ -1,6 +1,6 @@
 use crate::ast::UrlScheme;
 
-use super::source_location::SourceLocation;
+use super::ast::SourceLocation;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenKind {

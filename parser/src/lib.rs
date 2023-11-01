@@ -6,7 +6,6 @@ mod diagnostic;
 mod lexer;
 mod line;
 pub mod parser;
-mod source_location;
 mod tasks;
 mod token;
 
