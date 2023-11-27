@@ -1,18 +1,19 @@
-use bumpalo::collections::{String, Vec};
+use regex::Regex;
 
-use crate::ast::{AttrList, Inline, Inline::*, Macro};
+use crate::ast::*;
 use crate::block::Block;
 use crate::line::Line;
 use crate::parser::Substitutions;
-use crate::tasks::utils::Text;
+use crate::tasks::text_span::TextSpan;
 use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
+use crate::utils::bump::*;
 use crate::{Parser, Result};
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_inlines(
     &mut self,
     mut block: Block<'bmp, 'src>,
-  ) -> Result<Vec<'bmp, Inline<'bmp>>> {
+  ) -> Result<Vec<'bmp, InlineNode<'bmp>>> {
     self.parse_inlines_until(&mut block, &[])
   }
 
@@ -20,10 +21,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     block: &mut Block<'bmp, 'src>,
     stop_tokens: &[TokenKind],
-  ) -> Result<Vec<'bmp, Inline<'bmp>>> {
+  ) -> Result<Vec<'bmp, InlineNode<'bmp>>> {
     let mut inlines = Vec::new_in(self.bump);
-    let mut text = Text::new_in(self.bump);
+    if block.is_empty() {
+      return Ok(inlines);
+    }
+    let span_loc = block.location().unwrap().clamp_start();
+    let mut text = TextSpan::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
+
     while let Some(mut line) = block.consume_current() {
       loop {
         if line.starts_with_seq(stop_tokens) {
@@ -35,53 +41,118 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           return Ok(inlines);
         }
 
-        match line.consume_current() {
-          Some(token) if token.is(Whitespace) => text.push_str(" "),
-
+        let current_token = line.consume_current();
+        match current_token {
           Some(token) if subs.macros && token.is(MacroName) && line.continues_inline_macro() => {
+            let mut macro_loc = token.loc;
+            text.commit_inlines(&mut inlines);
             match token.lexeme {
               "image:" => {
+                let line_end = line.last_location().unwrap();
                 let target = line.consume_macro_target(self.bump);
-                let attr_list = self.parse_attr_list(&mut line)?;
-                text.commit_inlines(&mut inlines);
-                inlines.push(Macro(Macro::Image(target, attr_list)));
+                let attrs = self.parse_attr_list(&mut line)?;
+                finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                inlines.push(node(
+                  Macro(Image { flow: Flow::Inline, target, attrs }),
+                  macro_loc,
+                ));
               }
               "kbd:" => {
                 line.discard(1); // `[`
-                let attr_list = self.parse_attr_list(&mut line)?;
-                text.commit_inlines(&mut inlines);
-                inlines.push(Macro(Macro::Keyboard(attr_list)));
+                let keys_src = line.consume_to_string_until(CloseBracket, self.bump);
+                line.discard(1); // `]`
+                macro_loc.end = keys_src.loc.end + 1;
+                let mut keys = Vec::new_in(self.bump);
+                let re = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
+                for captures in re.captures_iter(&keys_src).step_by(2) {
+                  let key = captures.get(1).unwrap().as_str();
+                  keys.push(String::from_str_in(key, self.bump));
+                }
+                inlines.push(node(Macro(Keyboard { keys, keys_src }), macro_loc));
               }
               "footnote:" => {
                 let id = line.consume_optional_macro_target(self.bump);
-                let attr_list = self.parse_attr_list(&mut line)?;
-                text.commit_inlines(&mut inlines);
-                inlines.push(Macro(Macro::Footnote(id, attr_list)));
+                block.restore(line);
+                let note = self.parse_inlines_until(block, &[CloseBracket])?;
+                extend(&mut macro_loc, &note, 1);
+                inlines.push(node(Macro(Footnote { id, text: note }), macro_loc));
+                text.loc = macro_loc.clamp_end();
+                break;
               }
-              _ => text.push_token(&token),
+              // _ => text.push_token(&token),
+              _ => todo!(),
             }
           }
 
-          Some(token)
-            if subs.macros && token.is(LessThan) && line.current_token().is_url_scheme() =>
-          {
-            let scheme = line.consume_current().unwrap();
+          Some(token) if subs.macros && token.is_url_scheme() && line.src.starts_with("//") => {
+            let mut loc = token.loc;
+            let line_end = line.last_location().unwrap();
             text.commit_inlines(&mut inlines);
-            inlines.push(Macro(Macro::Link(
-              scheme.to_url_scheme().unwrap(),
-              line.consume_url(Some(&scheme), self.bump),
-              AttrList::role("bare", self.bump),
-            )));
-            line.discard(1); // `>`
+            let target = line.consume_url(Some(&token), self.bump);
+            loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
+            inlines.push(node(
+              Macro(Macro::Link {
+                scheme: token.to_url_scheme().unwrap(),
+                target,
+                attrs: AttrList::role("bare", self.bump),
+              }),
+              loc,
+            ));
+            text.loc = loc.clamp_end();
           }
 
-          Some(token) if subs.macros && token.is_url_scheme() => {
+          Some(token)
+            if subs.macros
+              && token.is(LessThan)
+              && line.current_token().is_url_scheme()
+              && line.is_continuous_thru(GreaterThan) =>
+          {
             text.commit_inlines(&mut inlines);
-            inlines.push(Macro(Macro::Link(
-              token.to_url_scheme().unwrap(),
-              line.consume_url(Some(&token), self.bump),
-              AttrList::role("bare", self.bump),
-            )));
+            inlines.push(node(Discarded, token.loc));
+            let scheme_token = line.consume_current().unwrap();
+            let mut loc = scheme_token.loc;
+            let line_end = line.last_location().unwrap();
+            let target = line.consume_url(Some(&scheme_token), self.bump);
+            loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
+            inlines.push(node(
+              Macro(Macro::Link {
+                scheme: scheme_token.to_url_scheme().unwrap(),
+                target,
+                attrs: AttrList::role("bare", self.bump),
+              }),
+              loc,
+            ));
+            inlines.push(node(Discarded, line.consume_current().unwrap().loc));
+            text.loc = loc.incr_end().clamp_end();
+          }
+
+          Some(token)
+            if subs.inline_formatting
+              && starts_constrained(&[Underscore], &token, &line, block) =>
+          {
+            self.parse_constrained(&token, Italic, &mut text, &mut inlines, line, block)?;
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && starts_unconstrained(Underscore, &token, &line, block) =>
+          {
+            self.parse_unconstrained(&token, Italic, &mut text, &mut inlines, line, block)?;
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && starts_constrained(&[Star], &token, &line, block) =>
+          {
+            self.parse_constrained(&token, Bold, &mut text, &mut inlines, line, block)?;
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && starts_unconstrained(Star, &token, &line, block) =>
+          {
+            self.parse_unconstrained(&token, Bold, &mut text, &mut inlines, line, block)?;
+            break;
           }
 
           Some(token)
@@ -89,64 +160,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && token.is(OpenBracket)
               && line.contains_seq(&[CloseBracket, Hash]) =>
           {
-            text.commit_inlines(&mut inlines);
+            let mut parse_token = token.clone();
             let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
             debug_assert!(line.current_is(Hash));
             line.discard(1); // `#`
-            let wrap = |inlines| TextSpan(attr_list, inlines);
+            parse_token.kind = Hash;
+            let wrap = |inner| TextSpan(attr_list, inner);
             if starts_unconstrained(Hash, line.current_token().unwrap(), &line, block) {
-              self.parse_unconstrained(Hash, wrap, &mut text, &mut inlines, line, block)?;
+              self.parse_unconstrained(&parse_token, wrap, &mut text, &mut inlines, line, block)?;
             } else {
-              self.parse_constrained(Hash, wrap, &mut text, &mut inlines, line, block)?;
+              self.parse_constrained(&parse_token, wrap, &mut text, &mut inlines, line, block)?;
             };
-            break;
-          }
-
-          Some(token)
-            if subs.inline_formatting && token.is(Caret) && line.is_continuous_thru(Caret) =>
-          {
-            text.commit_inlines(&mut inlines);
-            block.restore(line);
-            inlines.push(Superscript(self.parse_inlines_until(block, &[Caret])?));
-            break;
-          }
-
-          Some(token)
-            if subs.inline_formatting && token.is(Tilde) && line.is_continuous_thru(Tilde) =>
-          {
-            text.commit_inlines(&mut inlines);
-            block.restore(line);
-            inlines.push(Subscript(self.parse_inlines_until(block, &[Tilde])?));
-            break;
-          }
-
-          Some(token)
-            if subs.inline_formatting
-              && token.is(DoubleQuote)
-              && line.current_is(Backtick)
-              && starts_constrained(&[Backtick, DoubleQuote], &token, &line, block) =>
-          {
-            line.discard(1); // backtick
-            text.push_str("“");
-            text.commit_inlines(&mut inlines);
-            block.restore(line);
-            let mut quoted = self.parse_inlines_until(block, &[Backtick, DoubleQuote])?;
-            self.merge_inlines(&mut inlines, &mut quoted, Some("”"));
-            break;
-          }
-
-          Some(token)
-            if subs.inline_formatting
-              && token.is(SingleQuote)
-              && line.current_is(Backtick)
-              && starts_constrained(&[Backtick, SingleQuote], &token, &line, block) =>
-          {
-            line.discard(1); // backtick
-            text.push_str("‘");
-            text.commit_inlines(&mut inlines);
-            block.restore(line);
-            let mut quoted = self.parse_inlines_until(block, &[Backtick, SingleQuote])?;
-            self.merge_inlines(&mut inlines, &mut quoted, Some("’"));
             break;
           }
 
@@ -156,17 +180,154 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Plus)
               && contains_seq(&[Plus, Backtick], &line, block) =>
           {
+            let mut wrap_loc = token.loc;
             line.discard(1); // `+`
             text.commit_inlines(&mut inlines);
             block.restore(line);
             self.ctx.subs.inline_formatting = false;
             let mut inner = self.parse_inlines_until(block, &[Plus, Backtick])?;
+            extend(&mut wrap_loc, &inner, 2);
             self.ctx.subs = subs;
             assert!(inner.len() == 1, "invalid lit mono");
             match inner.pop().unwrap() {
-              Text(lit) => inlines.push(LitMono(lit)),
+              InlineNode { content: Text(lit), loc } => {
+                inlines.push(node(LitMono(SourceString::new(lit, loc)), wrap_loc))
+              }
               _ => panic!("invalid lit mono"),
             }
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && token.is(Caret) && line.is_continuous_thru(Caret) =>
+          {
+            let mut loc = token.loc;
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            let inner = self.parse_inlines_until(block, &[Caret])?;
+            extend(&mut loc, &inner, 1);
+            inlines.push(node(Superscript(inner), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting
+              && token.is(DoubleQuote)
+              && line.current_is(Backtick)
+              && starts_constrained(&[Backtick, DoubleQuote], &token, &line, block) =>
+          {
+            let mut loc = token.loc;
+            line.discard(1); // backtick
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            let quoted = self.parse_inlines_until(block, &[Backtick, DoubleQuote])?;
+            extend(&mut loc, &quoted, 2);
+            inlines.push(node(Quote(Double, quoted), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting
+              && token.is(SingleQuote)
+              && line.current_is(Backtick)
+              && starts_constrained(&[Backtick, SingleQuote], &token, &line, block) =>
+          {
+            let mut loc = token.loc;
+            line.discard(1); // backtick
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            let quoted = self.parse_inlines_until(block, &[Backtick, SingleQuote])?;
+            extend(&mut loc, &quoted, 2);
+            inlines.push(node(Quote(Single, quoted), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && token.is(Tilde) && line.is_continuous_thru(Tilde) =>
+          {
+            let mut loc = token.loc;
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            let inner = self.parse_inlines_until(block, &[Tilde])?;
+            extend(&mut loc, &inner, 1);
+            inlines.push(node(Subscript(inner), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && token.is(Backtick) && line.current_is(DoubleQuote) =>
+          {
+            let mut loc = token.loc;
+            line.discard(1); // double quote
+            loc.end += 1;
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            inlines.push(node(Curly(RightDouble), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && token.is(DoubleQuote) && line.current_is(Backtick) =>
+          {
+            let mut loc = token.loc;
+            line.discard(1); // backtick
+            loc.end += 1;
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            inlines.push(node(Curly(LeftDouble), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && token.is(Backtick) && line.current_is(SingleQuote) =>
+          {
+            let mut loc = token.loc;
+            line.discard(1); // double quote
+            loc.end += 1;
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            inlines.push(node(Curly(RightSingle), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && token.is(SingleQuote) && line.current_is(Backtick) =>
+          {
+            let mut loc = token.loc;
+            line.discard(1); // backtick
+            loc.end += 1;
+            text.commit_inlines(&mut inlines);
+            block.restore(line);
+            inlines.push(node(Curly(LeftSingle), loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && starts_constrained(&[Backtick], &token, &line, block) =>
+          {
+            self.parse_constrained(&token, Mono, &mut text, &mut inlines, line, block)?;
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && starts_unconstrained(Backtick, &token, &line, block) =>
+          {
+            self.parse_unconstrained(&token, Mono, &mut text, &mut inlines, line, block)?;
+            break;
+          }
+
+          Some(token)
+            if subs.inline_formatting && token.is(Hash) && contains_seq(&[Hash], &line, block) =>
+          {
+            self.parse_constrained(&token, Highlight, &mut text, &mut inlines, line, block)?;
             break;
           }
 
@@ -175,13 +336,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.starts_with_seq(&[Plus, Plus])
               && contains_seq(&[Plus, Plus, Plus], &line, block) =>
           {
+            let mut loc = token.loc;
             line.discard(2); // `++`
             text.commit_inlines(&mut inlines);
             block.restore(line);
             self.ctx.subs = Substitutions::none();
-            let mut passthrough = self.parse_inlines_until(block, &[Plus, Plus, Plus])?;
+            let passthrough = self.parse_inlines_until(block, &[Plus, Plus, Plus])?;
+            extend(&mut loc, &passthrough, 3);
             self.ctx.subs = subs;
-            self.merge_inlines(&mut inlines, &mut passthrough, None);
+            inlines.push(node(InlinePassthrough(passthrough), loc));
+            text.loc = loc.clamp_end();
             break;
           }
 
@@ -191,13 +355,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Plus)
               && starts_unconstrained(Plus, &token, &line, block) =>
           {
-            line.discard(1); // `+`
-            text.commit_inlines(&mut inlines);
-            block.restore(line);
             self.ctx.subs.inline_formatting = false;
-            let mut passthrough = self.parse_inlines_until(block, &[Plus, Plus])?;
+            self.parse_unconstrained(
+              &token,
+              InlinePassthrough,
+              &mut text,
+              &mut inlines,
+              line,
+              block,
+            )?;
             self.ctx.subs = subs;
-            self.merge_inlines(&mut inlines, &mut passthrough, None);
             break;
           }
 
@@ -206,89 +373,76 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && token.is(Plus)
               && starts_constrained(&[Plus], &token, &line, block) =>
           {
-            text.commit_inlines(&mut inlines);
-            block.restore(line);
             self.ctx.subs.inline_formatting = false;
-            let mut passthrough = self.parse_inlines_until(block, &[Plus])?;
+            self.parse_constrained(
+              &token,
+              InlinePassthrough,
+              &mut text,
+              &mut inlines,
+              line,
+              block,
+            )?;
             self.ctx.subs = subs;
-            self.merge_inlines(&mut inlines, &mut passthrough, None);
             break;
           }
 
           Some(token)
-            if subs.inline_formatting && token.is(Hash) && contains_seq(&[Hash], &line, block) =>
+            if subs.special_chars
+              && (token.is(Ampersand) || token.is(LessThan) || token.is(GreaterThan)) =>
           {
             text.commit_inlines(&mut inlines);
-            block.restore(line);
-            inlines.push(Highlight(self.parse_inlines_until(block, &[Hash])?));
-            break;
+            inlines.push(node(
+              SpecialChar(match token.kind {
+                Ampersand => SpecialCharKind::Ampersand,
+                LessThan => SpecialCharKind::LessThan,
+                GreaterThan => SpecialCharKind::GreaterThan,
+                _ => unreachable!(),
+              }),
+              token.loc,
+            ));
+            text.loc = token.loc.clamp_end();
           }
 
           Some(token)
-            if subs.inline_formatting && starts_unconstrained(Underscore, &token, &line, block) =>
+            if token.is(SingleQuote) && line.current_token().is(Word) && subs.inline_formatting =>
           {
-            self.parse_unconstrained(Underscore, Italic, &mut text, &mut inlines, line, block)?;
-            break;
+            if text.is_empty() || text.ends_with(char::is_whitespace) {
+              text.push_token(&token);
+            } else {
+              text.commit_inlines(&mut inlines);
+              inlines.push(node(Curly(LegacyImplicitApostrophe), token.loc));
+              text.loc = token.loc.clamp_end();
+            }
           }
 
           Some(token)
-            if subs.inline_formatting
-              && starts_constrained(&[Underscore], &token, &line, block) =>
+            if token.is(Whitespace) && token.lexeme.len() > 1 && subs.inline_formatting =>
           {
-            self.parse_constrained(Underscore, Italic, &mut text, &mut inlines, line, block)?;
+            text.commit_inlines(&mut inlines);
+            inlines.push(node(
+              MultiCharWhitespace(String::from_str_in(token.lexeme, self.bump)),
+              token.loc,
+            ));
+            text.loc = token.loc.clamp_end();
+          }
+
+          Some(token) => {
+            text.push_token(&token);
+          }
+
+          None if !block.is_empty() => {
+            text.commit_inlines(&mut inlines);
+            text.loc.end += 1;
+            inlines.push(node(JoiningNewline, text.loc));
+            text.loc = text.loc.clamp_end();
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && starts_unconstrained(Star, &token, &line, block) =>
-          {
-            self.parse_unconstrained(Star, Bold, &mut text, &mut inlines, line, block)?;
-            break;
-          }
-
-          Some(token)
-            if subs.inline_formatting && starts_constrained(&[Star], &token, &line, block) =>
-          {
-            self.parse_constrained(Star, Bold, &mut text, &mut inlines, line, block)?;
-            break;
-          }
-
-          Some(token)
-            if subs.inline_formatting && starts_unconstrained(Backtick, &token, &line, block) =>
-          {
-            self.parse_unconstrained(Backtick, Mono, &mut text, &mut inlines, line, block)?;
-            break;
-          }
-
-          Some(token)
-            if subs.inline_formatting && starts_constrained(&[Backtick], &token, &line, block) =>
-          {
-            self.parse_constrained(Backtick, Mono, &mut text, &mut inlines, line, block)?;
-            break;
-          }
-
-          Some(token) if subs.special_chars && token.is(Ampersand) => {
-            text.push_str("&amp;");
-          }
-
-          Some(token) if subs.special_chars && token.is(LessThan) => {
-            text.push_str("&lt;");
-          }
-
-          Some(token) if subs.special_chars && token.is(GreaterThan) => {
-            text.push_str("&gt;");
-          }
-
-          Some(token) => text.push_token(&token),
-
-          None => {
-            text.push_str(" "); // join lines with space
-            break;
-          }
+          None => break,
         }
       }
     }
-    text.trim_end(); // remove last space from EOL
+
     text.commit_inlines(&mut inlines);
 
     Ok(inlines)
@@ -296,32 +450,40 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_unconstrained(
     &mut self,
-    kind: TokenKind,
-    wrap: impl FnOnce(Vec<'bmp, Inline<'bmp>>) -> Inline<'bmp>,
-    text: &mut Text<'bmp>,
-    inlines: &mut Vec<'bmp, Inline<'bmp>>,
+    token: &Token<'src>,
+    wrap: impl FnOnce(Vec<'bmp, InlineNode<'bmp>>) -> Inline<'bmp>,
+    text: &mut TextSpan<'bmp>,
+    inlines: &mut Vec<'bmp, InlineNode<'bmp>>,
     mut line: Line<'bmp, 'src>,
     block: &mut Block<'bmp, 'src>,
   ) -> Result<()> {
+    let mut loc = token.loc;
     line.discard(1); // second token
     text.commit_inlines(inlines);
     block.restore(line);
-    inlines.push(wrap(self.parse_inlines_until(block, &[kind, kind])?));
+    let inner = self.parse_inlines_until(block, &[token.kind, token.kind])?;
+    extend(&mut loc, &inner, 2);
+    inlines.push(node(wrap(inner), loc));
+    text.loc = loc.clamp_end();
     Ok(())
   }
 
   fn parse_constrained(
     &mut self,
-    kind: TokenKind,
-    wrap: impl FnOnce(Vec<'bmp, Inline<'bmp>>) -> Inline<'bmp>,
-    text: &mut Text<'bmp>,
-    inlines: &mut Vec<'bmp, Inline<'bmp>>,
+    token: &Token<'src>,
+    wrap: impl FnOnce(Vec<'bmp, InlineNode<'bmp>>) -> Inline<'bmp>,
+    text: &mut TextSpan<'bmp>,
+    inlines: &mut Vec<'bmp, InlineNode<'bmp>>,
     line: Line<'bmp, 'src>,
     block: &mut Block<'bmp, 'src>,
   ) -> Result<()> {
+    let mut loc = token.loc;
     text.commit_inlines(inlines);
     block.restore(line);
-    inlines.push(wrap(self.parse_inlines_until(block, &[kind])?));
+    let inner = self.parse_inlines_until(block, &[token.kind])?;
+    extend(&mut loc, &inner, 1);
+    inlines.push(node(wrap(inner), loc));
+    text.loc = loc.clamp_end();
     Ok(())
   }
 
@@ -344,6 +506,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 }
 
+fn extend(loc: &mut SourceLocation, nodes: &[InlineNode<'_>], adding: usize) {
+  loc.end = nodes.last().map(|node| node.loc.end).unwrap_or(loc.end) + adding;
+}
+
 fn starts_constrained(
   stop_tokens: &[TokenKind],
   token: &Token,
@@ -363,184 +529,487 @@ fn contains_seq(seq: &[TokenKind], line: &Line, block: &Block) -> bool {
   line.contains_seq(seq) || block.contains_seq(seq)
 }
 
-impl<'bmp> Text<'bmp> {
-  fn commit_inlines(&mut self, inlines: &mut Vec<'bmp, Inline<'bmp>>) {
-    match (self.is_empty(), inlines.last_mut()) {
-      (false, Some(Inline::Text(text))) => text.push_str(&self.take()),
-      (false, _) => inlines.push(Inline::Text(self.take())),
-      _ => {}
-    }
+fn node(content: Inline, loc: SourceLocation) -> InlineNode {
+  InlineNode::new(content, loc)
+}
+
+fn finish_macro<'bmp>(
+  line: &Line<'bmp, '_>,
+  loc: &mut SourceLocation,
+  line_end: SourceLocation,
+  text: &mut TextSpan<'bmp>,
+) {
+  if let Some(cur_location) = line.location() {
+    loc.extend(cur_location);
+    text.loc = loc.clamp_end();
+    loc.end -= 1; // parsing attr list moves us one past end of macro
+  } else {
+    loc.extend(line_end);
+    text.loc = loc.clamp_end();
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::{AttrList, Inline::*, Macro, UrlScheme};
-  use bumpalo::collections::String;
-  use bumpalo::vec as bvec;
-  use bumpalo::Bump;
+  use crate::ast::*;
+  use crate::test::*;
+  use crate::utils::bump::*;
 
-  // todo...repeated
-  macro_rules! s {
-    (in $bump:expr; $s:expr) => {
-      String::from_str_in($s, $bump)
-    };
+  fn n(content: Inline, loc: SourceLocation) -> InlineNode {
+    InlineNode::new(content, loc)
   }
 
-  macro_rules! t {
-    (in $bump:expr; $s:expr) => {
-      Text(String::from_str_in($s, $bump))
-    };
+  fn role<'bmp>(role: &'static str, bump: &'bmp Bump) -> AttrList<'bmp> {
+    AttrList::role(role, bump)
+  }
+
+  fn n_text<'bmp>(s: &'static str, start: usize, end: usize, bump: &'bmp Bump) -> InlineNode<'bmp> {
+    InlineNode::new(
+      Text(String::from_str_in(s, bump)),
+      SourceLocation::new(start, end),
+    )
   }
 
   #[test]
   fn test_parse_inlines() {
+    use SpecialCharKind::*;
+
     let b = &Bump::new();
-    let bare_example_com = Macro(Macro::Link(
-      UrlScheme::Https,
-      s!(in b; "https://example.com"),
-      AttrList::role("bare", b),
-    ));
+    let bare_example_com = |loc: SourceLocation| -> Inline {
+      Macro(Link {
+        scheme: UrlScheme::Https,
+        target: b.src("https://example.com", loc),
+        attrs: AttrList::role("bare", b),
+      })
+    };
+
     let cases = vec![
       (
-        "foo [.nowrap]#bar#",
-        bvec![in b;
-          t!(in b; "foo "),
-          TextSpan(AttrList::role("nowrap", b), bvec![in b; t!(in b; "bar")]),
-        ],
-      ),
-      (
-        "[.big]##O##nce upon an infinite loop",
-        bvec![in b;
-          TextSpan(AttrList::role("big", b), bvec![in b; t!(in b;"O")]),
-          t!(in b; "nce upon an infinite loop"),
-        ],
-      ),
-      (
-        "Do werewolves believe in [.small]#small print#?",
-        bvec![in b;
-          t!(in b; "Do werewolves believe in "),
-          TextSpan(AttrList::role("small", b), bvec![in b; t!(in b; "small print")]),
-          t!(in b; "?"),
-        ],
+        "+_foo_+",
+        b.vec([n(
+          InlinePassthrough(b.vec([n_text("_foo_", 1, 6, b)])),
+          l(0, 7),
+        )]),
       ),
       (
         "`*_foo_*`",
-        bvec![in b; Mono(bvec![in b; Bold(bvec![in b; Italic(bvec![in b; t!(in b; "foo")])])])],
+        b.vec([n(
+          Mono(b.vec([n(
+            Bold(b.vec([n(Italic(b.vec([n_text("foo", 3, 6, b)])), l(2, 7))])),
+            l(1, 8),
+          )])),
+          l(0, 9),
+        )]),
       ),
       (
-        "foo _bar_",
-        bvec![in b; t!(in b; "foo "), Italic(bvec![in b; t!(in b; "bar")])],
+        "+_foo\nbar_+",
+        // not sure if this is "spec", but it's what asciidoctor currently does
+        b.vec([n(
+          InlinePassthrough(b.vec([
+            n_text("_foo", 1, 5, b),
+            n(JoiningNewline, l(5, 6)),
+            n_text("bar_", 6, 10, b),
+          ])),
+          l(0, 11),
+        )]),
       ),
-      (
-        "foo _bar baz_",
-        bvec![in b; t!(in b; "foo "), Italic(bvec![in b; t!(in b; "bar baz")])],
-      ),
-      (
-        "foo _bar\nbaz_",
-        bvec![in b; t!(in b; "foo "), Italic(bvec![in b; t!(in b; "bar baz")])],
-      ),
-      ("foo 'bar'", bvec![in b; t!(in b; "foo 'bar'")]),
-      ("foo \"bar\"", bvec![in b; t!(in b; "foo \"bar\"")]),
-      ("foo \"`bar`\"", bvec![in b; t!(in b; "foo “bar”")]),
-      ("foo \"`bar baz`\"", bvec![in b; t!(in b; "foo “bar baz”")]),
-      ("foo \"`bar\nbaz`\"", bvec![in b; t!(in b; "foo “bar baz”")]),
-      ("foo '`bar`'", bvec![in b; t!(in b; "foo ‘bar’")]),
-      ("foo '`bar baz`'", bvec![in b; t!(in b; "foo ‘bar baz’")]),
-      ("foo '`bar\nbaz`'", bvec![in b; t!(in b; "foo ‘bar baz’")]),
-      (
-        "foo *bar*",
-        bvec![in b; t!(in b; "foo "), Bold(bvec![in b; t!(in b; "bar")])],
-      ),
-      (
-        "foo `bar`",
-        bvec![in b; t!(in b; "foo "), Mono(bvec![in b; t!(in b; "bar")])],
-      ),
-      (
-        "foo __ba__r",
-        bvec![in b; t!(in b; "foo "), Italic(bvec![in b; t!(in b; "ba")]), t!(in b; "r")],
-      ),
-      (
-        "foo **ba**r",
-        bvec![in b; t!(in b; "foo "), Bold(bvec![in b; t!(in b; "ba")]), t!(in b; "r")],
-      ),
-      (
-        "foo ``ba``r",
-        bvec![in b; t!(in b; "foo "), Mono(bvec![in b; t!(in b; "ba")]), t!(in b; "r")],
-      ),
-      ("foo __bar", bvec![in b; t!(in b; "foo __bar")]),
-      (
-        "foo ^bar^",
-        bvec![in b; t!(in b; "foo "), Superscript(bvec![in b; t!(in b; "bar")])],
-      ),
-      (
-        "foo #bar#",
-        bvec![in b; t!(in b; "foo "), Highlight(bvec![in b; t!(in b; "bar")])],
-      ),
-      ("foo ^bar", bvec![in b; t!(in b; "foo ^bar")]),
-      ("foo bar^", bvec![in b; t!(in b; "foo bar^")]),
-      (
-        "foo ~bar~ baz",
-        bvec![in b; t!(in b; "foo "), Subscript(bvec![in b; t!(in b; "bar")]), t!(in b; " baz")],
-      ),
-      ("foo   bar\n", bvec![in b; t!(in b; "foo bar")]),
-      ("foo bar", bvec![in b; t!(in b; "foo bar")]),
-      ("foo   bar\nbaz", bvec![in b; t!(in b; "foo bar baz")]),
-      ("`+{name}+`", bvec![in b; LitMono(s!(in b; "{name}"))]),
-      ("`+_foo_+`", bvec![in b; LitMono(s!(in b; "_foo_"))]),
-      (
-        "foo <bar> & lol",
-        bvec![in b; Text(s!(in b; "foo &lt;bar&gt; &amp; lol"))],
-      ),
-      ("+_foo_+", bvec![in b; Text(s!(in b; "_foo_"))]),
       (
         "+_<foo>&_+",
-        bvec![in b; Text(s!(in b; "_&lt;foo&gt;&amp;_"))],
+        b.vec([n(
+          InlinePassthrough(b.vec([
+            n_text("_", 1, 2, b),
+            n(SpecialChar(LessThan), l(2, 3)),
+            n_text("foo", 3, 6, b),
+            n(SpecialChar(GreaterThan), l(6, 7)),
+            n(SpecialChar(Ampersand), l(7, 8)),
+            n_text("_", 8, 9, b),
+          ])),
+          l(0, 10),
+        )]),
       ),
       (
         "rofl +_foo_+ lol",
-        bvec![in b; Text(s!(in b; "rofl _foo_ lol"))],
+        b.vec([
+          n_text("rofl ", 0, 5, b),
+          n(
+            InlinePassthrough(b.vec([n_text("_foo_", 6, 11, b)])),
+            l(5, 12),
+          ),
+          n_text(" lol", 12, 16, b),
+        ]),
       ),
-      ("++_foo_++bar", bvec![in b; Text(s!(in b; "_foo_bar"))]),
       (
-        "lol ++_foo_++bar",
-        bvec![in b; Text(s!(in b; "lol _foo_bar"))],
+        "++_foo_++bar",
+        b.vec([
+          n(
+            InlinePassthrough(b.vec([n_text("_foo_", 2, 7, b)])),
+            l(0, 9),
+          ),
+          n_text("bar", 9, 12, b),
+        ]),
       ),
-      ("+++_<foo>&_+++", bvec![in b; Text(s!(in b; "_<foo>&_"))]),
+      (
+        "+++_<foo>&_+++ bar",
+        b.vec([
+          n(
+            InlinePassthrough(b.vec([n_text("_<foo>&_", 3, 11, b)])),
+            l(0, 14),
+          ),
+          n_text(" bar", 14, 18, b),
+        ]),
+      ),
+      (
+        "foo #bar#",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Highlight(b.vec([n_text("bar", 5, 8, b)])), l(4, 9)),
+        ]),
+      ),
+      (
+        "foo `bar`",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Mono(b.vec([n_text("bar", 5, 8, b)])), l(4, 9)),
+        ]),
+      ),
+      (
+        "foo b``ar``",
+        bvec![in b;
+          n_text("foo b", 0, 5, b),
+          n(Mono(b.vec([n_text("ar", 7, 9, b)])), l(5, 11)),
+        ],
+      ),
+      (
+        "foo *bar*",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Bold(b.vec([n_text("bar", 5, 8, b)])), l(4, 9)),
+        ]),
+      ),
+      (
+        "foo b**ar**",
+        b.vec([
+          n_text("foo b", 0, 5, b),
+          n(Bold(b.vec([n_text("ar", 7, 9, b)])), l(5, 11)),
+        ]),
+      ),
+      (
+        "foo ~bar~ baz",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Subscript(b.vec([n_text("bar", 5, 8, b)])), l(4, 9)),
+          n_text(" baz", 9, 13, b),
+        ]),
+      ),
+      (
+        "foo _bar\nbaz_",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Italic(b.vec([
+              n_text("bar", 5, 8, b),
+              n(JoiningNewline, l(8, 9)),
+              n_text("baz", 9, 12, b),
+            ])),
+            l(4, 13),
+          ),
+        ]),
+      ),
+      ("foo __bar", b.vec([n_text("foo __bar", 0, 9, b)])),
+      (
+        "foo _bar baz_",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Italic(b.vec([n_text("bar baz", 5, 12, b)])), l(4, 13)),
+        ]),
+      ),
+      (
+        "foo _bar_",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Italic(b.vec([n_text("bar", 5, 8, b)])), l(4, 9)),
+        ]),
+      ),
+      (
+        "foo b__ar__",
+        b.vec([
+          n_text("foo b", 0, 5, b),
+          n(Italic(b.vec([n_text("ar", 7, 9, b)])), l(5, 11)),
+        ]),
+      ),
+      ("foo 'bar'", b.vec([n_text("foo 'bar'", 0, 9, b)])),
+      ("foo \"bar\"", b.vec([n_text("foo \"bar\"", 0, 9, b)])),
+      (
+        "foo `\"bar\"`",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Curly(RightDouble), l(4, 6)),
+          n_text("bar", 6, 9, b),
+          n(Curly(LeftDouble), l(9, 11)),
+        ]),
+      ),
+      (
+        "foo `'bar'`",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Curly(RightSingle), l(4, 6)),
+          n_text("bar", 6, 9, b),
+          n(Curly(LeftSingle), l(9, 11)),
+        ]),
+      ),
+      (
+        "foo \"`bar`\"",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Quote(QuoteKind::Double, b.vec([n_text("bar", 6, 9, b)])),
+            l(4, 11),
+          ),
+        ]),
+      ),
+      (
+        "foo \"`bar baz`\"",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Quote(QuoteKind::Double, b.vec([n_text("bar baz", 6, 13, b)])),
+            l(4, 15),
+          ),
+        ]),
+      ),
+      (
+        "foo \"`bar\nbaz`\"",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Quote(
+              QuoteKind::Double,
+              b.vec([
+                n_text("bar", 6, 9, b),
+                n(JoiningNewline, l(9, 10)),
+                n_text("baz", 10, 13, b),
+              ]),
+            ),
+            l(4, 15),
+          ),
+        ]),
+      ),
+      (
+        "foo '`bar`'",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Quote(QuoteKind::Single, b.vec([n_text("bar", 6, 9, b)])),
+            l(4, 11),
+          ),
+        ]),
+      ),
+      (
+        "Olaf's wrench",
+        b.vec([
+          n_text("Olaf", 0, 4, b),
+          n(Curly(LegacyImplicitApostrophe), l(4, 5)),
+          n_text("s wrench", 5, 13, b),
+        ]),
+      ),
+      ("foo bar", b.vec([n_text("foo bar", 0, 7, b)])),
+      (
+        "foo   bar",
+        b.vec([
+          n_text("foo", 0, 3, b),
+          n(MultiCharWhitespace(b.s("   ")), l(3, 6)),
+          n_text("bar", 6, 9, b),
+        ]),
+      ),
+      (
+        "`+{name}+`",
+        b.vec([n(LitMono(b.src("{name}", l(2, 8))), l(0, 10))]),
+      ),
+      (
+        "`+_foo_+`",
+        b.vec([n(LitMono(b.src("_foo_", l(2, 7))), l(0, 9))]),
+      ),
+      (
+        "foo <bar> & lol",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(SpecialChar(LessThan), l(4, 5)),
+          n_text("bar", 5, 8, b),
+          n(SpecialChar(GreaterThan), l(8, 9)),
+          n_text(" ", 9, 10, b),
+          n(SpecialChar(Ampersand), l(10, 11)),
+          n_text(" lol", 11, 15, b),
+        ]),
+      ),
+      (
+        "foo [.nowrap]#bar#",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            TextSpan(role("nowrap", b), b.vec([n_text("bar", 14, 17, b)])),
+            l(4, 18),
+          ),
+        ]),
+      ),
+      (
+        "[.big]##O##nce upon an infinite loop",
+        b.vec([
+          n(
+            TextSpan(role("big", b), b.vec([n_text("O", 8, 9, b)])),
+            l(0, 11),
+          ),
+          n_text("nce upon an infinite loop", 11, 36, b),
+        ]),
+      ),
+      (
+        "Do werewolves believe in [.small]#small print#?",
+        b.vec([
+          n_text("Do werewolves believe in ", 0, 25, b),
+          n(
+            TextSpan(role("small", b), b.vec([n_text("small print", 34, 45, b)])),
+            l(25, 46),
+          ),
+          n_text("?", 46, 47, b),
+        ]),
+      ),
+      ("foo", b.vec([n_text("foo", 0, 3, b)])),
+      ("hello", b.vec([n_text("hello", 0, 5, b)])),
+      (
+        "^bar^",
+        b.vec([n(Superscript(b.vec([n_text("bar", 1, 4, b)])), l(0, 5))]),
+      ),
+      (
+        "^bar^",
+        b.vec([n(Superscript(b.vec([n_text("bar", 1, 4, b)])), l(0, 5))]),
+      ),
+      ("foo ^bar", b.vec([n_text("foo ^bar", 0, 8, b)])),
+      ("foo bar^", b.vec([n_text("foo bar^", 0, 8, b)])),
+      (
+        "foo ^bar^ foo",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Superscript(bvec![in b; n_text("bar", 5, 8, b)]), l(4, 9)),
+          n_text(" foo", 9, 13, b),
+        ]),
+      ),
+      (
+        "foo image:sunset.jpg[] bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Image {
+              flow: Flow::Inline,
+              target: b.src("sunset.jpg", l(10, 20)),
+              attrs: AttrList::new_in(b),
+            }),
+            l(4, 22),
+          ),
+          n_text(" bar", 22, 26, b),
+        ]),
+      ),
       (
         "foo image:sunset.jpg[]",
-        bvec![in b;
-          Text(s!(in b; "foo ")),
-          Macro(Macro::Image(s!(in b; "sunset.jpg"), AttrList::new_in(b))),
-        ],
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Image {
+              flow: Flow::Inline,
+              target: b.src("sunset.jpg", l(10, 20)),
+              attrs: AttrList::new_in(b),
+            }),
+            l(4, 22),
+          ),
+        ]),
       ),
       (
-        "doublefootnote:[ymmv]bar",
-        bvec![in b;
-          Text(s!(in b; "double")),
-          Macro(Macro::Footnote(None, AttrList::positional("ymmv", b))),
-          Text(s!(in b; "bar")),
-        ],
+        "doublefootnote:[ymmv _i_]bar",
+        b.vec([
+          n_text("double", 0, 6, b),
+          n(
+            Macro(Footnote {
+              id: None,
+              text: b.vec([
+                n_text("ymmv ", 16, 21, b),
+                n(Italic(b.vec([n_text("i", 22, 23, b)])), l(21, 24)),
+              ]),
+            }),
+            l(6, 25),
+          ),
+          n_text("bar", 25, 28, b),
+        ]),
       ),
       (
         "kbd:[F11]",
-        bvec![in b; Macro(Macro::Keyboard(AttrList::positional("F11", b)))],
+        b.vec([n(
+          Macro(Keyboard {
+            keys: bvec![in b; b.s("F11")],
+            keys_src: b.src("F11", l(5, 8)),
+          }),
+          l(0, 9),
+        )]),
       ),
       (
+        "kbd:[Ctrl++]",
+        b.vec([n(
+          Macro(Keyboard {
+            keys: bvec![in b; b.s("Ctrl"), b.s("+")],
+            keys_src: b.src("Ctrl++", l(5, 11)),
+          }),
+          l(0, 12),
+        )]),
+      ),
+      (
+        "kbd:[\\ ]",
+        b.vec([n(
+          Macro(Keyboard {
+            keys: bvec![in b; b.s("\\")],
+            keys_src: b.src("\\ ", l(5, 7)),
+          }),
+          l(0, 8),
+        )]),
+      ),
+      ("kbd:[\\]", b.vec([n_text("kbd:[\\]", 0, 7, b)])),
+      (
         "foo https://example.com",
-        bvec![in b; Text(s!(in b; "foo ")), bare_example_com.clone()],
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(bare_example_com(l(4, 23)), l(4, 23)),
+        ]),
       ),
       (
         "foo https://example.com.",
-        bvec![in b; Text(s!(in b; "foo ")), bare_example_com.clone(), Text(s!(in b; "."))],
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(bare_example_com(l(4, 23)), l(4, 23)),
+          n_text(".", 23, 24, b),
+        ]),
       ),
       (
         "foo https://example.com bar",
-        bvec![in b; Text(s!(in b; "foo ")), bare_example_com.clone(), Text(s!(in b; " bar"))],
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(bare_example_com(l(4, 23)), l(4, 23)),
+          n_text(" bar", 23, 27, b),
+        ]),
       ),
       (
         "foo <https://example.com> bar",
-        bvec![in b; Text(s!(in b; "foo ")), bare_example_com.clone(), Text(s!(in b; " bar"))],
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Discarded, l(4, 5)),
+          n(bare_example_com(l(5, 24)), l(5, 24)),
+          n(Discarded, l(24, 25)),
+          n_text(" bar", 25, 29, b),
+        ]),
+      ),
+      (
+        "foo <https://example.com>",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Discarded, l(4, 5)),
+          n(bare_example_com(l(5, 24)), l(5, 24)),
+          n(Discarded, l(24, 25)),
+        ]),
       ),
     ];
 

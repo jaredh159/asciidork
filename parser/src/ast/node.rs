@@ -1,6 +1,6 @@
 use bumpalo::collections::Vec;
 
-use super::{block::Block, doc_content::DocContent, DocHeader, Inline};
+use super::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Section<'bmp> {

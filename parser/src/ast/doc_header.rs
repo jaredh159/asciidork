@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bumpalo::collections::{String, Vec};
 
-use super::Inline;
+use super::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/document/header/
 #[derive(Debug, PartialEq, Eq)]
@@ -15,8 +15,8 @@ pub struct DocHeader<'bmp> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DocTitle<'bmp> {
-  pub heading: Vec<'bmp, Inline<'bmp>>,
-  pub subtitle: Option<Vec<'bmp, Inline<'bmp>>>,
+  pub heading: Vec<'bmp, InlineNode<'bmp>>,
+  pub subtitle: Option<Vec<'bmp, InlineNode<'bmp>>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

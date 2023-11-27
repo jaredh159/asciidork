@@ -29,23 +29,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 #[cfg(test)]
 mod tests {
   use crate::ast::*;
-
-  // todo, repeated
-  macro_rules! s {
-    (in $bump:expr; $s:expr) => {
-      bumpalo::collections::String::from_str_in($s, $bump)
-    };
-  }
+  use crate::test::*;
 
   #[test]
   fn test_parse_simple_block() {
-    let b = &bumpalo::Bump::new();
+    let b = &Bump::new();
     let mut parser = crate::Parser::new(b, "hello mamma,\nhello papa\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Paragraph(
-        bumpalo::vec![in b; Inline::Text(s!(in b; "hello mamma, hello papa"))],
-      ),
+      context: BlockContext::Paragraph(b.vec([
+        inode(Text(b.s("hello mamma,")), l(0, 12)),
+        inode(JoiningNewline, l(12, 13)),
+        inode(Text(b.s("hello papa")), l(13, 23)),
+      ])),
     };
     assert_eq!(block, expected);
   }

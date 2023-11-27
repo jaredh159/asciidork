@@ -1,7 +1,7 @@
 use bumpalo::collections::String;
 use regex::Regex;
 
-use crate::ast::Revision;
+use crate::ast::*;
 use crate::block::Block;
 use crate::token::TokenKind::*;
 use crate::Parser;
@@ -19,7 +19,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if !line.current_is(Word) {
       return;
     }
-    println!("line: {:?}", line.src);
 
     // https://regexr.com/7mbsk
     let pattern = r"^([^\s,:]+)(?:,\s*([^\s:]+))?(?::\s*(.+))?$";

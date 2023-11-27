@@ -6,7 +6,7 @@ use crate::token::Token;
 #[derive(Debug)]
 pub(super) struct Text<'bmp> {
   bump: &'bmp Bump,
-  string: Option<String<'bmp>>,
+  pub(crate) string: Option<String<'bmp>>,
 }
 
 impl<'bmp> Text<'bmp> {

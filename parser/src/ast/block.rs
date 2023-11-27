@@ -1,6 +1,6 @@
 use bumpalo::collections::Vec;
 
-use super::{node::Section, Inline};
+use super::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Block<'bmp> {
@@ -22,7 +22,7 @@ pub enum BlockContext<'bmp> {
   OrderedList,
   Open,
   PageBreak,
-  Paragraph(Vec<'bmp, Inline<'bmp>>),
+  Paragraph(Vec<'bmp, InlineNode<'bmp>>),
   Passthrough,
   BlockQuote,
   Section(Section<'bmp>),

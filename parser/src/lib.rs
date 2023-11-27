@@ -8,6 +8,10 @@ mod line;
 pub mod parser;
 mod tasks;
 mod token;
+mod utils;
+
+#[cfg(test)]
+pub mod test;
 
 pub use diagnostic::Diagnostic;
 pub use parser::Parser;

@@ -1,7 +1,7 @@
 use bumpalo::collections::{String, Vec};
 use regex::Regex;
 
-use crate::ast::Author;
+use crate::ast::*;
 use crate::line::Line;
 use crate::token::TokenKind::*;
 use crate::{Parser, Result};
@@ -68,14 +68,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::Author;
-  use bumpalo::collections::String;
-
-  macro_rules! s {
-    (in $bump:expr;$s:expr) => {
-      String::from_str_in($s, $bump)
-    };
-  }
+  use crate::ast::*;
+  use crate::test::*;
 
   #[test]
   fn test_parse_author_lines() {
@@ -86,6 +80,10 @@ mod tests {
       (
         "Bob L. Foo <bob@foo.com>",
         vec![("Bob", Some("L."), "Foo", Some("bob@foo.com"))],
+      ),
+      (
+        "Kismet R. Lee <kismet@asciidoctor.org>",
+        vec![("Kismet", Some("R."), "Lee", Some("kismet@asciidoctor.org"))],
       ),
       (
         "Bob Foo <bob@foo.com>",
@@ -104,7 +102,7 @@ mod tests {
       ),
     ];
 
-    let b = &bumpalo::Bump::new();
+    let b = &Bump::new();
     for (input, authors) in cases {
       let mut parser = crate::Parser::new(b, input);
       let line = parser.read_line().unwrap();

@@ -22,10 +22,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
 
-    // todo: optmize by not recompiling this regex every time
+    // todo: optimize by not recompiling this regex every time
     let re = Regex::new(r"^:([^\s:]+):\s*([^\s].*)?$").unwrap();
     let Some(captures) = re.captures(line.src) else {
-      println!("no captures, {}", line.src);
       return Ok(None);
     };
 
@@ -38,11 +37,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
-  macro_rules! s {
-    (in $bump:expr;$s:expr) => {
-      bumpalo::collections::String::from_str_in($s, $bump)
-    };
-  }
+  use crate::test::*;
 
   #[test]
   fn test_parse_doc_attr() {

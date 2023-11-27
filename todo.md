@@ -21,3 +21,9 @@
 
 ^ NB: commit `b035118` is useful if you want to find anything from the first, non
 bump-allocated version
+
+## questions
+
+- do we track source locations for attr_lists?
+- how can i see how asciidoctor emits asg?
+- special char substitution... when? what do asg source locations look like for these?

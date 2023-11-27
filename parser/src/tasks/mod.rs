@@ -5,4 +5,5 @@ mod parse_doc_attrs;
 mod parse_doc_header;
 mod parse_inlines;
 mod parse_revision_line;
-mod utils;
+mod text;
+mod text_span;

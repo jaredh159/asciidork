@@ -1,8 +1,7 @@
-use bumpalo::collections::{String, Vec};
-use bumpalo::{vec, Bump};
-
+use crate::ast::*;
 use crate::block::Block;
 use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
+use crate::utils::bump::*;
 
 #[derive(Debug)]
 pub struct Line<'bmp, 'src> {
@@ -21,6 +20,9 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn last_token(&self) -> Option<&Token<'src>> {
+    if self.is_empty() {
+      return None;
+    }
     self.all_tokens.last()
   }
 
@@ -148,12 +150,18 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
-  pub fn consume_to_string_until(&mut self, kind: TokenKind, bump: &'bmp Bump) -> String<'bmp> {
+  pub fn consume_to_string_until(
+    &mut self,
+    kind: TokenKind,
+    bump: &'bmp Bump,
+  ) -> SourceString<'bmp> {
+    let mut loc = self.location().expect("no tokens to consume");
     let mut s = String::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
       s.push_str(token.lexeme);
+      loc.extend(token.loc);
     }
-    s
+    SourceString::new(s, loc)
   }
 
   pub fn consume_if_not(&mut self, kind: TokenKind) -> Option<Token> {
@@ -163,23 +171,26 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
-  pub fn consume_macro_target(&mut self, bump: &'bmp Bump) -> String<'bmp> {
+  pub fn consume_macro_target(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
     let target = self.consume_to_string_until(OpenBracket, bump);
+    debug_assert!(self.current_is(OpenBracket));
     self.discard(1); // `[`
     target
   }
 
-  pub fn consume_optional_macro_target(&mut self, bump: &'bmp Bump) -> Option<String<'bmp>> {
+  pub fn consume_optional_macro_target(&mut self, bump: &'bmp Bump) -> Option<SourceString<'bmp>> {
     let target = match self.current_is(OpenBracket) {
       true => None,
       false => Some(self.consume_to_string_until(CloseBracket, bump)),
     };
+    debug_assert!(self.current_is(OpenBracket));
     self.discard(1); // `[`
     target
   }
 
   #[must_use]
-  pub fn consume_url(&mut self, start: Option<&Token>, bump: &'bmp Bump) -> String<'bmp> {
+  pub fn consume_url(&mut self, start: Option<&Token>, bump: &'bmp Bump) -> SourceString<'bmp> {
+    let mut loc = start.map_or_else(|| self.location().unwrap(), |t| t.loc);
     let mut num_tokens = 0;
 
     for token in self.tokens() {
@@ -197,11 +208,14 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     let mut s = String::new_in(bump);
     if let Some(start) = start {
       s.push_str(start.lexeme);
+      loc.extend(start.loc);
     }
     for _ in 0..num_tokens {
-      s.push_str(self.consume_current().unwrap().lexeme);
+      let token = self.consume_current().unwrap();
+      s.push_str(token.lexeme);
+      loc.extend(token.loc);
     }
-    s
+    SourceString::new(s, loc)
   }
 
   #[must_use]
@@ -216,7 +230,15 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn into_block_in(self, bump: &'bmp Bump) -> Block<'bmp, 'src> {
-    Block::new(vec![in bump; self])
+    Block::new(bvec![in bump; self])
+  }
+
+  pub fn location(&self) -> Option<SourceLocation> {
+    self.current_token().map(|t| t.loc)
+  }
+
+  pub fn last_location(&self) -> Option<SourceLocation> {
+    self.last_token().map(|t| t.loc)
   }
 }
 

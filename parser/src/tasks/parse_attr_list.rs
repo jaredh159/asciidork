@@ -1,8 +1,8 @@
 use bumpalo::Bump;
 
-use crate::ast::AttrList;
+use crate::ast::*;
 use crate::line::Line;
-use crate::tasks::utils::Text;
+use crate::tasks::text::Text;
 use crate::token::TokenKind::*;
 use crate::{Parser, Result};
 
@@ -170,8 +170,6 @@ impl<'bmp> AttrState<'bmp> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::ast::AttrList;
-  use crate::ast::Named;
   use bumpalo::collections::String;
   use bumpalo::vec as bvec;
   use bumpalo::Bump;

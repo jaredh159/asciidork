@@ -39,6 +39,10 @@ impl<'src> Lexer<'src> {
     self.peek == Some(c)
   }
 
+  pub fn loc_src(&self, loc: SourceLocation) -> &'src str {
+    &self.src[loc.start..loc.end]
+  }
+
   pub fn line_of(&self, location: usize) -> &'src str {
     let mut start = location;
     let mut end = location;
@@ -317,6 +321,10 @@ mod tests {
       ("==", vec![(EqualSigns, "==")]),
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
+      (
+        "foo     ;", // whitespace is grouped
+        vec![(Word, "foo"), (Whitespace, "     "), (SemiColon, ";")],
+      ),
       (
         "foo=;",
         vec![(Word, "foo"), (EqualSigns, "="), (SemiColon, ";")],

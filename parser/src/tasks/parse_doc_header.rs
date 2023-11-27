@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bumpalo::vec as bump_vec;
 
-use crate::ast::{DocHeader, DocTitle};
+use crate::ast::*;
 use crate::block::Block;
 use crate::token::TokenKind::*;
 use crate::{Parser, Result};

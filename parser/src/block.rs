@@ -1,5 +1,6 @@
 use bumpalo::collections::Vec as BumpVec;
 
+use crate::ast::SourceLocation;
 use crate::{line::Line, token::TokenIs, token::TokenKind};
 
 #[derive(Debug)]
@@ -49,6 +50,14 @@ impl<'bmp, 'src> Block<'bmp, 'src> {
         .map(|token| token.is(kind))
         .unwrap_or(false),
       None => false,
+    }
+  }
+
+  pub fn location(&self) -> Option<SourceLocation> {
+    if let Some(line) = self.lines.last() {
+      line.location()
+    } else {
+      None
     }
   }
 }

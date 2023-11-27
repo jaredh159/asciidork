@@ -1,20 +1,13 @@
 use std::cell::RefCell;
 
 use bumpalo::collections::Vec as BumpVec;
-use bumpalo::{collections::String, Bump};
+use bumpalo::Bump;
 
-use crate::ast::Document;
-use crate::ast::SourceLocation;
+use crate::ast::*;
 use crate::block::Block;
 use crate::lexer::Lexer;
 use crate::line::Line;
 use crate::Diagnostic;
-
-#[derive(Debug)]
-pub struct Node<'bmp> {
-  pub loc: SourceLocation,
-  pub text: String<'bmp>,
-}
 
 #[derive(Debug)]
 pub struct Parser<'bmp, 'src> {
@@ -55,6 +48,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       errors: RefCell::new(Vec::new()),
       bail: true,
     }
+  }
+
+  #[cfg(test)]
+  pub(crate) fn debug_loc(&self, loc: SourceLocation) {
+    println!("{:?}, {}", loc, self.lexer.loc_src(loc));
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
