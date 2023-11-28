@@ -98,6 +98,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         SingleQuote if state.quotes == InSingleQuotes => state.quotes = Default,
         DoubleQuote if state.quotes == Default => state.quotes = InDoubleQuotes,
         DoubleQuote if state.quotes == InDoubleQuotes => state.quotes = Default,
+        Comma
+          if state.quotes == Default
+            && (state.prev_token.is_none() || state.prev_token == Some(Comma)) =>
+        {
+          state.skip_positional();
+          state.kind = Positional;
+        }
         Comma if state.quotes == Default => {
           state.commit_prev(self)?;
           state.kind = Positional;
@@ -106,10 +113,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           std::mem::swap(&mut state.attr, &mut state.name);
           state.kind = Named;
         }
+        // Whitespace if state.quotes == Default && state.prev_token.is_none() => {
+        //   panic!("do i get here?");
+        // }
         Whitespace if state.quotes == Default => {}
         _ => state.attr.push_token(&token),
       }
+
       state.escaping = false;
+
+      // don't consider "insignificant" whitespace as a previous token
+      if token.kind != Whitespace || state.quotes != Default {
+        state.prev_token = Some(token.kind)
+      }
     }
     Ok(state.attr_list)
   }
@@ -166,13 +182,16 @@ impl<'bmp> AttrState<'bmp> {
     }
     Ok(())
   }
+
+  fn skip_positional(&mut self) {
+    self.attr_list.positional.push(String::new_in(self.bump));
+  }
 }
+
 #[cfg(test)]
 mod tests {
   use super::*;
-  use bumpalo::collections::String;
-  use bumpalo::vec as bvec;
-  use bumpalo::Bump;
+  use crate::test::*;
 
   macro_rules! s {
     (in $bump:expr;$s:expr) => {
@@ -288,6 +307,27 @@ mod tests {
         "[foo, bar]",
         AttrList {
           positional: bvec![in b; s!(in b; "foo"), s!(in b; "bar")],
+          ..AttrList::new_in(b)
+        },
+      ),
+      (
+        "[,bar]",
+        AttrList {
+          positional: bvec![in b; s!(in b; ""), s!(in b; "bar")],
+          ..AttrList::new_in(b)
+        },
+      ),
+      (
+        "[ , bar]",
+        AttrList {
+          positional: bvec![in b; s!(in b; ""), s!(in b; "bar")],
+          ..AttrList::new_in(b)
+        },
+      ),
+      (
+        "[, , bar]",
+        AttrList {
+          positional: bvec![in b; s!(in b; ""), s!(in b; ""), s!(in b; "bar")],
           ..AttrList::new_in(b)
         },
       ),
