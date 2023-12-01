@@ -79,7 +79,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 text.loc = macro_loc.clamp_end();
                 break;
               }
-              // _ => text.push_token(&token),
+              "mailto:" => {
+                let line_end = line.last_location().unwrap();
+                let target = line.consume_macro_target(self.bump);
+                let attrs = self.parse_attr_list(&mut line)?;
+                finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                inlines.push(node(
+                  Macro(Macro::Link {
+                    scheme: token.to_url_scheme().unwrap(),
+                    target,
+                    attrs: Some(attrs),
+                  }),
+                  macro_loc,
+                ));
+              }
               _ => todo!(),
             }
           }
@@ -94,7 +107,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               Macro(Macro::Link {
                 scheme: token.to_url_scheme().unwrap(),
                 target,
-                attrs: AttrList::role("bare", self.bump),
+                attrs: None,
               }),
               loc,
             ));
@@ -118,7 +131,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               Macro(Macro::Link {
                 scheme: scheme_token.to_url_scheme().unwrap(),
                 target,
-                attrs: AttrList::role("bare", self.bump),
+                attrs: None,
               }),
               loc,
             ));
@@ -404,7 +417,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           }
 
           Some(token)
-            if token.is(SingleQuote) && line.current_token().is(Word) && subs.inline_formatting =>
+            if token.is(SingleQuote) && line.current_is(Word) && subs.inline_formatting =>
           {
             if text.is_empty() || text.ends_with(char::is_whitespace) {
               text.push_token(&token);
@@ -559,10 +572,6 @@ mod tests {
     InlineNode::new(content, loc)
   }
 
-  fn role<'bmp>(role: &'static str, bump: &'bmp Bump) -> AttrList<'bmp> {
-    AttrList::role(role, bump)
-  }
-
   fn n_text<'bmp>(s: &'static str, start: usize, end: usize, bump: &'bmp Bump) -> InlineNode<'bmp> {
     InlineNode::new(
       Text(String::from_str_in(s, bump)),
@@ -579,8 +588,15 @@ mod tests {
       Macro(Link {
         scheme: UrlScheme::Https,
         target: b.src("https://example.com", loc),
-        attrs: AttrList::role("bare", b),
+        attrs: None,
       })
+    };
+
+    let role = |role: &'static str, loc: SourceLocation| -> AttrList {
+      AttrList {
+        roles: b.vec([b.src(role, SourceLocation::new(loc.start + 2, loc.end - 1))]),
+        ..AttrList::new(loc, b)
+      }
     };
 
     let cases = vec![
@@ -846,7 +862,7 @@ mod tests {
         b.vec([
           n_text("foo ", 0, 4, b),
           n(
-            TextSpan(role("nowrap", b), b.vec([n_text("bar", 14, 17, b)])),
+            TextSpan(role("nowrap", l(4, 13)), b.vec([n_text("bar", 14, 17, b)])),
             l(4, 18),
           ),
         ]),
@@ -855,7 +871,7 @@ mod tests {
         "[.big]##O##nce upon an infinite loop",
         b.vec([
           n(
-            TextSpan(role("big", b), b.vec([n_text("O", 8, 9, b)])),
+            TextSpan(role("big", l(0, 6)), b.vec([n_text("O", 8, 9, b)])),
             l(0, 11),
           ),
           n_text("nce upon an infinite loop", 11, 36, b),
@@ -866,7 +882,10 @@ mod tests {
         b.vec([
           n_text("Do werewolves believe in ", 0, 25, b),
           n(
-            TextSpan(role("small", b), b.vec([n_text("small print", 34, 45, b)])),
+            TextSpan(
+              role("small", l(25, 33)),
+              b.vec([n_text("small print", 34, 45, b)]),
+            ),
             l(25, 46),
           ),
           n_text("?", 46, 47, b),
@@ -900,7 +919,7 @@ mod tests {
             Macro(Image {
               flow: Flow::Inline,
               target: b.src("sunset.jpg", l(10, 20)),
-              attrs: AttrList::new_in(b),
+              attrs: AttrList::new(l(20, 22), b),
             }),
             l(4, 22),
           ),
@@ -915,7 +934,7 @@ mod tests {
             Macro(Image {
               flow: Flow::Inline,
               target: b.src("sunset.jpg", l(10, 20)),
-              attrs: AttrList::new_in(b),
+              attrs: AttrList::new(l(20, 22), b),
             }),
             l(4, 22),
           ),
@@ -1011,6 +1030,41 @@ mod tests {
           n(Discarded, l(24, 25)),
         ]),
       ),
+      (
+        "mailto:join@discuss.example.org[Subscribe,Subscribe me]",
+        b.vec([n(
+          Macro(Link {
+            scheme: UrlScheme::Mailto,
+            target: b.src("join@discuss.example.org", l(7, 31)),
+            attrs: Some(AttrList {
+              positional: b.vec([
+                Some(b.src("Subscribe", l(32, 41))),
+                Some(b.src("Subscribe me", l(42, 54))),
+              ]),
+              ..AttrList::new(l(31, 55), b)
+            }),
+          }),
+          l(0, 55),
+        )]),
+      ),
+      (
+        "foo mailto:foo@bar.com[,,Hi] bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Link {
+              scheme: UrlScheme::Mailto,
+              target: b.src("foo@bar.com", l(11, 22)),
+              attrs: Some(AttrList {
+                positional: b.vec([None, None, Some(b.src("Hi", l(25, 27)))]),
+                ..AttrList::new(l(22, 28), b)
+              }),
+            }),
+            l(4, 28),
+          ),
+          n_text(" bar", 28, 32, b),
+        ]),
+      ),
     ];
 
     // repeated passes necessary?
@@ -1021,15 +1075,6 @@ mod tests {
       let block = parser.read_block().unwrap();
       let inlines = parser.parse_inlines(block).unwrap();
       assert_eq!(inlines, expected);
-    }
-  }
-
-  impl<'bmp> AttrList<'bmp> {
-    pub fn positional(role: &'static str, bump: &'bmp Bump) -> AttrList<'bmp> {
-      AttrList {
-        positional: bvec![in bump; String::from_str_in(role, bump)],
-        ..AttrList::new_in(bump)
-      }
     }
   }
 }

@@ -4,13 +4,13 @@ use crate::utils::bump::*;
 pub use bumpalo::Bump;
 
 pub trait BumpTestHelpers<'bmp> {
-  fn vec<const N: usize>(&'bmp self, nodes: [InlineNode<'bmp>; N]) -> Vec<'bmp, InlineNode<'bmp>>;
+  fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> Vec<'bmp, T>;
   fn s(&'bmp self, s: &'static str) -> String<'bmp>;
   fn src(&'bmp self, s: &'static str, loc: SourceLocation) -> SourceString<'bmp>;
 }
 
 impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
-  fn vec<const N: usize>(&'bmp self, nodes: [InlineNode<'bmp>; N]) -> Vec<'bmp, InlineNode<'bmp>> {
+  fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> Vec<'bmp, T> {
     let mut vec = Vec::new_in(self);
     for node in nodes.iter() {
       vec.push(node.clone());

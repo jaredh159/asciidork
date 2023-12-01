@@ -50,7 +50,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  #[cfg(test)]
   pub(crate) fn debug_loc(&self, loc: SourceLocation) {
     println!("{:?}, {}", loc, self.lexer.loc_src(loc));
   }

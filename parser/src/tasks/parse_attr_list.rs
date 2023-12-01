@@ -2,8 +2,8 @@ use bumpalo::Bump;
 
 use crate::ast::*;
 use crate::line::Line;
-use crate::tasks::text::Text;
-use crate::token::TokenKind::*;
+use crate::tasks::text_span::TextSpan;
+use crate::token::TokenKind::{self, *};
 use crate::{Parser, Result};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -24,14 +24,16 @@ enum Quotes {
 
 #[derive(Debug)]
 struct AttrState<'bmp> {
+  bump: &'bmp Bump,
   attr_list: AttrList<'bmp>,
   quotes: Quotes,
-  attr: Text<'bmp>,
-  name: Text<'bmp>,
+  attr: TextSpan<'bmp>,
+  name: TextSpan<'bmp>,
   kind: AttrKind,
   escaping: bool,
   parse_range: (usize, usize),
   formatted_text: bool,
+  prev_token: Option<TokenKind>,
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -56,8 +58,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     debug_assert!(line.contains_nonescaped(CloseBracket));
 
     if line.current_is(CloseBracket) {
-      line.discard(1); // `]`
-      return Ok(AttrList::new_in(self.bump));
+      let close = line.consume_current().unwrap(); // `]`
+      return Ok(AttrList::new(close.loc.decr_start(), self.bump));
     }
 
     use AttrKind::*;
@@ -71,6 +73,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         CloseBracket if state.quotes == Default && !state.escaping => {
           state.commit_prev(self)?;
           break;
+        }
+        CloseBracket if state.quotes != Default => {
+          state.attr.push_token(&token);
+          let parse_end = line.first_nonescaped(CloseBracket).unwrap().loc.end - 1;
+          state.parse_range.1 = parse_end;
+          state.attr_list.loc.end = parse_end + 1;
         }
         Backslash if line.current_is(Whitespace) => {
           state.attr.push_token(&token);
@@ -94,9 +102,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           state.commit_prev(self)?;
           state.kind = Option;
         }
-        SingleQuote if state.quotes == Default => state.quotes = InSingleQuotes,
+        SingleQuote if state.quotes == Default => {
+          state.skip_char();
+          state.quotes = InSingleQuotes;
+        }
         SingleQuote if state.quotes == InSingleQuotes => state.quotes = Default,
-        DoubleQuote if state.quotes == Default => state.quotes = InDoubleQuotes,
+        DoubleQuote if state.quotes == Default => {
+          state.skip_char();
+          state.quotes = InDoubleQuotes;
+        }
         DoubleQuote if state.quotes == InDoubleQuotes => state.quotes = Default,
         Comma
           if state.quotes == Default
@@ -107,16 +121,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         }
         Comma if state.quotes == Default => {
           state.commit_prev(self)?;
+          state.skip_char();
           state.kind = Positional;
         }
         EqualSigns if state.quotes == Default && token.lexeme.len() == 1 => {
-          std::mem::swap(&mut state.attr, &mut state.name);
+          state.switch_to_named();
           state.kind = Named;
         }
-        // Whitespace if state.quotes == Default && state.prev_token.is_none() => {
-        //   panic!("do i get here?");
-        // }
-        Whitespace if state.quotes == Default => {}
+        Whitespace if state.quotes == Default => {
+          // skip leading and trailing whitespace
+          if state.attr.is_empty() || token.loc.end == parse_end || line.current_is(Comma) {
+            state.commit_prev(self)?;
+            state.skip_char();
+          } else {
+            state.attr.push_token(&token);
+          }
+        }
         _ => state.attr.push_token(&token),
       }
 
@@ -133,16 +153,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 impl<'bmp> AttrState<'bmp> {
   fn new_in(bump: &Bump, formatted_text: bool, parse_range: (usize, usize)) -> AttrState {
+    let start_loc = SourceLocation::new(parse_range.0, parse_range.0);
     AttrState {
-      attr_list: AttrList::new_in(bump),
+      bump,
+      attr_list: AttrList::new(
+        SourceLocation::new(parse_range.0 - 1, parse_range.1 + 1),
+        bump,
+      ),
       quotes: Quotes::Default,
-      attr: Text::new_in(bump),
-      name: Text::new_in(bump),
+      attr: TextSpan::new_in(start_loc, bump),
+      name: TextSpan::new_in(start_loc, bump),
       kind: AttrKind::Positional,
       escaping: false,
       parse_range,
       formatted_text,
+      prev_token: None,
     }
+  }
+
+  fn skip_char(&mut self) {
+    self.attr.loc = self.attr.loc.incr();
   }
 
   fn err_if_formatted(&self, parser: &Parser) -> Result<()> {
@@ -156,35 +186,45 @@ impl<'bmp> AttrState<'bmp> {
     Ok(())
   }
 
+  fn switch_to_named(&mut self) {
+    std::mem::swap(&mut self.attr, &mut self.name);
+    self.attr.loc = self.name.loc.incr_end().clamp_end(); // skip `=`
+  }
+
   fn commit_prev(&mut self, parser: &Parser) -> Result<()> {
     use AttrKind::*;
     if !self.attr.is_empty() {
       match &self.kind {
         Positional => {
           self.err_if_formatted(parser)?;
-          self.attr_list.positional.push(self.attr.take())
+          self.attr_list.positional.push(Some(self.attr.take_src()))
         }
         Named => {
           self.err_if_formatted(parser)?;
           self
             .attr_list
             .named
-            .insert(self.name.take(), self.attr.take());
+            .insert(self.name.take_src(), self.attr.take_src());
         }
-        Role => self.attr_list.roles.push(self.attr.take()),
+        Role => {
+          self.attr.loc = self.attr.loc.incr_start(); // skip `.`
+          self.attr_list.roles.push(self.attr.take_src())
+        }
         Id => {
           if self.attr_list.id.is_none() {
-            self.attr_list.id = Some(self.attr.take())
+            self.attr.loc = self.attr.loc.incr_start(); // skip `#`
+            self.attr_list.id = Some(self.attr.take_src())
           }
         }
-        Option => self.attr_list.options.push(self.attr.take()),
+        Option => self.attr_list.options.push(self.attr.take_src()),
       }
     }
     Ok(())
   }
 
   fn skip_positional(&mut self) {
-    self.attr_list.positional.push(String::new_in(self.bump));
+    self.attr_list.positional.push(None);
+    self.skip_char();
   }
 }
 
@@ -193,170 +233,197 @@ mod tests {
   use super::*;
   use crate::test::*;
 
-  macro_rules! s {
-    (in $bump:expr;$s:expr) => {
-      String::from_str_in($s, $bump)
-    };
-  }
-
   #[test]
   fn test_parse_attr_list() {
     let b = &Bump::new();
     let cases = vec![
+      ("[]", AttrList::new(l(0, 2), b)),
       (
         "[foo]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo")],
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("foo", l(1, 4)))]),
+          ..AttrList::new(l(0, 5), b)
+        },
+      ),
+      (
+        "[foo bar]",
+        AttrList {
+          positional: b.vec([Some(b.src("foo bar", l(1, 8)))]),
+          ..AttrList::new(l(0, 9), b)
+        },
+      ),
+      (
+        "[ foo bar ]",
+        AttrList {
+          positional: b.vec([Some(b.src("foo bar", l(2, 9)))]),
+          ..AttrList::new(l(0, 11), b)
+        },
+      ),
+      (
+        "[ foo , bar ]",
+        AttrList {
+          positional: b.vec([Some(b.src("foo", l(2, 5))), Some(b.src("bar", l(8, 11)))]),
+          ..AttrList::new(l(0, 13), b)
         },
       ),
       (
         "[\\ ]", // keyboard macro
         AttrList {
-          positional: bvec![in b; s!(in b; "\\")],
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("\\", l(1, 2)))]),
+          ..AttrList::new(l(0, 4), b)
         },
       ),
       (
         "[Ctrl+\\]]",
         AttrList {
-          positional: bvec![in b; s!(in b; "Ctrl+]")],
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("Ctrl+]", l(1, 8)))]),
+          ..AttrList::new(l(0, 9), b)
         },
       ),
       (
         "[#someid]",
         AttrList {
-          id: Some(s!(in b; "someid")),
-          ..AttrList::new_in(b)
+          id: Some(b.src("someid", l(2, 8))),
+          ..AttrList::new(l(0, 9), b)
         },
       ),
       (
         "[.nowrap]",
         AttrList {
-          roles: bvec![in b; s!(in b; "nowrap")],
-          ..AttrList::new_in(b)
+          roles: b.vec([b.src("nowrap", l(2, 8))]),
+          ..AttrList::new(l(0, 9), b)
         },
       ),
       (
         "[.nowrap.underline]",
         AttrList {
-          roles: bvec![in b; s!(in b; "nowrap"), s!(in b; "underline")],
-          ..AttrList::new_in(b)
+          roles: b.vec([b.src("nowrap", l(2, 8)), b.src("underline", l(9, 18))]),
+          ..AttrList::new(l(0, 19), b)
         },
       ),
       (
         "[foo,bar]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo"), s!(in b; "bar")],
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("foo", l(1, 4))), Some(b.src("bar", l(5, 8)))]),
+          ..AttrList::new(l(0, 9), b)
         },
       ),
       (
         "[foo,bar,a=b]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo"), s!(in b;"bar")],
-          named: Named::from(bvec![in b; (s!(in b;"a"), s!(in b; "b"))]),
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("foo", l(1, 4))), Some(b.src("bar", l(5, 8)))]),
+          named: Named::from(b.vec([(b.src("a", l(9, 10)), b.src("b", l(11, 12)))])),
+          ..AttrList::new(l(0, 13), b)
         },
       ),
       (
         "[a=b,foo,b=c,bar]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo"), s!(in b; "bar")],
-          named: Named::from(
-            bvec![in b; (s!(in b; "a"), s!(in b; "b")), (s!(in b; "b"), s!(in b; "c"))],
-          ),
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("foo", l(5, 8))), Some(b.src("bar", l(13, 16)))]),
+          named: Named::from(b.vec([
+            (b.src("a", l(1, 2)), b.src("b", l(3, 4))),
+            (b.src("b", l(9, 10)), b.src("c", l(11, 12))),
+          ])),
+          ..AttrList::new(l(0, 17), b)
         },
       ),
       (
         "[\"foo,bar\",baz]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo,bar"), s!(in b; "baz")],
-          ..AttrList::new_in(b)
+          positional: b.vec([
+            Some(b.src("foo,bar", l(2, 9))),
+            Some(b.src("baz", l(10, 14))),
+          ]),
+          ..AttrList::new(l(0, 15), b)
         },
       ),
       (
         "[Sunset,300,400]",
         AttrList {
-          positional: bvec![in b; s!(in b; "Sunset"), s!(in b; "300"), s!(in b; "400")],
-          ..AttrList::new_in(b)
+          positional: b.vec([
+            Some(b.src("Sunset", l(1, 7))),
+            Some(b.src("300", l(8, 11))),
+            Some(b.src("400", l(12, 15))),
+          ]),
+          ..AttrList::new(l(0, 16), b)
         },
       ),
       (
         "[alt=Sunset,width=300,height=400]",
         AttrList {
-          named: Named::from(bvec![in b;
-            (s!(in b; "alt"), s!(in b; "Sunset")),
-            (s!(in b; "width"), s!(in b; "300")),
-            (s!(in b; "height"), s!(in b; "400")),
-          ]),
-          ..AttrList::new_in(b)
+          named: Named::from(b.vec([
+            (b.src("alt", l(1, 4)), b.src("Sunset", l(5, 11))),
+            (b.src("width", l(12, 17)), b.src("300", l(18, 21))),
+            (b.src("height", l(22, 28)), b.src("400", l(29, 32))),
+          ])),
+          ..AttrList::new(l(0, 33), b)
         },
       ),
       (
         "[#custom-id,named=\"value of named\"]",
         AttrList {
-          id: Some(s!(in b; "custom-id")),
-          named: Named::from(bvec![in b;(s!(in b; "named"), s!(in b; "value of named"))]),
-          ..AttrList::new_in(b)
+          id: Some(b.src("custom-id", l(2, 11))),
+          named: Named::from(b.vec([(
+            b.src("named", l(12, 17)),
+            b.src("value of named", l(19, 33)),
+          )])),
+          ..AttrList::new(l(0, 35), b)
         },
       ),
       (
         "[foo, bar]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo"), s!(in b; "bar")],
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("foo", l(1, 4))), Some(b.src("bar", l(6, 9)))]),
+          ..AttrList::new(l(0, 10), b)
         },
       ),
       (
         "[,bar]",
         AttrList {
-          positional: bvec![in b; s!(in b; ""), s!(in b; "bar")],
-          ..AttrList::new_in(b)
+          positional: b.vec([None, Some(b.src("bar", l(2, 5)))]),
+          ..AttrList::new(l(0, 6), b)
         },
       ),
       (
         "[ , bar]",
         AttrList {
-          positional: bvec![in b; s!(in b; ""), s!(in b; "bar")],
-          ..AttrList::new_in(b)
+          positional: b.vec([None, Some(b.src("bar", l(4, 7)))]),
+          ..AttrList::new(l(0, 8), b)
         },
       ),
       (
         "[, , bar]",
         AttrList {
-          positional: bvec![in b; s!(in b; ""), s!(in b; ""), s!(in b; "bar")],
-          ..AttrList::new_in(b)
+          positional: b.vec([None, None, Some(b.src("bar", l(5, 8)))]),
+          ..AttrList::new(l(0, 9), b)
         },
       ),
       (
         "[\"foo]\"]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo]")],
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("foo]", l(2, 6)))]),
+          ..AttrList::new(l(0, 8), b)
         },
       ),
       (
         "[foo\\]]",
         AttrList {
-          positional: bvec![in b; s!(in b; "foo]")],
-          ..AttrList::new_in(b)
+          positional: b.vec([Some(b.src("foo]", l(1, 6)))]),
+          ..AttrList::new(l(0, 7), b)
         },
       ),
       (
         "[foo='bar']",
         AttrList {
-          named: Named::from(bvec![in b; (s!(in b; "foo"), s!(in b; "bar"))]),
-          ..AttrList::new_in(b)
+          named: Named::from(b.vec([(b.src("foo", l(1, 4)), b.src("bar", l(6, 9)))])),
+          ..AttrList::new(l(0, 11), b)
         },
       ),
       (
         "[foo='.foo#id%opt']",
         AttrList {
-          named: Named::from(bvec![in b; (s!(in b; "foo"), s!(in b; ".foo#id%opt"))]),
-          ..AttrList::new_in(b)
+          named: Named::from(b.vec([(b.src("foo", l(1, 4)), b.src(".foo#id%opt", l(6, 17)))])),
+          ..AttrList::new(l(0, 19), b)
         },
       ),
     ];

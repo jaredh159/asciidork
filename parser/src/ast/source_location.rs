@@ -32,6 +32,22 @@ impl SourceLocation {
   pub fn incr_end(&self) -> SourceLocation {
     Self::new(self.start, self.end + 1)
   }
+
+  pub fn decr_start(&self) -> SourceLocation {
+    Self::new(self.start - 1, self.end)
+  }
+
+  pub fn incr_start(&self) -> SourceLocation {
+    Self::new(self.start + 1, self.end)
+  }
+
+  pub fn incr(&self) -> SourceLocation {
+    Self::new(self.start + 1, self.end + 1)
+  }
+
+  pub fn decr(&self) -> SourceLocation {
+    Self::new(self.start - 1, self.end - 1)
+  }
 }
 
 impl From<usize> for SourceLocation {

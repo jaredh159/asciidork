@@ -28,6 +28,12 @@ impl<'bmp> TextSpan<'bmp> {
     self.string.replace(String::new_in(self.bump)).unwrap()
   }
 
+  pub fn take_src(&mut self) -> SourceString<'bmp> {
+    let src_loc = self.loc;
+    self.loc = self.loc.clamp_end();
+    SourceString::new(self.take(), src_loc)
+  }
+
   pub fn commit_inlines(&mut self, inlines: &mut Vec<'bmp, InlineNode<'bmp>>) {
     match (self.is_empty(), inlines.last_mut()) {
       (

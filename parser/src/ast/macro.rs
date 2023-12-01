@@ -19,7 +19,7 @@ pub enum Macro<'bmp> {
   Link {
     scheme: UrlScheme,
     target: SourceString<'bmp>,
-    attrs: AttrList<'bmp>,
+    attrs: Option<AttrList<'bmp>>,
   },
 }
 

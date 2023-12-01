@@ -22,3 +22,9 @@ impl<'bmp> Deref for SourceString<'bmp> {
     &self.src
   }
 }
+
+impl<'bmp> std::cmp::PartialEq<str> for SourceString<'bmp> {
+  fn eq(&self, other: &str) -> bool {
+    self.src == other
+  }
+}

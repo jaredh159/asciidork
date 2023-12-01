@@ -1,53 +1,47 @@
-use bumpalo::collections::{String, Vec};
-use bumpalo::Bump;
+use crate::ast::*;
+use crate::utils::bump::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/positional-and-named-attributes/
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AttrList<'bmp> {
-  pub positional: Vec<'bmp, String<'bmp>>,
+  pub positional: Vec<'bmp, Option<SourceString<'bmp>>>,
   pub named: Named<'bmp>,
-  pub id: Option<String<'bmp>>,
-  pub roles: Vec<'bmp, String<'bmp>>,
-  pub options: Vec<'bmp, String<'bmp>>,
+  pub id: Option<SourceString<'bmp>>,
+  pub roles: Vec<'bmp, SourceString<'bmp>>,
+  pub options: Vec<'bmp, SourceString<'bmp>>,
+  pub loc: SourceLocation,
 }
 
 impl<'bmp> AttrList<'bmp> {
-  pub fn new_in(bump: &'bmp Bump) -> Self {
+  pub fn new(loc: SourceLocation, bump: &'bmp Bump) -> Self {
     AttrList {
       positional: Vec::new_in(bump),
       named: Named::new_in(bump),
       id: None,
       roles: Vec::new_in(bump),
       options: Vec::new_in(bump),
+      loc,
     }
-  }
-
-  pub fn role(role: &'static str, bump: &'bmp Bump) -> AttrList<'bmp> {
-    let mut attr_list = AttrList::new_in(bump);
-    let mut string = String::with_capacity_in(role.len(), bump);
-    string.push_str(role);
-    attr_list.roles.push(string);
-    attr_list
   }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Named<'bmp>(Vec<'bmp, (String<'bmp>, String<'bmp>)>);
+pub struct Named<'bmp>(Vec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>);
 
 impl<'bmp> Named<'bmp> {
   pub fn new_in(bump: &'bmp Bump) -> Self {
     Named(Vec::new_in(bump))
   }
 
-  pub fn from(vec: Vec<'bmp, (String<'bmp>, String<'bmp>)>) -> Self {
+  pub fn from(vec: Vec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>) -> Self {
     Named(vec)
   }
 
-  pub fn insert(&mut self, key: String<'bmp>, value: String<'bmp>) {
+  pub fn insert(&mut self, key: SourceString<'bmp>, value: SourceString<'bmp>) {
     self.0.push((key, value));
   }
 
-  pub fn get(&self, key: &str) -> Option<&String<'bmp>> {
+  pub fn get(&self, key: &str) -> Option<&SourceString<'bmp>> {
     self
       .0
       .iter()
