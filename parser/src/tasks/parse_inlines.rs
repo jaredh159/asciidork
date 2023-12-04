@@ -1013,6 +1013,51 @@ mod tests {
         ]),
       ),
       (
+        "foo http://example.com bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Link {
+              scheme: UrlScheme::Http,
+              target: b.src("http://example.com", l(4, 22)),
+              attrs: None,
+            }),
+            l(4, 22),
+          ),
+          n_text(" bar", 22, 26, b),
+        ]),
+      ),
+      (
+        "foo ftp://example.com bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Link {
+              scheme: UrlScheme::Ftp,
+              target: b.src("ftp://example.com", l(4, 21)),
+              attrs: None,
+            }),
+            l(4, 21),
+          ),
+          n_text(" bar", 21, 25, b),
+        ]),
+      ),
+      (
+        "foo irc://example.com bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Link {
+              scheme: UrlScheme::Irc,
+              target: b.src("irc://example.com", l(4, 21)),
+              attrs: None,
+            }),
+            l(4, 21),
+          ),
+          n_text(" bar", 21, 25, b),
+        ]),
+      ),
+      (
         "foo <https://example.com> bar",
         b.vec([
           n_text("foo ", 0, 4, b),
