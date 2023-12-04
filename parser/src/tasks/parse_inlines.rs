@@ -42,10 +42,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           return Ok(inlines);
         }
 
-        // 👍 consider bailing with the two None cases, see if it cleans up match
-        let current_token = line.consume_current();
-        match current_token {
-          Some(token) if subs.macros && token.is(MacroName) && line.continues_inline_macro() => {
+        let Some(token) = line.consume_current() else {
+          if !block.is_empty() {
+            text.commit_inlines(&mut inlines);
+            text.loc.end += 1;
+            inlines.push(node(JoiningNewline, text.loc));
+            text.loc = text.loc.clamp_end();
+          }
+          break;
+        };
+
+        match token.kind {
+          MacroName if subs.macros && line.continues_inline_macro() => {
             let mut macro_loc = token.loc;
             text.commit_inlines(&mut inlines);
             match token.lexeme {
@@ -99,7 +107,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             }
           }
 
-          Some(token) if subs.macros && token.is(MaybeEmail) && EMAIL_RE.is_match(token.lexeme) => {
+          MaybeEmail if subs.macros && EMAIL_RE.is_match(token.lexeme) => {
             text.commit_inlines(&mut inlines);
             inlines.push(node(
               Macro(Macro::Link {
@@ -112,26 +120,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = token.loc.clamp_end();
           }
 
-          Some(token) if subs.macros && token.is_url_scheme() && line.src.starts_with("//") => {
-            let mut loc = token.loc;
-            let line_end = line.last_location().unwrap();
-            text.commit_inlines(&mut inlines);
-            let target = line.consume_url(Some(&token), self.bump);
-            loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
-            inlines.push(node(
-              Macro(Macro::Link {
-                scheme: token.to_url_scheme().unwrap(),
-                target,
-                attrs: None,
-              }),
-              loc,
-            ));
-            text.loc = loc.clamp_end();
-          }
-
-          Some(token)
+          LessThan
             if subs.macros
-              && token.is(LessThan)
               && line.current_token().is_url_scheme()
               && line.is_continuous_thru(GreaterThan) =>
           {
@@ -154,7 +144,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = loc.incr_end().clamp_end();
           }
 
-          Some(token)
+          Underscore
             if subs.inline_formatting
               && starts_constrained(&[Underscore], &token, &line, block) =>
           {
@@ -162,32 +152,24 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
+          Underscore
             if subs.inline_formatting && starts_unconstrained(Underscore, &token, &line, block) =>
           {
             self.parse_unconstrained(&token, Italic, &mut text, &mut inlines, line, block)?;
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && starts_constrained(&[Star], &token, &line, block) =>
-          {
+          Star if subs.inline_formatting && starts_constrained(&[Star], &token, &line, block) => {
             self.parse_constrained(&token, Bold, &mut text, &mut inlines, line, block)?;
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && starts_unconstrained(Star, &token, &line, block) =>
-          {
+          Star if subs.inline_formatting && starts_unconstrained(Star, &token, &line, block) => {
             self.parse_unconstrained(&token, Bold, &mut text, &mut inlines, line, block)?;
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting
-              && token.is(OpenBracket)
-              && line.contains_seq(&[CloseBracket, Hash]) =>
-          {
+          OpenBracket if subs.inline_formatting && line.contains_seq(&[CloseBracket, Hash]) => {
             let mut parse_token = token.clone();
             let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
             debug_assert!(line.current_is(Hash));
@@ -202,9 +184,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
+          Backtick
             if subs.inline_formatting
-              && token.is(Backtick)
               && line.current_is(Plus)
               && contains_seq(&[Plus, Backtick], &line, block) =>
           {
@@ -226,9 +207,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && token.is(Caret) && line.is_continuous_thru(Caret) =>
-          {
+          Caret if subs.inline_formatting && line.is_continuous_thru(Caret) => {
             let mut loc = token.loc;
             text.commit_inlines(&mut inlines);
             block.restore(line);
@@ -239,9 +218,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
+          DoubleQuote
             if subs.inline_formatting
-              && token.is(DoubleQuote)
               && line.current_is(Backtick)
               && starts_constrained(&[Backtick, DoubleQuote], &token, &line, block) =>
           {
@@ -256,9 +234,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
+          SingleQuote
             if subs.inline_formatting
-              && token.is(SingleQuote)
               && line.current_is(Backtick)
               && starts_constrained(&[Backtick, SingleQuote], &token, &line, block) =>
           {
@@ -273,9 +250,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && token.is(Tilde) && line.is_continuous_thru(Tilde) =>
-          {
+          Tilde if subs.inline_formatting && line.is_continuous_thru(Tilde) => {
             let mut loc = token.loc;
             text.commit_inlines(&mut inlines);
             block.restore(line);
@@ -286,9 +261,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && token.is(Backtick) && line.current_is(DoubleQuote) =>
-          {
+          Backtick if subs.inline_formatting && line.current_is(DoubleQuote) => {
             let mut loc = token.loc;
             line.discard(1); // double quote
             loc.end += 1;
@@ -299,9 +272,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && token.is(DoubleQuote) && line.current_is(Backtick) =>
-          {
+          DoubleQuote if subs.inline_formatting && line.current_is(Backtick) => {
             let mut loc = token.loc;
             line.discard(1); // backtick
             loc.end += 1;
@@ -312,9 +283,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && token.is(Backtick) && line.current_is(SingleQuote) =>
-          {
+          Backtick if subs.inline_formatting && line.current_is(SingleQuote) => {
             let mut loc = token.loc;
             line.discard(1); // double quote
             loc.end += 1;
@@ -325,9 +294,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && token.is(SingleQuote) && line.current_is(Backtick) =>
-          {
+          SingleQuote if subs.inline_formatting && line.current_is(Backtick) => {
             let mut loc = token.loc;
             line.discard(1); // backtick
             loc.end += 1;
@@ -338,30 +305,27 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
+          Backtick
             if subs.inline_formatting && starts_constrained(&[Backtick], &token, &line, block) =>
           {
             self.parse_constrained(&token, Mono, &mut text, &mut inlines, line, block)?;
             break;
           }
 
-          Some(token)
+          Backtick
             if subs.inline_formatting && starts_unconstrained(Backtick, &token, &line, block) =>
           {
             self.parse_unconstrained(&token, Mono, &mut text, &mut inlines, line, block)?;
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting && token.is(Hash) && contains_seq(&[Hash], &line, block) =>
-          {
+          Hash if subs.inline_formatting && contains_seq(&[Hash], &line, block) => {
             self.parse_constrained(&token, Highlight, &mut text, &mut inlines, line, block)?;
             break;
           }
 
-          Some(token)
-            if token.is(Plus)
-              && line.starts_with_seq(&[Plus, Plus])
+          Plus
+            if line.starts_with_seq(&[Plus, Plus])
               && contains_seq(&[Plus, Plus, Plus], &line, block) =>
           {
             let mut loc = token.loc;
@@ -377,9 +341,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
+          Plus
             if subs.inline_formatting
-              && token.is(Plus)
               && line.current_is(Plus)
               && starts_unconstrained(Plus, &token, &line, block) =>
           {
@@ -396,11 +359,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.inline_formatting
-              && token.is(Plus)
-              && starts_constrained(&[Plus], &token, &line, block) =>
-          {
+          Plus if subs.inline_formatting && starts_constrained(&[Plus], &token, &line, block) => {
             self.ctx.subs.inline_formatting = false;
             self.parse_constrained(
               &token,
@@ -414,10 +373,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          Some(token)
-            if subs.special_chars
-              && (token.is(Ampersand) || token.is(LessThan) || token.is(GreaterThan)) =>
-          {
+          Ampersand | LessThan | GreaterThan if subs.special_chars => {
             text.commit_inlines(&mut inlines);
             inlines.push(node(
               SpecialChar(match token.kind {
@@ -431,9 +387,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = token.loc.clamp_end();
           }
 
-          Some(token)
-            if token.is(SingleQuote) && line.current_is(Word) && subs.inline_formatting =>
-          {
+          SingleQuote if line.current_is(Word) && subs.inline_formatting => {
             if text.is_empty() || text.ends_with(char::is_whitespace) {
               text.push_token(&token);
             } else {
@@ -443,9 +397,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             }
           }
 
-          Some(token)
-            if token.is(Whitespace) && token.lexeme.len() > 1 && subs.inline_formatting =>
-          {
+          Whitespace if token.lexeme.len() > 1 && subs.inline_formatting => {
             text.commit_inlines(&mut inlines);
             inlines.push(node(
               MultiCharWhitespace(String::from_str_in(token.lexeme, self.bump)),
@@ -454,9 +406,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = token.loc.clamp_end();
           }
 
-          Some(token)
-            if token.is(Backslash)
-              && subs.macros
+          Backslash
+            if subs.macros
               && (line.current_is(MaybeEmail) || line.current_token().is_url_scheme()) =>
           {
             text.commit_inlines(&mut inlines);
@@ -467,19 +418,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.push_token(&next_token);
           }
 
-          Some(token) => {
+          _ if subs.macros && token.is_url_scheme() && line.src.starts_with("//") => {
+            let mut loc = token.loc;
+            let line_end = line.last_location().unwrap();
+            text.commit_inlines(&mut inlines);
+            let target = line.consume_url(Some(&token), self.bump);
+            loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
+            inlines.push(node(
+              Macro(Macro::Link {
+                scheme: token.to_url_scheme().unwrap(),
+                target,
+                attrs: None,
+              }),
+              loc,
+            ));
+            text.loc = loc.clamp_end();
+          }
+
+          _ => {
             text.push_token(&token);
           }
-
-          None if !block.is_empty() => {
-            text.commit_inlines(&mut inlines);
-            text.loc.end += 1;
-            inlines.push(node(JoiningNewline, text.loc));
-            text.loc = text.loc.clamp_end();
-            break;
-          }
-
-          None => break,
         }
       }
     }
