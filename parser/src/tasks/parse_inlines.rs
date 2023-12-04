@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::ast::*;
@@ -41,6 +42,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           return Ok(inlines);
         }
 
+        // 👍 consider bailing with the two None cases, see if it cleans up match
         let current_token = line.consume_current();
         match current_token {
           Some(token) if subs.macros && token.is(MacroName) && line.continues_inline_macro() => {
@@ -95,6 +97,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               }
               _ => todo!(),
             }
+          }
+
+          Some(token) if subs.macros && token.is(MaybeEmail) && EMAIL_RE.is_match(token.lexeme) => {
+            text.commit_inlines(&mut inlines);
+            inlines.push(node(
+              Macro(Macro::Link {
+                scheme: UrlScheme::Mailto,
+                target: SourceString::new(String::from_str_in(token.lexeme, self.bump), token.loc),
+                attrs: None,
+              }),
+              token.loc,
+            ));
+            text.loc = token.loc.clamp_end();
           }
 
           Some(token) if subs.macros && token.is_url_scheme() && line.src.starts_with("//") => {
@@ -439,6 +454,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = token.loc.clamp_end();
           }
 
+          Some(token)
+            if token.is(Backslash)
+              && subs.macros
+              && (line.current_is(MaybeEmail) || line.current_token().is_url_scheme()) =>
+          {
+            text.commit_inlines(&mut inlines);
+            inlines.push(node(Discarded, token.loc));
+            text.loc = token.loc.clamp_end();
+            // pushing the next token as text prevents macro subs for escaped token
+            let next_token = line.consume_current().unwrap();
+            text.push_token(&next_token);
+          }
+
           Some(token) => {
             text.push_token(&token);
           }
@@ -560,6 +588,13 @@ fn finish_macro<'bmp>(
     loc.extend(line_end);
     text.loc = loc.clamp_end();
   }
+}
+
+lazy_static! {
+  static ref EMAIL_RE: Regex = Regex::new(
+    r"^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})"
+  )
+  .unwrap();
 }
 
 #[cfg(test)]
@@ -1004,6 +1039,14 @@ mod tests {
         ]),
       ),
       (
+        "foo \\https://example.com.", // escaped autolink
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Discarded, l(4, 5)),
+          n_text("https://example.com.", 5, 25, b),
+        ]),
+      ),
+      (
         "foo https://example.com bar",
         b.vec([
           n_text("foo ", 0, 4, b),
@@ -1064,6 +1107,36 @@ mod tests {
           ),
           n_text(" bar", 28, 32, b),
         ]),
+      ),
+      (
+        "foo foo@bar.com bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Link {
+              scheme: UrlScheme::Mailto,
+              target: b.src("foo@bar.com", l(4, 15)),
+              attrs: None,
+            }),
+            l(4, 15),
+          ),
+          n_text(" bar", 15, 19, b),
+        ]),
+      ),
+      (
+        "foo@bar.com",
+        b.vec([n(
+          Macro(Link {
+            scheme: UrlScheme::Mailto,
+            target: b.src("foo@bar.com", l(0, 11)),
+            attrs: None,
+          }),
+          l(0, 11),
+        )]),
+      ),
+      (
+        "\\foo@bar.com bar", // escaped autolink
+        b.vec([n(Discarded, l(0, 1)), n_text("foo@bar.com bar", 1, 16, b)]),
       ),
     ];
 

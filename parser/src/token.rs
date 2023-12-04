@@ -20,6 +20,7 @@ pub enum TokenKind {
   Hash,
   LessThan,
   MacroName,
+  MaybeEmail,
   Newline,
   OpenBracket,
   Percent,

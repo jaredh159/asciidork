@@ -116,6 +116,7 @@ name = "parser"
 version = "0.1.0"
 dependencies = [
  "bumpalo",
+ "lazy_static",
  "regex",
 ]
 

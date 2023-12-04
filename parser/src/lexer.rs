@@ -156,8 +156,9 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  fn advance_while(&mut self, c: char) {
+  fn advance_while(&mut self, c: char) -> usize {
     while self.advance_if(c) {}
+    self.offset()
   }
 
   fn single(&self, kind: TokenKind) -> Token<'src> {
@@ -172,8 +173,7 @@ impl<'src> Lexer<'src> {
 
   fn repeating(&mut self, c: char, kind: TokenKind) -> Token<'src> {
     let start = self.offset() - 1;
-    self.advance_while(c);
-    let end = self.offset();
+    let end = self.advance_while(c);
     Token {
       kind,
       loc: SourceLocation::new(start, end),
@@ -181,39 +181,108 @@ impl<'src> Lexer<'src> {
     }
   }
 
+  fn advance_while_with(&mut self, f: impl Fn(char) -> bool) -> usize {
+    while self.peek.map_or(false, &f) {
+      self.advance();
+    }
+    self.offset()
+  }
+
+  fn advance_to_word_boundary(&mut self, with_at: bool) -> usize {
+    self.advance_until_one_of(&[
+      ' ',
+      '\t',
+      '\n',
+      ':',
+      ';',
+      '<',
+      '>',
+      ',',
+      '^',
+      '_',
+      '~',
+      '*',
+      '!',
+      '`',
+      '+',
+      '.',
+      '[',
+      ']',
+      '=',
+      '"',
+      '\'',
+      '\\',
+      '%',
+      '#',
+      '&',
+      if with_at { '@' } else { '&' },
+    ])
+  }
+
   fn word(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
-    self.advance_until_one_of(&[
-      ' ', '\t', '\n', ':', ';', '<', '>', ',', '^', '_', '~', '*', '!', '`', '+', '.', '[', ']',
-      '=', '"', '\'', '\\', '%', '#', '&',
-    ]);
-    let end = self.offset();
+    let end = self.advance_to_word_boundary(true);
     let lexeme = &self.src[start..end];
-    // check for macros...
-    if self.peek == Some(':') {
-      if self.is_macro_name(lexeme) {
+
+    // 👍 monday jared... not 100% sure, but, i think i want to
+    // encode a new token type of Email, by checking for the @
+    // and peeking ahead
+    // also, i should try to handle the `\` to opt out of macro and autolinking
+    // per https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/#escaping-urls-and-email-addresses
+
+    // special cases
+    match self.peek {
+      // macros
+      Some(':') => {
+        if self.is_macro_name(lexeme) {
+          self.advance();
+          return Token {
+            kind: MacroName,
+            loc: SourceLocation::new(start, end + 1),
+            lexeme: &self.src[start..end + 1],
+          };
+          // ...checking for contiguous footnote `somethingfootnote:[]`
+        } else if lexeme.ends_with('e') && lexeme.ends_with("footnote") {
+          self.reverse_by(8);
+          return Token {
+            kind: Word,
+            loc: SourceLocation::new(start, end - 8),
+            lexeme: &self.src[start..end - 8],
+          };
+        }
+      }
+      // maybe email
+      Some('@') => {
         self.advance();
-        return Token {
-          kind: MacroName,
-          loc: SourceLocation::new(start, end + 1),
-          lexeme: &self.src[start..end + 1],
-        };
-        // ...checking for contiguous footnote `somethingfootnote:[]`
-      } else if lexeme.ends_with('e') && lexeme.ends_with("footnote") {
-        self.chars = self.src[end - 8..].chars();
-        self.peek = self.chars.next();
+        let domain_end = self
+          .advance_while_with(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
+        let domain = &self.src[end + 1..domain_end];
+        if domain.len() > 3 && domain.contains('.') && !self.peek_is('@') {
+          return Token {
+            kind: MaybeEmail,
+            loc: SourceLocation::new(start, domain_end),
+            lexeme: &self.src[start..domain_end],
+          };
+        }
+        self.reverse_by(domain.len());
+        let end = self.advance_to_word_boundary(false);
         return Token {
           kind: Word,
-          loc: SourceLocation::new(start, end - 8),
-          lexeme: &self.src[start..end - 8],
+          loc: SourceLocation::new(start, end),
+          lexeme: &self.src[start..end],
         };
       }
+      _ => {}
     }
     Token {
       kind: Word,
       loc: SourceLocation::new(start, end),
       lexeme: &self.src[start..end],
     }
+  }
+  fn reverse_by(&mut self, n: usize) {
+    self.chars = self.src[self.offset() - n..].chars();
+    self.peek = self.chars.next();
   }
 
   fn is_macro_name(&self, lexeme: &str) -> bool {
@@ -235,7 +304,7 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  fn advance_until_one_of(&mut self, chars: &[char]) {
+  fn advance_until_one_of(&mut self, chars: &[char]) -> usize {
     loop {
       match self.peek {
         Some(c) if chars.contains(&c) => break,
@@ -245,6 +314,7 @@ impl<'src> Lexer<'src> {
         }
       }
     }
+    self.offset()
   }
 
   fn advance_while_one_of(&mut self, chars: &[char]) {
@@ -312,6 +382,14 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("foo@bar", vec![(Word, "foo@bar")]),
+      (
+        "foo@bar.com@",
+        vec![(Word, "foo@bar"), (Dot, "."), (Word, "com@")],
+      ),
+      ("@foo@bar", vec![(Word, "@foo@bar")]),
+      ("foo@", vec![(Word, "foo@")]),
+      ("foo@.a", vec![(Word, "foo@"), (Dot, "."), (Word, "a")]),
       ("foo.bar", vec![(Word, "foo"), (Dot, "."), (Word, "bar")]),
       (
         "roflfootnote:",
@@ -395,9 +473,7 @@ The document body starts here.
           (Word, "Lee"),
           (Whitespace, " "),
           (LessThan, "<"),
-          (Word, "kismet@asciidoctor"),
-          (Dot, "."),
-          (Word, "org"),
+          (MaybeEmail, "kismet@asciidoctor.org"),
           (GreaterThan, ">"),
           (Newline, "\n"),
           (Colon, ":"),
