@@ -89,17 +89,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 text.loc = macro_loc.clamp_end();
                 break;
               }
-              "mailto:" => {
+              "mailto:" | "link:" => {
                 let line_end = line.last_location().unwrap();
                 let target = line.consume_macro_target(self.bump);
                 let attrs = self.parse_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                let scheme = token.to_url_scheme();
                 inlines.push(node(
-                  Macro(Macro::Link {
-                    scheme: token.to_url_scheme().unwrap(),
-                    target,
-                    attrs: Some(attrs),
-                  }),
+                  Macro(Macro::Link { scheme, target, attrs: Some(attrs) }),
                   macro_loc,
                 ));
               }
@@ -109,7 +106,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 line.discard(1); // `[`
                 let attrs = self.parse_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
-                let scheme = token.to_url_scheme().unwrap();
+                let scheme = Some(token.to_url_scheme().unwrap());
                 inlines.push(node(
                   Macro(Macro::Link { scheme, target, attrs: Some(attrs) }),
                   macro_loc,
@@ -131,7 +128,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let line_end = line.last_location().unwrap();
             let target = line.consume_url(Some(&scheme_token), self.bump);
             loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
-            let scheme = scheme_token.to_url_scheme().unwrap();
+            let scheme = Some(scheme_token.to_url_scheme().unwrap());
             inlines.push(node(
               Macro(Macro::Link { scheme, target, attrs: None }),
               loc,
@@ -144,7 +141,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.commit_inlines(&mut inlines);
             inlines.push(node(
               Macro(Macro::Link {
-                scheme: UrlScheme::Mailto,
+                scheme: Some(UrlScheme::Mailto),
                 target: SourceString::new(String::from_str_in(token.lexeme, self.bump), token.loc),
                 attrs: None,
               }),
@@ -433,12 +430,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.commit_inlines(&mut inlines);
             let target = line.consume_url(Some(&token), self.bump);
             loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
+            let scheme = Some(token.to_url_scheme().unwrap());
             inlines.push(node(
-              Macro(Macro::Link {
-                scheme: token.to_url_scheme().unwrap(),
-                target,
-                attrs: None,
-              }),
+              Macro(Macro::Link { scheme, target, attrs: None }),
               loc,
             ));
             text.loc = loc.clamp_end();
@@ -577,7 +571,7 @@ mod tests {
     let b = &Bump::new();
     let bare_example_com = |loc: SourceLocation| -> Inline {
       Macro(Link {
-        scheme: UrlScheme::Https,
+        scheme: Some(UrlScheme::Https),
         target: b.src("https://example.com", loc),
         attrs: None,
       })
@@ -1016,7 +1010,7 @@ mod tests {
           n_text("foo ", 0, 4, b),
           n(
             Macro(Link {
-              scheme: UrlScheme::Http,
+              scheme: Some(UrlScheme::Http),
               target: b.src("http://example.com", l(4, 22)),
               attrs: None,
             }),
@@ -1031,7 +1025,7 @@ mod tests {
           n_text("foo ", 0, 4, b),
           n(
             Macro(Link {
-              scheme: UrlScheme::Ftp,
+              scheme: Some(UrlScheme::Ftp),
               target: b.src("ftp://example.com", l(4, 21)),
               attrs: None,
             }),
@@ -1046,7 +1040,7 @@ mod tests {
           n_text("foo ", 0, 4, b),
           n(
             Macro(Link {
-              scheme: UrlScheme::Irc,
+              scheme: Some(UrlScheme::Irc),
               target: b.src("irc://example.com", l(4, 21)),
               attrs: None,
             }),
@@ -1061,7 +1055,7 @@ mod tests {
           n_text("Ask in the ", 0, 11, b),
           n(
             Macro(Link {
-              scheme: UrlScheme::Https,
+              scheme: Some(UrlScheme::Https),
               target: b.src("https://chat.asciidoc.org", l(11, 36)),
               attrs: Some(AttrList {
                 positional: b.vec([Some(b.vec([n(
@@ -1082,7 +1076,7 @@ mod tests {
           n_text("Chat with other Fedora users in the ", 0, 36, b),
           n(
             Macro(Link {
-              scheme: UrlScheme::Irc,
+              scheme: Some(UrlScheme::Irc),
               target: b.src("irc://irc.freenode.org/#fedora", l(36, 66)),
               attrs: Some(AttrList {
                 positional: b.vec([Some(b.vec([n_text("Fedora IRC channel", 67, 85, b)]))]),
@@ -1092,6 +1086,24 @@ mod tests {
             l(36, 86),
           ),
           n_text(".", 86, 87, b),
+        ]),
+      ),
+      (
+        "foo link:downloads/report.pdf[Get Report] bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Link {
+              scheme: None,
+              target: b.src("downloads/report.pdf", l(9, 29)),
+              attrs: Some(AttrList {
+                positional: b.vec([Some(b.vec([n_text("Get Report", 30, 40, b)]))]),
+                ..AttrList::new(l(29, 41), b)
+              }),
+            }),
+            l(4, 41),
+          ),
+          n_text(" bar", 41, 45, b),
         ]),
       ),
       (
@@ -1117,7 +1129,7 @@ mod tests {
         "mailto:join@discuss.example.org[Subscribe,Subscribe me]",
         b.vec([n(
           Macro(Link {
-            scheme: UrlScheme::Mailto,
+            scheme: Some(UrlScheme::Mailto),
             target: b.src("join@discuss.example.org", l(7, 31)),
             attrs: Some(AttrList {
               positional: b.vec([
@@ -1136,7 +1148,7 @@ mod tests {
           n_text("foo ", 0, 4, b),
           n(
             Macro(Link {
-              scheme: UrlScheme::Mailto,
+              scheme: Some(UrlScheme::Mailto),
               target: b.src("foo@bar.com", l(11, 22)),
               attrs: Some(AttrList {
                 positional: b.vec([None, None, Some(b.vec([n_text("Hi", 25, 27, b)]))]),
@@ -1154,7 +1166,7 @@ mod tests {
           n_text("foo ", 0, 4, b),
           n(
             Macro(Link {
-              scheme: UrlScheme::Mailto,
+              scheme: Some(UrlScheme::Mailto),
               target: b.src("foo@bar.com", l(4, 15)),
               attrs: None,
             }),
@@ -1167,7 +1179,7 @@ mod tests {
         "foo@bar.com",
         b.vec([n(
           Macro(Link {
-            scheme: UrlScheme::Mailto,
+            scheme: Some(UrlScheme::Mailto),
             target: b.src("foo@bar.com", l(0, 11)),
             attrs: None,
           }),
