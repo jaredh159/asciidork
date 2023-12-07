@@ -103,7 +103,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                   macro_loc,
                 ));
               }
-              "https:" | "http:" => {
+              "https:" | "http:" | "irc:" => {
                 let line_end = line.last_location().unwrap();
                 let target = line.consume_url(Some(&token), self.bump);
                 line.discard(1); // `[`
@@ -1074,6 +1074,24 @@ mod tests {
             l(11, 54),
           ),
           n_text(".", 54, 55, b),
+        ]),
+      ),
+      (
+        "Chat with other Fedora users in the irc://irc.freenode.org/#fedora[Fedora IRC channel].",
+        b.vec([
+          n_text("Chat with other Fedora users in the ", 0, 36, b),
+          n(
+            Macro(Link {
+              scheme: UrlScheme::Irc,
+              target: b.src("irc://irc.freenode.org/#fedora", l(36, 66)),
+              attrs: Some(AttrList {
+                positional: b.vec([Some(b.vec([n_text("Fedora IRC channel", 67, 85, b)]))]),
+                ..AttrList::new(l(66, 86), b)
+              }),
+            }),
+            l(36, 86),
+          ),
+          n_text(".", 86, 87, b),
         ]),
       ),
       (
