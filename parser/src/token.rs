@@ -34,7 +34,7 @@ pub enum TokenKind {
   Word,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct Token<'src> {
   pub kind: TokenKind,
   pub loc: SourceLocation,
@@ -88,5 +88,15 @@ impl<'src> TokenIs for Option<&Token<'src>> {
 
   fn is_url_scheme(&self) -> bool {
     self.map_or(false, |t| t.is_url_scheme())
+  }
+}
+
+impl<'src> std::fmt::Debug for Token<'src> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "Token {{ {:?}, \"{}\", {:?} }}",
+      self.kind, self.lexeme, self.loc
+    )
   }
 }

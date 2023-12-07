@@ -27,3 +27,8 @@ bump-allocated version
 - do we track source locations for attr_lists?
 - how can i see how asciidoctor emits asg?
 - special char substitution... when? what do asg source locations look like for these?
+
+## weirdnesses...
+
+- footnote:[] macro takes an attr list, but it seems like it only supports a single
+  positional attribute

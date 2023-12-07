@@ -10,7 +10,7 @@ use crate::line::Line;
 use crate::Diagnostic;
 
 #[derive(Debug)]
-pub struct Parser<'bmp, 'src> {
+pub struct Parser<'bmp: 'src, 'src> {
   pub(super) bump: &'bmp Bump,
   pub(super) lexer: Lexer<'src>,
   pub(super) document: Document<'bmp>,
@@ -56,6 +56,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
     self.lexer.consume_line(self.bump)
+  }
+
+  pub(crate) fn line_from(
+    &self,
+    tokens: bumpalo::collections::Vec<'bmp, crate::token::Token<'src>>,
+    loc: SourceLocation,
+  ) -> Line<'bmp, 'src> {
+    Line::new(tokens, self.lexer.loc_src(loc))
   }
 
   pub(crate) fn read_block(&mut self) -> Option<Block<'bmp, 'src>> {

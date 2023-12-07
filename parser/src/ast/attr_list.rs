@@ -4,7 +4,7 @@ use crate::utils::bump::*;
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/positional-and-named-attributes/
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AttrList<'bmp> {
-  pub positional: Vec<'bmp, Option<SourceString<'bmp>>>,
+  pub positional: Vec<'bmp, Option<Vec<'bmp, InlineNode<'bmp>>>>,
   pub named: Named<'bmp>,
   pub id: Option<SourceString<'bmp>>,
   pub roles: Vec<'bmp, SourceString<'bmp>>,

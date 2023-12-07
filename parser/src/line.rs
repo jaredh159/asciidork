@@ -195,8 +195,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
     for token in self.tokens() {
       match token.kind {
-        Whitespace => break,
-        GreaterThan => break,
+        Whitespace | GreaterThan | OpenBracket => break,
         _ => num_tokens += 1,
       }
     }

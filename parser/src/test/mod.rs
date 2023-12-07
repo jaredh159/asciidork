@@ -35,6 +35,22 @@ pub fn inode(content: Inline, loc: SourceLocation) -> InlineNode {
   InlineNode::new(content, loc)
 }
 
+pub fn n(content: Inline, loc: SourceLocation) -> InlineNode {
+  InlineNode::new(content, loc)
+}
+
+pub fn n_text<'bmp>(
+  s: &'static str,
+  start: usize,
+  end: usize,
+  bump: &'bmp Bump,
+) -> InlineNode<'bmp> {
+  InlineNode::new(
+    Text(String::from_str_in(s, bump)),
+    SourceLocation::new(start, end),
+  )
+}
+
 macro_rules! s {
   (in $bump:expr; $s:expr) => {
     bumpalo::collections::String::from_str_in($s, $bump)

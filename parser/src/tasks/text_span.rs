@@ -2,7 +2,6 @@ use crate::ast::*;
 use crate::token::Token;
 use crate::utils::bump::*;
 
-#[derive(Debug)]
 pub struct TextSpan<'bmp> {
   bump: &'bmp bumpalo::Bump,
   string: Option<String<'bmp>>,
@@ -63,5 +62,19 @@ impl<'bmp> TextSpan<'bmp> {
 
   pub fn ends_with(&self, predicate: impl FnMut(char) -> bool) -> bool {
     self.string.as_ref().unwrap().ends_with(predicate)
+  }
+}
+
+impl<'bmp> std::fmt::Debug for TextSpan<'bmp> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "TextSpan {{ string: {}, loc: {:?} }}",
+      self
+        .string
+        .as_ref()
+        .map_or("None".to_string(), |s| format!("Some({:?})", s)),
+      self.loc
+    )
   }
 }

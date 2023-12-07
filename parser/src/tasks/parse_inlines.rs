@@ -103,21 +103,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                   macro_loc,
                 ));
               }
+              "https:" | "http:" => {
+                let line_end = line.last_location().unwrap();
+                let target = line.consume_url(Some(&token), self.bump);
+                line.discard(1); // `[`
+                let attrs = self.parse_attr_list(&mut line)?;
+                finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                let scheme = token.to_url_scheme().unwrap();
+                inlines.push(node(
+                  Macro(Macro::Link { scheme, target, attrs: Some(attrs) }),
+                  macro_loc,
+                ));
+              }
               _ => todo!(),
             }
-          }
-
-          MaybeEmail if subs.macros && EMAIL_RE.is_match(token.lexeme) => {
-            text.commit_inlines(&mut inlines);
-            inlines.push(node(
-              Macro(Macro::Link {
-                scheme: UrlScheme::Mailto,
-                target: SourceString::new(String::from_str_in(token.lexeme, self.bump), token.loc),
-                attrs: None,
-              }),
-              token.loc,
-            ));
-            text.loc = token.loc.clamp_end();
           }
 
           LessThan
@@ -132,16 +131,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let line_end = line.last_location().unwrap();
             let target = line.consume_url(Some(&scheme_token), self.bump);
             loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
+            let scheme = scheme_token.to_url_scheme().unwrap();
             inlines.push(node(
-              Macro(Macro::Link {
-                scheme: scheme_token.to_url_scheme().unwrap(),
-                target,
-                attrs: None,
-              }),
+              Macro(Macro::Link { scheme, target, attrs: None }),
               loc,
             ));
             inlines.push(node(Discarded, line.consume_current().unwrap().loc));
             text.loc = loc.incr_end().clamp_end();
+          }
+
+          MaybeEmail if subs.macros && EMAIL_RE.is_match(token.lexeme) => {
+            text.commit_inlines(&mut inlines);
+            inlines.push(node(
+              Macro(Macro::Link {
+                scheme: UrlScheme::Mailto,
+                target: SourceString::new(String::from_str_in(token.lexeme, self.bump), token.loc),
+                attrs: None,
+              }),
+              token.loc,
+            ));
+            text.loc = token.loc.clamp_end();
           }
 
           Underscore
@@ -560,17 +569,6 @@ mod tests {
   use crate::ast::*;
   use crate::test::*;
   use crate::utils::bump::*;
-
-  fn n(content: Inline, loc: SourceLocation) -> InlineNode {
-    InlineNode::new(content, loc)
-  }
-
-  fn n_text<'bmp>(s: &'static str, start: usize, end: usize, bump: &'bmp Bump) -> InlineNode<'bmp> {
-    InlineNode::new(
-      Text(String::from_str_in(s, bump)),
-      SourceLocation::new(start, end),
-    )
-  }
 
   #[test]
   fn test_parse_inlines() {
@@ -1058,6 +1056,27 @@ mod tests {
         ]),
       ),
       (
+        "Ask in the https://chat.asciidoc.org[*community chat*].",
+        b.vec([
+          n_text("Ask in the ", 0, 11, b),
+          n(
+            Macro(Link {
+              scheme: UrlScheme::Https,
+              target: b.src("https://chat.asciidoc.org", l(11, 36)),
+              attrs: Some(AttrList {
+                positional: b.vec([Some(b.vec([n(
+                  Bold(b.vec([n_text("community chat", 38, 52, b)])),
+                  l(37, 53),
+                )]))]),
+                ..AttrList::new(l(36, 54), b)
+              }),
+            }),
+            l(11, 54),
+          ),
+          n_text(".", 54, 55, b),
+        ]),
+      ),
+      (
         "foo <https://example.com> bar",
         b.vec([
           n_text("foo ", 0, 4, b),
@@ -1084,8 +1103,8 @@ mod tests {
             target: b.src("join@discuss.example.org", l(7, 31)),
             attrs: Some(AttrList {
               positional: b.vec([
-                Some(b.src("Subscribe", l(32, 41))),
-                Some(b.src("Subscribe me", l(42, 54))),
+                Some(b.vec([n_text("Subscribe", 32, 41, b)])),
+                Some(b.vec([n_text("Subscribe me", 42, 54, b)])),
               ]),
               ..AttrList::new(l(31, 55), b)
             }),
@@ -1102,7 +1121,7 @@ mod tests {
               scheme: UrlScheme::Mailto,
               target: b.src("foo@bar.com", l(11, 22)),
               attrs: Some(AttrList {
-                positional: b.vec([None, None, Some(b.src("Hi", l(25, 27)))]),
+                positional: b.vec([None, None, Some(b.vec([n_text("Hi", 25, 27, b)]))]),
                 ..AttrList::new(l(22, 28), b)
               }),
             }),
