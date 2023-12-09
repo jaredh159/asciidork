@@ -21,6 +21,10 @@ pub enum Macro<'bmp> {
     target: SourceString<'bmp>,
     attrs: Option<AttrList<'bmp>>,
   },
+  Pass {
+    target: Option<SourceString<'bmp>>,
+    content: Vec<'bmp, InlineNode<'bmp>>,
+  },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

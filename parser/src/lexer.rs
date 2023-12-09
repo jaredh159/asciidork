@@ -224,12 +224,6 @@ impl<'src> Lexer<'src> {
     let end = self.advance_to_word_boundary(true);
     let lexeme = &self.src[start..end];
 
-    // 👍 monday jared... not 100% sure, but, i think i want to
-    // encode a new token type of Email, by checking for the @
-    // and peeking ahead
-    // also, i should try to handle the `\` to opt out of macro and autolinking
-    // per https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/#escaping-urls-and-email-addresses
-
     // special cases
     match self.peek {
       // macros
@@ -288,7 +282,17 @@ impl<'src> Lexer<'src> {
   fn is_macro_name(&self, lexeme: &str) -> bool {
     matches!(
       lexeme,
-      "footnote" | "image" | "irc" | "icon" | "kbd" | "link" | "http" | "https" | "ftp" | "mailto"
+      "footnote"
+        | "image"
+        | "irc"
+        | "icon"
+        | "kbd"
+        | "link"
+        | "http"
+        | "https"
+        | "ftp"
+        | "mailto"
+        | "pass"
     )
   }
 

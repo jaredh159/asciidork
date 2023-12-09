@@ -1,10 +1,10 @@
-use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::ast::*;
 use crate::block::Block;
 use crate::line::Line;
 use crate::parser::Substitutions;
+use crate::tasks::parse_inlines_utils::*;
 use crate::tasks::text_span::TextSpan;
 use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
 use crate::utils::bump::*;
@@ -55,10 +55,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         match token.kind {
           MacroName if subs.macros && line.continues_inline_macro() => {
             let mut macro_loc = token.loc;
+            let line_end = line.last_location().unwrap();
             text.commit_inlines(&mut inlines);
             match token.lexeme {
               "image:" => {
-                let line_end = line.last_location().unwrap();
                 let target = line.consume_macro_target(self.bump);
                 let attrs = self.parse_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
@@ -90,7 +90,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 break;
               }
               "mailto:" | "link:" => {
-                let line_end = line.last_location().unwrap();
                 let target = line.consume_macro_target(self.bump);
                 let attrs = self.parse_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
@@ -101,7 +100,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 ));
               }
               "https:" | "http:" | "irc:" => {
-                let line_end = line.last_location().unwrap();
                 let target = line.consume_url(Some(&token), self.bump);
                 line.discard(1); // `[`
                 let attrs = self.parse_attr_list(&mut line)?;
@@ -112,7 +110,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                   macro_loc,
                 ));
               }
-              _ => todo!(),
+              "pass:" => {
+                let target = line.consume_optional_macro_target(self.bump);
+                self.ctx.subs = Substitutions::from_pass_macro_target(&target);
+                let mut attrs = self.parse_attr_list(&mut line)?;
+                self.ctx.subs = subs;
+                finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                let content = if !attrs.positional.is_empty() && attrs.positional[0].is_some() {
+                  attrs.positional[0].take().unwrap()
+                } else {
+                  bvec![in self.bump] // ...should probably be a diagnostic
+                };
+                inlines.push(node(Macro(Pass { target, content }), macro_loc));
+              }
+              _ => todo!("unhandled macro type: `{}`", token.lexeme),
             }
           }
 
@@ -127,7 +138,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let mut loc = scheme_token.loc;
             let line_end = line.last_location().unwrap();
             let target = line.consume_url(Some(&scheme_token), self.bump);
-            loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
+            finish_macro(&line, &mut loc, line_end, &mut text);
             let scheme = Some(scheme_token.to_url_scheme().unwrap());
             inlines.push(node(
               Macro(Macro::Link { scheme, target, attrs: None }),
@@ -429,7 +440,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let line_end = line.last_location().unwrap();
             text.commit_inlines(&mut inlines);
             let target = line.consume_url(Some(&token), self.bump);
-            loc.extend(line.location().map(|l| l.decr_end()).unwrap_or(line_end));
+            finish_macro(&line, &mut loc, line_end, &mut text);
             let scheme = Some(token.to_url_scheme().unwrap());
             inlines.push(node(
               Macro(Macro::Link { scheme, target, attrs: None }),
@@ -508,61 +519,66 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 }
 
-fn extend(loc: &mut SourceLocation, nodes: &[InlineNode<'_>], adding: usize) {
-  loc.end = nodes.last().map(|node| node.loc.end).unwrap_or(loc.end) + adding;
-}
-
-fn starts_constrained(
-  stop_tokens: &[TokenKind],
-  token: &Token,
-  line: &Line,
-  block: &mut Block,
-) -> bool {
-  debug_assert!(!stop_tokens.is_empty());
-  token.is(*stop_tokens.last().expect("non-empty stop tokens"))
-    && (line.terminates_constrained(stop_tokens) || block.terminates_constrained(stop_tokens))
-}
-
-fn starts_unconstrained(kind: TokenKind, token: &Token, line: &Line, block: &Block) -> bool {
-  token.is(kind) && line.current_is(kind) && contains_seq(&[kind; 2], line, block)
-}
-
-fn contains_seq(seq: &[TokenKind], line: &Line, block: &Block) -> bool {
-  line.contains_seq(seq) || block.contains_seq(seq)
-}
-
-fn node(content: Inline, loc: SourceLocation) -> InlineNode {
-  InlineNode::new(content, loc)
-}
-
-fn finish_macro<'bmp>(
-  line: &Line<'bmp, '_>,
-  loc: &mut SourceLocation,
-  line_end: SourceLocation,
-  text: &mut TextSpan<'bmp>,
-) {
-  if let Some(cur_location) = line.location() {
-    loc.extend(cur_location);
-    text.loc = loc.clamp_end();
-    loc.end -= 1; // parsing attr list moves us one past end of macro
-  } else {
-    loc.extend(line_end);
-    text.loc = loc.clamp_end();
-  }
-}
-
-lazy_static! {
-  static ref EMAIL_RE: Regex = Regex::new(
-    r"^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})"
-  )
-  .unwrap();
-}
-
 #[cfg(test)]
 mod tests {
   use crate::ast::*;
   use crate::test::*;
   use crate::utils::bump::*;
+
+  #[test]
+  fn test_pass_macro() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "pass:[_<foo>_]",
+        b.vec([n(
+          Macro(Pass {
+            target: None,
+            content: b.vec([n_text("_<foo>_", 6, 13, b)]),
+          }),
+          l(0, 14),
+        )]),
+      ),
+      (
+        "pass:c[<_foo_>]",
+        b.vec([n(
+          Macro(Pass {
+            target: Some(b.src("c", l(5, 6))),
+            content: b.vec([
+              n(SpecialChar(SpecialCharKind::LessThan), l(7, 8)),
+              n_text("_foo_", 8, 13, b),
+              n(SpecialChar(SpecialCharKind::GreaterThan), l(13, 14)),
+            ]),
+          }),
+          l(0, 15),
+        )]),
+      ),
+      (
+        "pass:c,q[<_foo_>]",
+        b.vec([n(
+          Macro(Pass {
+            target: Some(b.src("c,q", l(5, 8))),
+            content: b.vec([
+              n(SpecialChar(SpecialCharKind::LessThan), l(9, 10)),
+              n(Italic(b.vec([n_text("foo", 11, 14, b)])), l(10, 15)),
+              n(SpecialChar(SpecialCharKind::GreaterThan), l(15, 16)),
+            ]),
+          }),
+          l(0, 17),
+        )]),
+      ),
+    ];
+
+    // repeated passes necessary?
+    // yikes: `link:pass:[My Documents/report.pdf][Get Report]`
+
+    for (input, expected) in cases {
+      let mut parser = crate::Parser::new(b, input);
+      let block = parser.read_block().unwrap();
+      let inlines = parser.parse_inlines(block).unwrap();
+      assert_eq!(inlines, expected);
+    }
+  }
 
   #[test]
   fn test_parse_inlines() {

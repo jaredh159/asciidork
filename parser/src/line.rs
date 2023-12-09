@@ -181,7 +181,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   pub fn consume_optional_macro_target(&mut self, bump: &'bmp Bump) -> Option<SourceString<'bmp>> {
     let target = match self.current_is(OpenBracket) {
       true => None,
-      false => Some(self.consume_to_string_until(CloseBracket, bump)),
+      false => Some(self.consume_to_string_until(OpenBracket, bump)),
     };
     debug_assert!(self.current_is(OpenBracket));
     self.discard(1); // `[`

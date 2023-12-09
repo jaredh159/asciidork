@@ -33,8 +33,12 @@ pub(crate) struct Context {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Substitutions {
   pub(crate) special_chars: bool,
+  /// aka: `quotes`
   pub(crate) inline_formatting: bool,
+  pub(crate) attr_refs: bool,
+  pub(crate) char_replacement: bool,
   pub(crate) macros: bool,
+  pub(crate) post_replacement: bool,
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -104,7 +108,10 @@ impl Substitutions {
     Self {
       special_chars: true,
       inline_formatting: true,
+      attr_refs: true,
+      char_replacement: true,
       macros: true,
+      post_replacement: true,
     }
   }
 
@@ -112,7 +119,10 @@ impl Substitutions {
     Self {
       special_chars: false,
       inline_formatting: false,
+      attr_refs: false,
+      char_replacement: false,
       macros: false,
+      post_replacement: false,
     }
   }
 }
