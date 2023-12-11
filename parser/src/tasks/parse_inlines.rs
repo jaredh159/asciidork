@@ -123,6 +123,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 };
                 inlines.push(node(Macro(Pass { target, content }), macro_loc));
               }
+              "icon:" => {
+                let target = line.consume_macro_target(self.bump);
+                let attrs = self.parse_attr_list(&mut line)?;
+                finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                inlines.push(node(Macro(Icon { target, attrs }), macro_loc));
+              }
               _ => todo!("unhandled macro type: `{}`", token.lexeme),
             }
           }
@@ -526,79 +532,8 @@ mod tests {
   use crate::utils::bump::*;
 
   #[test]
-  fn test_pass_macro() {
-    let b = &Bump::new();
-    let cases = vec![
-      (
-        "pass:[_<foo>_]",
-        b.vec([n(
-          Macro(Pass {
-            target: None,
-            content: b.vec([n_text("_<foo>_", 6, 13, b)]),
-          }),
-          l(0, 14),
-        )]),
-      ),
-      (
-        "pass:c[<_foo_>]",
-        b.vec([n(
-          Macro(Pass {
-            target: Some(b.src("c", l(5, 6))),
-            content: b.vec([
-              n(SpecialChar(SpecialCharKind::LessThan), l(7, 8)),
-              n_text("_foo_", 8, 13, b),
-              n(SpecialChar(SpecialCharKind::GreaterThan), l(13, 14)),
-            ]),
-          }),
-          l(0, 15),
-        )]),
-      ),
-      (
-        "pass:c,q[<_foo_>]",
-        b.vec([n(
-          Macro(Pass {
-            target: Some(b.src("c,q", l(5, 8))),
-            content: b.vec([
-              n(SpecialChar(SpecialCharKind::LessThan), l(9, 10)),
-              n(Italic(b.vec([n_text("foo", 11, 14, b)])), l(10, 15)),
-              n(SpecialChar(SpecialCharKind::GreaterThan), l(15, 16)),
-            ]),
-          }),
-          l(0, 17),
-        )]),
-      ),
-    ];
-
-    // repeated passes necessary?
-    // yikes: `link:pass:[My Documents/report.pdf][Get Report]`
-
-    for (input, expected) in cases {
-      let mut parser = crate::Parser::new(b, input);
-      let block = parser.read_block().unwrap();
-      let inlines = parser.parse_inlines(block).unwrap();
-      assert_eq!(inlines, expected);
-    }
-  }
-
-  #[test]
   fn test_parse_inlines() {
-    use SpecialCharKind::*;
-
     let b = &Bump::new();
-    let bare_example_com = |loc: SourceLocation| -> Inline {
-      Macro(Link {
-        scheme: Some(UrlScheme::Https),
-        target: b.src("https://example.com", loc),
-        attrs: None,
-      })
-    };
-
-    let role = |role: &'static str, loc: SourceLocation| -> AttrList {
-      AttrList {
-        roles: b.vec([b.src(role, SourceLocation::new(loc.start + 2, loc.end - 1))]),
-        ..AttrList::new(loc, b)
-      }
-    };
 
     let cases = vec![
       (
@@ -635,10 +570,10 @@ mod tests {
         b.vec([n(
           InlinePassthrough(b.vec([
             n_text("_", 1, 2, b),
-            n(SpecialChar(LessThan), l(2, 3)),
+            n(SpecialChar(SpecialCharKind::LessThan), l(2, 3)),
             n_text("foo", 3, 6, b),
-            n(SpecialChar(GreaterThan), l(6, 7)),
-            n(SpecialChar(Ampersand), l(7, 8)),
+            n(SpecialChar(SpecialCharKind::GreaterThan), l(6, 7)),
+            n(SpecialChar(SpecialCharKind::Ampersand), l(7, 8)),
             n_text("_", 8, 9, b),
           ])),
           l(0, 10),
@@ -829,7 +764,6 @@ mod tests {
           n_text("s wrench", 5, 13, b),
         ]),
       ),
-      ("foo bar", b.vec([n_text("foo bar", 0, 7, b)])),
       (
         "foo   bar",
         b.vec([
@@ -850,14 +784,144 @@ mod tests {
         "foo <bar> & lol",
         b.vec([
           n_text("foo ", 0, 4, b),
-          n(SpecialChar(LessThan), l(4, 5)),
+          n(SpecialChar(SpecialCharKind::LessThan), l(4, 5)),
           n_text("bar", 5, 8, b),
-          n(SpecialChar(GreaterThan), l(8, 9)),
+          n(SpecialChar(SpecialCharKind::GreaterThan), l(8, 9)),
           n_text(" ", 9, 10, b),
-          n(SpecialChar(Ampersand), l(10, 11)),
+          n(SpecialChar(SpecialCharKind::Ampersand), l(10, 11)),
           n_text(" lol", 11, 15, b),
         ]),
       ),
+      (
+        "^bar^",
+        b.vec([n(Superscript(b.vec([n_text("bar", 1, 4, b)])), l(0, 5))]),
+      ),
+      (
+        "^bar^",
+        b.vec([n(Superscript(b.vec([n_text("bar", 1, 4, b)])), l(0, 5))]),
+      ),
+      ("foo ^bar", b.vec([n_text("foo ^bar", 0, 8, b)])),
+      ("foo bar^", b.vec([n_text("foo bar^", 0, 8, b)])),
+      (
+        "foo ^bar^ foo",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(Superscript(bvec![in b; n_text("bar", 5, 8, b)]), l(4, 9)),
+          n_text(" foo", 9, 13, b),
+        ]),
+      ),
+      (
+        "doublefootnote:[ymmv _i_]bar",
+        b.vec([
+          n_text("double", 0, 6, b),
+          n(
+            Macro(Footnote {
+              id: None,
+              text: b.vec([
+                n_text("ymmv ", 16, 21, b),
+                n(Italic(b.vec([n_text("i", 22, 23, b)])), l(21, 24)),
+              ]),
+            }),
+            l(6, 25),
+          ),
+          n_text("bar", 25, 28, b),
+        ]),
+      ),
+    ];
+
+    // repeated passes necessary?
+    // yikes: `link:pass:[My Documents/report.pdf][Get Report]`
+
+    run(cases, b);
+  }
+
+  #[test]
+  fn test_image_macro() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "foo image:sunset.jpg[] bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Image {
+              flow: Flow::Inline,
+              target: b.src("sunset.jpg", l(10, 20)),
+              attrs: AttrList::new(l(20, 22), b),
+            }),
+            l(4, 22),
+          ),
+          n_text(" bar", 22, 26, b),
+        ]),
+      ),
+      (
+        "foo image:sunset.jpg[]",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Image {
+              flow: Flow::Inline,
+              target: b.src("sunset.jpg", l(10, 20)),
+              attrs: AttrList::new(l(20, 22), b),
+            }),
+            l(4, 22),
+          ),
+        ]),
+      ),
+    ];
+    run(cases, b);
+  }
+
+  #[test]
+  fn test_kbd_macro() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "kbd:[F11]",
+        b.vec([n(
+          Macro(Keyboard {
+            keys: bvec![in b; b.s("F11")],
+            keys_src: b.src("F11", l(5, 8)),
+          }),
+          l(0, 9),
+        )]),
+      ),
+      (
+        "kbd:[Ctrl++]",
+        b.vec([n(
+          Macro(Keyboard {
+            keys: bvec![in b; b.s("Ctrl"), b.s("+")],
+            keys_src: b.src("Ctrl++", l(5, 11)),
+          }),
+          l(0, 12),
+        )]),
+      ),
+      (
+        "kbd:[\\ ]",
+        b.vec([n(
+          Macro(Keyboard {
+            keys: bvec![in b; b.s("\\")],
+            keys_src: b.src("\\ ", l(5, 7)),
+          }),
+          l(0, 8),
+        )]),
+      ),
+      ("kbd:[\\]", b.vec([n_text("kbd:[\\]", 0, 7, b)])),
+    ];
+
+    run(cases, b);
+  }
+
+  #[test]
+  fn test_custom_inline_styles() {
+    let b = &Bump::new();
+    let role = |role: &'static str, loc: SourceLocation| -> AttrList {
+      AttrList {
+        roles: b.vec([b.src(role, SourceLocation::new(loc.start + 2, loc.end - 1))]),
+        ..AttrList::new(loc, b)
+      }
+    };
+    let cases = vec![
       (
         "foo [.nowrap]#bar#",
         b.vec([
@@ -892,103 +956,21 @@ mod tests {
           n_text("?", 46, 47, b),
         ]),
       ),
-      ("foo", b.vec([n_text("foo", 0, 3, b)])),
-      ("hello", b.vec([n_text("hello", 0, 5, b)])),
-      (
-        "^bar^",
-        b.vec([n(Superscript(b.vec([n_text("bar", 1, 4, b)])), l(0, 5))]),
-      ),
-      (
-        "^bar^",
-        b.vec([n(Superscript(b.vec([n_text("bar", 1, 4, b)])), l(0, 5))]),
-      ),
-      ("foo ^bar", b.vec([n_text("foo ^bar", 0, 8, b)])),
-      ("foo bar^", b.vec([n_text("foo bar^", 0, 8, b)])),
-      (
-        "foo ^bar^ foo",
-        b.vec([
-          n_text("foo ", 0, 4, b),
-          n(Superscript(bvec![in b; n_text("bar", 5, 8, b)]), l(4, 9)),
-          n_text(" foo", 9, 13, b),
-        ]),
-      ),
-      (
-        "foo image:sunset.jpg[] bar",
-        b.vec([
-          n_text("foo ", 0, 4, b),
-          n(
-            Macro(Image {
-              flow: Flow::Inline,
-              target: b.src("sunset.jpg", l(10, 20)),
-              attrs: AttrList::new(l(20, 22), b),
-            }),
-            l(4, 22),
-          ),
-          n_text(" bar", 22, 26, b),
-        ]),
-      ),
-      (
-        "foo image:sunset.jpg[]",
-        b.vec([
-          n_text("foo ", 0, 4, b),
-          n(
-            Macro(Image {
-              flow: Flow::Inline,
-              target: b.src("sunset.jpg", l(10, 20)),
-              attrs: AttrList::new(l(20, 22), b),
-            }),
-            l(4, 22),
-          ),
-        ]),
-      ),
-      (
-        "doublefootnote:[ymmv _i_]bar",
-        b.vec([
-          n_text("double", 0, 6, b),
-          n(
-            Macro(Footnote {
-              id: None,
-              text: b.vec([
-                n_text("ymmv ", 16, 21, b),
-                n(Italic(b.vec([n_text("i", 22, 23, b)])), l(21, 24)),
-              ]),
-            }),
-            l(6, 25),
-          ),
-          n_text("bar", 25, 28, b),
-        ]),
-      ),
-      (
-        "kbd:[F11]",
-        b.vec([n(
-          Macro(Keyboard {
-            keys: bvec![in b; b.s("F11")],
-            keys_src: b.src("F11", l(5, 8)),
-          }),
-          l(0, 9),
-        )]),
-      ),
-      (
-        "kbd:[Ctrl++]",
-        b.vec([n(
-          Macro(Keyboard {
-            keys: bvec![in b; b.s("Ctrl"), b.s("+")],
-            keys_src: b.src("Ctrl++", l(5, 11)),
-          }),
-          l(0, 12),
-        )]),
-      ),
-      (
-        "kbd:[\\ ]",
-        b.vec([n(
-          Macro(Keyboard {
-            keys: bvec![in b; b.s("\\")],
-            keys_src: b.src("\\ ", l(5, 7)),
-          }),
-          l(0, 8),
-        )]),
-      ),
-      ("kbd:[\\]", b.vec([n_text("kbd:[\\]", 0, 7, b)])),
+    ];
+    run(cases, b);
+  }
+
+  #[test]
+  fn test_link_macro_and_autolinks() {
+    let b = &Bump::new();
+    let bare_example_com = |loc: SourceLocation| -> Inline {
+      Macro(Link {
+        scheme: Some(UrlScheme::Https),
+        target: b.src("https://example.com", loc),
+        attrs: None,
+      })
+    };
+    let cases = vec![
       (
         "foo https://example.com",
         b.vec([
@@ -1141,6 +1123,15 @@ mod tests {
           n(Discarded, l(24, 25)),
         ]),
       ),
+    ];
+
+    run(cases, b);
+  }
+
+  #[test]
+  fn test_email_macro_and_autolinks() {
+    let b = &Bump::new();
+    let cases = vec![
       (
         "mailto:join@discuss.example.org[Subscribe,Subscribe me]",
         b.vec([n(
@@ -1208,11 +1199,99 @@ mod tests {
       ),
     ];
 
-    // repeated passes necessary?
-    // yikes: `link:pass:[My Documents/report.pdf][Get Report]`
+    run(cases, b);
+  }
 
+  #[test]
+  fn test_icon_macro() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "foo icon:tags[] bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Icon {
+              target: b.src("tags", l(9, 13)),
+              attrs: AttrList { ..AttrList::new(l(13, 15), b) },
+            }),
+            l(4, 15),
+          ),
+          n_text(" bar", 15, 19, b),
+        ]),
+      ),
+      (
+        "icon:heart[2x,role=red]",
+        b.vec([n(
+          Macro(Icon {
+            target: b.src("heart", l(5, 10)),
+            attrs: AttrList {
+              positional: b.vec([Some(b.vec([n_text("2x", 11, 13, b)]))]),
+              named: Named::from(b.vec([(b.src("role", l(14, 18)), b.src("red", l(19, 22)))])),
+              ..AttrList::new(l(10, 23), b)
+            },
+          }),
+          l(0, 23),
+        )]),
+      ),
+    ];
+
+    run(cases, b);
+  }
+
+  #[test]
+  fn test_pass_macro() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "pass:[_<foo>_]",
+        b.vec([n(
+          Macro(Pass {
+            target: None,
+            content: b.vec([n_text("_<foo>_", 6, 13, b)]),
+          }),
+          l(0, 14),
+        )]),
+      ),
+      (
+        "pass:c[<_foo_>].",
+        b.vec([
+          n(
+            Macro(Pass {
+              target: Some(b.src("c", l(5, 6))),
+              content: b.vec([
+                n(SpecialChar(SpecialCharKind::LessThan), l(7, 8)),
+                n_text("_foo_", 8, 13, b),
+                n(SpecialChar(SpecialCharKind::GreaterThan), l(13, 14)),
+              ]),
+            }),
+            l(0, 15),
+          ),
+          n_text(".", 15, 16, b),
+        ]),
+      ),
+      (
+        "pass:c,q[<_foo_>]",
+        b.vec([n(
+          Macro(Pass {
+            target: Some(b.src("c,q", l(5, 8))),
+            content: b.vec([
+              n(SpecialChar(SpecialCharKind::LessThan), l(9, 10)),
+              n(Italic(b.vec([n_text("foo", 11, 14, b)])), l(10, 15)),
+              n(SpecialChar(SpecialCharKind::GreaterThan), l(15, 16)),
+            ]),
+          }),
+          l(0, 17),
+        )]),
+      ),
+    ];
+
+    run(cases, b);
+  }
+
+  fn run(cases: std::vec::Vec<(&str, Vec<InlineNode>)>, bump: &Bump) {
     for (input, expected) in cases {
-      let mut parser = crate::Parser::new(b, input);
+      let mut parser = crate::Parser::new(bump, input);
       let block = parser.read_block().unwrap();
       let inlines = parser.parse_inlines(block).unwrap();
       assert_eq!(inlines, expected);
