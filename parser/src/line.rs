@@ -51,6 +51,11 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
+  pub fn discard_assert(&mut self, kind: TokenKind) {
+    let token = self.consume_current();
+    debug_assert!(token.unwrap().is(kind));
+  }
+
   pub fn contains_nonescaped(&self, token_type: TokenKind) -> bool {
     self.first_nonescaped(token_type).is_some()
   }

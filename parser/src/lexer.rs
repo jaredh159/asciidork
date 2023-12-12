@@ -293,6 +293,8 @@ impl<'src> Lexer<'src> {
         | "ftp"
         | "mailto"
         | "pass"
+        | "btn"
+        | "menu"
     )
   }
 

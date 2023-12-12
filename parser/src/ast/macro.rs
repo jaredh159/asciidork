@@ -29,6 +29,8 @@ pub enum Macro<'bmp> {
     target: SourceString<'bmp>,
     attrs: AttrList<'bmp>,
   },
+  Button(SourceString<'bmp>),
+  Menu(Vec<'bmp, SourceString<'bmp>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

@@ -68,9 +68,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 ));
               }
               "kbd:" => {
-                line.discard(1); // `[`
+                line.discard_assert(OpenBracket);
                 let keys_src = line.consume_to_string_until(CloseBracket, self.bump);
-                line.discard(1); // `]`
+                line.discard_assert(CloseBracket);
                 macro_loc.end = keys_src.loc.end + 1;
                 let mut keys = Vec::new_in(self.bump);
                 let re = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
@@ -79,6 +79,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                   keys.push(String::from_str_in(key, self.bump));
                 }
                 inlines.push(node(Macro(Keyboard { keys, keys_src }), macro_loc));
+                text.loc = macro_loc.clamp_end();
               }
               "footnote:" => {
                 let id = line.consume_optional_macro_target(self.bump);
@@ -101,7 +102,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               }
               "https:" | "http:" | "irc:" => {
                 let target = line.consume_url(Some(&token), self.bump);
-                line.discard(1); // `[`
+                line.discard_assert(OpenBracket);
                 let attrs = self.parse_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
                 let scheme = Some(token.to_url_scheme().unwrap());
@@ -128,6 +129,35 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 let attrs = self.parse_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
                 inlines.push(node(Macro(Icon { target, attrs }), macro_loc));
+              }
+              "btn:" => {
+                line.discard_assert(OpenBracket);
+                let btn = line.consume_to_string_until(CloseBracket, self.bump);
+                line.discard_assert(CloseBracket);
+                finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                inlines.push(node(Macro(Button(btn)), macro_loc));
+              }
+              "menu:" => {
+                let first = line.consume_macro_target(self.bump);
+                let mut items = bvec![in self.bump; first];
+                let rest = line.consume_to_string_until(CloseBracket, self.bump);
+
+                let mut pos = rest.loc.start;
+                rest.split('>').for_each(|substr| {
+                  let mut trimmed = substr.trim_start();
+                  pos += substr.len() - trimmed.len();
+                  trimmed = trimmed.trim_end();
+                  if !trimmed.is_empty() {
+                    items.push(SourceString::new(
+                      String::from_str_in(trimmed, self.bump),
+                      SourceLocation::new(pos, pos + trimmed.len()),
+                    ));
+                  }
+                  pos += substr.len() + 1;
+                });
+                line.discard_assert(CloseBracket);
+                finish_macro(&line, &mut macro_loc, line_end, &mut text);
+                inlines.push(node(Macro(Menu(items)), macro_loc));
               }
               _ => todo!("unhandled macro type: `{}`", token.lexeme),
             }
@@ -196,7 +226,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let mut parse_token = token.clone();
             let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
             debug_assert!(line.current_is(Hash));
-            line.discard(1); // `#`
+            line.discard_assert(Hash);
             parse_token.kind = Hash;
             let wrap = |inner| TextSpan(attr_list, inner);
             if starts_unconstrained(Hash, line.current_token().unwrap(), &line, block) {
@@ -213,7 +243,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && contains_seq(&[Plus, Backtick], &line, block) =>
           {
             let mut wrap_loc = token.loc;
-            line.discard(1); // `+`
+            line.discard_assert(Plus);
             text.commit_inlines(&mut inlines);
             block.restore(line);
             self.ctx.subs.inline_formatting = false;
@@ -247,7 +277,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && starts_constrained(&[Backtick, DoubleQuote], &token, &line, block) =>
           {
             let mut loc = token.loc;
-            line.discard(1); // backtick
+            line.discard_assert(Backtick);
             text.commit_inlines(&mut inlines);
             block.restore(line);
             let quoted = self.parse_inlines_until(block, &[Backtick, DoubleQuote])?;
@@ -263,7 +293,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && starts_constrained(&[Backtick, SingleQuote], &token, &line, block) =>
           {
             let mut loc = token.loc;
-            line.discard(1); // backtick
+            line.discard_assert(Backtick);
             text.commit_inlines(&mut inlines);
             block.restore(line);
             let quoted = self.parse_inlines_until(block, &[Backtick, SingleQuote])?;
@@ -286,7 +316,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
           Backtick if subs.inline_formatting && line.current_is(DoubleQuote) => {
             let mut loc = token.loc;
-            line.discard(1); // double quote
+            line.discard_assert(DoubleQuote);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
             block.restore(line);
@@ -297,7 +327,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
           DoubleQuote if subs.inline_formatting && line.current_is(Backtick) => {
             let mut loc = token.loc;
-            line.discard(1); // backtick
+            line.discard_assert(Backtick);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
             block.restore(line);
@@ -308,7 +338,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
           Backtick if subs.inline_formatting && line.current_is(SingleQuote) => {
             let mut loc = token.loc;
-            line.discard(1); // double quote
+            line.discard_assert(SingleQuote);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
             block.restore(line);
@@ -319,7 +349,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
           SingleQuote if subs.inline_formatting && line.current_is(Backtick) => {
             let mut loc = token.loc;
-            line.discard(1); // backtick
+            line.discard_assert(Backtick);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
             block.restore(line);
@@ -352,7 +382,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && contains_seq(&[Plus, Plus, Plus], &line, block) =>
           {
             let mut loc = token.loc;
-            line.discard(2); // `++`
+            line.discard_assert(Plus);
+            line.discard_assert(Plus);
             text.commit_inlines(&mut inlines);
             block.restore(line);
             self.ctx.subs = Substitutions::none();
@@ -477,7 +508,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     block: &mut Block<'bmp, 'src>,
   ) -> Result<()> {
     let mut loc = token.loc;
-    line.discard(1); // second token
+    line.discard_assert(token.kind);
     text.commit_inlines(inlines);
     block.restore(line);
     let inner = self.parse_inlines_until(block, &[token.kind, token.kind])?;
@@ -534,7 +565,6 @@ mod tests {
   #[test]
   fn test_parse_inlines() {
     let b = &Bump::new();
-
     let cases = vec![
       (
         "+_foo_+",
@@ -836,6 +866,50 @@ mod tests {
   }
 
   #[test]
+  fn test_button_menu_macro() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "press the btn:[OK] button",
+        b.vec([
+          n_text("press the ", 0, 10, b),
+          n(Macro(Button(b.src("OK", l(15, 17)))), l(10, 18)),
+          n_text(" button", 18, 25, b),
+        ]),
+      ),
+      (
+        "btn:[Open]",
+        b.vec([n(Macro(Button(b.src("Open", l(5, 9)))), l(0, 10))]),
+      ),
+      (
+        "select menu:File[Save].",
+        b.vec([
+          n_text("select ", 0, 7, b),
+          n(
+            Macro(Menu(
+              b.vec([b.src("File", l(12, 16)), b.src("Save", l(17, 21))]),
+            )),
+            l(7, 22),
+          ),
+          n_text(".", 22, 23, b),
+        ]),
+      ),
+      (
+        "menu:View[Zoom > Reset]",
+        b.vec([n(
+          Macro(Menu(b.vec([
+            b.src("View", l(5, 9)),
+            b.src("Zoom", l(10, 14)),
+            b.src("Reset", l(17, 22)),
+          ]))),
+          l(0, 23),
+        )]),
+      ),
+    ];
+    run(cases, b);
+  }
+
+  #[test]
   fn test_image_macro() {
     let b = &Bump::new();
     let cases = vec![
@@ -885,6 +959,20 @@ mod tests {
           }),
           l(0, 9),
         )]),
+      ),
+      (
+        "foo kbd:[F11] bar",
+        b.vec([
+          n_text("foo ", 0, 4, b),
+          n(
+            Macro(Keyboard {
+              keys: bvec![in b; b.s("F11")],
+              keys_src: b.src("F11", l(9, 12)),
+            }),
+            l(4, 13),
+          ),
+          n_text(" bar", 13, 17, b),
+        ]),
       ),
       (
         "kbd:[Ctrl++]",
