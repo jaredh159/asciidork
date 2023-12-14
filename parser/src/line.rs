@@ -19,6 +19,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.all_tokens.get(self.pos)
   }
 
+  pub fn peek_token(&self) -> Option<&Token<'src>> {
+    self.nth_token(1)
+  }
+
   pub fn last_token(&self) -> Option<&Token<'src>> {
     if self.is_empty() {
       return None;
@@ -26,7 +30,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.all_tokens.last()
   }
 
-  pub fn nth_token(&self, n: usize) -> Option<&Token> {
+  pub fn nth_token(&self, n: usize) -> Option<&Token<'src>> {
     self.all_tokens.get(self.pos + n)
   }
 
@@ -45,6 +49,12 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.current_token().unwrap().lexeme.len() == len
   }
 
+  pub fn is_block_macro(&self) -> bool {
+    self.starts_with_seq(&[MacroName, Colon])
+      && self.contains(OpenBracket)
+      && self.ends_with_nonescaped(CloseBracket)
+  }
+
   pub fn discard(&mut self, n: usize) {
     for _ in 0..n {
       _ = self.consume_current();
@@ -58,6 +68,14 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn contains_nonescaped(&self, token_type: TokenKind) -> bool {
     self.first_nonescaped(token_type).is_some()
+  }
+
+  pub fn ends_with_nonescaped(&self, token_type: TokenKind) -> bool {
+    match self.tokens().len() {
+      0 => false,
+      1 => self.current_is(token_type),
+      n => self.last_token().is(token_type) && self.nth_token(n - 2).is_not(Backslash),
+    }
   }
 
   fn tokens(&self) -> impl ExactSizeIterator<Item = &Token<'src>> {
@@ -127,7 +145,9 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn continues_inline_macro(&self) -> bool {
-    self.is_continuous_thru(OpenBracket) && self.contains_nonescaped(CloseBracket)
+    !self.current_is(Colon)
+      && self.is_continuous_thru(OpenBracket)
+      && self.contains_nonescaped(CloseBracket)
   }
 
   /// true if there is no whitespace until token type, and token type is found
@@ -286,6 +306,22 @@ mod tests {
     let mut line = lexer.consume_line(bump).unwrap();
     line.discard(2); // `foo` and `_`
     assert!(line.has_seq_at(&[Hash], 0));
+  }
+
+  #[test]
+  fn test_ends_nonescaped() {
+    let cases: Vec<(&str, TokenKind, bool)> = vec![
+      ("x", CloseBracket, false),
+      ("]", CloseBracket, true),
+      ("\\]", CloseBracket, false),
+      ("l]", CloseBracket, true),
+    ];
+    let bump = &Bump::new();
+    for (input, token_type, expected) in cases {
+      let mut lexer = Lexer::new(input);
+      let line = lexer.consume_line(bump).unwrap();
+      assert_eq!(line.ends_with_nonescaped(token_type), expected);
+    }
   }
 
   #[test]

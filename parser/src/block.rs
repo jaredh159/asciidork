@@ -1,7 +1,7 @@
 use bumpalo::collections::Vec as BumpVec;
 
 use crate::ast::SourceLocation;
-use crate::{line::Line, token::TokenIs, token::TokenKind};
+use crate::{line::Line, token::*};
 
 #[derive(Debug)]
 pub struct Block<'bmp, 'src> {
@@ -18,6 +18,10 @@ impl<'bmp, 'src> Block<'bmp, 'src> {
 
   pub fn current_line(&self) -> Option<&Line<'bmp, 'src>> {
     self.lines.last()
+  }
+
+  pub fn current_token(&self) -> Option<&Token<'src>> {
+    self.current_line().and_then(|line| line.current_token())
   }
 
   pub fn is_empty(&self) -> bool {
@@ -41,6 +45,10 @@ impl<'bmp, 'src> Block<'bmp, 'src> {
       .lines
       .iter()
       .any(|line| line.terminates_constrained(stop_tokens))
+  }
+
+  pub fn is_block_macro(&self) -> bool {
+    self.lines.len() == 1 && self.current_line().unwrap().is_block_macro()
   }
 
   pub fn current_line_starts_with(&self, kind: TokenKind) -> bool {

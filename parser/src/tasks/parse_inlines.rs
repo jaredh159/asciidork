@@ -648,6 +648,10 @@ mod tests {
         ]),
       ),
       (
+        "image::foo.png[]", // unexpected block macro, parse as text
+        b.vec([n_text("image::foo.png[]", 0, 16, b)]),
+      ),
+      (
         "foo `bar`",
         b.vec([
           n_text("foo ", 0, 4, b),

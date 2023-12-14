@@ -5,6 +5,7 @@ use super::*;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Block<'bmp> {
   pub context: BlockContext<'bmp>,
+  pub loc: SourceLocation,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -15,7 +16,10 @@ pub enum BlockContext<'bmp> {
   DescriptionList,
   DiscreteHeading,
   Example,
-  Image,
+  Image {
+    target: SourceString<'bmp>,
+    attrs: AttrList<'bmp>,
+  },
   ListItem,
   Listing,
   Literal,
