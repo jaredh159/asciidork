@@ -2,14 +2,14 @@ use bumpalo::collections::Vec;
 
 use super::*;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Section<'bmp> {
   level: u8,
   heading: Heading<'bmp>,
   blocks: Vec<'bmp, Block<'bmp>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Heading<'bmp> {
   inlines: Vec<'bmp, Inline<'bmp>>,
 }

@@ -1,5 +1,7 @@
 ## todo
 
+- [ ] contiguous sidebar with no delimiters using [sidebar]
+- [ ] whacky `.Optional title` block first line above blocks (search docs for "sidebar")
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc

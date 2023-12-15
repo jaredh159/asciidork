@@ -12,6 +12,7 @@ pub enum TokenKind {
   Comma,
   CommentBlock,
   CommentLine,
+  DelimiterLine,
   DoubleQuote,
   Dot,
   EqualSigns,

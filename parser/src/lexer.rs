@@ -12,11 +12,17 @@ pub struct Lexer<'src> {
   src: &'src str,
   chars: Chars<'src>,
   peek: Option<char>,
+  is_line_start: bool,
 }
 
 impl<'src> Lexer<'src> {
   pub fn new(src: &'src str) -> Lexer<'src> {
-    let mut lexer = Lexer { src, chars: src.chars(), peek: None };
+    let mut lexer = Lexer {
+      src,
+      chars: src.chars(),
+      peek: None,
+      is_line_start: true,
+    };
     lexer.peek = lexer.chars.next();
     lexer
   }
@@ -103,7 +109,30 @@ impl<'src> Lexer<'src> {
     Some(Line::new(tokens, &self.src[start..end]))
   }
 
+  fn delimiter_line(&mut self) -> Option<Token<'src>> {
+    if !self.is_line_start || self.is_eof() || !matches!(self.peek, Some('-') | Some('*')) {
+      return None;
+    }
+    let start = self.offset();
+    let mut c = self.chars.clone();
+    let sequence = [self.peek, c.next(), c.next(), c.next(), c.next()];
+    match sequence {
+      [Some('-'), Some('-'), Some('\n') | None, _, _] => {
+        self.skip(2);
+        Some(self.token(DelimiterLine, start, start + 2))
+      }
+      [Some('*'), Some('*'), Some('*'), Some('*'), Some('\n') | None] => {
+        self.skip(4);
+        Some(self.token(DelimiterLine, start, start + 4))
+      }
+      _ => None,
+    }
+  }
+
   pub fn next_token(&mut self) -> Token<'src> {
+    if let Some(token) = self.delimiter_line() {
+      return token;
+    }
     match self.advance() {
       Some('=') => self.repeating('=', EqualSigns),
       Some(' ') | Some('\t') => self.whitespace(),
@@ -131,11 +160,7 @@ impl<'src> Lexer<'src> {
       Some('\'') => self.single(SingleQuote),
       Some('\\') => self.single(Backslash),
       Some(_) => self.word(),
-      None => Token {
-        kind: Eof,
-        loc: SourceLocation::new(self.offset(), self.offset()),
-        lexeme: "",
-      },
+      None => self.token(Eof, self.offset(), self.offset()),
     }
   }
 
@@ -144,7 +169,16 @@ impl<'src> Lexer<'src> {
   }
 
   fn advance(&mut self) -> Option<char> {
-    std::mem::replace(&mut self.peek, self.chars.next())
+    let next = std::mem::replace(&mut self.peek, self.chars.next());
+    self.is_line_start = matches!(next, Some('\n'));
+    next
+  }
+
+  pub fn skip(&mut self, n: usize) -> Option<char> {
+    debug_assert!(n > 1);
+    let next = std::mem::replace(&mut self.peek, self.chars.nth(n - 1));
+    self.is_line_start = matches!(next, Some('\n'));
+    next
   }
 
   fn advance_if(&mut self, c: char) -> bool {
@@ -164,21 +198,13 @@ impl<'src> Lexer<'src> {
   fn single(&self, kind: TokenKind) -> Token<'src> {
     let end = self.offset();
     let start = end - 1;
-    Token {
-      kind,
-      loc: SourceLocation::new(start, end),
-      lexeme: &self.src[start..end],
-    }
+    self.token(kind, start, end)
   }
 
   fn repeating(&mut self, c: char, kind: TokenKind) -> Token<'src> {
     let start = self.offset() - 1;
     let end = self.advance_while(c);
-    Token {
-      kind,
-      loc: SourceLocation::new(start, end),
-      lexeme: &self.src[start..end],
-    }
+    self.token(kind, start, end)
   }
 
   fn advance_while_with(&mut self, f: impl Fn(char) -> bool) -> usize {
@@ -230,19 +256,11 @@ impl<'src> Lexer<'src> {
       Some(':') => {
         if self.is_macro_name(lexeme) {
           self.advance();
-          return Token {
-            kind: MacroName,
-            loc: SourceLocation::new(start, end + 1),
-            lexeme: &self.src[start..end + 1],
-          };
+          return self.token(MacroName, start, end + 1);
           // ...checking for contiguous footnote `somethingfootnote:[]`
         } else if lexeme.ends_with('e') && lexeme.ends_with("footnote") {
           self.reverse_by(8);
-          return Token {
-            kind: Word,
-            loc: SourceLocation::new(start, end - 8),
-            lexeme: &self.src[start..end - 8],
-          };
+          return self.token(Word, start, end - 8);
         }
       }
       // maybe email
@@ -252,27 +270,15 @@ impl<'src> Lexer<'src> {
           .advance_while_with(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
         let domain = &self.src[end + 1..domain_end];
         if domain.len() > 3 && domain.contains('.') && !self.peek_is('@') {
-          return Token {
-            kind: MaybeEmail,
-            loc: SourceLocation::new(start, domain_end),
-            lexeme: &self.src[start..domain_end],
-          };
+          return self.token(MaybeEmail, start, domain_end);
         }
         self.reverse_by(domain.len());
         let end = self.advance_to_word_boundary(false);
-        return Token {
-          kind: Word,
-          loc: SourceLocation::new(start, end),
-          lexeme: &self.src[start..end],
-        };
+        return self.token(Word, start, end);
       }
       _ => {}
     }
-    Token {
-      kind: Word,
-      loc: SourceLocation::new(start, end),
-      lexeme: &self.src[start..end],
-    }
+    self.token(Word, start, end)
   }
   fn reverse_by(&mut self, n: usize) {
     self.chars = self.src[self.offset() - n..].chars();
@@ -338,22 +344,14 @@ impl<'src> Lexer<'src> {
     // TODO: block comments, testing if we have 2 more slashes
     self.advance_until('\n');
     let end = self.offset();
-    Token {
-      kind: CommentLine,
-      loc: SourceLocation::new(start, end),
-      lexeme: &self.src[start..end],
-    }
+    self.token(CommentLine, start, end)
   }
 
   fn whitespace(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
     self.advance_while_one_of(&[' ', '\t']);
     let end = self.offset();
-    Token {
-      kind: Whitespace,
-      loc: SourceLocation::new(start, end),
-      lexeme: &self.src[start..end],
-    }
+    self.token(Whitespace, start, end)
   }
 
   fn starts_comment(&self) -> bool {
@@ -367,6 +365,14 @@ impl<'src> Lexer<'src> {
     let prev_offset = self.offset().saturating_sub(1);
     // must be at the beginning of a line, so `https://foobar` not match
     matches!(self.src.chars().nth(prev_offset), Some('\n') | None)
+  }
+
+  fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'src> {
+    Token {
+      kind,
+      loc: SourceLocation::new(start, end),
+      lexeme: &self.src[start..end],
+    }
   }
 }
 
@@ -388,6 +394,23 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("--", vec![(DelimiterLine, "--")]),
+      ("--\n", vec![(DelimiterLine, "--"), (Newline, "\n")]),
+      ("****", vec![(DelimiterLine, "****")]),
+      (
+        "****\nfoo",
+        vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],
+      ),
+      (
+        "foo****",
+        vec![
+          (Word, "foo"),
+          (Star, "*"),
+          (Star, "*"),
+          (Star, "*"),
+          (Star, "*"),
+        ],
+      ),
       ("foo@bar", vec![(Word, "foo@bar")]),
       (
         "foo@bar.com@",

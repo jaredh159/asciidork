@@ -2,13 +2,13 @@ use bumpalo::collections::Vec;
 
 use super::*;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Block<'bmp> {
   pub context: BlockContext<'bmp>,
   pub loc: SourceLocation,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BlockContext<'bmp> {
   Admonition,
   Audio,
@@ -30,7 +30,7 @@ pub enum BlockContext<'bmp> {
   Passthrough,
   BlockQuote,
   Section(Section<'bmp>),
-  Sidebar,
+  Sidebar(Vec<'bmp, Block<'bmp>>),
   Table,
   TableCell,
   ThematicBreak,

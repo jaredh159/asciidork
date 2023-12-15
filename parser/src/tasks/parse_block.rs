@@ -1,7 +1,7 @@
 use crate::ast;
 use crate::ast::*;
 use crate::block::Block as Lines;
-use crate::token::TokenKind::*;
+use crate::token::{TokenIs, TokenKind::*};
 use crate::{Parser, Result};
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -12,12 +12,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     // parse block attr list `[...]`
 
+    let first_token = block.current_token();
+
     if block.is_block_macro() {
-      let token = block.current_token().unwrap();
-      match token.lexeme {
+      match first_token.unwrap().lexeme {
         "image:" => return Ok(Some(self.parse_image_block(block)?)),
-        _ => todo!("unhandled block macro type: `{:?}`", token.lexeme),
+        _ => todo!("unhandled block macro: `{:?}`", first_token.unwrap()),
       }
+    }
+
+    match first_token {
+      // 👍 sat/mon jared, start here
+      Some(token) if token.is(DelimiterLine) => todo!("delimited block"),
+      _ => {}
     }
 
     // if it starts a section, delegate somewhere else?
@@ -89,6 +96,21 @@ mod tests {
         attrs: AttrList::new(l(15, 17), b),
       },
       loc: l(0, 17),
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_sidebar_block() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "****\nfoo\n****\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      context: BlockContext::Sidebar(b.vec([Block {
+        context: BlockContext::Paragraph(b.vec([n_text("foo", 6, 9, b)])),
+        loc: l(0, 23),
+      }])),
+      loc: l(0, 23),
     };
     assert_eq!(block, expected);
   }
