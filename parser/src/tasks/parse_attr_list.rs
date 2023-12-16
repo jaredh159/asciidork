@@ -233,7 +233,7 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
           self.err_if_formatted(parser)?;
           let tokens = std::mem::replace(&mut self.tokens, Vec::new_in(self.bump));
           let line = parser.line_from(tokens, self.attr.take_src().loc);
-          let inlines = parser.parse_inlines(line.into_block_in(self.bump))?;
+          let inlines = parser.parse_inlines(&mut line.into_block_in(self.bump))?;
           self.attr_list.positional.push(Some(inlines));
         }
         Named => {

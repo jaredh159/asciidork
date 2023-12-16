@@ -49,7 +49,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     header_line.discard(2);
 
     doc_header.title = Some(DocTitle {
-      heading: self.parse_inlines(header_line.into_block_in(self.bump))?,
+      heading: self.parse_inlines(&mut header_line.into_block_in(self.bump))?,
       subtitle: None, // todo
     });
 

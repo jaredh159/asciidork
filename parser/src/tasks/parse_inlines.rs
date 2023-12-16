@@ -13,9 +13,9 @@ use crate::{Parser, Result};
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_inlines(
     &mut self,
-    mut block: Block<'bmp, 'src>,
+    block: &mut Block<'bmp, 'src>,
   ) -> Result<Vec<'bmp, InlineNode<'bmp>>> {
-    self.parse_inlines_until(&mut block, &[])
+    self.parse_inlines_until(block, &[])
   }
 
   fn parse_inlines_until(
@@ -39,6 +39,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           if !line.is_empty() {
             block.restore(line);
           }
+          return Ok(inlines);
+        }
+
+        if self.ctx.delimiter.is_some() && line.current_is(DelimiterLine) {
+          if matches!(inlines.last().map(|n| &n.content), Some(JoiningNewline)) {
+            inlines.pop();
+          }
+          block.restore(line);
           return Ok(inlines);
         }
 
@@ -1384,8 +1392,8 @@ mod tests {
   fn run(cases: std::vec::Vec<(&str, Vec<InlineNode>)>, bump: &Bump) {
     for (input, expected) in cases {
       let mut parser = crate::Parser::new(bump, input);
-      let block = parser.read_block().unwrap();
-      let inlines = parser.parse_inlines(block).unwrap();
+      let mut block = parser.read_block().unwrap();
+      let inlines = parser.parse_inlines(&mut block).unwrap();
       assert_eq!(inlines, expected);
     }
   }

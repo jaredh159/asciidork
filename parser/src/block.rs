@@ -3,7 +3,7 @@ use bumpalo::collections::Vec as BumpVec;
 use crate::ast::SourceLocation;
 use crate::{line::Line, token::*};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block<'bmp, 'src> {
   // NB: lines kept in reverse, as there is no VeqDeque in bumpalo
   // and we almost always want to consume from the front, so fake it

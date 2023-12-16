@@ -3,7 +3,7 @@ use crate::block::Block;
 use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
 use crate::utils::bump::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Line<'bmp, 'src> {
   pub src: &'src str,
   all_tokens: Vec<'bmp, Token<'src>>,

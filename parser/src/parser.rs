@@ -25,9 +25,15 @@ pub struct ParseResult<'bmp> {
   pub warnings: Vec<Diagnostic>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Delimiter {
+  Sidebar,
+}
+
 #[derive(Debug)]
 pub(crate) struct Context {
   pub(crate) subs: Substitutions,
+  pub(crate) delimiter: Option<Delimiter>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -48,7 +54,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       lexer: Lexer::new(src),
       document: Document::new_in(bump),
       peeked_block: None,
-      ctx: Context { subs: Substitutions::all() },
+      ctx: Context {
+        subs: Substitutions::all(),
+        delimiter: None,
+      },
       errors: RefCell::new(Vec::new()),
       bail: true,
     }
@@ -87,6 +96,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
     debug_assert!(!lines.is_empty());
     Some(Block::new(lines))
+  }
+
+  pub fn restore_block(&mut self, block: Block<'bmp, 'src>) {
+    debug_assert!(self.peeked_block.is_none());
+    self.peeked_block = Some(block);
   }
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
