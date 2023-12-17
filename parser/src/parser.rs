@@ -3,10 +3,11 @@ use std::cell::RefCell;
 use bumpalo::collections::Vec as BumpVec;
 use bumpalo::Bump;
 
-use crate::ast::*;
+use crate::ast::{self, *};
 use crate::block::Block;
 use crate::lexer::Lexer;
 use crate::line::Line;
+use crate::token::{Token, TokenKind};
 use crate::Diagnostic;
 
 #[derive(Debug)]
@@ -25,9 +26,35 @@ pub struct ParseResult<'bmp> {
   pub warnings: Vec<Diagnostic>,
 }
 
-#[derive(Debug, Clone, Copy)]
+// todo: move to a better place
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Delimiter {
   Sidebar,
+  Open,
+}
+
+impl Delimiter {
+  pub(crate) fn wrap_fn<'bmp>(
+    &self,
+  ) -> impl FnOnce(BumpVec<'bmp, ast::Block<'bmp>>) -> BlockContext<'bmp> {
+    match *self {
+      Delimiter::Sidebar => BlockContext::Sidebar,
+      Delimiter::Open => BlockContext::Open,
+    }
+  }
+}
+
+impl<'src> Token<'src> {
+  pub(crate) fn to_delimeter(&self) -> Option<Delimiter> {
+    if self.kind != TokenKind::DelimiterLine {
+      return None;
+    }
+    match self.lexeme {
+      "****" => Some(Delimiter::Sidebar),
+      "--" => Some(Delimiter::Open),
+      _ => None,
+    }
+  }
 }
 
 #[derive(Debug)]
@@ -100,7 +127,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn restore_block(&mut self, block: Block<'bmp, 'src>) {
     debug_assert!(self.peeked_block.is_none());
-    self.peeked_block = Some(block);
+    if !block.is_empty() {
+      self.peeked_block = Some(block);
+    }
   }
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {

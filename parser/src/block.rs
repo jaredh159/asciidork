@@ -32,6 +32,12 @@ impl<'bmp, 'src> Block<'bmp, 'src> {
     self.lines.pop()
   }
 
+  pub fn consume_current_token(&mut self) -> Option<Token<'src>> {
+    self
+      .consume_current()
+      .and_then(|mut line| line.consume_current())
+  }
+
   pub fn restore(&mut self, line: Line<'bmp, 'src>) {
     self.lines.push(line);
   }

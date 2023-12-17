@@ -24,7 +24,7 @@ pub enum BlockContext<'bmp> {
   Listing,
   Literal,
   OrderedList,
-  Open,
+  Open(Vec<'bmp, Block<'bmp>>),
   PageBreak,
   Paragraph(Vec<'bmp, InlineNode<'bmp>>),
   Passthrough,
