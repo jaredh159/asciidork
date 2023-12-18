@@ -58,16 +58,25 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     while let Some(inner) = self.parse_block()? {
       blocks.push(inner);
     }
-    let Some(mut block) = self.read_block() else {
-      todo!("throw error, no end delimiter")
+    let end = if let Some(mut block) = self.read_block() {
+      let token = block.consume_current_token().unwrap();
+      debug_assert!(token.is(DelimiterLine));
+      self.restore_block(block);
+      token.loc.end
+    } else {
+      let end = blocks.last().map(|b| b.loc.end).unwrap_or(start.loc.end);
+      let message = format!(
+        "unclosed delimiter block, expected `{}`, opened on line {}",
+        start.lexeme,
+        self.lexer.line_number(start.loc.start)
+      );
+      self.err_at(message, end, end + 1)?;
+      end
     };
-    let end = block.consume_current_token().unwrap();
-    debug_assert!(end.is(DelimiterLine));
-    self.restore_block(block);
     self.ctx.delimiter = prev;
     return Ok(Some(Block {
       context: delimiter.wrap_fn()(blocks),
-      loc: SourceLocation::new(start.loc.start, end.loc.end),
+      loc: SourceLocation::new(start.loc.start, end),
     }));
   }
 
@@ -102,9 +111,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::*;
   use crate::parser::Parser;
   use crate::test::*;
+  use crate::{ast::*, Diagnostic};
 
   #[test]
   fn test_parse_simple_block() {
@@ -148,6 +157,18 @@ mod tests {
         loc: l(3, 6),
       }])),
       loc: l(0, 9),
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_empty_delimited_block() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "--\n--\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      context: BlockContext::Open(b.vec([])),
+      loc: l(0, 5),
     };
     assert_eq!(block, expected);
   }
@@ -253,5 +274,22 @@ This is more content in the sidebar block.
       loc: l(0, 108),
     };
     assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_unclosed_delimited_block_err() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "--\nfoo\n\n");
+    let err = parser.parse_block().err().unwrap();
+    assert_eq!(
+      err,
+      Diagnostic {
+        line_num: 2,
+        line: "foo".to_string(),
+        message: "unclosed delimiter block, expected `--`, opened on line 1".to_string(),
+        underline_start: 3,
+        underline_width: 1,
+      }
+    )
   }
 }
