@@ -1,7 +1,4 @@
-use bumpalo::collections::Vec;
-
-use super::block::{Block, BlockContext};
-use super::node::Section;
+use crate::prelude::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocContent<'bmp> {
@@ -15,12 +12,9 @@ pub enum DocContent<'bmp> {
 impl<'bmp> DocContent<'bmp> {
   pub fn push_block(&mut self, block: Block<'bmp>) {
     match block.context {
-      BlockContext::Section(section) => {
+      BlockContext::Section => {
         self.ensure_sectioned();
-        match self {
-          DocContent::Sectioned { sections, .. } => sections.push(section),
-          _ => unreachable!(),
-        }
+        todo!("push_block: section")
       }
       _ => match self {
         DocContent::Blocks(blocks) => blocks.push(block),

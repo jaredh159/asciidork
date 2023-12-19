@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use bumpalo::collections::{String, Vec};
-
-use super::*;
+use crate::prelude::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/document/header/
 #[derive(Debug, PartialEq, Eq)]

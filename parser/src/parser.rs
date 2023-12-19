@@ -1,64 +1,25 @@
 use std::cell::RefCell;
 
-use bumpalo::collections::Vec as BumpVec;
-use bumpalo::Bump;
-
-use crate::ast::{self, *};
-use crate::block::Block;
-use crate::lexer::Lexer;
-use crate::line::Line;
-use crate::token::{Token, TokenKind};
-use crate::Diagnostic;
+use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct Parser<'bmp: 'src, 'src> {
   pub(super) bump: &'bmp Bump,
   pub(super) lexer: Lexer<'src>,
   pub(super) document: Document<'bmp>,
-  pub(super) peeked_block: Option<Block<'bmp, 'src>>,
-  pub(super) ctx: Context,
-  pub(super) errors: RefCell<Vec<Diagnostic>>,
+  pub(super) peeked_lines: Option<ContiguousLines<'bmp, 'src>>,
+  pub(super) ctx: ParseContext,
+  pub(super) errors: RefCell<StdVec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
 }
 
 pub struct ParseResult<'bmp> {
   pub document: Document<'bmp>,
-  pub warnings: Vec<Diagnostic>,
-}
-
-// todo: move to a better place
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) enum Delimiter {
-  Sidebar,
-  Open,
-}
-
-impl Delimiter {
-  pub(crate) fn wrap_fn<'bmp>(
-    &self,
-  ) -> impl FnOnce(BumpVec<'bmp, ast::Block<'bmp>>) -> BlockContext<'bmp> {
-    match *self {
-      Delimiter::Sidebar => BlockContext::Sidebar,
-      Delimiter::Open => BlockContext::Open,
-    }
-  }
-}
-
-impl<'src> Token<'src> {
-  pub(crate) fn to_delimeter(&self) -> Option<Delimiter> {
-    if self.kind != TokenKind::DelimiterLine {
-      return None;
-    }
-    match self.lexeme {
-      "****" => Some(Delimiter::Sidebar),
-      "--" => Some(Delimiter::Open),
-      _ => None,
-    }
-  }
+  pub warnings: StdVec<Diagnostic>,
 }
 
 #[derive(Debug)]
-pub(crate) struct Context {
+pub(crate) struct ParseContext {
   pub(crate) subs: Substitutions,
   pub(crate) delimiter: Option<Delimiter>,
 }
@@ -80,12 +41,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       bump,
       lexer: Lexer::new(src),
       document: Document::new_in(bump),
-      peeked_block: None,
-      ctx: Context {
+      peeked_lines: None,
+      ctx: ParseContext {
         subs: Substitutions::all(),
         delimiter: None,
       },
-      errors: RefCell::new(Vec::new()),
+      errors: RefCell::new(StdVec::new()),
       bail: true,
     }
   }
@@ -106,15 +67,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Line::new(tokens, self.lexer.loc_src(loc))
   }
 
-  pub(crate) fn read_block(&mut self) -> Option<Block<'bmp, 'src>> {
-    if let Some(block) = self.peeked_block.take() {
-      return Some(block);
+  pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'bmp, 'src>> {
+    if let Some(peeked) = self.peeked_lines.take() {
+      return Some(peeked);
     }
     self.lexer.consume_empty_lines();
     if self.lexer.is_eof() {
       return None;
     }
-    let mut lines = BumpVec::new_in(self.bump);
+    let mut lines = Vec::new_in(self.bump);
     while let Some(line) = self.lexer.consume_line(self.bump) {
       lines.push(line);
       if self.lexer.peek_is('\n') {
@@ -122,17 +83,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
     debug_assert!(!lines.is_empty());
-    Some(Block::new(lines))
+    Some(ContiguousLines::new(lines))
   }
 
-  pub fn restore_block(&mut self, block: Block<'bmp, 'src>) {
-    debug_assert!(self.peeked_block.is_none());
-    if !block.is_empty() {
-      self.peeked_block = Some(block);
+  pub fn restore_lines(&mut self, lines: ContiguousLines<'bmp, 'src>) {
+    debug_assert!(self.peeked_lines.is_none());
+    if !lines.is_empty() {
+      self.peeked_lines = Some(lines);
     }
   }
 
-  pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
+  pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, StdVec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
 
     while let Some(block) = self.parse_block()? {
@@ -170,7 +131,7 @@ impl Substitutions {
   }
 }
 
-impl From<Diagnostic> for Vec<Diagnostic> {
+impl From<Diagnostic> for StdVec<Diagnostic> {
   fn from(diagnostic: Diagnostic) -> Self {
     vec![diagnostic]
   }

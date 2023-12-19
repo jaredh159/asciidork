@@ -1,6 +1,4 @@
-use bumpalo::collections::Vec;
-
-use super::*;
+use crate::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Section<'bmp> {

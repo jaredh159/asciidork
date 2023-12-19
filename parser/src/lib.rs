@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 mod ast; // will be it's own crate at some point...
-mod block;
+mod contiguous_lines;
+mod delimiter;
 mod diagnostic;
 mod lexer;
 mod line;
@@ -17,3 +18,23 @@ pub use diagnostic::Diagnostic;
 pub use parser::Parser;
 
 type Result<T> = std::result::Result<T, Diagnostic>;
+
+pub mod prelude {
+  pub use crate::ast::*;
+  pub use crate::contiguous_lines::ContiguousLines;
+  pub use crate::delimiter::*;
+  pub use crate::diagnostic::*;
+  pub use crate::lexer::*;
+  pub use crate::line::*;
+  pub use crate::parser::*;
+  pub use crate::tasks::collect_text::*;
+  pub use crate::token::*;
+  pub use crate::utils::bump::*;
+  pub type Result<T> = std::result::Result<T, Diagnostic>;
+}
+
+pub mod variants {
+  pub mod token {
+    pub use crate::token::TokenKind::*;
+  }
+}

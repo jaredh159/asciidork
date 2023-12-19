@@ -1,12 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::ast::*;
-use crate::block::Block;
-use crate::line::Line;
-use crate::parser::Substitutions;
-use crate::tasks::text_span::TextSpan;
-use crate::token::{Token, TokenIs, TokenKind};
+use crate::prelude::*;
 
 impl Substitutions {
   /// https://docs.asciidoctor.org/asciidoc/latest/pass/pass-macro/#custom-substitutions
@@ -38,19 +33,24 @@ pub fn starts_constrained(
   stop_tokens: &[TokenKind],
   token: &Token,
   line: &Line,
-  block: &mut Block,
+  lines: &mut ContiguousLines,
 ) -> bool {
   debug_assert!(!stop_tokens.is_empty());
   token.is(*stop_tokens.last().expect("non-empty stop tokens"))
-    && (line.terminates_constrained(stop_tokens) || block.terminates_constrained(stop_tokens))
+    && (line.terminates_constrained(stop_tokens) || lines.terminates_constrained(stop_tokens))
 }
 
-pub fn starts_unconstrained(kind: TokenKind, token: &Token, line: &Line, block: &Block) -> bool {
-  token.is(kind) && line.current_is(kind) && contains_seq(&[kind; 2], line, block)
+pub fn starts_unconstrained(
+  kind: TokenKind,
+  token: &Token,
+  line: &Line,
+  lines: &ContiguousLines,
+) -> bool {
+  token.is(kind) && line.current_is(kind) && contains_seq(&[kind; 2], line, lines)
 }
 
-pub fn contains_seq(seq: &[TokenKind], line: &Line, block: &Block) -> bool {
-  line.contains_seq(seq) || block.contains_seq(seq)
+pub fn contains_seq(seq: &[TokenKind], line: &Line, lines: &ContiguousLines) -> bool {
+  line.contains_seq(seq) || lines.contains_seq(seq)
 }
 
 pub fn node(content: Inline, loc: SourceLocation) -> InlineNode {
@@ -61,7 +61,7 @@ pub fn finish_macro<'bmp>(
   line: &Line<'bmp, '_>,
   loc: &mut SourceLocation,
   line_end: SourceLocation,
-  text: &mut TextSpan<'bmp>,
+  text: &mut CollectText<'bmp>,
 ) {
   if let Some(cur_location) = line.location() {
     loc.extend(cur_location);

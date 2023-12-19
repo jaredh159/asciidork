@@ -1,18 +1,16 @@
 use bumpalo::collections::String;
 use regex::Regex;
 
-use crate::ast::*;
-use crate::block::Block;
-use crate::token::TokenKind::*;
-use crate::Parser;
+use crate::prelude::*;
+use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_revision_line(
     &self,
-    block: &mut Block,
+    lines: &mut ContiguousLines,
     revision: &mut Option<Revision<'bmp>>,
   ) {
-    let Some(line) = block.current_line() else {
+    let Some(line) = lines.current() else {
       return;
     };
 
@@ -40,7 +38,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if captures.get(2).is_none() && captures.get(3).is_none() {
       if Regex::new(r"^v(\d[^\s]+)$").unwrap().is_match(raw_version) {
         *revision = Some(Revision { version, date: None, remark: None });
-        block.consume_current();
+        lines.consume_current();
       }
       return;
     }
@@ -53,7 +51,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         date: None,
         remark: Some(String::from_str_in(remark, self.bump)),
       });
-      block.consume_current();
+      lines.consume_current();
       return;
     }
 
@@ -65,7 +63,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         date: Some(String::from_str_in(date, self.bump)),
         remark: None,
       });
-      block.consume_current();
+      lines.consume_current();
       return;
     }
 
@@ -76,7 +74,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       date: Some(String::from_str_in(date, self.bump)),
       remark: Some(String::from_str_in(remark, self.bump)),
     });
-    block.consume_current();
+    lines.consume_current();
   }
 }
 
@@ -150,7 +148,7 @@ mod tests {
 
     for (input, expected) in cases {
       let mut parser = crate::Parser::new(b, input);
-      let mut block = parser.read_block().unwrap();
+      let mut block = parser.read_lines().unwrap();
       let mut revision = None;
       parser.parse_revision_line(&mut block, &mut revision);
       assert_eq!(revision, expected);

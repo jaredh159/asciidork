@@ -1,5 +1,4 @@
-use crate::ast::*;
-use crate::utils::bump::*;
+use crate::prelude::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/positional-and-named-attributes/
 #[derive(Debug, PartialEq, Eq, Clone)]

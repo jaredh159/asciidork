@@ -1,24 +1,26 @@
 use std::collections::HashMap;
 
-use bumpalo::collections::String;
 use regex::Regex;
 
-use crate::{block::Block, Parser, Result};
+use crate::prelude::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attrs(
     &self,
-    block: &mut Block<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp, 'src>,
     attrs: &mut HashMap<String<'bmp>, String<'bmp>>,
   ) -> Result<()> {
-    while let Some((key, value)) = self.parse_doc_attr(block)? {
+    while let Some((key, value)) = self.parse_doc_attr(lines)? {
       attrs.insert(key, value);
     }
     Ok(())
   }
 
-  fn parse_doc_attr(&self, block: &mut Block) -> Result<Option<(String<'bmp>, String<'bmp>)>> {
-    let Some(line) = block.current_line() else {
+  fn parse_doc_attr(
+    &self,
+    lines: &mut ContiguousLines,
+  ) -> Result<Option<(String<'bmp>, String<'bmp>)>> {
+    let Some(line) = lines.current() else {
       return Ok(None);
     };
 
@@ -28,7 +30,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
 
-    block.consume_current();
+    lines.consume_current();
     let key = String::from_str_in(captures.get(1).unwrap().as_str(), self.bump);
     let value = String::from_str_in(captures.get(2).map_or("", |m| m.as_str()), self.bump);
     Ok(Some((key, value)))
@@ -49,7 +51,7 @@ mod tests {
     ];
     for (input, authors) in cases {
       let mut parser = crate::Parser::new(b, input);
-      let mut block = parser.read_block().unwrap();
+      let mut block = parser.read_lines().unwrap();
       let attr = parser.parse_doc_attr(&mut block).unwrap().unwrap();
       assert_eq!(attr, (s!(in b; authors.0), s!(in b; authors.1)));
     }

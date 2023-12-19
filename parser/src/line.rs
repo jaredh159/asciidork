@@ -1,7 +1,5 @@
-use crate::ast::*;
-use crate::block::Block;
-use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
-use crate::utils::bump::*;
+use crate::prelude::*;
+use crate::variants::token::*;
 
 #[derive(Debug, Clone)]
 pub struct Line<'bmp, 'src> {
@@ -253,8 +251,8 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Some(token)
   }
 
-  pub fn into_block_in(self, bump: &'bmp Bump) -> Block<'bmp, 'src> {
-    Block::new(bvec![in bump; self])
+  pub fn into_lines_in(self, bump: &'bmp Bump) -> ContiguousLines<'bmp, 'src> {
+    ContiguousLines::new(bvec![in bump; self])
   }
 
   pub fn location(&self) -> Option<SourceLocation> {

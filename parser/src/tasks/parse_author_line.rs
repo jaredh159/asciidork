@@ -1,10 +1,7 @@
-use bumpalo::collections::{String, Vec};
 use regex::Regex;
 
-use crate::ast::*;
-use crate::line::Line;
-use crate::token::TokenKind::*;
-use crate::{Parser, Result};
+use crate::prelude::*;
+use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   /// if this function is called, the following invaraints hold:
@@ -68,13 +65,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::*;
+  use super::*;
   use crate::test::*;
 
   #[test]
   fn test_parse_author_lines() {
     #[allow(clippy::type_complexity)]
-    let cases: Vec<(&str, Vec<(&str, Option<&str>, &str, Option<&str>)>)> = vec![
+    let cases: StdVec<(&str, StdVec<(&str, Option<&str>, &str, Option<&str>)>)> = vec![
       ("Bob L. Foo", vec![("Bob", Some("L."), "Foo", None)]),
       ("Bob Foo", vec![("Bob", None, "Foo", None)]),
       (
@@ -115,7 +112,7 @@ mod tests {
           last_name: s!(in b; last),
           email: email.map(|e| s!(in b; e)),
         })
-        .collect::<Vec<Author>>();
+        .collect::<StdVec<Author>>();
       let mut authors = bumpalo::collections::Vec::new_in(b);
       parser.parse_author_line(line, &mut authors).unwrap();
       assert_eq!(authors.to_vec(), expected_authors);

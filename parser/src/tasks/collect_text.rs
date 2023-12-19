@@ -1,16 +1,14 @@
-use crate::ast::*;
-use crate::token::Token;
-use crate::utils::bump::*;
+use crate::prelude::*;
 
-pub struct TextSpan<'bmp> {
+pub struct CollectText<'bmp> {
   bump: &'bmp bumpalo::Bump,
   string: Option<String<'bmp>>,
   pub loc: SourceLocation,
 }
 
-impl<'bmp> TextSpan<'bmp> {
+impl<'bmp> CollectText<'bmp> {
   pub fn new_in(loc: SourceLocation, bump: &'bmp bumpalo::Bump) -> Self {
-    TextSpan {
+    CollectText {
       bump,
       string: Some(String::new_in(bump)),
       loc,
@@ -65,7 +63,7 @@ impl<'bmp> TextSpan<'bmp> {
   }
 }
 
-impl<'bmp> std::fmt::Debug for TextSpan<'bmp> {
+impl<'bmp> std::fmt::Debug for CollectText<'bmp> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,

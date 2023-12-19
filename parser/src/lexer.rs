@@ -1,11 +1,7 @@
 use std::str::Chars;
 
-use bumpalo::collections::Vec as BumpVec;
-use bumpalo::Bump;
-
-use crate::ast::SourceLocation;
-use crate::line::Line;
-use crate::token::{Token, TokenKind, TokenKind::*};
+use crate::prelude::*;
+use crate::variants::token::*;
 
 #[derive(Debug)]
 pub struct Lexer<'src> {
@@ -97,7 +93,7 @@ impl<'src> Lexer<'src> {
     }
     let start = self.offset();
     let mut end = start;
-    let mut tokens = BumpVec::new_in(bump);
+    let mut tokens = Vec::new_in(bump);
     while !self.peek_is('\n') && !self.is_eof() {
       let token = self.next_token();
       end = token.loc.end;

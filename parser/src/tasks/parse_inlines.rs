@@ -1,43 +1,37 @@
 use regex::Regex;
 
-use crate::ast::*;
-use crate::block::Block;
-use crate::line::Line;
-use crate::parser::Substitutions;
+use crate::prelude::*;
 use crate::tasks::parse_inlines_utils::*;
-use crate::tasks::text_span::TextSpan;
-use crate::token::{Token, TokenIs, TokenKind, TokenKind::*};
-use crate::utils::bump::*;
-use crate::{Parser, Result};
+use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_inlines(
     &mut self,
-    block: &mut Block<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<Vec<'bmp, InlineNode<'bmp>>> {
-    self.parse_inlines_until(block, &[])
+    self.parse_inlines_until(lines, &[])
   }
 
   fn parse_inlines_until(
     &mut self,
-    block: &mut Block<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp, 'src>,
     stop_tokens: &[TokenKind],
   ) -> Result<Vec<'bmp, InlineNode<'bmp>>> {
     let mut inlines = Vec::new_in(self.bump);
-    if block.is_empty() {
+    if lines.is_empty() {
       return Ok(inlines);
     }
-    let span_loc = block.location().unwrap().clamp_start();
-    let mut text = TextSpan::new_in(span_loc, self.bump);
+    let span_loc = lines.location().unwrap().clamp_start();
+    let mut text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
 
-    while let Some(mut line) = block.consume_current() {
+    while let Some(mut line) = lines.consume_current() {
       loop {
         if line.starts_with_seq(stop_tokens) {
           line.discard(stop_tokens.len());
           text.commit_inlines(&mut inlines);
           if !line.is_empty() {
-            block.restore(line);
+            lines.restore(line);
           }
           return Ok(inlines);
         }
@@ -46,12 +40,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           if matches!(inlines.last().map(|n| &n.content), Some(JoiningNewline)) {
             inlines.pop();
           }
-          block.restore(line);
+          lines.restore(line);
           return Ok(inlines);
         }
 
         let Some(token) = line.consume_current() else {
-          if !block.is_empty() {
+          if !lines.is_empty() {
             text.commit_inlines(&mut inlines);
             text.loc.end += 1;
             inlines.push(node(JoiningNewline, text.loc));
@@ -91,8 +85,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               }
               "footnote:" => {
                 let id = line.consume_optional_macro_target(self.bump);
-                block.restore(line);
-                let note = self.parse_inlines_until(block, &[CloseBracket])?;
+                lines.restore(line);
+                let note = self.parse_inlines_until(lines, &[CloseBracket])?;
                 extend(&mut macro_loc, &note, 1);
                 inlines.push(node(Macro(Footnote { id, text: note }), macro_loc));
                 text.loc = macro_loc.clamp_end();
@@ -207,26 +201,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
           Underscore
             if subs.inline_formatting
-              && starts_constrained(&[Underscore], &token, &line, block) =>
+              && starts_constrained(&[Underscore], &token, &line, lines) =>
           {
-            self.parse_constrained(&token, Italic, &mut text, &mut inlines, line, block)?;
+            self.parse_constrained(&token, Italic, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
           Underscore
-            if subs.inline_formatting && starts_unconstrained(Underscore, &token, &line, block) =>
+            if subs.inline_formatting && starts_unconstrained(Underscore, &token, &line, lines) =>
           {
-            self.parse_unconstrained(&token, Italic, &mut text, &mut inlines, line, block)?;
+            self.parse_unconstrained(&token, Italic, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
-          Star if subs.inline_formatting && starts_constrained(&[Star], &token, &line, block) => {
-            self.parse_constrained(&token, Bold, &mut text, &mut inlines, line, block)?;
+          Star if subs.inline_formatting && starts_constrained(&[Star], &token, &line, lines) => {
+            self.parse_constrained(&token, Bold, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
-          Star if subs.inline_formatting && starts_unconstrained(Star, &token, &line, block) => {
-            self.parse_unconstrained(&token, Bold, &mut text, &mut inlines, line, block)?;
+          Star if subs.inline_formatting && starts_unconstrained(Star, &token, &line, lines) => {
+            self.parse_unconstrained(&token, Bold, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
@@ -237,10 +231,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(Hash);
             parse_token.kind = Hash;
             let wrap = |inner| TextSpan(attr_list, inner);
-            if starts_unconstrained(Hash, line.current_token().unwrap(), &line, block) {
-              self.parse_unconstrained(&parse_token, wrap, &mut text, &mut inlines, line, block)?;
+            if starts_unconstrained(Hash, line.current_token().unwrap(), &line, lines) {
+              self.parse_unconstrained(&parse_token, wrap, &mut text, &mut inlines, line, lines)?;
             } else {
-              self.parse_constrained(&parse_token, wrap, &mut text, &mut inlines, line, block)?;
+              self.parse_constrained(&parse_token, wrap, &mut text, &mut inlines, line, lines)?;
             };
             break;
           }
@@ -248,14 +242,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           Backtick
             if subs.inline_formatting
               && line.current_is(Plus)
-              && contains_seq(&[Plus, Backtick], &line, block) =>
+              && contains_seq(&[Plus, Backtick], &line, lines) =>
           {
             let mut wrap_loc = token.loc;
             line.discard_assert(Plus);
             text.commit_inlines(&mut inlines);
-            block.restore(line);
+            lines.restore(line);
             self.ctx.subs.inline_formatting = false;
-            let mut inner = self.parse_inlines_until(block, &[Plus, Backtick])?;
+            let mut inner = self.parse_inlines_until(lines, &[Plus, Backtick])?;
             extend(&mut wrap_loc, &inner, 2);
             self.ctx.subs = subs;
             assert!(inner.len() == 1, "invalid lit mono");
@@ -271,8 +265,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           Caret if subs.inline_formatting && line.is_continuous_thru(Caret) => {
             let mut loc = token.loc;
             text.commit_inlines(&mut inlines);
-            block.restore(line);
-            let inner = self.parse_inlines_until(block, &[Caret])?;
+            lines.restore(line);
+            let inner = self.parse_inlines_until(lines, &[Caret])?;
             extend(&mut loc, &inner, 1);
             inlines.push(node(Superscript(inner), loc));
             text.loc = loc.clamp_end();
@@ -282,13 +276,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           DoubleQuote
             if subs.inline_formatting
               && line.current_is(Backtick)
-              && starts_constrained(&[Backtick, DoubleQuote], &token, &line, block) =>
+              && starts_constrained(&[Backtick, DoubleQuote], &token, &line, lines) =>
           {
             let mut loc = token.loc;
             line.discard_assert(Backtick);
             text.commit_inlines(&mut inlines);
-            block.restore(line);
-            let quoted = self.parse_inlines_until(block, &[Backtick, DoubleQuote])?;
+            lines.restore(line);
+            let quoted = self.parse_inlines_until(lines, &[Backtick, DoubleQuote])?;
             extend(&mut loc, &quoted, 2);
             inlines.push(node(Quote(Double, quoted), loc));
             text.loc = loc.clamp_end();
@@ -298,13 +292,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           SingleQuote
             if subs.inline_formatting
               && line.current_is(Backtick)
-              && starts_constrained(&[Backtick, SingleQuote], &token, &line, block) =>
+              && starts_constrained(&[Backtick, SingleQuote], &token, &line, lines) =>
           {
             let mut loc = token.loc;
             line.discard_assert(Backtick);
             text.commit_inlines(&mut inlines);
-            block.restore(line);
-            let quoted = self.parse_inlines_until(block, &[Backtick, SingleQuote])?;
+            lines.restore(line);
+            let quoted = self.parse_inlines_until(lines, &[Backtick, SingleQuote])?;
             extend(&mut loc, &quoted, 2);
             inlines.push(node(Quote(Single, quoted), loc));
             text.loc = loc.clamp_end();
@@ -314,8 +308,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           Tilde if subs.inline_formatting && line.is_continuous_thru(Tilde) => {
             let mut loc = token.loc;
             text.commit_inlines(&mut inlines);
-            block.restore(line);
-            let inner = self.parse_inlines_until(block, &[Tilde])?;
+            lines.restore(line);
+            let inner = self.parse_inlines_until(lines, &[Tilde])?;
             extend(&mut loc, &inner, 1);
             inlines.push(node(Subscript(inner), loc));
             text.loc = loc.clamp_end();
@@ -327,7 +321,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(DoubleQuote);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            block.restore(line);
+            lines.restore(line);
             inlines.push(node(Curly(RightDouble), loc));
             text.loc = loc.clamp_end();
             break;
@@ -338,7 +332,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(Backtick);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            block.restore(line);
+            lines.restore(line);
             inlines.push(node(Curly(LeftDouble), loc));
             text.loc = loc.clamp_end();
             break;
@@ -349,7 +343,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(SingleQuote);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            block.restore(line);
+            lines.restore(line);
             inlines.push(node(Curly(RightSingle), loc));
             text.loc = loc.clamp_end();
             break;
@@ -360,42 +354,42 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(Backtick);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            block.restore(line);
+            lines.restore(line);
             inlines.push(node(Curly(LeftSingle), loc));
             text.loc = loc.clamp_end();
             break;
           }
 
           Backtick
-            if subs.inline_formatting && starts_constrained(&[Backtick], &token, &line, block) =>
+            if subs.inline_formatting && starts_constrained(&[Backtick], &token, &line, lines) =>
           {
-            self.parse_constrained(&token, Mono, &mut text, &mut inlines, line, block)?;
+            self.parse_constrained(&token, Mono, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
           Backtick
-            if subs.inline_formatting && starts_unconstrained(Backtick, &token, &line, block) =>
+            if subs.inline_formatting && starts_unconstrained(Backtick, &token, &line, lines) =>
           {
-            self.parse_unconstrained(&token, Mono, &mut text, &mut inlines, line, block)?;
+            self.parse_unconstrained(&token, Mono, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
-          Hash if subs.inline_formatting && contains_seq(&[Hash], &line, block) => {
-            self.parse_constrained(&token, Highlight, &mut text, &mut inlines, line, block)?;
+          Hash if subs.inline_formatting && contains_seq(&[Hash], &line, lines) => {
+            self.parse_constrained(&token, Highlight, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
           Plus
             if line.starts_with_seq(&[Plus, Plus])
-              && contains_seq(&[Plus, Plus, Plus], &line, block) =>
+              && contains_seq(&[Plus, Plus, Plus], &line, lines) =>
           {
             let mut loc = token.loc;
             line.discard_assert(Plus);
             line.discard_assert(Plus);
             text.commit_inlines(&mut inlines);
-            block.restore(line);
+            lines.restore(line);
             self.ctx.subs = Substitutions::none();
-            let passthrough = self.parse_inlines_until(block, &[Plus, Plus, Plus])?;
+            let passthrough = self.parse_inlines_until(lines, &[Plus, Plus, Plus])?;
             extend(&mut loc, &passthrough, 3);
             self.ctx.subs = subs;
             inlines.push(node(InlinePassthrough(passthrough), loc));
@@ -406,7 +400,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           Plus
             if subs.inline_formatting
               && line.current_is(Plus)
-              && starts_unconstrained(Plus, &token, &line, block) =>
+              && starts_unconstrained(Plus, &token, &line, lines) =>
           {
             self.ctx.subs.inline_formatting = false;
             self.parse_unconstrained(
@@ -415,13 +409,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               &mut text,
               &mut inlines,
               line,
-              block,
+              lines,
             )?;
             self.ctx.subs = subs;
             break;
           }
 
-          Plus if subs.inline_formatting && starts_constrained(&[Plus], &token, &line, block) => {
+          Plus if subs.inline_formatting && starts_constrained(&[Plus], &token, &line, lines) => {
             self.ctx.subs.inline_formatting = false;
             self.parse_constrained(
               &token,
@@ -429,7 +423,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               &mut text,
               &mut inlines,
               line,
-              block,
+              lines,
             )?;
             self.ctx.subs = subs;
             break;
@@ -510,16 +504,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     token: &Token<'src>,
     wrap: impl FnOnce(Vec<'bmp, InlineNode<'bmp>>) -> Inline<'bmp>,
-    text: &mut TextSpan<'bmp>,
+    text: &mut CollectText<'bmp>,
     inlines: &mut Vec<'bmp, InlineNode<'bmp>>,
     mut line: Line<'bmp, 'src>,
-    block: &mut Block<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<()> {
     let mut loc = token.loc;
     line.discard_assert(token.kind);
     text.commit_inlines(inlines);
-    block.restore(line);
-    let inner = self.parse_inlines_until(block, &[token.kind, token.kind])?;
+    lines.restore(line);
+    let inner = self.parse_inlines_until(lines, &[token.kind, token.kind])?;
     extend(&mut loc, &inner, 2);
     inlines.push(node(wrap(inner), loc));
     text.loc = loc.clamp_end();
@@ -530,15 +524,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     token: &Token<'src>,
     wrap: impl FnOnce(Vec<'bmp, InlineNode<'bmp>>) -> Inline<'bmp>,
-    text: &mut TextSpan<'bmp>,
+    text: &mut CollectText<'bmp>,
     inlines: &mut Vec<'bmp, InlineNode<'bmp>>,
     line: Line<'bmp, 'src>,
-    block: &mut Block<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<()> {
     let mut loc = token.loc;
     text.commit_inlines(inlines);
-    block.restore(line);
-    let inner = self.parse_inlines_until(block, &[token.kind])?;
+    lines.restore(line);
+    let inner = self.parse_inlines_until(lines, &[token.kind])?;
     extend(&mut loc, &inner, 1);
     inlines.push(node(wrap(inner), loc));
     text.loc = loc.clamp_end();
@@ -566,9 +560,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
-  use crate::ast::*;
+  use super::*;
   use crate::test::*;
-  use crate::utils::bump::*;
 
   #[test]
   fn test_parse_inlines() {
@@ -1392,7 +1385,7 @@ mod tests {
   fn run(cases: std::vec::Vec<(&str, Vec<InlineNode>)>, bump: &Bump) {
     for (input, expected) in cases {
       let mut parser = crate::Parser::new(bump, input);
-      let mut block = parser.read_block().unwrap();
+      let mut block = parser.read_lines().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
       assert_eq!(inlines, expected);
     }

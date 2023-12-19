@@ -1,12 +1,5 @@
-use bumpalo::Bump;
-
-use crate::ast::*;
-use crate::line::Line;
-use crate::tasks::text_span::TextSpan;
-use crate::token::TokenKind::{self, *};
-use crate::token::{Token, TokenIs};
-use crate::utils::bump::*;
-use crate::{Parser, Result};
+use crate::prelude::*;
+use crate::variants::token::*;
 
 #[derive(Debug, PartialEq, Eq)]
 enum AttrKind {
@@ -29,8 +22,8 @@ struct AttrState<'bmp: 'src, 'src> {
   bump: &'bmp Bump,
   attr_list: AttrList<'bmp>,
   quotes: Quotes,
-  attr: TextSpan<'bmp>,
-  name: TextSpan<'bmp>,
+  attr: CollectText<'bmp>,
+  name: CollectText<'bmp>,
   tokens: Vec<'bmp, Token<'src>>,
   kind: AttrKind,
   escaping: bool,
@@ -180,8 +173,8 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
         bump,
       ),
       quotes: Quotes::Default,
-      attr: TextSpan::new_in(start_loc, bump),
-      name: TextSpan::new_in(start_loc, bump),
+      attr: CollectText::new_in(start_loc, bump),
+      name: CollectText::new_in(start_loc, bump),
       tokens: Vec::new_in(bump),
       kind: AttrKind::Positional,
       escaping: false,
@@ -233,7 +226,7 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
           self.err_if_formatted(parser)?;
           let tokens = std::mem::replace(&mut self.tokens, Vec::new_in(self.bump));
           let line = parser.line_from(tokens, self.attr.take_src().loc);
-          let inlines = parser.parse_inlines(&mut line.into_block_in(self.bump))?;
+          let inlines = parser.parse_inlines(&mut line.into_lines_in(self.bump))?;
           self.attr_list.positional.push(Some(inlines));
         }
         Named => {

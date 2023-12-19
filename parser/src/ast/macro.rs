@@ -1,5 +1,4 @@
-use super::*;
-use crate::utils::bump::*;
+use crate::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Macro<'bmp> {

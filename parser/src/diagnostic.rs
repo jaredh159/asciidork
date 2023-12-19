@@ -1,17 +1,23 @@
-use crate::token::Token;
-use crate::{Parser, Result};
+use crate::prelude::*;
+// use crate::token::Token;
+// use crate::{Parser, Result};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Diagnostic {
   pub line_num: usize,
-  pub line: String,
-  pub message: String,
+  pub line: StdString,
+  pub message: StdString,
   pub underline_start: usize,
   pub underline_width: usize,
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(crate) fn err_at(&self, message: impl Into<String>, start: usize, end: usize) -> Result<()> {
+  pub(crate) fn err_at(
+    &self,
+    message: impl Into<StdString>,
+    start: usize,
+    end: usize,
+  ) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
     self.handle_err(Diagnostic {
       line_num,
@@ -60,7 +66,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     })
   }
 
-  pub(crate) fn err(&self, message: impl Into<String>, token: Option<&Token>) -> Result<()> {
+  pub(crate) fn err(&self, message: impl Into<StdString>, token: Option<&Token>) -> Result<()> {
     let location = token.map_or_else(|| self.lexer.loc(), |t| t.loc);
     let (line_num, offset) = self.lexer.line_number_with_offset(location.start);
     self.handle_err(Diagnostic {

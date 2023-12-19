@@ -1,5 +1,4 @@
-use crate::ast::*;
-use crate::utils::bump::*;
+use crate::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct InlineNode<'bmp> {

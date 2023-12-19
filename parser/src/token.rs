@@ -1,4 +1,4 @@
-use crate::ast::*;
+use crate::ast::{SourceLocation, UrlScheme};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenKind {

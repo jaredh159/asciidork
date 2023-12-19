@@ -1,27 +1,24 @@
-use bumpalo::collections::Vec as BumpVec;
-
-use crate::ast::SourceLocation;
-use crate::{line::Line, token::*};
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
-pub struct Block<'bmp, 'src> {
+pub struct ContiguousLines<'bmp, 'src> {
   // NB: lines kept in reverse, as there is no VeqDeque in bumpalo
   // and we almost always want to consume from the front, so fake it
-  pub(crate) lines: BumpVec<'bmp, Line<'bmp, 'src>>,
+  lines: Vec<'bmp, Line<'bmp, 'src>>,
 }
 
-impl<'bmp, 'src> Block<'bmp, 'src> {
-  pub fn new(mut lines: BumpVec<'bmp, Line<'bmp, 'src>>) -> Self {
+impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
+  pub fn new(mut lines: Vec<'bmp, Line<'bmp, 'src>>) -> Self {
     lines.reverse();
-    Block { lines }
+    ContiguousLines { lines }
   }
 
-  pub fn current_line(&self) -> Option<&Line<'bmp, 'src>> {
+  pub fn current(&self) -> Option<&Line<'bmp, 'src>> {
     self.lines.last()
   }
 
   pub fn current_token(&self) -> Option<&Token<'src>> {
-    self.current_line().and_then(|line| line.current_token())
+    self.current().and_then(|line| line.current_token())
   }
 
   pub fn is_empty(&self) -> bool {
@@ -42,6 +39,14 @@ impl<'bmp, 'src> Block<'bmp, 'src> {
     self.lines.push(line);
   }
 
+  pub fn retain(&mut self, f: impl FnMut(&Line<'bmp, 'src>) -> bool) {
+    self.lines.retain(f);
+  }
+
+  pub fn any(&self, f: impl FnMut(&Line<'bmp, 'src>) -> bool) -> bool {
+    self.lines.iter().any(f)
+  }
+
   pub fn contains_seq(&self, kinds: &[TokenKind]) -> bool {
     self.lines.iter().any(|line| line.contains_seq(kinds))
   }
@@ -54,11 +59,11 @@ impl<'bmp, 'src> Block<'bmp, 'src> {
   }
 
   pub fn is_block_macro(&self) -> bool {
-    self.lines.len() == 1 && self.current_line().unwrap().is_block_macro()
+    self.lines.len() == 1 && self.current().unwrap().is_block_macro()
   }
 
-  pub fn current_line_starts_with(&self, kind: TokenKind) -> bool {
-    match self.current_line() {
+  pub fn current_starts_with(&self, kind: TokenKind) -> bool {
+    match self.current() {
       Some(line) => line
         .current_token()
         .map(|token| token.is(kind))

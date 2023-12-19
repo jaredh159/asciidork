@@ -1,13 +1,10 @@
-use crate::ast::*;
-use crate::block::Block as Lines;
-use crate::parser::Delimiter;
-use crate::token::{TokenIs, TokenKind::*};
-use crate::utils::bump::*;
-use crate::{Parser, Result};
+use crate::ast::short::block::*;
+use crate::prelude::*;
+use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'bmp>>> {
-    let Some(block) = self.read_block() else {
+    let Some(block) = self.read_lines() else {
       return Ok(None);
     };
 
@@ -26,7 +23,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     match first_token.kind {
       DelimiterLine if self.ctx.delimiter == first_token.to_delimeter() => {
-        self.restore_block(block);
+        self.restore_lines(block);
         return Ok(None);
       }
       DelimiterLine => {
@@ -36,32 +33,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       _ => {}
     }
 
-    // if it starts a section, delegate somewhere else?
-    //   --> return self.parse_section()
-
-    // is it some kind of compound, delimited block?
-    //   --> return self.parse_X()
-
     self.parse_paragraph(block)
   }
 
   fn parse_delimited_block(
     &mut self,
     delimiter: Delimiter,
-    mut block: Lines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp, 'src>,
   ) -> Result<Option<Block<'bmp>>> {
     let prev = self.ctx.delimiter;
     self.ctx.delimiter = Some(delimiter);
-    let start = block.consume_current_token().unwrap();
-    self.restore_block(block);
+    let start = lines.consume_current_token().unwrap();
+    self.restore_lines(lines);
     let mut blocks = Vec::new_in(self.bump);
     while let Some(inner) = self.parse_block()? {
       blocks.push(inner);
     }
-    let end = if let Some(mut block) = self.read_block() {
+    let end = if let Some(mut block) = self.read_lines() {
       let token = block.consume_current_token().unwrap();
       debug_assert!(token.is(DelimiterLine));
-      self.restore_block(block);
+      self.restore_lines(block);
       token.loc.end
     } else {
       let end = blocks.last().map(|b| b.loc.end).unwrap_or(start.loc.end);
@@ -75,12 +66,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
     self.ctx.delimiter = prev;
     return Ok(Some(Block {
-      context: delimiter.wrap_fn()(blocks),
+      attrs: None,
+      content: Content::Compound(blocks),
+      context: Context::from(delimiter),
       loc: SourceLocation::new(start.loc.start, end),
     }));
   }
 
-  fn parse_image_block(&mut self, mut lines: Lines<'bmp, 'src>) -> Result<Block<'bmp>> {
+  fn parse_image_block(&mut self, mut lines: ContiguousLines<'bmp, 'src>) -> Result<Block<'bmp>> {
     let mut line = lines.consume_current().unwrap();
     let start = line.location().unwrap().start;
     line.discard_assert(MacroName);
@@ -88,21 +81,28 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let target = line.consume_macro_target(self.bump);
     let attrs = self.parse_attr_list(&mut line)?;
     Ok(Block {
+      attrs: None,
       loc: SourceLocation::new(start, attrs.loc.end),
-      context: BlockContext::Image { target, attrs },
+      context: Context::Image,
+      content: Content::Empty(EmptyMetadata::Image { target, attrs }),
     })
   }
 
-  fn parse_paragraph(&mut self, mut lines: Lines<'bmp, 'src>) -> Result<Option<Block<'bmp>>> {
+  fn parse_paragraph(
+    &mut self,
+    mut lines: ContiguousLines<'bmp, 'src>,
+  ) -> Result<Option<Block<'bmp>>> {
     let inlines = self.parse_inlines(&mut lines)?;
     let result = match (inlines.first(), inlines.last()) {
       (Some(first), Some(last)) => Ok(Some(Block {
+        attrs: None,
         loc: SourceLocation::new(first.loc.start, last.loc.end),
-        context: BlockContext::Paragraph(inlines),
+        context: Context::Paragraph,
+        content: Content::Simple(inlines),
       })),
       _ => Ok(None),
     };
-    self.restore_block(lines);
+    self.restore_lines(lines);
     result
   }
 }
@@ -111,9 +111,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
-  use crate::parser::Parser;
+  use super::*;
   use crate::test::*;
-  use crate::{ast::*, Diagnostic};
 
   #[test]
   fn test_parse_simple_block() {
@@ -121,7 +120,9 @@ mod tests {
     let mut parser = Parser::new(b, "hello mamma,\nhello papa\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Paragraph(b.vec([
+      attrs: None,
+      context: Context::Paragraph,
+      content: Content::Simple(b.vec([
         inode(Text(b.s("hello mamma,")), l(0, 12)),
         inode(JoiningNewline, l(12, 13)),
         inode(Text(b.s("hello papa")), l(13, 23)),
@@ -137,10 +138,12 @@ mod tests {
     let mut parser = Parser::new(b, "image::name.png[]\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Image {
+      attrs: None,
+      context: Context::Image,
+      content: Content::Empty(EmptyMetadata::Image {
         target: b.src("name.png", l(7, 15)),
         attrs: AttrList::new(l(15, 17), b),
-      },
+      }),
       loc: l(0, 17),
     };
     assert_eq!(block, expected);
@@ -152,11 +155,29 @@ mod tests {
     let mut parser = Parser::new(b, "--\nfoo\n--\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Open(b.vec([Block {
-        context: BlockContext::Paragraph(b.vec([n_text("foo", 3, 6, b)])),
+      attrs: None,
+      context: Context::Open,
+      content: Content::Compound(b.vec([Block {
+        attrs: None,
+        context: Context::Paragraph,
+        content: Content::Simple(b.vec([n_text("foo", 3, 6, b)])),
         loc: l(3, 6),
       }])),
       loc: l(0, 9),
+    };
+    assert_eq!(block, expected);
+  }
+
+  // #[test]
+  fn test_undelimited_sidebar() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "[sidebar]\nfoo\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      attrs: None,
+      context: Context::Sidebar,
+      content: Content::Simple(b.vec([n_text("foo", 9, 12, b)])),
+      loc: l(0, 5),
     };
     assert_eq!(block, expected);
   }
@@ -167,7 +188,9 @@ mod tests {
     let mut parser = Parser::new(b, "--\n--\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Open(b.vec([])),
+      attrs: None,
+      context: Context::Open,
+      content: Content::Compound(b.vec([])),
       loc: l(0, 5),
     };
     assert_eq!(block, expected);
@@ -179,8 +202,12 @@ mod tests {
     let mut parser = Parser::new(b, "****\nfoo\n****\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Sidebar(b.vec([Block {
-        context: BlockContext::Paragraph(b.vec([n_text("foo", 5, 8, b)])),
+      attrs: None,
+      context: Context::Sidebar,
+      content: Content::Compound(b.vec([Block {
+        attrs: None,
+        context: Context::Paragraph,
+        content: Content::Simple(b.vec([n_text("foo", 5, 8, b)])),
         loc: l(5, 8),
       }])),
       loc: l(0, 13),
@@ -200,9 +227,15 @@ foo
     let mut parser = Parser::new(b, input.trim());
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Sidebar(b.vec([Block {
-        context: BlockContext::Open(b.vec([Block {
-          context: BlockContext::Paragraph(b.vec([n_text("foo", 8, 11, b)])),
+      attrs: None,
+      context: Context::Sidebar,
+      content: Content::Compound(b.vec([Block {
+        attrs: None,
+        context: Context::Open,
+        content: Content::Compound(b.vec([Block {
+          attrs: None,
+          context: Context::Paragraph,
+          content: Content::Simple(b.vec([n_text("foo", 8, 11, b)])),
           loc: l(8, 11),
         }])),
         loc: l(5, 14),
@@ -225,9 +258,15 @@ foo
     let mut parser = Parser::new(b, input.trim());
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      context: BlockContext::Sidebar(b.vec([Block {
-        context: BlockContext::Open(b.vec([Block {
-          context: BlockContext::Paragraph(b.vec([n_text("foo", 10, 13, b)])),
+      attrs: None,
+      context: Context::Sidebar,
+      content: Content::Compound(b.vec([Block {
+        attrs: None,
+        context: Context::Open,
+        content: Content::Compound(b.vec([Block {
+          attrs: None,
+          context: Context::Paragraph,
+          content: Content::Simple(b.vec([n_text("foo", 10, 13, b)])),
           loc: l(10, 13),
         }])),
         loc: l(6, 18),
@@ -254,20 +293,28 @@ This is more content in the sidebar block.
     let para_1_txt = n_text("This is content in a sidebar block.", 5, 40, b);
     let para_2_txt = n_text("This is more content in the sidebar block.", 61, 103, b);
     let expected = Block {
-      context: BlockContext::Sidebar(b.vec([
+      attrs: None,
+      context: Context::Sidebar,
+      content: Content::Compound(b.vec([
         Block {
-          context: BlockContext::Paragraph(b.vec([para_1_txt])),
+          attrs: None,
+          context: Context::Paragraph,
+          content: Content::Simple(b.vec([para_1_txt])),
           loc: l(5, 40),
         },
         Block {
-          context: BlockContext::Image {
+          attrs: None,
+          context: Context::Image,
+          content: Content::Empty(EmptyMetadata::Image {
             target: b.src("name.png", l(49, 57)),
             attrs: AttrList::new(l(57, 59), b),
-          },
+          }),
           loc: l(42, 59),
         },
         Block {
-          context: BlockContext::Paragraph(b.vec([para_2_txt])),
+          attrs: None,
+          context: Context::Paragraph,
+          content: Content::Simple(b.vec([para_2_txt])),
           loc: l(61, 103),
         },
       ])),
