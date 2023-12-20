@@ -4,36 +4,33 @@ use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'bmp>>> {
-    let Some(block) = self.read_lines() else {
+    let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
 
-    // parse block attr list `[...]`
+    let meta = self.parse_block_metadata(&mut lines)?;
+    let first_token = lines.current_token().unwrap();
 
-    let Some(first_token) = block.current_token() else {
-      return Ok(None);
-    };
-
-    if block.is_block_macro() {
+    if lines.is_block_macro() {
       match first_token.lexeme {
-        "image:" => return Ok(Some(self.parse_image_block(block)?)),
+        "image:" => return Ok(Some(self.parse_image_block(lines)?)),
         _ => todo!("block macro type: `{:?}`", first_token.lexeme),
       }
     }
 
     match first_token.kind {
       DelimiterLine if self.ctx.delimiter == first_token.to_delimeter() => {
-        self.restore_lines(block);
+        self.restore_lines(lines);
         return Ok(None);
       }
       DelimiterLine => {
         let delimiter = first_token.to_delimeter().unwrap();
-        return self.parse_delimited_block(delimiter, block);
+        return self.parse_delimited_block(delimiter, lines);
       }
       _ => {}
     }
 
-    self.parse_paragraph(block)
+    self.parse_paragraph(lines, meta)
   }
 
   fn parse_delimited_block(
@@ -91,19 +88,56 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_paragraph(
     &mut self,
     mut lines: ContiguousLines<'bmp, 'src>,
+    meta: BlockMetadata<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let inlines = self.parse_inlines(&mut lines)?;
-    let result = match (inlines.first(), inlines.last()) {
-      (Some(first), Some(last)) => Ok(Some(Block {
+    let result = match inlines.last() {
+      Some(last) => Ok(Some(Block {
         attrs: None,
-        loc: SourceLocation::new(first.loc.start, last.loc.end),
-        context: Context::Paragraph,
+        loc: SourceLocation::new(meta.start, last.loc.end),
+        context: meta.block_style_or(Context::Paragraph),
         content: Content::Simple(inlines),
       })),
       _ => Ok(None),
     };
     self.restore_lines(lines);
     result
+  }
+
+  fn parse_block_metadata(
+    &mut self,
+    lines: &mut ContiguousLines<'bmp, 'src>,
+  ) -> Result<BlockMetadata<'bmp>> {
+    let start = lines.current_token().unwrap().loc.start;
+    let mut attrs = None;
+    loop {
+      match lines.current().unwrap() {
+        line if line.is_attr_list() => {
+          let mut line = lines.consume_current().unwrap();
+          line.discard_assert(OpenBracket);
+          attrs = Some(self.parse_attr_list(&mut line)?);
+        }
+        // todo: parse block title
+        _ => break,
+      }
+    }
+    Ok(BlockMetadata { attrs, title: None, start })
+  }
+}
+
+struct BlockMetadata<'bmp> {
+  title: Option<SourceString<'bmp>>,
+  attrs: Option<AttrList<'bmp>>,
+  start: usize,
+}
+
+impl BlockMetadata<'_> {
+  fn block_style_or(&self, default: BlockContext) -> BlockContext {
+    self
+      .attrs
+      .as_ref()
+      .and_then(|attrs| attrs.block_style())
+      .unwrap_or(default)
   }
 }
 
@@ -168,7 +202,7 @@ mod tests {
     assert_eq!(block, expected);
   }
 
-  // #[test]
+  #[test]
   fn test_undelimited_sidebar() {
     let b = &Bump::new();
     let mut parser = Parser::new(b, "[sidebar]\nfoo\n\n");
@@ -176,8 +210,8 @@ mod tests {
     let expected = Block {
       attrs: None,
       context: Context::Sidebar,
-      content: Content::Simple(b.vec([n_text("foo", 9, 12, b)])),
-      loc: l(0, 5),
+      content: Content::Simple(b.vec([n_text("foo", 10, 13, b)])),
+      loc: l(0, 13),
     };
     assert_eq!(block, expected);
   }

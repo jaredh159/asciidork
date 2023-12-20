@@ -22,6 +22,23 @@ impl<'bmp> AttrList<'bmp> {
       loc,
     }
   }
+
+  /// https://docs.asciidoctor.org/asciidoc/latest/blocks/#block-style
+  pub fn block_style(&self) -> Option<BlockContext> {
+    let Some(Some(nodes)) = self.positional.get(0) else {
+      return None;
+    };
+    if nodes.len() != 1 {
+      return None;
+    }
+    let Inline::Text(string) = &nodes[0].content else {
+      return None;
+    };
+    match string.as_str() {
+      "sidebar" => Some(BlockContext::Sidebar),
+      _ => None,
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

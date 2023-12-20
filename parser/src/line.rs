@@ -53,6 +53,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       && self.ends_with_nonescaped(CloseBracket)
   }
 
+  pub fn is_attr_list(&self) -> bool {
+    self.starts(OpenBracket) && self.ends_with_nonescaped(CloseBracket)
+  }
+
   pub fn discard(&mut self, n: usize) {
     for _ in 0..n {
       _ = self.consume_current();
