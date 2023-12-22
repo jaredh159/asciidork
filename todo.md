@@ -1,7 +1,5 @@
 ## todo
 
-- [ ] contiguous sidebar with no delimiters using [sidebar]
-- [ ] whacky `.Optional title` block first line above blocks (search docs for "sidebar")
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
@@ -16,6 +14,8 @@
       https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/#email-autolinks
 - [ ] unsetting doc attrs, e.g. `:version-label!:`
 - [•] soon: multi-file non corner painting
+- [√] contiguous sidebar with no delimiters using [sidebar]
+- [√] whacky `.Optional title` block first line above blocks (search docs for "sidebar")
 - [√] email autolinks:
 - [√] need to track locations in nodes, like inline at least, maybe doc header
 - [√] shared test macros (duplication of s!)
@@ -36,6 +36,8 @@ bump-allocated version
   a vec of inlines parsed according to subs?
 - pass:[] macro docs contain a list of allowed substitution values, and then the example
   right below it shows using a value `q` not on the list!
+- docs seems to say that a block _title_ needs to be _above_ the attr list, but dr. seems
+  to parse it the same in either order
 
 ## weirdnesses...
 

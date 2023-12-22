@@ -36,7 +36,9 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
   }
 
   pub fn restore(&mut self, line: Line<'bmp, 'src>) {
-    self.lines.push(line);
+    if !line.is_empty() {
+      self.lines.push(line);
+    }
   }
 
   pub fn retain(&mut self, f: impl FnMut(&Line<'bmp, 'src>) -> bool) {

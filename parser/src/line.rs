@@ -57,6 +57,11 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.starts(OpenBracket) && self.ends_with_nonescaped(CloseBracket)
   }
 
+  pub fn is_block_title(&self) -> bool {
+    // dot followed by at least one non-whitespace token
+    self.starts(Dot) && self.tokens().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
+  }
+
   pub fn discard(&mut self, n: usize) {
     for _ in 0..n {
       _ = self.consume_current();
@@ -177,6 +182,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
+  #[must_use]
   pub fn consume_to_string_until(
     &mut self,
     kind: TokenKind,
@@ -191,6 +197,17 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     SourceString::new(s, loc)
   }
 
+  #[must_use]
+  pub fn consume_to_string(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
+    let mut loc = self.location().expect("no tokens to consume");
+    let mut s = String::new_in(bump);
+    while let Some(token) = self.consume_current() {
+      s.push_str(token.lexeme);
+      loc.extend(token.loc);
+    }
+    SourceString::new(s, loc)
+  }
+
   pub fn consume_if_not(&mut self, kind: TokenKind) -> Option<Token> {
     match self.current_token() {
       Some(token) if !token.is(kind) => self.consume_current(),
@@ -198,6 +215,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
+  #[must_use]
   pub fn consume_macro_target(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
     let target = self.consume_to_string_until(OpenBracket, bump);
     debug_assert!(self.current_is(OpenBracket));
@@ -205,6 +223,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     target
   }
 
+  #[must_use]
   pub fn consume_optional_macro_target(&mut self, bump: &'bmp Bump) -> Option<SourceString<'bmp>> {
     let target = match self.current_is(OpenBracket) {
       true => None,

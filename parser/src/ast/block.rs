@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Block<'bmp> {
-  // pub title: Option<SourceString<'bmp>>,
+  pub title: Option<SourceString<'bmp>>,
   pub attrs: Option<AttrList<'bmp>>,
   pub content: BlockContent<'bmp>,
   pub context: BlockContext,
@@ -29,7 +29,11 @@ pub enum EmptyMetadata<'bmp> {
 
 #[derive(Copy, Debug, PartialEq, Eq, Clone)]
 pub enum BlockContext {
-  Admonition,
+  AdmonitionCaution,
+  AdmonitionImportant,
+  AdmonitionNote,
+  AdmonitionTip,
+  AdmonitionWarning,
   Audio,
   CalloutList,
   DescriptionList,
@@ -54,4 +58,24 @@ pub enum BlockContext {
   UnorderedList,
   Verse,
   Video,
+}
+
+impl BlockContext {
+  pub fn derive_admonition(string: &str) -> Option<Self> {
+    match string {
+      "CAUTION" => Some(BlockContext::AdmonitionCaution),
+      "IMPORTANT" => Some(BlockContext::AdmonitionImportant),
+      "NOTE" => Some(BlockContext::AdmonitionNote),
+      "TIP" => Some(BlockContext::AdmonitionTip),
+      "WARNING" => Some(BlockContext::AdmonitionWarning),
+      _ => None,
+    }
+  }
+
+  pub fn derive(string: &str) -> Option<Self> {
+    match string {
+      "sidebar" => Some(BlockContext::Sidebar),
+      _ => Self::derive_admonition(string),
+    }
+  }
 }

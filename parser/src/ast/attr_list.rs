@@ -31,13 +31,10 @@ impl<'bmp> AttrList<'bmp> {
     if nodes.len() != 1 {
       return None;
     }
-    let Inline::Text(string) = &nodes[0].content else {
+    let Inline::Text(first_positional) = &nodes[0].content else {
       return None;
     };
-    match string.as_str() {
-      "sidebar" => Some(BlockContext::Sidebar),
-      _ => None,
-    }
+    BlockContext::derive(first_positional.as_str())
   }
 }
 

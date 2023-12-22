@@ -3,6 +3,7 @@ use crate::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Delimiter {
   Sidebar,
+  Example,
   Open,
 }
 
@@ -11,6 +12,7 @@ impl From<Delimiter> for BlockContext {
     match delimiter {
       Delimiter::Sidebar => BlockContext::Sidebar,
       Delimiter::Open => BlockContext::Open,
+      Delimiter::Example => BlockContext::Example,
     }
   }
 }
@@ -22,6 +24,7 @@ impl<'src> Token<'src> {
     }
     match self.lexeme {
       "****" => Some(Delimiter::Sidebar),
+      "====" => Some(Delimiter::Example),
       "--" => Some(Delimiter::Open),
       _ => None,
     }
