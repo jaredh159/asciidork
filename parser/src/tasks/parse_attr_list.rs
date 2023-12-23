@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::variants::token::*;
+use ast::variants::inline::*;
 
 #[derive(Debug, PartialEq, Eq)]
 enum AttrKind {

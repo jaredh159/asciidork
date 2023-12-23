@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::prelude::*;
+use crate::internal::*;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct SourceString<'bmp> {

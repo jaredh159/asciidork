@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::prelude::*;
+use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/document/header/
 #[derive(Debug, PartialEq, Eq)]

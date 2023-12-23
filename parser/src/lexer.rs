@@ -379,8 +379,8 @@ impl<'src> Lexer<'src> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::ast::SourceLocation;
   use crate::token::TokenKind;
+  use ast::SourceLocation;
 
   #[test]
   fn test_consume_line() {

@@ -1,9 +1,11 @@
 [workspace]
 
 members = [
+  "ast",
   "adork-cli",
   "test-utils",
   "parser",
+  "backend-asciidoctor"
 ]
 
 resolver = "2"

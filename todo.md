@@ -1,5 +1,6 @@
 ## todo
 
+- [ ] block quotes
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc

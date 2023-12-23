@@ -3,6 +3,7 @@ use regex::Regex;
 use crate::prelude::*;
 use crate::tasks::parse_inlines_utils::*;
 use crate::variants::token::*;
+use ast::variants::{inline::*, r#macro::*};
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_inlines(
@@ -98,7 +99,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
                 let scheme = token.to_url_scheme();
                 inlines.push(node(
-                  Macro(Macro::Link { scheme, target, attrs: Some(attrs) }),
+                  Macro(Link { scheme, target, attrs: Some(attrs) }),
                   macro_loc,
                 ));
               }
@@ -109,7 +110,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
                 let scheme = Some(token.to_url_scheme().unwrap());
                 inlines.push(node(
-                  Macro(Macro::Link { scheme, target, attrs: Some(attrs) }),
+                  Macro(Link { scheme, target, attrs: Some(attrs) }),
                   macro_loc,
                 ));
               }
@@ -178,10 +179,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let target = line.consume_url(Some(&scheme_token), self.bump);
             finish_macro(&line, &mut loc, line_end, &mut text);
             let scheme = Some(scheme_token.to_url_scheme().unwrap());
-            inlines.push(node(
-              Macro(Macro::Link { scheme, target, attrs: None }),
-              loc,
-            ));
+            inlines.push(node(Macro(Link { scheme, target, attrs: None }), loc));
             inlines.push(node(Discarded, line.consume_current().unwrap().loc));
             text.loc = loc.incr_end().clamp_end();
           }
@@ -189,7 +187,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           MaybeEmail if subs.macros && EMAIL_RE.is_match(token.lexeme) => {
             text.commit_inlines(&mut inlines);
             inlines.push(node(
-              Macro(Macro::Link {
+              Macro(Link {
                 scheme: Some(UrlScheme::Mailto),
                 target: SourceString::new(String::from_str_in(token.lexeme, self.bump), token.loc),
                 attrs: None,
@@ -481,10 +479,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let target = line.consume_url(Some(&token), self.bump);
             finish_macro(&line, &mut loc, line_end, &mut text);
             let scheme = Some(token.to_url_scheme().unwrap());
-            inlines.push(node(
-              Macro(Macro::Link { scheme, target, attrs: None }),
-              loc,
-            ));
+            inlines.push(node(Macro(Link { scheme, target, attrs: None }), loc));
             text.loc = loc.clamp_end();
           }
 

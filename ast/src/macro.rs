@@ -1,7 +1,7 @@
-use crate::prelude::*;
+use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Macro<'bmp> {
+pub enum MacroNode<'bmp> {
   Footnote {
     id: Option<SourceString<'bmp>>,
     text: Vec<'bmp, InlineNode<'bmp>>,

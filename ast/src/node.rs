@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Section<'bmp> {

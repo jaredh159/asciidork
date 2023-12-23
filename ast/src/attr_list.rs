@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/positional-and-named-attributes/
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -35,6 +35,22 @@ impl<'bmp> AttrList<'bmp> {
       return None;
     };
     BlockContext::derive(first_positional.as_str())
+  }
+
+  pub fn positional(
+    positional: &'static str,
+    loc: SourceLocation,
+    bump: &'bmp Bump,
+  ) -> AttrList<'bmp> {
+    AttrList {
+      positional: bvec![in bump; Some(bvec![in bump;
+        InlineNode::new(
+          Inline::Text(String::from_str_in(positional, bump)),
+          SourceLocation::new(loc.start, loc.end),
+        )
+      ])],
+      ..AttrList::new(SourceLocation::new(loc.start - 1, loc.end + 1), bump)
+    }
   }
 }
 

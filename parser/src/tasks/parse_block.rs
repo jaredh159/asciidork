@@ -1,6 +1,6 @@
-use crate::ast::short::block::*;
 use crate::prelude::*;
 use crate::variants::token::*;
+use ast::short::block::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'bmp>>> {
@@ -184,6 +184,7 @@ impl BlockMetadata<'_> {
 mod tests {
   use super::*;
   use crate::test::*;
+  use ast::variants::inline::*;
 
   #[test]
   fn test_parse_simple_block() {

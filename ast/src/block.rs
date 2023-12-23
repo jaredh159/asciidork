@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Block<'bmp> {
@@ -7,6 +7,18 @@ pub struct Block<'bmp> {
   pub content: BlockContent<'bmp>,
   pub context: BlockContext,
   pub loc: SourceLocation,
+}
+
+impl<'bmp> Block<'bmp> {
+  pub fn empty(b: &'bmp Bump) -> Self {
+    Block {
+      title: None,
+      attrs: None,
+      context: BlockContext::Paragraph,
+      content: BlockContent::Simple(bvec![in b;]),
+      loc: SourceLocation::new(0, 0),
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

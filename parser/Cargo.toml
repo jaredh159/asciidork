@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ast = { path = "../ast" }
 bumpalo = { version = "3.14.0", features = ["collections"] }
 lazy_static = "1.4.0"
 regex = { version = "1.10.2", features = ["std", "use_std"] }

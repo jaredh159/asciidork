@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct InlineNode<'bmp> {
@@ -19,7 +19,7 @@ pub enum Inline<'bmp> {
   Curly(CurlyKind),
   Discarded,
   Highlight(Vec<'bmp, InlineNode<'bmp>>),
-  Macro(Macro<'bmp>),
+  Macro(MacroNode<'bmp>),
   Italic(Vec<'bmp, InlineNode<'bmp>>),
   InlinePassthrough(Vec<'bmp, InlineNode<'bmp>>),
   JoiningNewline,

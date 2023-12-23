@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use ast::prelude::*;
 
 pub trait BumpTestHelpers<'bmp> {
   fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> Vec<'bmp, T>;
@@ -43,30 +44,9 @@ pub fn n_text<'bmp>(
   bump: &'bmp Bump,
 ) -> InlineNode<'bmp> {
   InlineNode::new(
-    Text(String::from_str_in(s, bump)),
+    Inline::Text(String::from_str_in(s, bump)),
     SourceLocation::new(start, end),
   )
-}
-
-impl<'bmp> AttrList<'bmp> {
-  pub fn positional(pos: &'static str, loc: SourceLocation, bump: &'bmp Bump) -> Self {
-    AttrList {
-      positional: bvec![in bump; Some(bvec![in bump; n_text(pos, loc.start, loc.end, bump)])],
-      ..AttrList::new(l(loc.start - 1, loc.end + 1), bump)
-    }
-  }
-}
-
-impl<'bmp> Block<'bmp> {
-  pub fn empty(b: &'bmp Bump) -> Self {
-    Block {
-      title: None,
-      attrs: None,
-      context: BlockContext::Paragraph,
-      content: BlockContent::Simple(bvec![in b;]),
-      loc: l(0, 0),
-    }
-  }
 }
 
 macro_rules! s {

@@ -21,6 +21,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ast"
+version = "0.1.0"
+dependencies = [
+ "bumpalo",
+]
+
+[[package]]
+name = "backend-asciidoctor"
+version = "0.1.0"
+
+[[package]]
 name = "bitflags"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -115,6 +126,7 @@ checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 name = "parser"
 version = "0.1.0"
 dependencies = [
+ "ast",
  "bumpalo",
  "lazy_static",
  "regex",
