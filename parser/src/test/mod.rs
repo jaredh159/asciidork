@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::internal::*;
 use ast::prelude::*;
 
 pub trait BumpTestHelpers<'bmp> {

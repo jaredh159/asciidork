@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::prelude::*;
+use crate::internal::*;
 use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {

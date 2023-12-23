@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::prelude::*;
+use crate::internal::*;
 
 impl Substitutions {
   /// https://docs.asciidoctor.org/asciidoc/latest/pass/pass-macro/#custom-substitutions

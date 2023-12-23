@@ -16,9 +16,7 @@ pub mod test;
 pub use diagnostic::Diagnostic;
 pub use parser::Parser;
 
-type Result<T> = std::result::Result<T, Diagnostic>;
-
-pub mod prelude {
+mod internal {
   pub use crate::contiguous_lines::ContiguousLines;
   pub use crate::delimiter::*;
   pub use crate::diagnostic::*;

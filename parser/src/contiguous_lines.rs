@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::internal::*;
 
 #[derive(Debug, Clone)]
 pub struct ContiguousLines<'bmp, 'src> {

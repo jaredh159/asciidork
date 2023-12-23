@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use regex::Regex;
 
-use crate::prelude::*;
+use crate::internal::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attrs(

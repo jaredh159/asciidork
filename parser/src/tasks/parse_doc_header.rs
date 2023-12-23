@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::prelude::*;
+use crate::internal::*;
 use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {

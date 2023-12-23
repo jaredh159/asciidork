@@ -1,6 +1,6 @@
 use std::str::Chars;
 
-use crate::prelude::*;
+use crate::internal::*;
 use crate::variants::token::*;
 
 #[derive(Debug)]

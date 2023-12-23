@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::prelude::*;
+use crate::internal::*;
 
 #[derive(Debug)]
 pub struct Parser<'bmp: 'src, 'src> {

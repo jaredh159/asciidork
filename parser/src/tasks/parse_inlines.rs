@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::prelude::*;
+use crate::internal::*;
 use crate::tasks::parse_inlines_utils::*;
 use crate::variants::token::*;
 use ast::variants::{inline::*, r#macro::*};

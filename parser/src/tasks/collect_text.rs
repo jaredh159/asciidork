@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::internal::*;
 
 pub struct CollectText<'bmp> {
   bump: &'bmp bumpalo::Bump,
