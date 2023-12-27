@@ -1,5 +1,4 @@
 use crate::internal::*;
-use ast::prelude::*;
 
 pub trait BumpTestHelpers<'bmp> {
   fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> Vec<'bmp, T>;

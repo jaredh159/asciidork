@@ -117,7 +117,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               "pass:" => {
                 let target = line.consume_optional_macro_target(self.bump);
                 self.ctx.subs = Substitutions::from_pass_macro_target(&target);
+                println!("line: {:?}", line.src);
                 let mut attrs = self.parse_attr_list(&mut line)?;
+                println!("line: {:?}", line.src);
+                println!("inlines: {:?}", inlines);
                 self.ctx.subs = subs;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
                 let content = if !attrs.positional.is_empty() && attrs.positional[0].is_some() {
@@ -505,6 +508,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<()> {
     let mut loc = token.loc;
+    let line_end = line.last_location().unwrap().end;
     line.discard_assert(token.kind);
     text.commit_inlines(inlines);
     lines.restore(line);
@@ -512,6 +516,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     extend(&mut loc, &inner, 2);
     inlines.push(node(wrap(inner), loc));
     text.loc = loc.clamp_end();
+    // if we've consumed the whole line, and there are lines to come, add a newline
+    if text.loc.end == line_end && lines.current().is_some() {
+      text.loc.end += 1;
+      inlines.push(node(JoiningNewline, text.loc));
+      text.loc = text.loc.clamp_end();
+    }
     Ok(())
   }
 
@@ -525,12 +535,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<()> {
     let mut loc = token.loc;
+    let line_end = line.last_location().map_or(loc.end, |t| t.end);
     text.commit_inlines(inlines);
     lines.restore(line);
     let inner = self.parse_inlines_until(lines, &[token.kind])?;
     extend(&mut loc, &inner, 1);
     inlines.push(node(wrap(inner), loc));
     text.loc = loc.clamp_end();
+    // if we've consumed the whole line, and there are lines to come, add a newline
+    if text.loc.end == line_end && lines.current().is_some() {
+      text.loc.end += 1;
+      inlines.push(node(JoiningNewline, text.loc));
+      text.loc = text.loc.clamp_end();
+    }
     Ok(())
   }
 
@@ -557,6 +574,31 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 mod tests {
   use super::*;
   use crate::test::*;
+
+  #[test]
+  fn test_joinin_newlines() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "_foo_\nbar",
+        b.vec([
+          n(Italic(b.vec([n_text("foo", 1, 4, b)])), l(0, 5)),
+          n(JoiningNewline, l(5, 6)),
+          n_text("bar", 6, 9, b),
+        ]),
+      ),
+      (
+        "__foo__\nbar",
+        b.vec([
+          n(Italic(b.vec([n_text("foo", 2, 5, b)])), l(0, 7)),
+          n(JoiningNewline, l(7, 8)),
+          n_text("bar", 8, 11, b),
+        ]),
+      ),
+    ];
+
+    run(cases, b);
+  }
 
   #[test]
   fn test_parse_inlines() {
@@ -657,8 +699,8 @@ mod tests {
       (
         "foo b``ar``",
         bvec![in b;
-          n_text("foo b", 0, 5, b),
-          n(Mono(b.vec([n_text("ar", 7, 9, b)])), l(5, 11)),
+        n_text("foo b", 0, 5, b),
+        n(Mono(b.vec([n_text("ar", 7, 9, b)])), l(5, 11)),
         ],
       ),
       (

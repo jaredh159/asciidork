@@ -30,6 +30,10 @@ dependencies = [
 [[package]]
 name = "backend-asciidoctor"
 version = "0.1.0"
+dependencies = [
+ "ast",
+ "parser",
+]
 
 [[package]]
 name = "bitflags"

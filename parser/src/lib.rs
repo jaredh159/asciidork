@@ -10,8 +10,10 @@ mod tasks;
 mod token;
 mod utils;
 
-#[cfg(test)]
-pub mod test;
+pub mod prelude {
+  pub use crate::parser::Parser;
+  pub use bumpalo::Bump;
+}
 
 pub use diagnostic::Diagnostic;
 pub use parser::Parser;
@@ -35,3 +37,6 @@ pub mod variants {
     pub use crate::token::TokenKind::*;
   }
 }
+
+#[cfg(test)]
+pub mod test;

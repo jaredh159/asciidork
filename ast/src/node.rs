@@ -1,17 +1,5 @@
 use crate::internal::*;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Section<'bmp> {
-  level: u8,
-  heading: Heading<'bmp>,
-  blocks: Vec<'bmp, Block<'bmp>>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Heading<'bmp> {
-  inlines: Vec<'bmp, Inline<'bmp>>,
-}
-
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#document
 #[derive(Debug, PartialEq, Eq)]
 pub struct Document<'bmp> {
@@ -26,4 +14,16 @@ impl<'bmp> Document<'bmp> {
       content: DocContent::Blocks(bumpalo::vec![in bump]),
     }
   }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Section<'bmp> {
+  level: u8,
+  heading: Heading<'bmp>,
+  blocks: Vec<'bmp, Block<'bmp>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Heading<'bmp> {
+  inlines: Vec<'bmp, Inline<'bmp>>,
 }
