@@ -25,18 +25,27 @@ impl<'bmp> AttrList<'bmp> {
 
   /// https://docs.asciidoctor.org/asciidoc/latest/blocks/#block-style
   pub fn block_style(&self) -> Option<BlockContext> {
-    let Some(Some(nodes)) = self.positional.get(0) else {
+    if let Some(first_positional) = self.str_positional_at(0) {
+      BlockContext::derive(first_positional)
+    } else {
+      None
+    }
+  }
+
+  pub fn str_positional_at(&self, index: usize) -> Option<&str> {
+    let Some(Some(nodes)) = self.positional.get(index) else {
       return None;
     };
     if nodes.len() != 1 {
       return None;
     }
-    let Inline::Text(first_positional) = &nodes[0].content else {
+    let Inline::Text(first_positional) = &nodes[index].content else {
       return None;
     };
-    BlockContext::derive(first_positional.as_str())
+    Some(first_positional.as_str())
   }
 
+  // todo: rename, make test or something...
   pub fn positional(
     positional: &'static str,
     loc: SourceLocation,

@@ -32,7 +32,11 @@ name = "backend-asciidoctor"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "indoc",
+ "lazy_static",
  "parser",
+ "regex",
+ "test-utils",
 ]
 
 [[package]]
@@ -90,6 +94,12 @@ name = "hermit-abi"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "443144c8cdadd93ebf52ddb4056d257f5b52c04d3c804e657d19eb73fc33668b"
+
+[[package]]
+name = "indoc"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e186cfbae8084e513daff4240b4797e342f988cecda4fb6c939150f96315fd8"
 
 [[package]]
 name = "is-terminal"
@@ -181,6 +191,16 @@ dependencies = [
 [[package]]
 name = "test-utils"
 version = "0.1.0"
+dependencies = [
+ "indoc",
+ "tl",
+]
+
+[[package]]
+name = "tl"
+version = "0.7.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5e993a1c7c32fdf90a308cec4d457f507b2573acc909bd6e7a092321664fdb3"
 
 [[package]]
 name = "windows-sys"

@@ -13,7 +13,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     if lines.is_block_macro() {
       match first_token.lexeme {
-        "image:" => return Ok(Some(self.parse_image_block(lines)?)),
+        "image:" => return Ok(Some(self.parse_image_block(lines, meta)?)),
         _ => todo!("block macro type: `{:?}`", first_token.lexeme),
       }
     }
@@ -76,7 +76,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }))
   }
 
-  fn parse_image_block(&mut self, mut lines: ContiguousLines<'bmp, 'src>) -> Result<Block<'bmp>> {
+  fn parse_image_block(
+    &mut self,
+    mut lines: ContiguousLines<'bmp, 'src>,
+    meta: BlockMetadata<'bmp>,
+  ) -> Result<Block<'bmp>> {
     let mut line = lines.consume_current().unwrap();
     let start = line.location().unwrap().start;
     line.discard_assert(MacroName);
@@ -84,8 +88,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let target = line.consume_macro_target(self.bump);
     let attrs = self.parse_attr_list(&mut line)?;
     Ok(Block {
-      title: None,
-      attrs: None,
+      title: meta.title,
+      attrs: meta.attrs,
       loc: SourceLocation::new(start, attrs.loc.end),
       context: Context::Image,
       content: Content::Empty(EmptyMetadata::Image { target, attrs }),
@@ -102,7 +106,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let result = match inlines.last() {
       Some(last) => Ok(Some(Block {
         title: meta.title,
-        attrs: None,
+        attrs: meta.attrs,
         loc: SourceLocation::new(meta.start, last.loc.end),
         context,
         content: Content::Simple(inlines),
@@ -233,9 +237,21 @@ mod tests {
     };
     assert_eq!(block, expected);
 
+    let mut parser = Parser::new(b, "[pos]\nTIP: foo\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      attrs: Some(AttrList::positional("pos", l(1, 4), b)),
+      context: Context::AdmonitionTip,
+      content: Content::Simple(b.vec([inode(Text(b.s("foo")), l(11, 14))])),
+      loc: l(0, 14),
+      ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+
     let mut parser = Parser::new(b, "[WARNING]\nTIP: foo\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
+      attrs: Some(AttrList::positional("WARNING", l(1, 8), b)),
       context: Context::AdmonitionWarning,
       content: Content::Simple(b.vec([
         inode(Text(b.s("TIP: foo")), l(10, 18)), // <-- attr list wins
@@ -303,11 +319,10 @@ mod tests {
     let expected = Block {
       context: Context::Open,
       content: Content::Compound(b.vec([Block {
-        title: None,
-        attrs: None,
         context: Context::Paragraph,
         content: Content::Simple(b.vec([n_text("foo", 3, 6, b)])),
         loc: l(3, 6),
+        ..Block::empty(b)
       }])),
       loc: l(0, 9),
       ..Block::empty(b)
@@ -340,6 +355,7 @@ mod tests {
     let mut parser = Parser::new(b, "[sidebar]\nfoo\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
+      attrs: Some(AttrList::positional("sidebar", l(1, 8), b)),
       context: Context::Sidebar,
       content: Content::Simple(b.vec([n_text("foo", 10, 13, b)])),
       loc: l(0, 13),

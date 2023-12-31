@@ -1,8 +1,56 @@
 use std::convert::Infallible;
 
+use lazy_static::lazy_static;
+use regex::Regex;
+
 use ast::short::block::*;
 use ast::variants::inline::*;
-use ast::{Block, DocContent, Document, InlineNode, SpecialCharKind};
+use ast::{AttrList, Block, DocContent, Document, EmptyMetadata, InlineNode, SpecialCharKind};
+
+#[derive(Copy, Debug, PartialEq, Eq, Clone)]
+pub enum AdmonitionKind {
+  Tip,
+  Caution,
+  Important,
+  Note,
+  Warning,
+}
+
+impl AdmonitionKind {
+  pub fn lowercase_str(&self) -> &'static str {
+    match self {
+      AdmonitionKind::Tip => "tip",
+      AdmonitionKind::Caution => "caution",
+      AdmonitionKind::Important => "important",
+      AdmonitionKind::Note => "note",
+      AdmonitionKind::Warning => "warning",
+    }
+  }
+
+  pub fn str(&self) -> &'static str {
+    match self {
+      AdmonitionKind::Tip => "Tip",
+      AdmonitionKind::Caution => "Caution",
+      AdmonitionKind::Important => "Important",
+      AdmonitionKind::Note => "Note",
+      AdmonitionKind::Warning => "Warning",
+    }
+  }
+}
+
+impl TryFrom<Context> for AdmonitionKind {
+  type Error = &'static str;
+  fn try_from(context: Context) -> Result<Self, Self::Error> {
+    match context {
+      Context::AdmonitionTip => Ok(AdmonitionKind::Tip),
+      Context::AdmonitionCaution => Ok(AdmonitionKind::Caution),
+      Context::AdmonitionImportant => Ok(AdmonitionKind::Important),
+      Context::AdmonitionNote => Ok(AdmonitionKind::Note),
+      Context::AdmonitionWarning => Ok(AdmonitionKind::Warning),
+      _ => Err("not an admonition"),
+    }
+  }
+}
 
 pub trait Backend {
   type Output;
@@ -12,12 +60,17 @@ pub trait Backend {
   fn enter_document(&mut self, document: &Document);
   fn exit_document(&mut self, document: &Document);
 
-  // blocks
+  // blocks contexts
   fn enter_paragraph_block(&mut self, block: &Block);
   fn exit_paragraph_block(&mut self, block: &Block);
+  fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block);
+  fn exit_image_block(&mut self, block: &Block);
+  fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
+  fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
+
+  // block content
   fn enter_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
   fn exit_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
-  fn visit_block_title(&mut self, title: &str);
 
   /// inlines
   fn visit_inline_text(&mut self, text: &str);
@@ -51,6 +104,49 @@ impl AsciidoctorHtml {
   pub fn into_string(self) -> String {
     self.html
   }
+
+  fn push<const N: usize>(&mut self, strs: [&str; N]) {
+    for s in strs {
+      self.html.push_str(s);
+    }
+  }
+
+  fn visit_block_title(&mut self, title: Option<&str>, prefix: Option<&str>) {
+    if let Some(title) = title {
+      self.html.push_str(r#"<div class="title">"#);
+      if let Some(prefix) = prefix {
+        self.html.push_str(prefix);
+      }
+      self.html.push_str(title);
+      self.html.push_str("</div>");
+    }
+  }
+
+  fn open_element(&mut self, element: &str, classes: &[&str], attrs: &Option<AttrList>) {
+    self.html.push('<');
+    self.html.push_str(element);
+    if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {
+      self.html.push_str(" id=\"");
+      self.html.push_str(id);
+      self.html.push('"');
+    }
+    if !classes.is_empty() || attrs.as_ref().map_or(false, |a| !a.roles.is_empty()) {
+      self.html.push_str(" class=\"");
+      for class in classes {
+        self.html.push_str(class);
+        self.html.push(' ');
+      }
+      if let Some(roles) = attrs.as_ref().map(|a| &a.roles) {
+        for role in roles {
+          self.html.push_str(role);
+          self.html.push(' ');
+        }
+      }
+      self.html.pop();
+      self.html.push('"');
+    }
+    self.html.push('>');
+  }
 }
 
 impl Default for AsciidoctorHtml {
@@ -66,8 +162,9 @@ impl Backend for AsciidoctorHtml {
   fn enter_document(&mut self, _document: &Document) {}
   fn exit_document(&mut self, _document: &Document) {}
 
-  fn enter_paragraph_block(&mut self, _block: &Block) {
+  fn enter_paragraph_block(&mut self, block: &Block) {
     self.html.push_str(r#"<div class="paragraph">"#);
+    self.visit_block_title(block.title.as_deref(), None);
   }
 
   fn exit_paragraph_block(&mut self, _block: &Block) {
@@ -80,12 +177,6 @@ impl Backend for AsciidoctorHtml {
 
   fn exit_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {
     self.html.push_str("</p>");
-  }
-
-  fn visit_block_title(&mut self, title: &str) {
-    self.html.push_str(r#"<div class="title">"#);
-    self.html.push_str(title);
-    self.html.push_str("</div>");
   }
 
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {
@@ -146,6 +237,41 @@ impl Backend for AsciidoctorHtml {
   fn result(&self) -> Result<&Self::Output, Self::Error> {
     Ok(&self.html)
   }
+
+  fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
+    let classes = &["admonitionblock", kind.lowercase_str()];
+    self.open_element("div", classes, &block.attrs);
+    self.html.push_str(r#"<table><tr><td class="icon">"#);
+    self.html.push_str(r#"<div class="title">"#);
+    self.html.push_str(kind.str());
+    self.html.push_str(r#"</div></td><td class="content">"#);
+    self.visit_block_title(block.title.as_deref(), None);
+  }
+
+  fn exit_admonition_block(&mut self, _kind: AdmonitionKind, _block: &Block) {
+    self.html.push_str(r#"</td></tr></table></div>"#);
+  }
+
+  fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block) {
+    let alt = img_attrs.str_positional_at(0).unwrap_or({
+      if let Some(captures) = REMOVE_FILE_EXT.captures(img_target) {
+        captures.get(1).unwrap().as_str()
+      } else {
+        img_target
+      }
+    });
+    self.open_element("div", &["imageblock"], &block.attrs);
+    self.html.push_str(r#"<div class="content">"#);
+    self.push([r#"<img src=""#, img_target, r#"" alt=""#, alt, r#"">"#]);
+    self.html.push_str(r#"</div>"#);
+  }
+
+  fn exit_image_block(&mut self, block: &Block) {
+    // sunday/monday jared: figcaption numbering, checking
+    // https://docs.asciidoctor.org/asciidoc/latest/macros/images/#figure-caption-label
+    self.visit_block_title(block.title.as_deref(), Some("Figure 1. "));
+    self.html.push_str(r#"</div>"#);
+  }
 }
 
 pub fn eval<B: Backend>(document: Document, mut backend: B) -> Result<B::Output, B::Error> {
@@ -170,13 +296,27 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
   match (block.context, &block.content) {
     (Context::Paragraph, Content::Simple(children)) => {
       backend.enter_paragraph_block(block);
-      if let Some(title) = &block.title {
-        backend.visit_block_title(title);
-      }
       backend.enter_simple_block_content(children, block);
       children.iter().for_each(|node| eval_inline(node, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_paragraph_block(block);
+    }
+    (
+      Context::AdmonitionTip
+      | Context::AdmonitionNote
+      | Context::AdmonitionCaution
+      | Context::AdmonitionWarning
+      | Context::AdmonitionImportant,
+      Content::Simple(children),
+    ) => {
+      let admonition = AdmonitionKind::try_from(block.context).unwrap();
+      backend.enter_admonition_block(admonition, block);
+      children.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_admonition_block(admonition, block);
+    }
+    (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs })) => {
+      backend.enter_image_block(target, attrs, block);
+      backend.exit_image_block(block);
     }
     _ => todo!(),
   }
@@ -217,6 +357,10 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
       todo!();
     }
   }
+}
+
+lazy_static! {
+  pub static ref REMOVE_FILE_EXT: Regex = Regex::new(r"^(.*)\.[^.]+$").unwrap();
 }
 
 #[cfg(test)]
