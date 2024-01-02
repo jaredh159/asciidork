@@ -88,6 +88,55 @@ fn test_eval() {
         </div>
       "#},
     ),
+    (
+      indoc! {r#"
+        .Cat
+        image::cat.png[]
+
+        .Dog
+        image::dog.png[]
+      "#},
+      indoc! {r#"
+        <div class="imageblock">
+          <div class="content">
+            <img src="cat.png" alt="cat">
+          </div>
+          <div class="title">Figure 1. Cat</div>
+        </div>
+        <div class="imageblock">
+          <div class="content">
+            <img src="dog.png" alt="dog">
+          </div>
+          <div class="title">Figure 2. Dog</div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        = Doc Header
+        :!figure-caption:
+
+        .Cat
+        image::cat.png[]
+
+        .Dog
+        image::dog.png[]
+      "#},
+      indoc! {r#"
+        <div class="imageblock">
+          <div class="content">
+            <img src="cat.png" alt="cat">
+          </div>
+          <div class="title">Cat</div>
+        </div>
+        <div class="imageblock">
+          <div class="content">
+            <img src="dog.png" alt="dog">
+          </div>
+          <div class="title">Dog</div>
+        </div>
+      "#},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();

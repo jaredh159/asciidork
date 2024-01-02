@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::internal::*;
 use crate::variants::token::*;
 
@@ -21,7 +19,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       title: None,
       authors: bvec![in self.bump],
       revision: None,
-      attrs: HashMap::new(),
+      attrs: AttrEntries::new(),
     };
 
     self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;

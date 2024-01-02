@@ -1,5 +1,7 @@
 ## todo
 
+- [ ] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
+      folded into ContiguousLines so that it shows up as one line, i think
 - [ ] block quotes
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
@@ -13,8 +15,8 @@
       `{docdate}` example
 - [ ] h1 subtitle
       https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/#email-autolinks
-- [ ] unsetting doc attrs, e.g. `:version-label!:`
 - [•] soon: multi-file non corner painting
+- [√] unsetting doc attrs, e.g. `:version-label!:`
 - [√] contiguous sidebar with no delimiters using [sidebar]
 - [√] whacky `.Optional title` block first line above blocks (search docs for "sidebar")
 - [√] email autolinks:

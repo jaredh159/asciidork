@@ -1,64 +1,20 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
 
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use ast::prelude::*;
 use ast::short::block::*;
 use ast::variants::inline::*;
-use ast::{AttrList, Block, DocContent, Document, EmptyMetadata, InlineNode, SpecialCharKind};
-
-#[derive(Copy, Debug, PartialEq, Eq, Clone)]
-pub enum AdmonitionKind {
-  Tip,
-  Caution,
-  Important,
-  Note,
-  Warning,
-}
-
-impl AdmonitionKind {
-  pub fn lowercase_str(&self) -> &'static str {
-    match self {
-      AdmonitionKind::Tip => "tip",
-      AdmonitionKind::Caution => "caution",
-      AdmonitionKind::Important => "important",
-      AdmonitionKind::Note => "note",
-      AdmonitionKind::Warning => "warning",
-    }
-  }
-
-  pub fn str(&self) -> &'static str {
-    match self {
-      AdmonitionKind::Tip => "Tip",
-      AdmonitionKind::Caution => "Caution",
-      AdmonitionKind::Important => "Important",
-      AdmonitionKind::Note => "Note",
-      AdmonitionKind::Warning => "Warning",
-    }
-  }
-}
-
-impl TryFrom<Context> for AdmonitionKind {
-  type Error = &'static str;
-  fn try_from(context: Context) -> Result<Self, Self::Error> {
-    match context {
-      Context::AdmonitionTip => Ok(AdmonitionKind::Tip),
-      Context::AdmonitionCaution => Ok(AdmonitionKind::Caution),
-      Context::AdmonitionImportant => Ok(AdmonitionKind::Important),
-      Context::AdmonitionNote => Ok(AdmonitionKind::Note),
-      Context::AdmonitionWarning => Ok(AdmonitionKind::Warning),
-      _ => Err("not an admonition"),
-    }
-  }
-}
 
 pub trait Backend {
   type Output;
   type Error;
 
   // document
-  fn enter_document(&mut self, document: &Document);
-  fn exit_document(&mut self, document: &Document);
+  fn enter_document(&mut self, document: &Document, doc_attrs: &AttrEntries);
+  fn exit_document(&mut self, document: &Document, doc_attrs: &AttrEntries);
 
   // blocks contexts
   fn enter_paragraph_block(&mut self, block: &Block);
@@ -94,11 +50,17 @@ pub trait Backend {
 
 pub struct AsciidoctorHtml {
   html: String,
+  doc_attrs: AttrEntries,
+  fig_caption_num: usize,
 }
 
 impl AsciidoctorHtml {
   pub fn new() -> Self {
-    Self { html: String::new() }
+    Self {
+      html: String::new(),
+      doc_attrs: AttrEntries::new(),
+      fig_caption_num: 0,
+    }
   }
 
   pub fn into_string(self) -> String {
@@ -111,11 +73,11 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn visit_block_title(&mut self, title: Option<&str>, prefix: Option<&str>) {
+  fn visit_block_title(&mut self, title: Option<&str>, prefix: Option<Cow<str>>) {
     if let Some(title) = title {
       self.html.push_str(r#"<div class="title">"#);
       if let Some(prefix) = prefix {
-        self.html.push_str(prefix);
+        self.html.push_str(prefix.as_ref());
       }
       self.html.push_str(title);
       self.html.push_str("</div>");
@@ -159,8 +121,11 @@ impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
 
-  fn enter_document(&mut self, _document: &Document) {}
-  fn exit_document(&mut self, _document: &Document) {}
+  fn enter_document(&mut self, _document: &Document, doc_attrs: &AttrEntries) {
+    self.doc_attrs = doc_attrs.clone();
+  }
+
+  fn exit_document(&mut self, _document: &Document, _doc_attrs: &AttrEntries) {}
 
   fn enter_paragraph_block(&mut self, block: &Block) {
     self.html.push_str(r#"<div class="paragraph">"#);
@@ -267,9 +232,13 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_image_block(&mut self, block: &Block) {
-    // sunday/monday jared: figcaption numbering, checking
-    // https://docs.asciidoctor.org/asciidoc/latest/macros/images/#figure-caption-label
-    self.visit_block_title(block.title.as_deref(), Some("Figure 1. "));
+    let prefix = if self.doc_attrs.is_unset("figure-caption") {
+      None
+    } else {
+      self.fig_caption_num += 1;
+      Some(Cow::Owned(format!("Figure {}. ", self.fig_caption_num)))
+    };
+    self.visit_block_title(block.title.as_deref(), prefix);
     self.html.push_str(r#"</div>"#);
   }
 }
@@ -280,7 +249,13 @@ pub fn eval<B: Backend>(document: Document, mut backend: B) -> Result<B::Output,
 }
 
 pub fn visit<B: Backend>(document: Document, backend: &mut B) {
-  backend.enter_document(&document);
+  let empty_attrs = AttrEntries::new();
+  let doc_attrs = document
+    .header
+    .as_ref()
+    .map(|h| &h.attrs)
+    .unwrap_or(&empty_attrs);
+  backend.enter_document(&document, doc_attrs);
   match &document.content {
     DocContent::Blocks(blocks) => {
       for block in blocks {
@@ -289,7 +264,7 @@ pub fn visit<B: Backend>(document: Document, backend: &mut B) {
     }
     DocContent::Sectioned { .. } => todo!(),
   }
-  backend.exit_document(&document);
+  backend.exit_document(&document, doc_attrs);
 }
 
 fn eval_block(block: &Block, backend: &mut impl Backend) {
@@ -363,10 +338,47 @@ lazy_static! {
   pub static ref REMOVE_FILE_EXT: Regex = Regex::new(r"^(.*)\.[^.]+$").unwrap();
 }
 
-#[cfg(test)]
-mod tests {
-  #[test]
-  fn it_works() {
-    assert_eq!(2 + 2, 4);
+#[derive(Copy, Debug, PartialEq, Eq, Clone)]
+pub enum AdmonitionKind {
+  Tip,
+  Caution,
+  Important,
+  Note,
+  Warning,
+}
+
+impl AdmonitionKind {
+  pub fn lowercase_str(&self) -> &'static str {
+    match self {
+      AdmonitionKind::Tip => "tip",
+      AdmonitionKind::Caution => "caution",
+      AdmonitionKind::Important => "important",
+      AdmonitionKind::Note => "note",
+      AdmonitionKind::Warning => "warning",
+    }
+  }
+
+  pub fn str(&self) -> &'static str {
+    match self {
+      AdmonitionKind::Tip => "Tip",
+      AdmonitionKind::Caution => "Caution",
+      AdmonitionKind::Important => "Important",
+      AdmonitionKind::Note => "Note",
+      AdmonitionKind::Warning => "Warning",
+    }
+  }
+}
+
+impl TryFrom<Context> for AdmonitionKind {
+  type Error = &'static str;
+  fn try_from(context: Context) -> Result<Self, Self::Error> {
+    match context {
+      Context::AdmonitionTip => Ok(AdmonitionKind::Tip),
+      Context::AdmonitionCaution => Ok(AdmonitionKind::Caution),
+      Context::AdmonitionImportant => Ok(AdmonitionKind::Important),
+      Context::AdmonitionNote => Ok(AdmonitionKind::Note),
+      Context::AdmonitionWarning => Ok(AdmonitionKind::Warning),
+      _ => Err("not an admonition"),
+    }
   }
 }
