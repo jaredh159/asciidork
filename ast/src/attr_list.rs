@@ -32,6 +32,10 @@ impl<'bmp> AttrList<'bmp> {
     }
   }
 
+  pub fn named(&self, key: &str) -> Option<&str> {
+    self.named.get(key).map(|s| s.src.as_str())
+  }
+
   pub fn str_positional_at(&self, index: usize) -> Option<&str> {
     let Some(Some(nodes)) = self.positional.get(index) else {
       return None;
@@ -39,10 +43,10 @@ impl<'bmp> AttrList<'bmp> {
     if nodes.len() != 1 {
       return None;
     }
-    let Inline::Text(first_positional) = &nodes[index].content else {
+    let Inline::Text(positional) = &nodes[0].content else {
       return None;
     };
-    Some(first_positional.as_str())
+    Some(positional.as_str())
   }
 
   // todo: rename, make test or something...

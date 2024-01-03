@@ -29,6 +29,7 @@ pub enum BlockContent<'bmp> {
   Raw,
   Empty(EmptyMetadata<'bmp>),
   Table,
+  DocumentAttribute(StdString, AttrEntry),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -50,6 +51,7 @@ pub enum BlockContext {
   CalloutList,
   DescriptionList,
   DiscreteHeading,
+  DocumentAttributeDecl,
   Example,
   Image,
   ListItem,

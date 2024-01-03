@@ -92,7 +92,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           state.escaping = true;
           continue;
         }
-        Dot if state.quotes == Default => {
+        Dot
+          if state.quotes == Default
+            && (state.kind == Role || state.kind == Id || state.prev_token != Some(Word)) =>
+        {
           state.commit_prev(self)?;
           state.kind = Role;
         }
@@ -302,6 +305,26 @@ mod tests {
         },
       ),
       (
+        "[link=https://example.com]", // named, without quotes
+        AttrList {
+          named: Named::from(b.vec([(
+            b.src("link", l(1, 5)),
+            b.src("https://example.com", l(6, 25)),
+          )])),
+          ..AttrList::new(l(0, 26), b)
+        },
+      ),
+      (
+        "[link=\"https://example.com\"]",
+        AttrList {
+          named: Named::from(b.vec([(
+            b.src("link", l(1, 5)),
+            b.src("https://example.com", l(7, 26)),
+          )])),
+          ..AttrList::new(l(0, 28), b)
+        },
+      ),
+      (
         "[\\ ]", // keyboard macro
         AttrList {
           positional: b.vec([Some(b.vec([n_text("\\", 1, 2, b)]))]),
@@ -320,6 +343,14 @@ mod tests {
         AttrList {
           id: Some(b.src("someid", l(2, 8))),
           ..AttrList::new(l(0, 9), b)
+        },
+      ),
+      (
+        "[#someid.nowrap]",
+        AttrList {
+          id: Some(b.src("someid", l(2, 8))),
+          roles: b.vec([b.src("nowrap", l(9, 15))]),
+          ..AttrList::new(l(0, 16), b)
         },
       ),
       (

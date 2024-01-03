@@ -9,17 +9,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     lines: &mut ContiguousLines<'bmp, 'src>,
     attrs: &mut AttrEntries,
   ) -> Result<()> {
-    while let Some((key, value)) = self.parse_doc_attr(lines, attrs)? {
+    while let Some((key, value, _)) = self.parse_doc_attr(lines, attrs)? {
       attrs.insert(key, value);
     }
     Ok(())
   }
 
-  fn parse_doc_attr(
+  pub(super) fn parse_doc_attr(
     &self,
     lines: &mut ContiguousLines,
     attrs: &mut AttrEntries,
-  ) -> Result<Option<(StdString, AttrEntry)>> {
+  ) -> Result<Option<(StdString, AttrEntry, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
     };
@@ -64,7 +64,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       AttrEntry::Bool(!is_negated)
     };
 
-    Ok(Some((key.to_string(), attr)))
+    Ok(Some((
+      key.to_string(),
+      attr,
+      line.last_location().unwrap().end,
+    )))
   }
 }
 
@@ -101,17 +105,18 @@ mod tests {
         ("foo-bar", AttrEntry::String("baz, rofl, lol".to_string())),
       ),
     ];
-    for (input, (key, value)) in cases {
+    for (input, (expected_key, expected_val)) in cases {
       let mut existing = AttrEntries::new();
       existing.insert("custom".to_string(), AttrEntry::String("value".to_string()));
       existing.insert("baz".to_string(), AttrEntry::String("qux".to_string()));
       let mut parser = crate::Parser::new(b, input);
       let mut block = parser.read_lines().unwrap();
-      let attr = parser
+      let (key, value, _) = parser
         .parse_doc_attr(&mut block, &mut existing)
         .unwrap()
         .unwrap();
-      assert_eq!(attr, (key.to_string(), value));
+      assert_eq!(&key, expected_key);
+      assert_eq!(value, expected_val);
     }
   }
 }

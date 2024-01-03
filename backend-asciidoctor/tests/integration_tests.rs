@@ -4,6 +4,40 @@ use parser::prelude::*;
 use indoc::indoc;
 use regex::Regex;
 
+// #[test]
+// fn test_isolate() {
+//   let input = indoc! {r#"
+//     .Title
+//     image::foo.png[]
+
+//     :!figure-caption:
+
+//     .Next
+//     image::bar.png[]
+//   "#};
+//   let expected = indoc! {r#"
+//     <div class="imageblock">
+//       <div class="content">
+//         <img src="foo.png" alt="foo">
+//       </div>
+//       <div class="title">Figure 1. Title</div>
+//     </div>
+//     <div class="imageblock">
+//       <div class="content">
+//         <img src="bar.png" alt="bar">
+//       </div>
+//       <div class="title">Next</div>
+//     </div>
+//   "#};
+//   let bump = &Bump::new();
+//   let re = Regex::new(r"(?m)\n\s*").unwrap();
+//   let expected = re.replace_all(expected, "");
+//   let parser = Parser::new(bump, input);
+//   let doc = parser.parse().unwrap().document;
+//   let asciidoctor_html = AsciidoctorHtml::new();
+//   assert_eq!(eval(doc, asciidoctor_html).unwrap(), expected);
+// }
+
 #[test]
 fn test_eval() {
   let cases = vec![
@@ -134,6 +168,48 @@ fn test_eval() {
             <img src="dog.png" alt="dog">
           </div>
           <div class="title">Dog</div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        .A mountain sunset
+        [#img-sunset,link=https://www.flickr.com/photos/javh/5448336655]
+        image::sunset.jpg[Sunset,200,100]
+      "#},
+      indoc! {r#"
+        <div id="img-sunset" class="imageblock">
+          <div class="content">
+            <a class="image" href="https://www.flickr.com/photos/javh/5448336655">
+              <img src="sunset.jpg" alt="Sunset" width="200" height="100">
+            </a>
+          </div>
+          <div class="title">Figure 1. A mountain sunset</div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        .Title
+        image::foo.png[]
+
+        :!figure-caption:
+
+        .Next
+        image::bar.png[]
+      "#},
+      indoc! {r#"
+        <div class="imageblock">
+          <div class="content">
+            <img src="foo.png" alt="foo">
+          </div>
+          <div class="title">Figure 1. Title</div>
+        </div>
+        <div class="imageblock">
+          <div class="content">
+            <img src="bar.png" alt="bar">
+          </div>
+          <div class="title">Next</div>
         </div>
       "#},
     ),

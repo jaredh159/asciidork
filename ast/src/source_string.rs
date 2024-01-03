@@ -29,6 +29,6 @@ impl<'bmp> std::cmp::PartialEq<str> for SourceString<'bmp> {
 }
 impl<'bmp> std::fmt::Debug for SourceString<'bmp> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "SourceString {{ \"{}\", {:?} }}", self.src, self.loc)
+    write!(f, "SourceString{{\"{}\",{:?}}}", self.src, self.loc)
   }
 }

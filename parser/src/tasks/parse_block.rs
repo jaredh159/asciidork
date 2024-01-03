@@ -18,6 +18,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
 
+    let mut attr_entries = AttrEntries::new();
     match first_token.kind {
       DelimiterLine if self.ctx.delimiter == first_token.to_delimeter() => {
         self.restore_lines(lines);
@@ -26,6 +27,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       DelimiterLine => {
         let delimiter = first_token.to_delimeter().unwrap();
         return self.parse_delimited_block(delimiter, lines, meta);
+      }
+      Colon => {
+        if let Some((key, value, end)) = self.parse_doc_attr(&mut lines, &mut attr_entries)? {
+          return Ok(Some(Block {
+            title: None,
+            attrs: None,
+            loc: SourceLocation::new(meta.start, end),
+            context: Context::DocumentAttributeDecl,
+            content: Content::DocumentAttribute(key, value),
+          }));
+        }
       }
       _ => {}
     }
@@ -196,8 +208,6 @@ mod tests {
     let mut parser = Parser::new(b, "hello mamma,\nhello papa\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
-      title: None,
-      attrs: None,
       context: Context::Paragraph,
       content: Content::Simple(b.vec([
         inode(Text(b.s("hello mamma,")), l(0, 12)),
@@ -205,6 +215,21 @@ mod tests {
         inode(Text(b.s("hello papa")), l(13, 23)),
       ])),
       loc: l(0, 23),
+      ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_doc_attr_entry() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, ":!figure-caption:\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      context: Context::DocumentAttributeDecl,
+      content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
+      loc: l(0, 17),
+      ..Block::empty(b)
     };
     assert_eq!(block, expected);
   }

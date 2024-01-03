@@ -8,6 +8,8 @@ pub struct DocHeader<'bmp> {
   pub title: Option<DocTitle<'bmp>>,
   pub authors: Vec<'bmp, Author<'bmp>>,
   pub revision: Option<Revision<'bmp>>,
+  // 👍 thurs jared: make non optional up at the doc level, maybe with
+  // an empty entries that gets handed out if doc header not present
   pub attrs: AttrEntries,
 }
 

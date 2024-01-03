@@ -13,8 +13,9 @@ pub trait Backend {
   type Error;
 
   // document
-  fn enter_document(&mut self, document: &Document, doc_attrs: &AttrEntries);
-  fn exit_document(&mut self, document: &Document, doc_attrs: &AttrEntries);
+  fn enter_document(&mut self, document: &Document, header_attrs: &AttrEntries);
+  fn exit_document(&mut self, document: &Document, header_attrs: &AttrEntries);
+  fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry);
 
   // blocks contexts
   fn enter_paragraph_block(&mut self, block: &Block);
@@ -67,47 +68,55 @@ impl AsciidoctorHtml {
     self.html
   }
 
+  fn push_str(&mut self, s: &str) {
+    self.html.push_str(s);
+  }
+
+  fn push_ch(&mut self, c: char) {
+    self.html.push(c);
+  }
+
   fn push<const N: usize>(&mut self, strs: [&str; N]) {
     for s in strs {
-      self.html.push_str(s);
+      self.push_str(s);
     }
   }
 
   fn visit_block_title(&mut self, title: Option<&str>, prefix: Option<Cow<str>>) {
     if let Some(title) = title {
-      self.html.push_str(r#"<div class="title">"#);
+      self.push_str(r#"<div class="title">"#);
       if let Some(prefix) = prefix {
-        self.html.push_str(prefix.as_ref());
+        self.push_str(prefix.as_ref());
       }
-      self.html.push_str(title);
-      self.html.push_str("</div>");
+      self.push_str(title);
+      self.push_str("</div>");
     }
   }
 
   fn open_element(&mut self, element: &str, classes: &[&str], attrs: &Option<AttrList>) {
-    self.html.push('<');
-    self.html.push_str(element);
+    self.push_ch('<');
+    self.push_str(element);
     if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {
-      self.html.push_str(" id=\"");
-      self.html.push_str(id);
-      self.html.push('"');
+      self.push_str(" id=\"");
+      self.push_str(id);
+      self.push_ch('"');
     }
     if !classes.is_empty() || attrs.as_ref().map_or(false, |a| !a.roles.is_empty()) {
-      self.html.push_str(" class=\"");
+      self.push_str(" class=\"");
       for class in classes {
-        self.html.push_str(class);
-        self.html.push(' ');
+        self.push_str(class);
+        self.push_ch(' ');
       }
       if let Some(roles) = attrs.as_ref().map(|a| &a.roles) {
         for role in roles {
-          self.html.push_str(role);
-          self.html.push(' ');
+          self.push_str(role);
+          self.push_ch(' ');
         }
       }
       self.html.pop();
-      self.html.push('"');
+      self.push_ch('"');
     }
-    self.html.push('>');
+    self.push_ch('>');
   }
 }
 
@@ -121,59 +130,59 @@ impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
 
-  fn enter_document(&mut self, _document: &Document, doc_attrs: &AttrEntries) {
-    self.doc_attrs = doc_attrs.clone();
+  fn enter_document(&mut self, _document: &Document, header_attrs: &AttrEntries) {
+    self.doc_attrs = header_attrs.clone();
   }
 
-  fn exit_document(&mut self, _document: &Document, _doc_attrs: &AttrEntries) {}
+  fn exit_document(&mut self, _document: &Document, _header_attrs: &AttrEntries) {}
 
   fn enter_paragraph_block(&mut self, block: &Block) {
-    self.html.push_str(r#"<div class="paragraph">"#);
+    self.push_str(r#"<div class="paragraph">"#);
     self.visit_block_title(block.title.as_deref(), None);
   }
 
   fn exit_paragraph_block(&mut self, _block: &Block) {
-    self.html.push_str("</div>");
+    self.push_str("</div>");
   }
 
   fn enter_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {
-    self.html.push_str("<p>");
+    self.push_str("<p>");
   }
 
   fn exit_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {
-    self.html.push_str("</p>");
+    self.push_str("</p>");
   }
 
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("<em>");
+    self.push_str("<em>");
   }
 
   fn exit_inline_italic(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("</em>");
+    self.push_str("</em>");
   }
 
   fn visit_inline_text(&mut self, text: &str) {
-    self.html.push_str(text);
+    self.push_str(text);
   }
 
   fn visit_joining_newline(&mut self) {
-    self.html.push(' ');
+    self.push_ch(' ');
   }
 
   fn enter_inline_mono(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("<code>");
+    self.push_str("<code>");
   }
 
   fn exit_inline_mono(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("</code>");
+    self.push_str("</code>");
   }
 
   fn enter_inline_bold(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("<strong>");
+    self.push_str("<strong>");
   }
 
   fn exit_inline_bold(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("</strong>");
+    self.push_str("</strong>");
   }
 
   fn enter_inline_passthrough(&mut self, _children: &[InlineNode]) {}
@@ -181,18 +190,18 @@ impl Backend for AsciidoctorHtml {
 
   fn visit_inline_specialchar(&mut self, char: &SpecialCharKind) {
     match char {
-      SpecialCharKind::Ampersand => self.html.push_str("&amp;"),
-      SpecialCharKind::LessThan => self.html.push_str("&lt;"),
-      SpecialCharKind::GreaterThan => self.html.push_str("&gt;"),
+      SpecialCharKind::Ampersand => self.push_str("&amp;"),
+      SpecialCharKind::LessThan => self.push_str("&lt;"),
+      SpecialCharKind::GreaterThan => self.push_str("&gt;"),
     }
   }
 
   fn enter_inline_highlight(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("<mark>");
+    self.push_str("<mark>");
   }
 
   fn exit_inline_highlight(&mut self, _children: &[InlineNode]) {
-    self.html.push_str("</mark>");
+    self.push_str("</mark>");
   }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {
@@ -206,15 +215,14 @@ impl Backend for AsciidoctorHtml {
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
     let classes = &["admonitionblock", kind.lowercase_str()];
     self.open_element("div", classes, &block.attrs);
-    self.html.push_str(r#"<table><tr><td class="icon">"#);
-    self.html.push_str(r#"<div class="title">"#);
-    self.html.push_str(kind.str());
-    self.html.push_str(r#"</div></td><td class="content">"#);
+    self.push_str(r#"<table><tr><td class="icon"><div class="title">"#);
+    self.push_str(kind.str());
+    self.push_str(r#"</div></td><td class="content">"#);
     self.visit_block_title(block.title.as_deref(), None);
   }
 
   fn exit_admonition_block(&mut self, _kind: AdmonitionKind, _block: &Block) {
-    self.html.push_str(r#"</td></tr></table></div>"#);
+    self.push_str(r#"</td></tr></table></div>"#);
   }
 
   fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block) {
@@ -226,9 +234,24 @@ impl Backend for AsciidoctorHtml {
       }
     });
     self.open_element("div", &["imageblock"], &block.attrs);
-    self.html.push_str(r#"<div class="content">"#);
-    self.push([r#"<img src=""#, img_target, r#"" alt=""#, alt, r#"">"#]);
-    self.html.push_str(r#"</div>"#);
+    self.push_str(r#"<div class="content">"#);
+    let mut has_link = false;
+    if let Some(href) = &block.attrs.as_ref().and_then(|attrs| attrs.named("link")) {
+      self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
+      has_link = true;
+    }
+    self.push([r#"<img src=""#, img_target, r#"" alt=""#, alt, "\""]);
+    if let Some(width) = img_attrs.str_positional_at(1) {
+      self.push([r#" width=""#, width, "\""]);
+    }
+    if let Some(height) = img_attrs.str_positional_at(2) {
+      self.push([r#" height=""#, height, "\""]);
+    }
+    self.push_ch('>');
+    if has_link {
+      self.push_str("</a>");
+    }
+    self.push_str(r#"</div>"#);
   }
 
   fn exit_image_block(&mut self, block: &Block) {
@@ -239,7 +262,11 @@ impl Backend for AsciidoctorHtml {
       Some(Cow::Owned(format!("Figure {}. ", self.fig_caption_num)))
     };
     self.visit_block_title(block.title.as_deref(), prefix);
-    self.html.push_str(r#"</div>"#);
+    self.push_str(r#"</div>"#);
+  }
+
+  fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry) {
+    self.doc_attrs.insert(name.to_string(), entry.clone());
   }
 }
 
@@ -292,6 +319,9 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
     (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs })) => {
       backend.enter_image_block(target, attrs, block);
       backend.exit_image_block(block);
+    }
+    (Context::DocumentAttributeDecl, Content::DocumentAttribute(name, entry)) => {
+      backend.visit_document_attribute_decl(name, entry);
     }
     _ => todo!(),
   }
