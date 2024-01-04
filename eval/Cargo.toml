@@ -1,0 +1,8 @@
+[package]
+name = "asciidork-eval"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+asciidork-ast = { path = "../ast" }
+asciidork-backend = { path = "../backend" }

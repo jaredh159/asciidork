@@ -1,15 +1,17 @@
 [package]
-name = "backend-asciidoctor"
+name = "asciidork-backend-asciidoctor"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ast = { path = "../ast" }
+asciidork-ast = { path = "../ast" }
+asciidork-backend = { path = "../backend" }
 lazy_static = "1.4.0"
 regex = "1.10.2"
 
 [dev-dependencies]
-parser = { path = "../parser" }
+asciidork-parser = { path = "../parser" }
+asciidork-eval = { path = "../eval" }
 test-utils = { path = "../test-utils" }
 indoc = "2.0.4"
 regex = { version = "1.10.2", features = ["std", "use_std"] }

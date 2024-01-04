@@ -10,13 +10,23 @@ check:
   cargo build
 
 watch-print-ast file:
-  @watchexec --no-vcs-ignore --restart --clear --watch parser/src --watch adork-cli/src --watch {{file}} cargo run print-ast {{file}}
+  @watchexec --no-vcs-ignore --restart --clear \
+  --watch ast/src \
+  --watch backend/src \
+  --watch backend-asciidoctor-html/src \
+  --watch cli/src \
+  --watch eval/src \
+  --watch parser/src \
+  --watch {{file}} \
+  cargo run print-ast {{file}}
 
 watch-test isolate="":
   @watchexec --restart --clear \
-  --watch parser/src \
-  --watch adork-cli/src \
-  --watch test-utils/src \
   --watch ast/src \
-  --watch backend-asciidoctor/src --watch backend-asciidoctor/tests \
+  --watch backend/src \
+  --watch backend-asciidoctor-html/src \
+  --watch backend-asciidoctor-html/tests \
+  --watch cli/src \
+  --watch eval/src \
+  --watch parser/src \
   cargo test {{isolate}}

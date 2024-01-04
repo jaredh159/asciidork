@@ -5,7 +5,7 @@ use std::{env, fs};
 use bumpalo::Bump;
 use colored::*;
 
-use parser::parser::Parser;
+use asciidork_parser::parser::Parser;
 
 fn main() {
   let args = env::args().skip(1).collect::<Vec<String>>();

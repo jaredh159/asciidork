@@ -2,10 +2,12 @@
 
 members = [
   "ast",
-  "adork-cli",
-  "test-utils",
+  "backend",
+  "backend-asciidoctor-html",
+  "cli",
+  "eval",
   "parser",
-  "backend-asciidoctor"
+  "test-utils",
 ]
 
 resolver = "2"

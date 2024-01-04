@@ -10,6 +10,8 @@ mod tasks;
 mod token;
 mod utils;
 
+extern crate asciidork_ast as ast;
+
 pub mod prelude {
   pub use crate::parser::Parser;
   pub use bumpalo::Bump;
