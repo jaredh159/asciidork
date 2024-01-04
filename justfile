@@ -20,6 +20,18 @@ watch-print-ast file:
   --watch {{file}} \
   cargo run print-ast {{file}}
 
+watch-print-html file:
+  @watchexec --no-vcs-ignore --restart --clear \
+  --watch ast/src \
+  --watch backend/src \
+  --watch backend-asciidoctor-html/src \
+  --watch cli/src \
+  --watch eval/src \
+  --watch parser/src \
+  --watch {{file}} \
+  cargo run print-html {{file}}
+
+
 watch-test isolate="":
   @watchexec --restart --clear \
   --watch ast/src \

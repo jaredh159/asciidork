@@ -53,7 +53,10 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
     (Context::DocumentAttributeDecl, Content::DocumentAttribute(name, entry)) => {
       backend.visit_document_attribute_decl(name, entry);
     }
-    _ => todo!(),
+    _ => {
+      dbg!(block.context);
+      todo!();
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-use asciidork_backend_asciidoctor::AsciidoctorHtml;
+use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
 use asciidork_eval::eval;
 use asciidork_parser::prelude::*;
 

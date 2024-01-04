@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+asciidork-eval = { path = "../eval" }
 asciidork-parser = { path = "../parser" }
+asciidork-backend-asciidoctor-html = { path = "../backend-asciidoctor-html" }
 colored = "2.0.4"
 bumpalo = { version = "3.14.0", features = ["collections"] }

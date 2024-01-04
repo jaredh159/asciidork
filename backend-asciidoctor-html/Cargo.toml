@@ -1,5 +1,5 @@
 [package]
-name = "asciidork-backend-asciidoctor"
+name = "asciidork-backend-asciidoctor-html"
 version = "0.1.0"
 edition = "2021"
 
