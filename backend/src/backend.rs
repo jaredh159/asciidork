@@ -37,6 +37,8 @@ pub trait Backend {
   fn exit_inline_passthrough(&mut self, children: &[InlineNode]);
   fn enter_inline_highlight(&mut self, children: &[InlineNode]);
   fn exit_inline_highlight(&mut self, children: &[InlineNode]);
+  fn enter_footnote(&mut self, id: Option<&str>, content: &[InlineNode]);
+  fn exit_footnote(&mut self, id: Option<&str>, content: &[InlineNode]);
 
   // result
   fn into_result(self) -> Result<Self::Output, Self::Error>;

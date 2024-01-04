@@ -192,34 +192,27 @@ fn test_eval() {
   }
 }
 
-// #[test]
-// fn test_isolate() {
-//   let input = indoc! {r#"
-//     .Title
-//     image::foo.png[]
-//     :!figure-caption:
-//     .Next
-//     image::bar.png[]
-//   "#};
-//   let expected = indoc! {r#"
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="foo.png" alt="foo">
-//       </div>
-//       <div class="title">Figure 1. Title</div>
-//     </div>
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="bar.png" alt="bar">
-//       </div>
-//       <div class="title">Next</div>
-//     </div>
-//   "#};
-//   let bump = &Bump::new();
-//   let re = Regex::new(r"(?m)\n\s*").unwrap();
-//   let expected = re.replace_all(expected, "");
-//   let parser = Parser::new(bump, input);
-//   let doc = parser.parse().unwrap().document;
-//   let asciidoctor_html = AsciidoctorHtml::new();
-//   assert_eq!(eval(doc, asciidoctor_html).unwrap(), expected);
-// }
+#[test]
+fn test_isolate() {
+  let input = indoc! {r#"
+    foo.footnote:[bar]
+  "#};
+  let expected = indoc! {r##"
+    <div class="paragraph">
+      <p>foo.<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup></p>
+    </div>
+    <div id="footnotes">
+      <hr>
+      <div class="footnote" id="_footnote_1">
+        <a href="#_footnoteref_1">1</a>. bar
+      </div>
+    </div>
+  "##};
+  let bump = &Bump::new();
+  let re = Regex::new(r"(?m)\n\s*").unwrap();
+  let expected = re.replace_all(expected, "");
+  let parser = Parser::new(bump, input);
+  let doc = parser.parse().unwrap().document;
+  let asciidoctor_html = AsciidoctorHtml::new();
+  assert_eq!(eval(doc, asciidoctor_html).unwrap(), expected);
+}

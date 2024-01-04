@@ -1,80 +1,14 @@
+use std::collections::HashMap;
+
 use crate::internal::*;
 
 pub struct AsciidoctorHtml {
   html: String,
+  alt_html: String,
+  footnotes: HashMap<String, String>,
+  footnote_num: usize,
   doc_attrs: AttrEntries,
   fig_caption_num: usize,
-}
-
-impl AsciidoctorHtml {
-  pub fn new() -> Self {
-    Self {
-      html: String::new(),
-      doc_attrs: AttrEntries::new(),
-      fig_caption_num: 0,
-    }
-  }
-
-  pub fn into_string(self) -> String {
-    self.html
-  }
-
-  fn push_str(&mut self, s: &str) {
-    self.html.push_str(s);
-  }
-
-  fn push_ch(&mut self, c: char) {
-    self.html.push(c);
-  }
-
-  fn push<const N: usize>(&mut self, strs: [&str; N]) {
-    for s in strs {
-      self.push_str(s);
-    }
-  }
-
-  fn visit_block_title(&mut self, title: Option<&str>, prefix: Option<Cow<str>>) {
-    if let Some(title) = title {
-      self.push_str(r#"<div class="title">"#);
-      if let Some(prefix) = prefix {
-        self.push_str(prefix.as_ref());
-      }
-      self.push_str(title);
-      self.push_str("</div>");
-    }
-  }
-
-  fn open_element(&mut self, element: &str, classes: &[&str], attrs: &Option<AttrList>) {
-    self.push_ch('<');
-    self.push_str(element);
-    if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {
-      self.push_str(" id=\"");
-      self.push_str(id);
-      self.push_ch('"');
-    }
-    if !classes.is_empty() || attrs.as_ref().map_or(false, |a| !a.roles.is_empty()) {
-      self.push_str(" class=\"");
-      for class in classes {
-        self.push_str(class);
-        self.push_ch(' ');
-      }
-      if let Some(roles) = attrs.as_ref().map(|a| &a.roles) {
-        for role in roles {
-          self.push_str(role);
-          self.push_ch(' ');
-        }
-      }
-      self.html.pop();
-      self.push_ch('"');
-    }
-    self.push_ch('>');
-  }
-}
-
-impl Default for AsciidoctorHtml {
-  fn default() -> Self {
-    Self::new()
-  }
 }
 
 impl Backend for AsciidoctorHtml {
@@ -218,6 +152,97 @@ impl Backend for AsciidoctorHtml {
 
   fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry) {
     self.doc_attrs.insert(name.to_string(), entry.clone());
+  }
+
+  fn enter_footnote(&mut self, _id: Option<&str>, _content: &[InlineNode]) {
+    std::mem::swap(&mut self.html, &mut self.alt_html);
+  }
+
+  fn exit_footnote(&mut self, id: Option<&str>, _content: &[InlineNode]) {
+    std::mem::swap(&mut self.alt_html, &mut self.html);
+    let mut footnote = String::new();
+    std::mem::swap(&mut footnote, &mut self.alt_html);
+    let num_string = self.footnote_num.to_string();
+    let id = id.unwrap_or(&num_string);
+    self.push_str(r#"<sup class="footnote">[<a id="_footnoteref_"#);
+    self.push([id, r##"" class="footnote" href="#_footnote_"##, &num_string]);
+    self.push([r#"" title="View footnote.">"#, &num_string, "</a>]</sup>"]);
+    self.footnotes.insert(id.to_string(), footnote);
+    self.footnote_num += 1;
+  }
+}
+
+impl AsciidoctorHtml {
+  pub fn new() -> Self {
+    Self {
+      html: String::new(),
+      alt_html: String::new(),
+      doc_attrs: AttrEntries::new(),
+      footnotes: HashMap::new(),
+      footnote_num: 1,
+      fig_caption_num: 0,
+    }
+  }
+
+  pub fn into_string(self) -> String {
+    self.html
+  }
+
+  fn push_str(&mut self, s: &str) {
+    self.html.push_str(s);
+  }
+
+  fn push_ch(&mut self, c: char) {
+    self.html.push(c);
+  }
+
+  fn push<const N: usize>(&mut self, strs: [&str; N]) {
+    for s in strs {
+      self.push_str(s);
+    }
+  }
+
+  fn visit_block_title(&mut self, title: Option<&str>, prefix: Option<Cow<str>>) {
+    if let Some(title) = title {
+      self.push_str(r#"<div class="title">"#);
+      if let Some(prefix) = prefix {
+        self.push_str(prefix.as_ref());
+      }
+      self.push_str(title);
+      self.push_str("</div>");
+    }
+  }
+
+  fn open_element(&mut self, element: &str, classes: &[&str], attrs: &Option<AttrList>) {
+    self.push_ch('<');
+    self.push_str(element);
+    if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {
+      self.push_str(" id=\"");
+      self.push_str(id);
+      self.push_ch('"');
+    }
+    if !classes.is_empty() || attrs.as_ref().map_or(false, |a| !a.roles.is_empty()) {
+      self.push_str(" class=\"");
+      for class in classes {
+        self.push_str(class);
+        self.push_ch(' ');
+      }
+      if let Some(roles) = attrs.as_ref().map(|a| &a.roles) {
+        for role in roles {
+          self.push_str(role);
+          self.push_ch(' ');
+        }
+      }
+      self.html.pop();
+      self.push_ch('"');
+    }
+    self.push_ch('>');
+  }
+}
+
+impl Default for AsciidoctorHtml {
+  fn default() -> Self {
+    Self::new()
   }
 }
 

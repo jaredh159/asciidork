@@ -90,9 +90,14 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
       children.iter().for_each(|node| eval_inline(node, backend));
       backend.exit_inline_highlight(children);
     }
+    Macro(Footnote { id, text }) => {
+      backend.enter_footnote(id.as_deref(), text);
+      text.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_footnote(id.as_deref(), text);
+    }
     _ => {
-      dbg!(inline);
-      println!("Unhandled inline node type ^^^");
+      println!("\nUnhandled inline node type:");
+      println!("  -> {:?}\n", &inline.content);
       todo!();
     }
   }
