@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-
 use crate::internal::*;
 
 pub struct AsciidoctorHtml {
   html: String,
   alt_html: String,
-  footnotes: HashMap<String, String>,
-  footnote_num: usize,
+  footnotes: Vec<(String, String)>,
   doc_attrs: AttrEntries,
   fig_caption_num: usize,
 }
@@ -19,7 +16,11 @@ impl Backend for AsciidoctorHtml {
     self.doc_attrs = header_attrs.clone();
   }
 
-  fn exit_document(&mut self, _document: &Document, _header_attrs: &AttrEntries) {}
+  fn exit_document(&mut self, _document: &Document, _header_attrs: &AttrEntries) {
+    if !self.footnotes.is_empty() {
+      self.render_footnotes();
+    }
+  }
 
   fn enter_paragraph_block(&mut self, block: &Block) {
     self.push_str(r#"<div class="paragraph">"#);
@@ -155,20 +156,19 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_footnote(&mut self, _id: Option<&str>, _content: &[InlineNode]) {
-    std::mem::swap(&mut self.html, &mut self.alt_html);
+    mem::swap(&mut self.html, &mut self.alt_html);
   }
 
   fn exit_footnote(&mut self, id: Option<&str>, _content: &[InlineNode]) {
-    std::mem::swap(&mut self.alt_html, &mut self.html);
+    mem::swap(&mut self.alt_html, &mut self.html);
     let mut footnote = String::new();
-    std::mem::swap(&mut footnote, &mut self.alt_html);
-    let num_string = self.footnote_num.to_string();
+    mem::swap(&mut footnote, &mut self.alt_html);
+    let num_string = (self.footnotes.len() + 1).to_string();
     let id = id.unwrap_or(&num_string);
     self.push_str(r#"<sup class="footnote">[<a id="_footnoteref_"#);
     self.push([id, r##"" class="footnote" href="#_footnote_"##, &num_string]);
     self.push([r#"" title="View footnote.">"#, &num_string, "</a>]</sup>"]);
-    self.footnotes.insert(id.to_string(), footnote);
-    self.footnote_num += 1;
+    self.footnotes.push((id.to_string(), footnote));
   }
 }
 
@@ -178,8 +178,7 @@ impl AsciidoctorHtml {
       html: String::new(),
       alt_html: String::new(),
       doc_attrs: AttrEntries::new(),
-      footnotes: HashMap::new(),
-      footnote_num: 1,
+      footnotes: Vec::new(),
       fig_caption_num: 0,
     }
   }
@@ -237,6 +236,18 @@ impl AsciidoctorHtml {
       self.push_ch('"');
     }
     self.push_ch('>');
+  }
+
+  fn render_footnotes(&mut self) {
+    self.push_str(r#"<div id="footnotes"><hr>"#);
+    let footnotes = mem::take(&mut self.footnotes);
+    for (index, (id, footnote)) in footnotes.iter().enumerate() {
+      self.push_str(r#"<div class="footnote" id="_footnotedef_"#);
+      self.push([id, r##""><a href="#_footnoteref_"##, id, "\">"]);
+      self.push([&(index + 1).to_string(), "</a>. ", footnote, "</div>"]);
+    }
+    self.push_str(r#"</div>"#);
+    self.footnotes = footnotes;
   }
 }
 

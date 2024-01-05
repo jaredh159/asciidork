@@ -14,8 +14,8 @@ enum AttrKind {
 #[derive(Debug, PartialEq, Eq)]
 enum Quotes {
   Default,
-  InDoubleQuotes,
-  InSingleQuotes,
+  InDouble,
+  InSingle,
 }
 
 #[derive(Debug)]
@@ -112,18 +112,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         }
         SingleQuote if state.quotes == Default => {
           state.skip_char();
-          state.quotes = InSingleQuotes;
+          state.quotes = InSingle;
         }
-        SingleQuote if state.quotes == InSingleQuotes => {
+        SingleQuote if state.quotes == InSingle => {
           state.commit_prev(self)?;
           state.skip_char();
           state.quotes = Default;
         }
         DoubleQuote if state.quotes == Default => {
           state.skip_char();
-          state.quotes = InDoubleQuotes;
+          state.quotes = InDouble;
         }
-        DoubleQuote if state.quotes == InDoubleQuotes => {
+        DoubleQuote if state.quotes == InDouble => {
           state.commit_prev(self)?;
           state.skip_char();
           state.quotes = Default;

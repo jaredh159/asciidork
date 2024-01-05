@@ -176,7 +176,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       // constrained sequences can't immediately terminate
       // or else `foo __bar` would include an empty italic node
       // TODO: maybe that's only true for _single_ tok sequences?
-      Some(n) if n == 0 => false,
+      Some(0) => false,
       Some(n) if self.nth_token(n).is_not(Word) => true,
       _ => false,
     }

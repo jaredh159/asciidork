@@ -187,15 +187,14 @@ fn test_eval() {
     let expected = re.replace_all(expected, "");
     let parser = Parser::new(bump, input);
     let doc = parser.parse().unwrap().document;
-    let asciidoctor_html = AsciidoctorHtml::new();
-    assert_eq!(eval(doc, asciidoctor_html).unwrap(), expected);
+    assert_eq!(eval(doc, AsciidoctorHtml::new()).unwrap(), expected);
   }
 }
 
 #[test]
 fn test_isolate() {
   let input = indoc! {r#"
-    foo.footnote:[bar]
+    foo.footnote:[bar _baz_]
   "#};
   let expected = indoc! {r##"
     <div class="paragraph">
@@ -203,8 +202,8 @@ fn test_isolate() {
     </div>
     <div id="footnotes">
       <hr>
-      <div class="footnote" id="_footnote_1">
-        <a href="#_footnoteref_1">1</a>. bar
+      <div class="footnote" id="_footnotedef_1">
+        <a href="#_footnoteref_1">1</a>. bar <em>baz</em>
       </div>
     </div>
   "##};
@@ -213,6 +212,5 @@ fn test_isolate() {
   let expected = re.replace_all(expected, "");
   let parser = Parser::new(bump, input);
   let doc = parser.parse().unwrap().document;
-  let asciidoctor_html = AsciidoctorHtml::new();
-  assert_eq!(eval(doc, asciidoctor_html).unwrap(), expected);
+  assert_eq!(eval(doc, AsciidoctorHtml::new()).unwrap(), expected);
 }

@@ -32,7 +32,6 @@ mod internal {
   pub use bumpalo::vec as bvec;
   pub use bumpalo::Bump;
   pub use std::string::String as StdString;
-  pub use std::vec::Vec as StdVec;
 }
 
 pub mod prelude {
