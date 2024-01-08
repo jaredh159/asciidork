@@ -1,18 +1,22 @@
 use crate::internal::*;
 
-pub fn eval<B: Backend>(document: Document, mut backend: B) -> Result<B::Output, B::Error> {
-  visit(document, &mut backend);
+pub fn eval<B: Backend>(
+  document: Document,
+  flags: Flags,
+  mut backend: B,
+) -> Result<B::Output, B::Error> {
+  visit(document, flags, &mut backend);
   backend.into_result()
 }
 
-pub fn visit<B: Backend>(document: Document, backend: &mut B) {
+pub fn visit<B: Backend>(document: Document, flags: Flags, backend: &mut B) {
   let empty_attrs = AttrEntries::new();
   let doc_attrs = document
     .header
     .as_ref()
     .map(|h| &h.attrs)
     .unwrap_or(&empty_attrs);
-  backend.enter_document(&document, doc_attrs);
+  backend.enter_document(&document, doc_attrs, flags);
   match &document.content {
     DocContent::Blocks(blocks) => {
       for block in blocks {
@@ -41,10 +45,10 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       | Context::AdmonitionImportant,
       Content::Simple(children),
     ) => {
-      let admonition = AdmonitionKind::try_from(block.context).unwrap();
-      backend.enter_admonition_block(admonition, block);
+      let kind = AdmonitionKind::try_from(block.context).unwrap();
+      backend.enter_admonition_block(kind, block);
       children.iter().for_each(|node| eval_inline(node, backend));
-      backend.exit_admonition_block(admonition, block);
+      backend.exit_admonition_block(kind, block);
     }
     (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs })) => {
       backend.enter_image_block(target, attrs, block);

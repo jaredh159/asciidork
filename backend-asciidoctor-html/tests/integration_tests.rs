@@ -1,8 +1,9 @@
 use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
-use asciidork_eval::eval;
+use asciidork_eval::{eval, Flags};
 use asciidork_parser::prelude::*;
 
 use indoc::indoc;
+use pretty_assertions::assert_eq;
 use regex::Regex;
 
 #[test]
@@ -180,6 +181,24 @@ fn test_eval() {
         </div>
       "#},
     ),
+    (
+      "foo.footnote:[bar _baz_]",
+      indoc! {r##"
+        <div class="paragraph">
+          <p>foo.
+            <sup class="footnote">
+              [<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]
+            </sup>
+          </p>
+        </div>
+        <div id="footnotes">
+          <hr>
+          <div class="footnote" id="_footnotedef_1">
+            <a href="#_footnoteref_1">1</a>. bar <em>baz</em>
+          </div>
+        </div>
+      "##},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();
@@ -187,7 +206,10 @@ fn test_eval() {
     let expected = re.replace_all(expected, "");
     let parser = Parser::new(bump, input);
     let doc = parser.parse().unwrap().document;
-    assert_eq!(eval(doc, AsciidoctorHtml::new()).unwrap(), expected);
+    assert_eq!(
+      eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
+      expected
+    );
   }
 }
 
@@ -195,15 +217,31 @@ fn test_eval() {
 fn test_isolate() {
   let input = indoc! {r#"
     foo.footnote:[bar _baz_]
+
+    lol.footnote:cust[baz]
   "#};
   let expected = indoc! {r##"
     <div class="paragraph">
-      <p>foo.<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup></p>
+      <p>foo.
+        <sup class="footnote">
+          [<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]
+        </sup>
+      </p>
+    </div>
+    <div class="paragraph">
+      <p>lol.
+        <sup class="footnote" id="_footnote_cust">
+          [<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]
+        </sup>
+      </p>
     </div>
     <div id="footnotes">
       <hr>
       <div class="footnote" id="_footnotedef_1">
         <a href="#_footnoteref_1">1</a>. bar <em>baz</em>
+      </div>
+      <div class="footnote" id="_footnotedef_2">
+        <a href="#_footnoteref_2">2</a>. baz
       </div>
     </div>
   "##};
@@ -212,5 +250,8 @@ fn test_isolate() {
   let expected = re.replace_all(expected, "");
   let parser = Parser::new(bump, input);
   let doc = parser.parse().unwrap().document;
-  assert_eq!(eval(doc, AsciidoctorHtml::new()).unwrap(), expected);
+  assert_eq!(
+    eval(doc, Flags::default(), AsciidoctorHtml::new()).unwrap(),
+    expected
+  );
 }

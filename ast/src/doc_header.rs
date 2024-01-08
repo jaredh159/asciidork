@@ -19,7 +19,7 @@ pub enum AttrEntry {
   Bool(bool),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct AttrEntries(HashMap<StdString, AttrEntry>);
 
 impl AttrEntries {
@@ -41,12 +41,6 @@ impl AttrEntries {
 
   pub fn is_unset(&self, key: &str) -> bool {
     matches!(self.get(key), Some(AttrEntry::Bool(false)))
-  }
-}
-
-impl Default for AttrEntries {
-  fn default() -> Self {
-    Self::new()
   }
 }
 

@@ -7,7 +7,7 @@ pub trait Backend {
   type Error;
 
   // document
-  fn enter_document(&mut self, document: &Document, header_attrs: &AttrEntries);
+  fn enter_document(&mut self, document: &Document, header_attrs: &AttrEntries, flags: Flags);
   fn exit_document(&mut self, document: &Document, header_attrs: &AttrEntries);
   fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry);
 
@@ -43,4 +43,16 @@ pub trait Backend {
   // result
   fn into_result(self) -> Result<Self::Output, Self::Error>;
   fn result(&self) -> Result<&Self::Output, Self::Error>;
+}
+
+// todo: naming, which crate?... (settings?, meta?, opts?)
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Flags {
+  pub embedded: bool,
+}
+
+impl Flags {
+  pub fn embedded() -> Self {
+    Self { embedded: true }
+  }
 }

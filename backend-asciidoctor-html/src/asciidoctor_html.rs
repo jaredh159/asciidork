@@ -1,18 +1,22 @@
 use crate::internal::*;
 
+#[derive(Debug, Default)]
 pub struct AsciidoctorHtml {
   html: String,
   alt_html: String,
   footnotes: Vec<(String, String)>,
   doc_attrs: AttrEntries,
   fig_caption_num: usize,
+  flags: Flags,
 }
 
 impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
 
-  fn enter_document(&mut self, _document: &Document, header_attrs: &AttrEntries) {
+  fn enter_document(&mut self, _document: &Document, header_attrs: &AttrEntries, flags: Flags) {
+    // 👍 mon jared: embedded, and work on <head> stuff...
+    self.flags = flags;
     self.doc_attrs = header_attrs.clone();
   }
 
@@ -163,24 +167,22 @@ impl Backend for AsciidoctorHtml {
     mem::swap(&mut self.alt_html, &mut self.html);
     let mut footnote = String::new();
     mem::swap(&mut footnote, &mut self.alt_html);
-    let num_string = (self.footnotes.len() + 1).to_string();
-    let id = id.unwrap_or(&num_string);
-    self.push_str(r#"<sup class="footnote">[<a id="_footnoteref_"#);
-    self.push([id, r##"" class="footnote" href="#_footnote_"##, &num_string]);
-    self.push([r#"" title="View footnote.">"#, &num_string, "</a>]</sup>"]);
+    let num = (self.footnotes.len() + 1).to_string();
+    self.push_str(r#"<sup class="footnote""#);
+    if let Some(id) = id {
+      self.push([r#" id="_footnote_"#, id, "\""]);
+    }
+    self.push_str(r#">[<a id="_footnoteref_"#);
+    self.push([&num, r##"" class="footnote" href="#_footnotedef_"##, &num]);
+    self.push([r#"" title="View footnote.">"#, &num, "</a>]</sup>"]);
+    let id = id.unwrap_or(&num);
     self.footnotes.push((id.to_string(), footnote));
   }
 }
 
 impl AsciidoctorHtml {
   pub fn new() -> Self {
-    Self {
-      html: String::new(),
-      alt_html: String::new(),
-      doc_attrs: AttrEntries::new(),
-      footnotes: Vec::new(),
-      fig_caption_num: 0,
-    }
+    Self::default()
   }
 
   pub fn into_string(self) -> String {
@@ -241,19 +243,14 @@ impl AsciidoctorHtml {
   fn render_footnotes(&mut self) {
     self.push_str(r#"<div id="footnotes"><hr>"#);
     let footnotes = mem::take(&mut self.footnotes);
-    for (index, (id, footnote)) in footnotes.iter().enumerate() {
+    for (index, (_id, footnote)) in footnotes.iter().enumerate() {
+      let num = &(index + 1).to_string();
       self.push_str(r#"<div class="footnote" id="_footnotedef_"#);
-      self.push([id, r##""><a href="#_footnoteref_"##, id, "\">"]);
-      self.push([&(index + 1).to_string(), "</a>. ", footnote, "</div>"]);
+      self.push([num, r##""><a href="#_footnoteref_"##, num, "\">"]);
+      self.push([num, "</a>. ", footnote, "</div>"]);
     }
     self.push_str(r#"</div>"#);
     self.footnotes = footnotes;
-  }
-}
-
-impl Default for AsciidoctorHtml {
-  fn default() -> Self {
-    Self::new()
   }
 }
 

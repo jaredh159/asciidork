@@ -1,5 +1,6 @@
 mod eval;
 
+pub use asciidork_backend::Flags;
 pub use eval::*;
 
 mod internal {
