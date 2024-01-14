@@ -14,15 +14,62 @@ impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
 
-  fn enter_document(&mut self, _document: &Document, header_attrs: &AttrEntries, flags: Flags) {
-    // 👍 mon jared: embedded, and work on <head> stuff...
+  fn enter_document(&mut self, document: &Document, attrs: &AttrEntries, flags: Flags) {
     self.flags = flags;
-    self.doc_attrs = header_attrs.clone();
+    self.doc_attrs = attrs.clone();
+    if flags.embedded {
+      return;
+    }
+    self.push_str(r#"<!DOCTYPE html><html"#);
+    if !attrs.is_set("nolang") {
+      self.push([r#" lang=""#, attrs.str_or("lang", "en"), "\""]);
+    }
+    let encoding = attrs.str_or("encoding", "UTF-8");
+    self.push([r#"><head><meta charset=""#, encoding, r#"">"#]);
+    self.push_str(r#"<meta http-equiv="X-UA-Compatible" content="IE=edge">"#);
+    self.push_str(r#"<meta name="viewport" content="width=device-width, initial-scale=1.0">"#);
+    if !attrs.is_set("reproducible") {
+      self.push_str(r#"<meta name="generator" content="Asciidork">"#);
+    }
+    if let Some(appname) = attrs.str("app-name") {
+      self.push([r#"<meta name="application-name" content=""#, appname, "\">"]);
+    }
+    if let Some(desc) = attrs.str("description") {
+      self.push([r#"<meta name="description" content=""#, desc, "\">"]);
+    }
+    if let Some(keywords) = attrs.str("keywords") {
+      self.push([r#"<meta name="keywords" content=""#, keywords, "\">"]);
+    }
+    if let Some(header) = &document.header {
+      if !header.authors.is_empty() {
+        self.push_str(r#"<meta name="author" content=""#);
+        for (index, author) in header.authors.iter().enumerate() {
+          if index > 0 {
+            self.push_str(", ");
+          }
+          // TODO: escape/sanitize, w/ tests, see asciidoctor
+          self.push_str(&author.fullname());
+        }
+        self.push_str(r#"">"#);
+      }
+    }
+    if let Some(_title) = &document.header.as_ref().and_then(|h| h.title.as_ref()) {
+      // TODO: strip tags, support doc `title` attr as override
+      // @see https://github.com/asciidoctor/asciidoctor/issues/504
+      self.push_str(r#"<title>"#);
+      self.push_str(r#"</title>"#);
+    }
+
+    // self.push_str("<title>Untitled</title>");
+    self.push_str(r#"</head><body>"#);
   }
 
   fn exit_document(&mut self, _document: &Document, _header_attrs: &AttrEntries) {
     if !self.footnotes.is_empty() {
       self.render_footnotes();
+    }
+    if !self.flags.embedded {
+      self.push_str("</body></html>");
     }
   }
 

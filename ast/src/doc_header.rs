@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/document/header/
@@ -11,37 +9,6 @@ pub struct DocHeader<'bmp> {
   // 👍 thurs jared: make non optional up at the doc level, maybe with
   // an empty entries that gets handed out if doc header not present
   pub attrs: AttrEntries,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AttrEntry {
-  String(StdString),
-  Bool(bool),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct AttrEntries(HashMap<StdString, AttrEntry>);
-
-impl AttrEntries {
-  pub fn new() -> Self {
-    Self(HashMap::new())
-  }
-
-  pub fn insert(&mut self, key: StdString, value: AttrEntry) {
-    self.0.insert(key, value);
-  }
-
-  pub fn get(&self, key: &str) -> Option<&AttrEntry> {
-    self.0.get(key)
-  }
-
-  pub fn is_set(&self, key: &str) -> bool {
-    matches!(self.get(key), Some(AttrEntry::Bool(true)))
-  }
-
-  pub fn is_unset(&self, key: &str) -> bool {
-    matches!(self.get(key), Some(AttrEntry::Bool(false)))
-  }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -63,4 +30,23 @@ pub struct Author<'bmp> {
   pub middle_name: Option<String<'bmp>>,
   pub last_name: String<'bmp>,
   pub email: Option<String<'bmp>>,
+}
+
+impl<'bmp> Author<'bmp> {
+  pub fn fullname(&self) -> StdString {
+    let mut name = StdString::with_capacity(
+      self.first_name.len()
+        + self.last_name.len()
+        + self.middle_name.as_ref().map_or(0, |s| s.len())
+        + 2,
+    );
+    name.push_str(&self.first_name);
+    if let Some(middle_name) = &self.middle_name {
+      name.push(' ');
+      name.push_str(middle_name);
+    }
+    name.push(' ');
+    name.push_str(&self.last_name);
+    name
+  }
 }

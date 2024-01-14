@@ -199,6 +199,38 @@ fn test_eval() {
         </div>
       "##},
     ),
+    (
+      indoc! {r#"
+      foo.footnote:[bar _baz_]
+
+      lol.footnote:cust[baz]
+    "#},
+      indoc! {r##"
+      <div class="paragraph">
+        <p>foo.
+          <sup class="footnote">
+            [<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]
+          </sup>
+        </p>
+      </div>
+      <div class="paragraph">
+        <p>lol.
+          <sup class="footnote" id="_footnote_cust">
+            [<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]
+          </sup>
+        </p>
+      </div>
+      <div id="footnotes">
+        <hr>
+        <div class="footnote" id="_footnotedef_1">
+          <a href="#_footnoteref_1">1</a>. bar <em>baz</em>
+        </div>
+        <div class="footnote" id="_footnotedef_2">
+          <a href="#_footnoteref_2">2</a>. baz
+        </div>
+      </div>
+    "##},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();
@@ -213,37 +245,118 @@ fn test_eval() {
   }
 }
 
+enum SubstrTest {
+  Contains(&'static str),
+  DoesNotContain(&'static str),
+}
+
+#[test]
+fn test_head_opts() {
+  use SubstrTest::*;
+  let cases = vec![
+    (":nolang:", DoesNotContain("lang=")),
+    // (":nolang:", Contains("<title>Doc Header</title>")),
+    (":lang: es", Contains("lang=\"es\"")),
+    (":encoding: latin1", Contains("charset=\"latin1\"")),
+    (":reproducible:", DoesNotContain("generator")),
+    (
+      ":app-name: x",
+      Contains(r#"<meta name="application-name" content="x">"#),
+    ),
+    (
+      ":description: x",
+      Contains(r#"<meta name="description" content="x">"#),
+    ),
+    (
+      ":keywords: x, y",
+      Contains(r#"<meta name="keywords" content="x, y">"#),
+    ),
+    (
+      "Kismet R. Lee <kismet@asciidoctor.org>",
+      Contains(r#"<meta name="author" content="Kismet R. Lee">"#),
+    ),
+    (
+      "Kismet R. Lee <kismet@asciidoctor.org>; Bob Smith",
+      Contains(r#"<meta name="author" content="Kismet R. Lee, Bob Smith">"#),
+    ),
+  ];
+  let bump = &Bump::new();
+  for (opts, expectation) in cases {
+    let input = format!("= Doc Header\n{}\n\nignore me\n\n", opts);
+    let parser = Parser::new(bump, &input);
+    let document = parser.parse().unwrap().document;
+    let html = eval(document, Flags::default(), AsciidoctorHtml::new()).unwrap();
+    match expectation {
+      Contains(s) => assert!(
+        html.contains(s),
+        "\n`{}` was NOT found when expected\n\n```adoc\n{}\n```\n\n```html\n{}\n```",
+        s,
+        input.trim(),
+        html.replace('>', ">\n").trim()
+      ),
+      DoesNotContain(s) => assert!(
+        !html.contains(s),
+        "\n`{}` WAS found when not expected\n\n```adoc\n{}\n```\n\n```html\n{}\n```",
+        s,
+        input.trim(),
+        html.replace('>', ">\n").trim()
+      ),
+    }
+  }
+}
+
+#[test]
+fn test_non_embedded() {
+  let input = indoc! {r#"
+    foo
+  "#};
+  let expected = indoc! {r##"
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="generator" content="Asciidork">
+      </head>
+      <body>
+        <div class="paragraph">
+          <p>foo</p>
+        </div>
+      </body>
+    </html>
+  "##};
+  let bump = &Bump::new();
+  let re = Regex::new(r"(?m)\n\s*").unwrap();
+  let expected = re.replace_all(expected, "");
+  let parser = Parser::new(bump, input);
+  let doc = parser.parse().unwrap().document;
+  assert_eq!(
+    eval(doc, Flags::default(), AsciidoctorHtml::new()).unwrap(),
+    expected
+  );
+}
+
 #[test]
 fn test_isolate() {
   let input = indoc! {r#"
-    foo.footnote:[bar _baz_]
-
-    lol.footnote:cust[baz]
+    foo
   "#};
   let expected = indoc! {r##"
-    <div class="paragraph">
-      <p>foo.
-        <sup class="footnote">
-          [<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]
-        </sup>
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>lol.
-        <sup class="footnote" id="_footnote_cust">
-          [<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]
-        </sup>
-      </p>
-    </div>
-    <div id="footnotes">
-      <hr>
-      <div class="footnote" id="_footnotedef_1">
-        <a href="#_footnoteref_1">1</a>. bar <em>baz</em>
-      </div>
-      <div class="footnote" id="_footnotedef_2">
-        <a href="#_footnoteref_2">2</a>. baz
-      </div>
-    </div>
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="generator" content="Asciidork">
+      </head>
+      <body>
+        <div class="paragraph">
+          <p>foo</p>
+        </div>
+      </body>
+    </html>
   "##};
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();
