@@ -3,10 +3,10 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocContent<'bmp> {
   Sectioned {
-    preamble: Option<Vec<'bmp, Block<'bmp>>>,
-    sections: Vec<'bmp, Section<'bmp>>,
+    preamble: Option<BumpVec<'bmp, Block<'bmp>>>,
+    sections: BumpVec<'bmp, Section<'bmp>>,
   },
-  Blocks(Vec<'bmp, Block<'bmp>>),
+  Blocks(BumpVec<'bmp, Block<'bmp>>),
 }
 
 impl<'bmp> DocContent<'bmp> {

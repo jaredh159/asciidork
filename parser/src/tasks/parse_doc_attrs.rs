@@ -19,7 +19,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &self,
     lines: &mut ContiguousLines,
     attrs: &mut AttrEntries,
-  ) -> Result<Option<(StdString, AttrEntry, usize)>> {
+  ) -> Result<Option<(String, AttrEntry, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
     };

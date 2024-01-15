@@ -2,7 +2,7 @@ use crate::internal::*;
 
 pub struct CollectText<'bmp> {
   bump: &'bmp bumpalo::Bump,
-  string: Option<String<'bmp>>,
+  string: Option<BumpString<'bmp>>,
   pub loc: SourceLocation,
 }
 
@@ -10,7 +10,7 @@ impl<'bmp> CollectText<'bmp> {
   pub fn new_in(loc: SourceLocation, bump: &'bmp bumpalo::Bump) -> Self {
     CollectText {
       bump,
-      string: Some(String::new_in(bump)),
+      string: Some(BumpString::new_in(bump)),
       loc,
     }
   }
@@ -20,9 +20,9 @@ impl<'bmp> CollectText<'bmp> {
     self.loc.extend(token.loc);
   }
 
-  pub fn take(&mut self) -> String<'bmp> {
+  pub fn take(&mut self) -> BumpString<'bmp> {
     self.loc = self.loc.clamp_end();
-    self.string.replace(String::new_in(self.bump)).unwrap()
+    self.string.replace(BumpString::new_in(self.bump)).unwrap()
   }
 
   pub fn take_src(&mut self) -> SourceString<'bmp> {

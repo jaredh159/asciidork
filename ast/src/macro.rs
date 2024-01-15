@@ -4,7 +4,7 @@ use crate::internal::*;
 pub enum MacroNode<'bmp> {
   Footnote {
     id: Option<SourceString<'bmp>>,
-    text: Vec<'bmp, InlineNode<'bmp>>,
+    text: BumpVec<'bmp, InlineNode<'bmp>>,
   },
   Image {
     flow: Flow,
@@ -12,7 +12,7 @@ pub enum MacroNode<'bmp> {
     attrs: AttrList<'bmp>,
   },
   Keyboard {
-    keys: Vec<'bmp, String<'bmp>>,
+    keys: BumpVec<'bmp, BumpString<'bmp>>,
     keys_src: SourceString<'bmp>,
   },
   Link {
@@ -22,14 +22,14 @@ pub enum MacroNode<'bmp> {
   },
   Pass {
     target: Option<SourceString<'bmp>>,
-    content: Vec<'bmp, InlineNode<'bmp>>,
+    content: BumpVec<'bmp, InlineNode<'bmp>>,
   },
   Icon {
     target: SourceString<'bmp>,
     attrs: AttrList<'bmp>,
   },
   Button(SourceString<'bmp>),
-  Menu(Vec<'bmp, SourceString<'bmp>>),
+  Menu(BumpVec<'bmp, SourceString<'bmp>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

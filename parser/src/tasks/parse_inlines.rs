@@ -79,7 +79,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 let re = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
                 for captures in re.captures_iter(&keys_src).step_by(2) {
                   let key = captures.get(1).unwrap().as_str();
-                  keys.push(String::from_str_in(key, self.bump));
+                  keys.push(BumpString::from_str_in(key, self.bump));
                 }
                 inlines.push(node(Macro(Keyboard { keys, keys_src }), macro_loc));
                 text.loc = macro_loc.clamp_end();
@@ -155,7 +155,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                   trimmed = trimmed.trim_end();
                   if !trimmed.is_empty() {
                     items.push(SourceString::new(
-                      String::from_str_in(trimmed, self.bump),
+                      BumpString::from_str_in(trimmed, self.bump),
                       SourceLocation::new(pos, pos + trimmed.len()),
                     ));
                   }
@@ -192,7 +192,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             inlines.push(node(
               Macro(Link {
                 scheme: Some(UrlScheme::Mailto),
-                target: SourceString::new(String::from_str_in(token.lexeme, self.bump), token.loc),
+                target: SourceString::new(
+                  BumpString::from_str_in(token.lexeme, self.bump),
+                  token.loc,
+                ),
                 attrs: None,
               }),
               token.loc,
@@ -457,7 +460,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           Whitespace if token.lexeme.len() > 1 && subs.inline_formatting => {
             text.commit_inlines(&mut inlines);
             inlines.push(node(
-              MultiCharWhitespace(String::from_str_in(token.lexeme, self.bump)),
+              MultiCharWhitespace(BumpString::from_str_in(token.lexeme, self.bump)),
               token.loc,
             ));
             text.loc = token.loc.clamp_end();
@@ -564,7 +567,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     a.append(b);
     match (append, a.last_mut()) {
       (Some(append), Some(Text(text))) => text.push_str(append),
-      (Some(append), _) => a.push(Text(String::from_str_in(append, self.bump))),
+      (Some(append), _) => a.push(Text(BumpString::from_str_in(append, self.bump))),
       _ => {}
     }
   }

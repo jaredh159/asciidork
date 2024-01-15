@@ -53,6 +53,7 @@ impl Backend for AsciidoctorHtml {
         self.push_str(r#"">"#);
       }
     }
+
     if let Some(_title) = &document.header.as_ref().and_then(|h| h.title.as_ref()) {
       // TODO: strip tags, support doc `title` attr as override
       // @see https://github.com/asciidoctor/asciidoctor/issues/504

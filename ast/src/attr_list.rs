@@ -3,22 +3,22 @@ use crate::internal::*;
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/positional-and-named-attributes/
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AttrList<'bmp> {
-  pub positional: Vec<'bmp, Option<Vec<'bmp, InlineNode<'bmp>>>>,
+  pub positional: BumpVec<'bmp, Option<BumpVec<'bmp, InlineNode<'bmp>>>>,
   pub named: Named<'bmp>,
   pub id: Option<SourceString<'bmp>>,
-  pub roles: Vec<'bmp, SourceString<'bmp>>,
-  pub options: Vec<'bmp, SourceString<'bmp>>,
+  pub roles: BumpVec<'bmp, SourceString<'bmp>>,
+  pub options: BumpVec<'bmp, SourceString<'bmp>>,
   pub loc: SourceLocation,
 }
 
 impl<'bmp> AttrList<'bmp> {
   pub fn new(loc: SourceLocation, bump: &'bmp Bump) -> Self {
     AttrList {
-      positional: Vec::new_in(bump),
+      positional: BumpVec::new_in(bump),
       named: Named::new_in(bump),
       id: None,
-      roles: Vec::new_in(bump),
-      options: Vec::new_in(bump),
+      roles: BumpVec::new_in(bump),
+      options: BumpVec::new_in(bump),
       loc,
     }
   }
@@ -58,7 +58,7 @@ impl<'bmp> AttrList<'bmp> {
     AttrList {
       positional: bvec![in bump; Some(bvec![in bump;
         InlineNode::new(
-          Inline::Text(String::from_str_in(positional, bump)),
+          Inline::Text(BumpString::from_str_in(positional, bump)),
           SourceLocation::new(loc.start, loc.end),
         )
       ])],
@@ -68,14 +68,14 @@ impl<'bmp> AttrList<'bmp> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Named<'bmp>(Vec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>);
+pub struct Named<'bmp>(BumpVec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>);
 
 impl<'bmp> Named<'bmp> {
   pub fn new_in(bump: &'bmp Bump) -> Self {
-    Named(Vec::new_in(bump))
+    Named(BumpVec::new_in(bump))
   }
 
-  pub fn from(vec: Vec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>) -> Self {
+  pub fn from(vec: BumpVec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>) -> Self {
     Named(vec)
   }
 

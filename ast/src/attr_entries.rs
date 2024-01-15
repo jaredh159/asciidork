@@ -1,22 +1,20 @@
 use std::collections::HashMap;
 
-use crate::internal::*;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttrEntry {
-  String(StdString),
+  String(String),
   Bool(bool),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct AttrEntries(HashMap<StdString, AttrEntry>);
+pub struct AttrEntries(HashMap<String, AttrEntry>);
 
 impl AttrEntries {
   pub fn new() -> Self {
     Self(HashMap::new())
   }
 
-  pub fn insert(&mut self, key: StdString, value: AttrEntry) {
+  pub fn insert(&mut self, key: String, value: AttrEntry) {
     self.0.insert(key, value);
   }
 

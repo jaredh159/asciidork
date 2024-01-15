@@ -2,7 +2,7 @@ use crate::internal::*;
 
 pub trait BumpTestHelpers<'bmp> {
   fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> Vec<'bmp, T>;
-  fn s(&'bmp self, s: &'static str) -> String<'bmp>;
+  fn s(&'bmp self, s: &'static str) -> BumpString<'bmp>;
   fn src(&'bmp self, s: &'static str, loc: SourceLocation) -> SourceString<'bmp>;
 }
 
@@ -15,8 +15,8 @@ impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
     vec
   }
 
-  fn s(&'bmp self, s: &'static str) -> String<'bmp> {
-    String::from_str_in(s, self)
+  fn s(&'bmp self, s: &'static str) -> BumpString<'bmp> {
+    BumpString::from_str_in(s, self)
   }
 
   fn src(&'bmp self, s: &'static str, loc: SourceLocation) -> SourceString<'bmp> {
@@ -43,14 +43,14 @@ pub fn n_text<'bmp>(
   bump: &'bmp Bump,
 ) -> InlineNode<'bmp> {
   InlineNode::new(
-    Inline::Text(String::from_str_in(s, bump)),
+    Inline::Text(BumpString::from_str_in(s, bump)),
     SourceLocation::new(start, end),
   )
 }
 
 macro_rules! s {
   (in $bump:expr; $s:expr) => {
-    bumpalo::collections::String::from_str_in($s, $bump)
+    bumpalo::collections::BumpString::from_str_in($s, $bump)
   };
 }
 

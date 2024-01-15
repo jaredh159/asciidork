@@ -1,4 +1,3 @@
-use bumpalo::collections::String;
 use regex::Regex;
 
 use crate::internal::*;
@@ -32,7 +31,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let vre = Regex::new(r"\d.*$").unwrap();
     let version = vre.captures(raw_version).unwrap().get(0).unwrap().as_str();
-    let version = String::from_str_in(version, self.bump);
+    let version = BumpString::from_str_in(version, self.bump);
 
     // only revision, must start with `v` then digit
     if captures.get(2).is_none() && captures.get(3).is_none() {
@@ -49,7 +48,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       *revision = Some(Revision {
         version,
         date: None,
-        remark: Some(String::from_str_in(remark, self.bump)),
+        remark: Some(BumpString::from_str_in(remark, self.bump)),
       });
       lines.consume_current();
       return;
@@ -60,7 +59,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       let date = captures.get(2).unwrap().as_str();
       *revision = Some(Revision {
         version,
-        date: Some(String::from_str_in(date, self.bump)),
+        date: Some(BumpString::from_str_in(date, self.bump)),
         remark: None,
       });
       lines.consume_current();
@@ -71,8 +70,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let remark = captures.get(3).unwrap().as_str();
     *revision = Some(Revision {
       version,
-      date: Some(String::from_str_in(date, self.bump)),
-      remark: Some(String::from_str_in(remark, self.bump)),
+      date: Some(BumpString::from_str_in(date, self.bump)),
+      remark: Some(BumpString::from_str_in(remark, self.bump)),
     });
     lines.consume_current();
   }
@@ -86,7 +85,7 @@ mod tests {
 
   macro_rules! s {
     (in $bump:expr;$s:expr) => {
-      bumpalo::collections::String::from_str_in($s, $bump)
+      bumpalo::collections::BumpString::from_str_in($s, $bump)
     };
   }
 

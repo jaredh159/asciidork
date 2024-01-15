@@ -15,23 +15,23 @@ impl<'bmp> InlineNode<'bmp> {
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Inline<'bmp> {
-  Bold(Vec<'bmp, InlineNode<'bmp>>),
+  Bold(BumpVec<'bmp, InlineNode<'bmp>>),
   Curly(CurlyKind),
   Discarded,
-  Highlight(Vec<'bmp, InlineNode<'bmp>>),
+  Highlight(BumpVec<'bmp, InlineNode<'bmp>>),
   Macro(MacroNode<'bmp>),
-  Italic(Vec<'bmp, InlineNode<'bmp>>),
-  InlinePassthrough(Vec<'bmp, InlineNode<'bmp>>),
+  Italic(BumpVec<'bmp, InlineNode<'bmp>>),
+  InlinePassthrough(BumpVec<'bmp, InlineNode<'bmp>>),
   JoiningNewline,
   LitMono(SourceString<'bmp>),
-  Mono(Vec<'bmp, InlineNode<'bmp>>),
-  MultiCharWhitespace(String<'bmp>),
-  Quote(QuoteKind, Vec<'bmp, InlineNode<'bmp>>),
+  Mono(BumpVec<'bmp, InlineNode<'bmp>>),
+  MultiCharWhitespace(BumpString<'bmp>),
+  Quote(QuoteKind, BumpVec<'bmp, InlineNode<'bmp>>),
   SpecialChar(SpecialCharKind),
-  Superscript(Vec<'bmp, InlineNode<'bmp>>),
-  Subscript(Vec<'bmp, InlineNode<'bmp>>),
-  Text(String<'bmp>),
-  TextSpan(AttrList<'bmp>, Vec<'bmp, InlineNode<'bmp>>),
+  Superscript(BumpVec<'bmp, InlineNode<'bmp>>),
+  Subscript(BumpVec<'bmp, InlineNode<'bmp>>),
+  Text(BumpString<'bmp>),
+  TextSpan(AttrList<'bmp>, BumpVec<'bmp, InlineNode<'bmp>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -55,10 +55,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let last_name = captures.get(5).unwrap().as_str();
     let email = captures.get(6).map(|m| m.as_str());
     return Author {
-      first_name: String::from_str_in(first_name, self.bump),
-      middle_name: middle_name.map(|m| String::from_str_in(m, self.bump)),
-      last_name: String::from_str_in(last_name, self.bump),
-      email: email.map(|e| String::from_str_in(e, self.bump)),
+      first_name: BumpString::from_str_in(first_name, self.bump),
+      middle_name: middle_name.map(|m| BumpString::from_str_in(m, self.bump)),
+      last_name: BumpString::from_str_in(last_name, self.bump),
+      email: email.map(|e| BumpString::from_str_in(e, self.bump)),
     };
   }
 }

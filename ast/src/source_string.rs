@@ -4,12 +4,12 @@ use crate::internal::*;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct SourceString<'bmp> {
-  pub src: String<'bmp>,
+  pub src: BumpString<'bmp>,
   pub loc: SourceLocation,
 }
 
 impl<'bmp> SourceString<'bmp> {
-  pub fn new(src: String<'bmp>, loc: SourceLocation) -> Self {
+  pub fn new(src: BumpString<'bmp>, loc: SourceLocation) -> Self {
     Self { src, loc }
   }
 }

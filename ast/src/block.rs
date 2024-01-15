@@ -23,13 +23,13 @@ impl<'bmp> Block<'bmp> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BlockContent<'bmp> {
-  Compound(Vec<'bmp, Block<'bmp>>),
-  Simple(Vec<'bmp, InlineNode<'bmp>>),
+  Compound(BumpVec<'bmp, Block<'bmp>>),
+  Simple(BumpVec<'bmp, InlineNode<'bmp>>),
   Verbatim,
   Raw,
   Empty(EmptyMetadata<'bmp>),
   Table,
-  DocumentAttribute(StdString, AttrEntry),
+  DocumentAttribute(String, AttrEntry),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

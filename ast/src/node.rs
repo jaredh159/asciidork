@@ -20,10 +20,10 @@ impl<'bmp> Document<'bmp> {
 pub struct Section<'bmp> {
   level: u8,
   heading: Heading<'bmp>,
-  blocks: Vec<'bmp, Block<'bmp>>,
+  blocks: BumpVec<'bmp, Block<'bmp>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Heading<'bmp> {
-  inlines: Vec<'bmp, Inline<'bmp>>,
+  inlines: BumpVec<'bmp, Inline<'bmp>>,
 }

@@ -189,7 +189,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     bump: &'bmp Bump,
   ) -> SourceString<'bmp> {
     let mut loc = self.location().expect("no tokens to consume");
-    let mut s = String::new_in(bump);
+    let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
       s.push_str(token.lexeme);
       loc.extend(token.loc);
@@ -200,7 +200,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   #[must_use]
   pub fn consume_to_string(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
     let mut loc = self.location().expect("no tokens to consume");
-    let mut s = String::new_in(bump);
+    let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_current() {
       s.push_str(token.lexeme);
       loc.extend(token.loc);
@@ -250,7 +250,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       num_tokens -= 1;
     }
 
-    let mut s = String::new_in(bump);
+    let mut s = BumpString::new_in(bump);
     if let Some(start) = start {
       s.push_str(start.lexeme);
       loc.extend(start.loc);

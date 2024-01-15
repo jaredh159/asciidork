@@ -4,37 +4,35 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq)]
 pub struct DocHeader<'bmp> {
   pub title: Option<DocTitle<'bmp>>,
-  pub authors: Vec<'bmp, Author<'bmp>>,
+  pub authors: BumpVec<'bmp, Author<'bmp>>,
   pub revision: Option<Revision<'bmp>>,
-  // 👍 thurs jared: make non optional up at the doc level, maybe with
-  // an empty entries that gets handed out if doc header not present
   pub attrs: AttrEntries,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DocTitle<'bmp> {
-  pub heading: Vec<'bmp, InlineNode<'bmp>>,
-  pub subtitle: Option<Vec<'bmp, InlineNode<'bmp>>>,
+  pub heading: BumpVec<'bmp, InlineNode<'bmp>>,
+  pub subtitle: Option<BumpVec<'bmp, InlineNode<'bmp>>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Revision<'bmp> {
-  pub version: String<'bmp>,
-  pub date: Option<String<'bmp>>,
-  pub remark: Option<String<'bmp>>,
+  pub version: BumpString<'bmp>,
+  pub date: Option<BumpString<'bmp>>,
+  pub remark: Option<BumpString<'bmp>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Author<'bmp> {
-  pub first_name: String<'bmp>,
-  pub middle_name: Option<String<'bmp>>,
-  pub last_name: String<'bmp>,
-  pub email: Option<String<'bmp>>,
+  pub first_name: BumpString<'bmp>,
+  pub middle_name: Option<BumpString<'bmp>>,
+  pub last_name: BumpString<'bmp>,
+  pub email: Option<BumpString<'bmp>>,
 }
 
 impl<'bmp> Author<'bmp> {
-  pub fn fullname(&self) -> StdString {
-    let mut name = StdString::with_capacity(
+  pub fn fullname(&self) -> String {
+    let mut name = String::with_capacity(
       self.first_name.len()
         + self.last_name.len()
         + self.middle_name.as_ref().map_or(0, |s| s.len())
