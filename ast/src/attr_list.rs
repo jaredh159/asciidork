@@ -3,7 +3,7 @@ use crate::internal::*;
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/positional-and-named-attributes/
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AttrList<'bmp> {
-  pub positional: BumpVec<'bmp, Option<BumpVec<'bmp, InlineNode<'bmp>>>>,
+  pub positional: BumpVec<'bmp, Option<InlineNodes<'bmp>>>,
   pub named: Named<'bmp>,
   pub id: Option<SourceString<'bmp>>,
   pub roles: BumpVec<'bmp, SourceString<'bmp>>,
@@ -61,7 +61,7 @@ impl<'bmp> AttrList<'bmp> {
           Inline::Text(BumpString::from_str_in(positional, bump)),
           SourceLocation::new(loc.start, loc.end),
         )
-      ])],
+      ].into())],
       ..AttrList::new(SourceLocation::new(loc.start - 1, loc.end + 1), bump)
     }
   }

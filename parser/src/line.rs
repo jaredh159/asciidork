@@ -4,12 +4,12 @@ use crate::variants::token::*;
 #[derive(Debug, Clone)]
 pub struct Line<'bmp, 'src> {
   pub src: &'src str,
-  all_tokens: Vec<'bmp, Token<'src>>,
+  all_tokens: BumpVec<'bmp, Token<'src>>,
   pos: usize,
 }
 
 impl<'bmp, 'src> Line<'bmp, 'src> {
-  pub fn new(tokens: Vec<'bmp, Token<'src>>, src: &'src str) -> Self {
+  pub fn new(tokens: BumpVec<'bmp, Token<'src>>, src: &'src str) -> Self {
     Line { all_tokens: tokens, src, pos: 0 }
   }
 

@@ -11,8 +11,8 @@ pub struct DocHeader<'bmp> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DocTitle<'bmp> {
-  pub heading: BumpVec<'bmp, InlineNode<'bmp>>,
-  pub subtitle: Option<BumpVec<'bmp, InlineNode<'bmp>>>,
+  pub heading: InlineNodes<'bmp>,
+  pub subtitle: Option<InlineNodes<'bmp>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

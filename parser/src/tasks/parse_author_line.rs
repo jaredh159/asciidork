@@ -13,7 +13,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_author_line(
     &self,
     line: Line<'bmp, 'src>,
-    authors: &mut Vec<'bmp, Author<'bmp>>,
+    authors: &mut BumpVec<'bmp, Author<'bmp>>,
   ) -> Result<()> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
@@ -71,7 +71,7 @@ mod tests {
   #[test]
   fn test_parse_author_lines() {
     #[allow(clippy::type_complexity)]
-    let cases: StdVec<(&str, StdVec<(&str, Option<&str>, &str, Option<&str>)>)> = vec![
+    let cases: Vec<(&str, Vec<(&str, Option<&str>, &str, Option<&str>)>)> = vec![
       ("Bob L. Foo", vec![("Bob", Some("L."), "Foo", None)]),
       ("Bob Foo", vec![("Bob", None, "Foo", None)]),
       (
@@ -112,7 +112,7 @@ mod tests {
           last_name: s!(in b; last),
           email: email.map(|e| s!(in b; e)),
         })
-        .collect::<StdVec<Author>>();
+        .collect::<Vec<Author>>();
       let mut authors = bumpalo::collections::Vec::new_in(b);
       parser.parse_author_line(line, &mut authors).unwrap();
       assert_eq!(authors.to_vec(), expected_authors);

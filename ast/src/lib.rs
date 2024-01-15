@@ -19,7 +19,7 @@ mod internal {
     pub use crate::doc_content::DocContent;
     pub use crate::doc_header::{Author, DocHeader, DocTitle, Revision};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
-    pub use crate::inline::{CurlyKind::*, QuoteKind::*};
+    pub use crate::inline::{CurlyKind::*, InlineNodes, QuoteKind::*};
     pub use crate::node::{Document, Section};
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme};
     pub use crate::source_location::SourceLocation;

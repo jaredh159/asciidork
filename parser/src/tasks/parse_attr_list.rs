@@ -25,7 +25,7 @@ struct AttrState<'bmp: 'src, 'src> {
   quotes: Quotes,
   attr: CollectText<'bmp>,
   name: CollectText<'bmp>,
-  tokens: Vec<'bmp, Token<'src>>,
+  tokens: BumpVec<'bmp, Token<'src>>,
   kind: AttrKind,
   escaping: bool,
   parse_range: (usize, usize),
@@ -179,7 +179,7 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
       quotes: Quotes::Default,
       attr: CollectText::new_in(start_loc, bump),
       name: CollectText::new_in(start_loc, bump),
-      tokens: Vec::new_in(bump),
+      tokens: BumpVec::new_in(bump),
       kind: AttrKind::Positional,
       escaping: false,
       parse_range,
@@ -223,12 +223,12 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
           self.err_if_formatted(parser)?;
           let src = self.attr.take_src();
           self.attr_list.positional.push(Some(
-            bvec![in self.bump; InlineNode::new(Text(src.src), src.loc)],
+            bvec![in self.bump; InlineNode::new(Text(src.src), src.loc)].into(),
           ));
         }
         Positional => {
           self.err_if_formatted(parser)?;
-          let tokens = std::mem::replace(&mut self.tokens, Vec::new_in(self.bump));
+          let tokens = std::mem::replace(&mut self.tokens, BumpVec::new_in(self.bump));
           let line = parser.line_from(tokens, self.attr.take_src().loc);
           let inlines = parser.parse_inlines(&mut line.into_lines_in(self.bump))?;
           self.attr_list.positional.push(Some(inlines));
@@ -276,21 +276,21 @@ mod tests {
       (
         "[foo]",
         AttrList {
-          positional: b.vec([Some(b.vec([n_text("foo", 1, 4, b)]))]),
+          positional: b.vec([Some(b.inodes([n_text("foo", 1, 4, b)]))]),
           ..AttrList::new(l(0, 5), b)
         },
       ),
       (
         "[foo bar]",
         AttrList {
-          positional: b.vec([Some(b.vec([n_text("foo bar", 1, 8, b)]))]),
+          positional: b.vec([Some(b.inodes([n_text("foo bar", 1, 8, b)]))]),
           ..AttrList::new(l(0, 9), b)
         },
       ),
       (
         "[ foo bar ]",
         AttrList {
-          positional: b.vec([Some(b.vec([n_text("foo bar", 2, 9, b)]))]),
+          positional: b.vec([Some(b.inodes([n_text("foo bar", 2, 9, b)]))]),
           ..AttrList::new(l(0, 11), b)
         },
       ),
@@ -298,8 +298,8 @@ mod tests {
         "[ foo , bar ]",
         AttrList {
           positional: b.vec([
-            Some(b.vec([n_text("foo", 2, 5, b)])),
-            Some(b.vec([n_text("bar", 8, 11, b)])),
+            Some(b.inodes([n_text("foo", 2, 5, b)])),
+            Some(b.inodes([n_text("bar", 8, 11, b)])),
           ]),
           ..AttrList::new(l(0, 13), b)
         },
@@ -327,14 +327,14 @@ mod tests {
       (
         "[\\ ]", // keyboard macro
         AttrList {
-          positional: b.vec([Some(b.vec([n_text("\\", 1, 2, b)]))]),
+          positional: b.vec([Some(b.inodes([n_text("\\", 1, 2, b)]))]),
           ..AttrList::new(l(0, 4), b)
         },
       ),
       (
         "[Ctrl+\\]]",
         AttrList {
-          positional: b.vec([Some(b.vec([n_text("Ctrl+]", 1, 8, b)]))]),
+          positional: b.vec([Some(b.inodes([n_text("Ctrl+]", 1, 8, b)]))]),
           ..AttrList::new(l(0, 9), b)
         },
       ),
@@ -371,8 +371,8 @@ mod tests {
         "[foo,bar]",
         AttrList {
           positional: b.vec([
-            Some(b.vec([n_text("foo", 1, 4, b)])),
-            Some(b.vec([n_text("bar", 5, 8, b)])),
+            Some(b.inodes([n_text("foo", 1, 4, b)])),
+            Some(b.inodes([n_text("bar", 5, 8, b)])),
           ]),
           ..AttrList::new(l(0, 9), b)
         },
@@ -381,8 +381,8 @@ mod tests {
         "[foo,bar,a=b]",
         AttrList {
           positional: b.vec([
-            Some(b.vec([n_text("foo", 1, 4, b)])),
-            Some(b.vec([n_text("bar", 5, 8, b)])),
+            Some(b.inodes([n_text("foo", 1, 4, b)])),
+            Some(b.inodes([n_text("bar", 5, 8, b)])),
           ]),
           named: Named::from(b.vec([(b.src("a", l(9, 10)), b.src("b", l(11, 12)))])),
           ..AttrList::new(l(0, 13), b)
@@ -392,8 +392,8 @@ mod tests {
         "[a=b,foo,b=c,bar]",
         AttrList {
           positional: b.vec([
-            Some(b.vec([n_text("foo", 5, 8, b)])),
-            Some(b.vec([n_text("bar", 13, 16, b)])),
+            Some(b.inodes([n_text("foo", 5, 8, b)])),
+            Some(b.inodes([n_text("bar", 13, 16, b)])),
           ]),
           named: Named::from(b.vec([
             (b.src("a", l(1, 2)), b.src("b", l(3, 4))),
@@ -406,8 +406,8 @@ mod tests {
         "[\"foo,bar\",baz]",
         AttrList {
           positional: b.vec([
-            Some(b.vec([n_text("foo,bar", 2, 9, b)])),
-            Some(b.vec([n_text("baz", 11, 14, b)])),
+            Some(b.inodes([n_text("foo,bar", 2, 9, b)])),
+            Some(b.inodes([n_text("baz", 11, 14, b)])),
           ]),
           ..AttrList::new(l(0, 15), b)
         },
@@ -416,9 +416,9 @@ mod tests {
         "[Sunset,300,400]",
         AttrList {
           positional: b.vec([
-            Some(b.vec([n_text("Sunset", 1, 7, b)])),
-            Some(b.vec([n_text("300", 8, 11, b)])),
-            Some(b.vec([n_text("400", 12, 15, b)])),
+            Some(b.inodes([n_text("Sunset", 1, 7, b)])),
+            Some(b.inodes([n_text("300", 8, 11, b)])),
+            Some(b.inodes([n_text("400", 12, 15, b)])),
           ]),
           ..AttrList::new(l(0, 16), b)
         },
@@ -449,8 +449,8 @@ mod tests {
         "[foo, bar]",
         AttrList {
           positional: b.vec([
-            Some(b.vec([n_text("foo", 1, 4, b)])),
-            Some(b.vec([n_text("bar", 6, 9, b)])),
+            Some(b.inodes([n_text("foo", 1, 4, b)])),
+            Some(b.inodes([n_text("bar", 6, 9, b)])),
           ]),
           ..AttrList::new(l(0, 10), b)
         },
@@ -458,35 +458,35 @@ mod tests {
       (
         "[,bar]",
         AttrList {
-          positional: b.vec([None, Some(b.vec([n_text("bar", 2, 5, b)]))]),
+          positional: b.vec([None, Some(b.inodes([n_text("bar", 2, 5, b)]))]),
           ..AttrList::new(l(0, 6), b)
         },
       ),
       (
         "[ , bar]",
         AttrList {
-          positional: b.vec([None, Some(b.vec([n_text("bar", 4, 7, b)]))]),
+          positional: b.vec([None, Some(b.inodes([n_text("bar", 4, 7, b)]))]),
           ..AttrList::new(l(0, 8), b)
         },
       ),
       (
         "[, , bar]",
         AttrList {
-          positional: b.vec([None, None, Some(b.vec([n_text("bar", 5, 8, b)]))]),
+          positional: b.vec([None, None, Some(b.inodes([n_text("bar", 5, 8, b)]))]),
           ..AttrList::new(l(0, 9), b)
         },
       ),
       (
         "[\"foo]\"]",
         AttrList {
-          positional: b.vec([Some(b.vec([n_text("foo]", 2, 6, b)]))]),
+          positional: b.vec([Some(b.inodes([n_text("foo]", 2, 6, b)]))]),
           ..AttrList::new(l(0, 8), b)
         },
       ),
       (
         "[foo\\]]",
         AttrList {
-          positional: b.vec([Some(b.vec([n_text("foo]", 1, 6, b)]))]),
+          positional: b.vec([Some(b.inodes([n_text("foo]", 1, 6, b)]))]),
           ..AttrList::new(l(0, 7), b)
         },
       ),

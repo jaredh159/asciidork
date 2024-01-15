@@ -55,7 +55,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.ctx.delimiter = Some(delimiter);
     let delimiter_token = lines.consume_current_token().unwrap();
     self.restore_lines(lines);
-    let mut blocks = Vec::new_in(self.bump);
+    let mut blocks = BumpVec::new_in(self.bump);
     while let Some(inner) = self.parse_block()? {
       blocks.push(inner);
     }
@@ -209,7 +209,7 @@ mod tests {
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
       context: Context::Paragraph,
-      content: Content::Simple(b.vec([
+      content: Content::Simple(b.inodes([
         inode(Text(b.s("hello mamma,")), l(0, 12)),
         inode(JoiningNewline, l(12, 13)),
         inode(Text(b.s("hello papa")), l(13, 23)),
@@ -243,7 +243,7 @@ mod tests {
       title: Some(b.src("My Title", l(1, 9))),
       attrs: None,
       context: Context::Paragraph,
-      content: Content::Simple(b.vec([inode(Text(b.s("foo")), l(10, 13))])),
+      content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(10, 13))])),
       loc: l(0, 13),
     };
     assert_eq!(block, expected);
@@ -256,7 +256,7 @@ mod tests {
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
       context: Context::AdmonitionTip,
-      content: Content::Simple(b.vec([inode(Text(b.s("foo")), l(5, 8))])),
+      content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(5, 8))])),
       loc: l(0, 8),
       ..Block::empty(b)
     };
@@ -267,7 +267,7 @@ mod tests {
     let expected = Block {
       attrs: Some(AttrList::positional("pos", l(1, 4), b)),
       context: Context::AdmonitionTip,
-      content: Content::Simple(b.vec([inode(Text(b.s("foo")), l(11, 14))])),
+      content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(11, 14))])),
       loc: l(0, 14),
       ..Block::empty(b)
     };
@@ -278,7 +278,7 @@ mod tests {
     let expected = Block {
       attrs: Some(AttrList::positional("WARNING", l(1, 8), b)),
       context: Context::AdmonitionWarning,
-      content: Content::Simple(b.vec([
+      content: Content::Simple(b.inodes([
         inode(Text(b.s("TIP: foo")), l(10, 18)), // <-- attr list wins
       ])),
       loc: l(0, 18),
@@ -294,7 +294,7 @@ mod tests {
       context: Context::AdmonitionWarning, // <-- turns example into warning
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
-        content: Content::Simple(b.vec([n_text("foo", 15, 18, b)])),
+        content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
         loc: l(15, 18),
         ..Block::empty(b)
       }])),
@@ -310,7 +310,7 @@ mod tests {
       context: Context::AdmonitionCaution,
       content: Content::Compound(b.vec([Block {
         context: Context::AdmonitionNote,
-        content: Content::Simple(b.vec([inode(Text(b.s("foo")), l(21, 24))])),
+        content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(21, 24))])),
         loc: l(15, 24),
         ..Block::empty(b)
       }])),
@@ -345,7 +345,7 @@ mod tests {
       context: Context::Open,
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
-        content: Content::Simple(b.vec([n_text("foo", 3, 6, b)])),
+        content: Content::Simple(b.inodes([n_text("foo", 3, 6, b)])),
         loc: l(3, 6),
         ..Block::empty(b)
       }])),
@@ -364,7 +364,7 @@ mod tests {
       context: Context::Example,
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
-        content: Content::Simple(b.vec([n_text("foo", 5, 8, b)])),
+        content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
         loc: l(5, 8),
         ..Block::empty(b)
       }])),
@@ -382,7 +382,7 @@ mod tests {
     let expected = Block {
       attrs: Some(AttrList::positional("sidebar", l(1, 8), b)),
       context: Context::Sidebar,
-      content: Content::Simple(b.vec([n_text("foo", 10, 13, b)])),
+      content: Content::Simple(b.inodes([n_text("foo", 10, 13, b)])),
       loc: l(0, 13),
       ..Block::empty(b)
     };
@@ -412,7 +412,7 @@ mod tests {
       context: Context::Sidebar,
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
-        content: Content::Simple(b.vec([n_text("foo", 5, 8, b)])),
+        content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
         loc: l(5, 8),
         ..Block::empty(b)
       }])),
@@ -439,7 +439,7 @@ foo
         context: Context::Open,
         content: Content::Compound(b.vec([Block {
           context: Context::Paragraph,
-          content: Content::Simple(b.vec([n_text("foo", 8, 11, b)])),
+          content: Content::Simple(b.inodes([n_text("foo", 8, 11, b)])),
           loc: l(8, 11),
           ..Block::empty(b)
         }])),
@@ -472,7 +472,7 @@ foo
         context: Context::Open,
         content: Content::Compound(b.vec([Block {
           context: Context::Paragraph,
-          content: Content::Simple(b.vec([n_text("foo", 15, 18, b)])),
+          content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
           loc: l(15, 18),
           ..Block::empty(b)
         }])),
@@ -506,7 +506,7 @@ This is more content in the sidebar block.
       content: Content::Compound(b.vec([
         Block {
           context: Context::Paragraph,
-          content: Content::Simple(b.vec([para_1_txt])),
+          content: Content::Simple(b.inodes([para_1_txt])),
           loc: l(5, 40),
           ..Block::empty(b)
         },
@@ -521,7 +521,7 @@ This is more content in the sidebar block.
         },
         Block {
           context: Context::Paragraph,
-          content: Content::Simple(b.vec([para_2_txt])),
+          content: Content::Simple(b.inodes([para_2_txt])),
           loc: l(61, 103),
           ..Block::empty(b)
         },

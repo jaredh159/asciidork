@@ -4,7 +4,7 @@ use crate::internal::*;
 pub enum MacroNode<'bmp> {
   Footnote {
     id: Option<SourceString<'bmp>>,
-    text: BumpVec<'bmp, InlineNode<'bmp>>,
+    text: InlineNodes<'bmp>,
   },
   Image {
     flow: Flow,
@@ -22,7 +22,7 @@ pub enum MacroNode<'bmp> {
   },
   Pass {
     target: Option<SourceString<'bmp>>,
-    content: BumpVec<'bmp, InlineNode<'bmp>>,
+    content: InlineNodes<'bmp>,
   },
   Icon {
     target: SourceString<'bmp>,

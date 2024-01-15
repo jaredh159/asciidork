@@ -9,13 +9,13 @@ pub struct Parser<'bmp: 'src, 'src> {
   pub(super) document: Document<'bmp>,
   pub(super) peeked_lines: Option<ContiguousLines<'bmp, 'src>>,
   pub(super) ctx: ParseContext,
-  pub(super) errors: RefCell<StdVec<Diagnostic>>,
+  pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
 }
 
 pub struct ParseResult<'bmp> {
   pub document: Document<'bmp>,
-  pub warnings: StdVec<Diagnostic>,
+  pub warnings: Vec<Diagnostic>,
 }
 
 #[derive(Debug)]
@@ -46,7 +46,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         subs: Substitutions::all(),
         delimiter: None,
       },
-      errors: RefCell::new(StdVec::new()),
+      errors: RefCell::new(Vec::new()),
       bail: true,
     }
   }
@@ -75,7 +75,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if self.lexer.is_eof() {
       return None;
     }
-    let mut lines = Vec::new_in(self.bump);
+    let mut lines = BumpVec::new_in(self.bump);
     while let Some(line) = self.lexer.consume_line(self.bump) {
       lines.push(line);
       if self.lexer.peek_is('\n') {
@@ -93,7 +93,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, StdVec<Diagnostic>> {
+  pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
 
     while let Some(block) = self.parse_block()? {
@@ -131,7 +131,7 @@ impl Substitutions {
   }
 }
 
-impl From<Diagnostic> for StdVec<Diagnostic> {
+impl From<Diagnostic> for Vec<Diagnostic> {
   fn from(diagnostic: Diagnostic) -> Self {
     vec![diagnostic]
   }

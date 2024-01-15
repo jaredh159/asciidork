@@ -1,14 +1,15 @@
 use crate::internal::*;
 
 pub trait BumpTestHelpers<'bmp> {
-  fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> Vec<'bmp, T>;
+  fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> BumpVec<'bmp, T>;
   fn s(&'bmp self, s: &'static str) -> BumpString<'bmp>;
   fn src(&'bmp self, s: &'static str, loc: SourceLocation) -> SourceString<'bmp>;
+  fn inodes<const N: usize>(&'bmp self, nodes: [InlineNode<'bmp>; N]) -> InlineNodes<'bmp>;
 }
 
 impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
-  fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> Vec<'bmp, T> {
-    let mut vec = Vec::new_in(self);
+  fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> BumpVec<'bmp, T> {
+    let mut vec = BumpVec::new_in(self);
     for node in nodes.iter() {
       vec.push(node.clone());
     }
@@ -21,6 +22,14 @@ impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
 
   fn src(&'bmp self, s: &'static str, loc: SourceLocation) -> SourceString<'bmp> {
     SourceString::new(self.s(s), loc)
+  }
+
+  fn inodes<const N: usize>(&'bmp self, nodes: [InlineNode<'bmp>; N]) -> InlineNodes<'bmp> {
+    let mut vec = BumpVec::new_in(self);
+    for node in nodes.iter() {
+      vec.push(node.clone());
+    }
+    vec.into()
   }
 }
 

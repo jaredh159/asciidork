@@ -31,7 +31,7 @@ impl<'bmp> CollectText<'bmp> {
     SourceString::new(self.take(), src_loc)
   }
 
-  pub fn commit_inlines(&mut self, inlines: &mut Vec<'bmp, InlineNode<'bmp>>) {
+  pub fn commit_inlines(&mut self, inlines: &mut InlineNodes<'bmp>) {
     match (self.is_empty(), inlines.last_mut()) {
       (
         false,

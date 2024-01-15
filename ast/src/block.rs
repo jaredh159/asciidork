@@ -15,7 +15,7 @@ impl<'bmp> Block<'bmp> {
       title: None,
       attrs: None,
       context: BlockContext::Paragraph,
-      content: BlockContent::Simple(bvec![in b;]),
+      content: BlockContent::Simple(InlineNodes::new(b)),
       loc: SourceLocation::new(0, 0),
     }
   }
@@ -24,7 +24,7 @@ impl<'bmp> Block<'bmp> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BlockContent<'bmp> {
   Compound(BumpVec<'bmp, Block<'bmp>>),
-  Simple(BumpVec<'bmp, InlineNode<'bmp>>),
+  Simple(InlineNodes<'bmp>),
   Verbatim,
   Raw,
   Empty(EmptyMetadata<'bmp>),

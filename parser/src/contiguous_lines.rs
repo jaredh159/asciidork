@@ -4,11 +4,11 @@ use crate::internal::*;
 pub struct ContiguousLines<'bmp, 'src> {
   // NB: lines kept in reverse, as there is no VeqDeque in bumpalo
   // and we almost always want to consume from the front, so fake it
-  lines: Vec<'bmp, Line<'bmp, 'src>>,
+  lines: BumpVec<'bmp, Line<'bmp, 'src>>,
 }
 
 impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
-  pub fn new(mut lines: Vec<'bmp, Line<'bmp, 'src>>) -> Self {
+  pub fn new(mut lines: BumpVec<'bmp, Line<'bmp, 'src>>) -> Self {
     lines.reverse();
     ContiguousLines { lines }
   }
