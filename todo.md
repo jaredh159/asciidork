@@ -1,5 +1,8 @@
 ## todo
 
+- [ ] asciidoctor html backend _stylesheets,_ @see
+      https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
+      `html5.rb`
 - [ ] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
       folded into ContiguousLines so that it shows up as one line, i think
 - [ ] block quotes

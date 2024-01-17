@@ -255,7 +255,11 @@ fn test_head_opts() {
   use SubstrTest::*;
   let cases = vec![
     (":nolang:", DoesNotContain("lang=")),
-    // (":nolang:", Contains("<title>Doc Header</title>")),
+    (":nolang:", Contains("<title>Doc Header</title>")),
+    (
+      ":title: Such Custom Title",
+      Contains("<title>Such Custom Title</title>"),
+    ),
     (":lang: es", Contains("lang=\"es\"")),
     (":encoding: latin1", Contains("charset=\"latin1\"")),
     (":reproducible:", DoesNotContain("generator")),
@@ -279,8 +283,25 @@ fn test_head_opts() {
       "Kismet R. Lee <kismet@asciidoctor.org>; Bob Smith",
       Contains(r#"<meta name="author" content="Kismet R. Lee, Bob Smith">"#),
     ),
+    (
+      ":copyright: x",
+      Contains(r#"<meta name="copyright" content="x">"#),
+    ),
+    (
+      ":favicon:",
+      Contains(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#),
+    ),
+    (
+      ":favicon: ./images/favicon/favicon.png",
+      Contains(r#"<link rel="icon" type="image/png" href="./images/favicon/favicon.png">"#),
+    ),
+    (
+      ":iconsdir: custom\n:favicon: {iconsdir}/my/icon.png",
+      Contains(r#"<link rel="icon" type="image/png" href="custom/my/icon.png">"#),
+    ),
   ];
   let bump = &Bump::new();
+
   for (opts, expectation) in cases {
     let input = format!("= Doc Header\n{}\n\nignore me\n\n", opts);
     let parser = Parser::new(bump, &input);
@@ -303,11 +324,18 @@ fn test_head_opts() {
       ),
     }
   }
+  // one test with no doc header
+  let parser = Parser::new(bump, "without doc header");
+  let document = parser.parse().unwrap().document;
+  let html = eval(document, Flags::default(), AsciidoctorHtml::new()).unwrap();
+  assert!(html.contains("<title>Untitled</title>"));
 }
 
 #[test]
 fn test_non_embedded() {
   let input = indoc! {r#"
+    = *Document* _title_
+
     foo
   "#};
   let expected = indoc! {r##"
@@ -318,6 +346,7 @@ fn test_non_embedded() {
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="generator" content="Asciidork">
+        <title>Document title</title>
       </head>
       <body>
         <div class="paragraph">
@@ -350,6 +379,7 @@ fn test_isolate() {
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="generator" content="Asciidork">
+        <title>Untitled</title>
       </head>
       <body>
         <div class="paragraph">

@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -11,34 +9,6 @@ pub struct InlineNode<'bmp> {
 impl<'bmp> InlineNode<'bmp> {
   pub fn new(content: Inline<'bmp>, loc: SourceLocation) -> Self {
     Self { content, loc }
-  }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct InlineNodes<'bmp>(BumpVec<'bmp, InlineNode<'bmp>>);
-
-impl<'bmp> InlineNodes<'bmp> {
-  pub fn new(bump: &'bmp Bump) -> Self {
-    Self(BumpVec::new_in(bump))
-  }
-}
-
-impl<'bmp> Deref for InlineNodes<'bmp> {
-  type Target = BumpVec<'bmp, InlineNode<'bmp>>;
-  fn deref(&self) -> &Self::Target {
-    &self.0
-  }
-}
-
-impl<'bmp> DerefMut for InlineNodes<'bmp> {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.0
-  }
-}
-
-impl<'bmp> From<BumpVec<'bmp, InlineNode<'bmp>>> for InlineNodes<'bmp> {
-  fn from(vec: BumpVec<'bmp, InlineNode<'bmp>>) -> Self {
-    Self(vec)
   }
 }
 

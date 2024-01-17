@@ -579,7 +579,7 @@ mod tests {
   use crate::test::*;
 
   #[test]
-  fn test_joinin_newlines() {
+  fn test_joining_newlines() {
     let b = &Bump::new();
     let cases = vec![
       (
@@ -956,10 +956,9 @@ mod tests {
 
   fn run(cases: Vec<(&str, InlineNodes)>, bump: &Bump) {
     for (input, expected) in cases {
-      let mut parser = crate::Parser::new(bump, input);
+      let mut parser = Parser::new(bump, input);
       let mut block = parser.read_lines().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
-      // let bump_vec = BumpVec::from_iter_in(inlines.into_iter(), bump);
       assert_eq!(inlines, expected);
     }
   }

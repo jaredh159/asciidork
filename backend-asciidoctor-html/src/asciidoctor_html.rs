@@ -40,28 +40,13 @@ impl Backend for AsciidoctorHtml {
     if let Some(keywords) = attrs.str("keywords") {
       self.push([r#"<meta name="keywords" content=""#, keywords, "\">"]);
     }
-    if let Some(header) = &document.header {
-      if !header.authors.is_empty() {
-        self.push_str(r#"<meta name="author" content=""#);
-        for (index, author) in header.authors.iter().enumerate() {
-          if index > 0 {
-            self.push_str(", ");
-          }
-          // TODO: escape/sanitize, w/ tests, see asciidoctor
-          self.push_str(&author.fullname());
-        }
-        self.push_str(r#"">"#);
-      }
+    if let Some(copyright) = attrs.str("copyright") {
+      self.push([r#"<meta name="copyright" content=""#, copyright, "\">"]);
     }
-
-    if let Some(_title) = &document.header.as_ref().and_then(|h| h.title.as_ref()) {
-      // TODO: strip tags, support doc `title` attr as override
-      // @see https://github.com/asciidoctor/asciidoctor/issues/504
-      self.push_str(r#"<title>"#);
-      self.push_str(r#"</title>"#);
-    }
-
-    // self.push_str("<title>Untitled</title>");
+    self.render_favicon(attrs);
+    self.render_authors(&document.header);
+    self.render_title(document, attrs);
+    // TODO: stylesheets
     self.push_str(r#"</head><body>"#);
   }
 
@@ -299,6 +284,56 @@ impl AsciidoctorHtml {
     }
     self.push_str(r#"</div>"#);
     self.footnotes = footnotes;
+  }
+
+  fn render_favicon(&mut self, attrs: &AttrEntries) {
+    match attrs.get("favicon") {
+      Some(AttrEntry::String(path)) => {
+        let ext = helpers::file_ext(path).unwrap_or("ico");
+        self.push_str(r#"<link rel="icon" type="image/"#);
+        self.push([ext, r#"" href=""#, path, "\">"]);
+      }
+      Some(AttrEntry::Bool(true)) => {
+        self.push_str(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#);
+      }
+      _ => {}
+    }
+  }
+
+  fn render_authors(&mut self, header: &Option<DocHeader>) {
+    let Some(DocHeader { authors, .. }) = header else {
+      return;
+    };
+    if authors.is_empty() {
+      return;
+    }
+    self.push_str(r#"<meta name="author" content=""#);
+    for (index, author) in authors.iter().enumerate() {
+      if index > 0 {
+        self.push_str(", ");
+      }
+      // TODO: escape/sanitize, w/ tests, see asciidoctor
+      self.push_str(&author.fullname());
+    }
+    self.push_str(r#"">"#);
+  }
+
+  fn render_title(&mut self, document: &Document, attrs: &AttrEntries) {
+    self.push_str(r#"<title>"#);
+    if let Some(title) = attrs.str("title") {
+      self.push_str(title);
+    } else if let Some(title) = document
+      .header
+      .as_ref()
+      .and_then(|header| header.title.as_ref())
+    {
+      for s in title.heading.plain_text() {
+        self.push_str(s);
+      }
+    } else {
+      self.push_str("Untitled");
+    }
+    self.push_str(r#"</title>"#);
   }
 }
 

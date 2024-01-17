@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 asciidork-ast = { path = "../ast" }
 asciidork-backend = { path = "../backend" }
+asciidork-eval = { path = "../eval" }
 lazy_static = "1.4.0"
 regex = "1.10.2"
 
