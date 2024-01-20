@@ -111,6 +111,28 @@ impl Backend for AsciidoctorHtml {
   fn enter_inline_passthrough(&mut self, _children: &[InlineNode]) {}
   fn exit_inline_passthrough(&mut self, _children: &[InlineNode]) {}
 
+  fn visit_button_macro(&mut self, text: &str) {
+    self.push([r#"<b class="button">"#, text, "</b>"])
+  }
+
+  fn visit_menu_macro(&mut self, items: &[&str]) {
+    let mut items = items.iter();
+    self.push_str(r#"<span class="menuseq"><span class="menu">"#);
+    self.push_str(items.next().unwrap());
+    self.push_str("</span>");
+
+    let last_idx = items.len() - 1;
+    for (idx, item) in items.enumerate() {
+      self.push_str(r#"&#160;&#9656;<span class=""#);
+      if idx == last_idx {
+        self.push(["menuitem\">", item, "</span>"]);
+      } else {
+        self.push(["submenu\">", item, "</span>"]);
+      }
+    }
+    self.push_str("</span>");
+  }
+
   fn visit_inline_specialchar(&mut self, char: &SpecialCharKind) {
     match char {
       SpecialCharKind::Ampersand => self.push_str("&amp;"),
@@ -127,12 +149,52 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</mark>");
   }
 
-  fn into_result(self) -> Result<Self::Output, Self::Error> {
-    Ok(self.html)
+  fn enter_inline_subscript(&mut self, _children: &[InlineNode]) {
+    self.push_str("<sub>");
   }
 
-  fn result(&self) -> Result<&Self::Output, Self::Error> {
-    Ok(&self.html)
+  fn exit_inline_subscript(&mut self, _children: &[InlineNode]) {
+    self.push_str("</sub>");
+  }
+
+  fn enter_inline_superscript(&mut self, _children: &[InlineNode]) {
+    self.push_str("<sup>");
+  }
+
+  fn exit_inline_superscript(&mut self, _children: &[InlineNode]) {
+    self.push_str("</sup>");
+  }
+
+  fn enter_inline_quote(&mut self, kind: QuoteKind, _children: &[InlineNode]) {
+    match kind {
+      QuoteKind::Double => self.push_str("&#8220;"),
+      QuoteKind::Single => self.push_str("&#8216;"),
+    }
+  }
+
+  fn exit_inline_quote(&mut self, kind: QuoteKind, _children: &[InlineNode]) {
+    match kind {
+      QuoteKind::Double => self.push_str("&#8221;"),
+      QuoteKind::Single => self.push_str("&#8217;"),
+    }
+  }
+
+  fn visit_curly_quote(&mut self, kind: CurlyKind) {
+    match kind {
+      CurlyKind::LeftDouble => self.push_str("&#8221;"),
+      CurlyKind::RightDouble => self.push_str("&#8220;"),
+      CurlyKind::LeftSingle => self.push_str("&#8217;"),
+      CurlyKind::RightSingle => self.push_str("&#8216;"),
+      CurlyKind::LegacyImplicitApostrophe => self.push_str("&#8217;"),
+    }
+  }
+
+  fn visit_inline_lit_mono(&mut self, text: &str) {
+    self.push(["<code>", text, "</code>"]);
+  }
+
+  fn visit_multichar_whitespace(&mut self, _whitespace: &str) {
+    self.push_ch(' ');
   }
 
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
@@ -210,6 +272,14 @@ impl Backend for AsciidoctorHtml {
     self.push([r#"" title="View footnote.">"#, &num, "</a>]</sup>"]);
     let id = id.unwrap_or(&num);
     self.footnotes.push((id.to_string(), footnote));
+  }
+
+  fn into_result(self) -> Result<Self::Output, Self::Error> {
+    Ok(self.html)
+  }
+
+  fn result(&self) -> Result<&Self::Output, Self::Error> {
+    Ok(&self.html)
   }
 }
 

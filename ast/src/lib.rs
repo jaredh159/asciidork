@@ -42,7 +42,7 @@ pub mod prelude {
   pub use crate::attr_list::{AttrList, Named};
   pub use crate::block::{Block, EmptyMetadata};
   pub use crate::doc_content::DocContent;
-  pub use crate::inline::{InlineNode, SpecialCharKind};
+  pub use crate::inline::{CurlyKind, InlineNode, QuoteKind, SpecialCharKind};
   pub use crate::node::{Document, Section};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;

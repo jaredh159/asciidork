@@ -94,10 +94,32 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
       children.iter().for_each(|node| eval_inline(node, backend));
       backend.exit_inline_highlight(children);
     }
+    Subscript(children) => {
+      backend.enter_inline_subscript(children);
+      children.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_inline_subscript(children);
+    }
+    Superscript(children) => {
+      backend.enter_inline_superscript(children);
+      children.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_inline_superscript(children);
+    }
+    Quote(kind, children) => {
+      backend.enter_inline_quote(*kind, children);
+      children.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_inline_quote(*kind, children);
+    }
+    LitMono(text) => backend.visit_inline_lit_mono(text),
+    Curly(kind) => backend.visit_curly_quote(*kind),
+    MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws.as_str()),
     Macro(Footnote { id, text }) => {
       backend.enter_footnote(id.as_deref(), text);
       text.iter().for_each(|node| eval_inline(node, backend));
       backend.exit_footnote(id.as_deref(), text);
+    }
+    Macro(Button(text)) => backend.visit_button_macro(text),
+    Macro(Menu(items)) => {
+      backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
     }
     _ => {
       println!("\nUnhandled inline node type:");

@@ -34,13 +34,13 @@ pub enum Inline<'bmp> {
   TextSpan(AttrList<'bmp>, InlineNodes<'bmp>),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum QuoteKind {
   Double,
   Single,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CurlyKind {
   LeftDouble,
   RightDouble,

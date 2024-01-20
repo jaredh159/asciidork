@@ -117,10 +117,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               "pass:" => {
                 let target = line.consume_optional_macro_target(self.bump);
                 self.ctx.subs = Substitutions::from_pass_macro_target(&target);
-                println!("line: {:?}", line.src);
                 let mut attrs = self.parse_attr_list(&mut line)?;
-                println!("line: {:?}", line.src);
-                println!("inlines: {:?}", inlines);
                 self.ctx.subs = subs;
                 finish_macro(&line, &mut macro_loc, line_end, &mut text);
                 let content = if !attrs.positional.is_empty() && attrs.positional[0].is_some() {
@@ -277,6 +274,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
+          Backtick
+            if subs.inline_formatting && starts_constrained(&[Backtick], &token, &line, lines) =>
+          {
+            self.parse_constrained(&token, Mono, &mut text, &mut inlines, line, lines)?;
+            break;
+          }
+
+          Backtick
+            if subs.inline_formatting && starts_unconstrained(Backtick, &token, &line, lines) =>
+          {
+            self.parse_unconstrained(&token, Mono, &mut text, &mut inlines, line, lines)?;
+            break;
+          }
+
           DoubleQuote
             if subs.inline_formatting
               && line.current_is(Backtick)
@@ -331,7 +342,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          DoubleQuote if subs.inline_formatting && line.current_is(Backtick) => {
+          DoubleQuote
+            if subs.inline_formatting && line.current_is(Backtick) && stop_tokens != [Backtick] =>
+          {
             let mut loc = token.loc;
             line.discard_assert(Backtick);
             loc.end += 1;
@@ -353,7 +366,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
-          SingleQuote if subs.inline_formatting && line.current_is(Backtick) => {
+          SingleQuote
+            if subs.inline_formatting && line.current_is(Backtick) && stop_tokens != [Backtick] =>
+          {
             let mut loc = token.loc;
             line.discard_assert(Backtick);
             loc.end += 1;
@@ -361,20 +376,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             lines.restore(line);
             inlines.push(node(Curly(LeftSingle), loc));
             text.loc = loc.clamp_end();
-            break;
-          }
-
-          Backtick
-            if subs.inline_formatting && starts_constrained(&[Backtick], &token, &line, lines) =>
-          {
-            self.parse_constrained(&token, Mono, &mut text, &mut inlines, line, lines)?;
-            break;
-          }
-
-          Backtick
-            if subs.inline_formatting && starts_unconstrained(Backtick, &token, &line, lines) =>
-          {
-            self.parse_unconstrained(&token, Mono, &mut text, &mut inlines, line, lines)?;
             break;
           }
 
@@ -577,6 +578,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 mod tests {
   use super::*;
   use crate::test::*;
+  use pretty_assertions::assert_eq;
 
   #[test]
   fn test_joining_newlines() {
@@ -770,18 +772,14 @@ mod tests {
         "foo `\"bar\"`",
         b.inodes([
           n_text("foo ", 0, 4, b),
-          n(Curly(RightDouble), l(4, 6)),
-          n_text("bar", 6, 9, b),
-          n(Curly(LeftDouble), l(9, 11)),
+          n(Mono(b.inodes([n_text("\"bar\"", 5, 10, b)])), l(4, 11)),
         ]),
       ),
       (
         "foo `'bar'`",
         b.inodes([
           n_text("foo ", 0, 4, b),
-          n(Curly(RightSingle), l(4, 6)),
-          n_text("bar", 6, 9, b),
-          n(Curly(LeftSingle), l(9, 11)),
+          n(Mono(b.inodes([n_text("'bar'", 5, 10, b)])), l(4, 11)),
         ]),
       ),
       (
@@ -959,7 +957,7 @@ mod tests {
       let mut parser = Parser::new(bump, input);
       let mut block = parser.read_lines().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
-      assert_eq!(inlines, expected);
+      assert_eq!(inlines, expected, "input was: `{}`", input);
     }
   }
 }

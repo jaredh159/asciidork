@@ -66,6 +66,7 @@ dependencies = [
  "asciidork-ast",
  "bumpalo",
  "lazy_static",
+ "pretty_assertions",
  "regex",
 ]
 

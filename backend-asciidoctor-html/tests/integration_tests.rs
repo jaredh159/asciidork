@@ -26,6 +26,76 @@ fn test_eval() {
       r#"<div class="paragraph"><p>foo <mark>bar</mark></p></div>"#,
     ),
     (
+      "foo `bar`",
+      r#"<div class="paragraph"><p>foo <code>bar</code></p></div>"#,
+    ),
+    (
+      "rofl +_foo_+ lol",
+      r#"<div class="paragraph"><p>rofl _foo_ lol</p></div>"#,
+    ),
+    (
+      "+++_<foo>&_+++ bar",
+      r#"<div class="paragraph"><p>_<foo>&_ bar</p></div>"#,
+    ),
+    (
+      "foo ~bar~ baz",
+      r#"<div class="paragraph"><p>foo <sub>bar</sub> baz</p></div>"#,
+    ),
+    (
+      "foo ^bar^ baz",
+      r#"<div class="paragraph"><p>foo <sup>bar</sup> baz</p></div>"#,
+    ),
+    (
+      "foo `'bar'`",
+      r#"<div class="paragraph"><p>foo <code>'bar'</code></p></div>"#,
+    ),
+    (
+      "foo \"`bar`\"",
+      r#"<div class="paragraph"><p>foo &#8220;bar&#8221;</p></div>"#,
+    ),
+    (
+      "Olaf's wrench",
+      r#"<div class="paragraph"><p>Olaf&#8217;s wrench</p></div>"#,
+    ),
+    (
+      "foo   bar",
+      r#"<div class="paragraph"><p>foo bar</p></div>"#,
+    ),
+    (
+      "`+{name}+`",
+      r#"<div class="paragraph"><p><code>{name}</code></p></div>"#,
+    ),
+    (
+      "foo <bar> & lol",
+      r#"<div class="paragraph"><p>foo &lt;bar&gt; &amp; lol</p></div>"#,
+    ),
+    (
+      "press the btn:[OK] button",
+      r#"<div class="paragraph"><p>press the <b class="button">OK</b> button</p></div>"#,
+    ),
+    (
+      "select menu:File[Save].",
+      indoc! {r#"
+        <div class="paragraph">
+          <p>select <span class="menuseq"><span class="menu">File</span>&#160;&#9656;<span class="menuitem">Save</span></span>.</p>
+        </div>
+      "#},
+    ),
+    (
+      "select menu:File[Save > Reset].",
+      indoc! {r#"
+        <div class="paragraph">
+          <p>
+            select <span class="menuseq"
+              ><span class="menu">File</span>&#160;&#9656;
+              <span class="submenu">Save</span>&#160;&#9656;
+              <span class="menuitem">Reset</span></span
+            >.
+          </p>
+        </div>
+      "#},
+    ),
+    (
       ".Title\nfoo",
       indoc! {r#"
         <div class="paragraph">

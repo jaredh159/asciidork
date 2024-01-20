@@ -25,7 +25,12 @@ pub trait Backend {
 
   /// inlines
   fn visit_inline_text(&mut self, text: &str);
+  fn visit_inline_lit_mono(&mut self, text: &str);
   fn visit_joining_newline(&mut self);
+  fn visit_curly_quote(&mut self, kind: CurlyKind);
+  fn visit_multichar_whitespace(&mut self, whitespace: &str);
+  fn visit_button_macro(&mut self, text: &str);
+  fn visit_menu_macro(&mut self, items: &[&str]);
   fn enter_inline_italic(&mut self, children: &[InlineNode]);
   fn exit_inline_italic(&mut self, children: &[InlineNode]);
   fn enter_inline_mono(&mut self, children: &[InlineNode]);
@@ -37,6 +42,12 @@ pub trait Backend {
   fn exit_inline_passthrough(&mut self, children: &[InlineNode]);
   fn enter_inline_highlight(&mut self, children: &[InlineNode]);
   fn exit_inline_highlight(&mut self, children: &[InlineNode]);
+  fn enter_inline_subscript(&mut self, children: &[InlineNode]);
+  fn exit_inline_subscript(&mut self, children: &[InlineNode]);
+  fn enter_inline_superscript(&mut self, children: &[InlineNode]);
+  fn exit_inline_superscript(&mut self, children: &[InlineNode]);
+  fn enter_inline_quote(&mut self, kind: QuoteKind, children: &[InlineNode]);
+  fn exit_inline_quote(&mut self, kind: QuoteKind, children: &[InlineNode]);
   fn enter_footnote(&mut self, id: Option<&str>, content: &[InlineNode]);
   fn exit_footnote(&mut self, id: Option<&str>, content: &[InlineNode]);
 
