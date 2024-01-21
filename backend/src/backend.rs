@@ -14,6 +14,8 @@ pub trait Backend {
   // blocks contexts
   fn enter_paragraph_block(&mut self, block: &Block);
   fn exit_paragraph_block(&mut self, block: &Block);
+  fn enter_sidebar_block(&mut self, block: &Block, content: &BlockContent);
+  fn exit_sidebar_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block);
   fn exit_image_block(&mut self, block: &Block);
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
@@ -22,6 +24,8 @@ pub trait Backend {
   // block content
   fn enter_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
   fn exit_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
+  fn enter_compound_block_content(&mut self, children: &[Block], block: &Block);
+  fn exit_compound_block_content(&mut self, children: &[Block], block: &Block);
 
   /// inlines
   fn visit_inline_text(&mut self, text: &str);

@@ -96,6 +96,16 @@ fn test_eval() {
       "#},
     ),
     (
+      "[sidebar]\nfoo bar",
+      indoc! {r#"
+        <div class="sidebarblock">
+          <div class="content">
+            foo bar
+          </div>
+        </div>
+      "#},
+    ),
+    (
       ".Title\nfoo",
       indoc! {r#"
         <div class="paragraph">
@@ -271,6 +281,34 @@ fn test_eval() {
     ),
     (
       indoc! {r#"
+        ****
+        This is content in a sidebar block.
+
+        image::name.png[]
+
+        This is more content in the sidebar block.
+        ****
+      "#},
+      indoc! {r#"
+        <div class="sidebarblock">
+          <div class="content">
+            <div class="paragraph">
+              <p>This is content in a sidebar block.</p>
+            </div>
+            <div class="imageblock">
+              <div class="content">
+                <img src="name.png" alt="name">
+              </div>
+            </div>
+            <div class="paragraph">
+              <p>This is more content in the sidebar block.</p>
+            </div>
+          </div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
       foo.footnote:[bar _baz_]
 
       lol.footnote:cust[baz]
@@ -310,7 +348,9 @@ fn test_eval() {
     let doc = parser.parse().unwrap().document;
     assert_eq!(
       eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
-      expected
+      expected,
+      "input was\n\n{}",
+      input
     );
   }
 }
@@ -432,7 +472,9 @@ fn test_non_embedded() {
   let doc = parser.parse().unwrap().document;
   assert_eq!(
     eval(doc, Flags::default(), AsciidoctorHtml::new()).unwrap(),
-    expected
+    expected,
+    "input was {}",
+    input
   );
 }
 
@@ -465,6 +507,8 @@ fn test_isolate() {
   let doc = parser.parse().unwrap().document;
   assert_eq!(
     eval(doc, Flags::default(), AsciidoctorHtml::new()).unwrap(),
-    expected
+    expected,
+    "input was {}",
+    input
   );
 }

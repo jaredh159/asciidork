@@ -40,7 +40,7 @@ mod internal {
 pub mod prelude {
   pub use crate::attr_entries::{AttrEntries, AttrEntry};
   pub use crate::attr_list::{AttrList, Named};
-  pub use crate::block::{Block, EmptyMetadata};
+  pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
   pub use crate::doc_content::DocContent;
   pub use crate::inline::{CurlyKind, InlineNode, QuoteKind, SpecialCharKind};
   pub use crate::node::{Document, Section};

@@ -37,6 +37,20 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       backend.exit_simple_block_content(children, block);
       backend.exit_paragraph_block(block);
     }
+    (Context::Sidebar, Content::Simple(children)) => {
+      backend.enter_sidebar_block(block, &block.content);
+      backend.enter_simple_block_content(children, block);
+      children.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_simple_block_content(children, block);
+      backend.exit_sidebar_block(block, &block.content);
+    }
+    (Context::Sidebar, Content::Compound(blocks)) => {
+      backend.enter_sidebar_block(block, &block.content);
+      backend.enter_compound_block_content(blocks, block);
+      blocks.iter().for_each(|block| eval_block(block, backend));
+      backend.exit_compound_block_content(blocks, block);
+      backend.exit_sidebar_block(block, &block.content);
+    }
     (
       Context::AdmonitionTip
       | Context::AdmonitionNote
