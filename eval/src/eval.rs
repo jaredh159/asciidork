@@ -51,6 +51,20 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       backend.exit_compound_block_content(blocks, block);
       backend.exit_sidebar_block(block, &block.content);
     }
+    (Context::Open, Content::Compound(blocks)) => {
+      backend.enter_open_block(block, &block.content);
+      backend.enter_compound_block_content(blocks, block);
+      blocks.iter().for_each(|block| eval_block(block, backend));
+      backend.exit_compound_block_content(blocks, block);
+      backend.exit_open_block(block, &block.content);
+    }
+    (Context::Example, Content::Compound(blocks)) => {
+      backend.enter_example_block(block, &block.content);
+      backend.enter_compound_block_content(blocks, block);
+      blocks.iter().for_each(|block| eval_block(block, backend));
+      backend.exit_compound_block_content(blocks, block);
+      backend.exit_example_block(block, &block.content);
+    }
     (
       Context::AdmonitionTip
       | Context::AdmonitionNote

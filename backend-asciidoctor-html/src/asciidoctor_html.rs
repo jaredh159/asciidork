@@ -73,6 +73,23 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
+  fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
+    self.open_element("div", &["exampleblock"], &block.attrs);
+    self.push_str(r#"<div class="content">"#);
+  }
+
+  fn exit_example_block(&mut self, _block: &Block, _content: &BlockContent) {
+    self.push_str("</div></div>");
+  }
+  fn enter_open_block(&mut self, block: &Block, _content: &BlockContent) {
+    self.open_element("div", &["openblock"], &block.attrs);
+    self.push_str(r#"<div class="content">"#);
+  }
+
+  fn exit_open_block(&mut self, _block: &Block, _content: &BlockContent) {
+    self.push_str("</div></div>");
+  }
+
   fn enter_paragraph_block(&mut self, block: &Block) {
     self.push_str(r#"<div class="paragraph">"#);
     self.visit_block_title(block.title.as_deref(), None);

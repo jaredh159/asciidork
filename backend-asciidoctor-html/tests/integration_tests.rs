@@ -115,6 +115,30 @@ fn test_eval() {
       "#},
     ),
     (
+      "--\nfoo\n--",
+      indoc! {r#"
+        <div class="openblock">
+          <div class="content">
+            <div class="paragraph">
+              <p>foo</p>
+            </div>
+          </div>
+        </div>
+      "#},
+    ),
+    (
+      "====\nfoo\n====",
+      indoc! {r#"
+        <div class="exampleblock">
+          <div class="content">
+            <div class="paragraph">
+              <p>foo</p>
+            </div>
+          </div>
+        </div>
+      "#},
+    ),
+    (
       "[#my-id.some-class]\nTIP: never start a land war in Asia",
       indoc! {r#"
         <div id="my-id" class="admonitionblock tip some-class">
@@ -167,6 +191,28 @@ fn test_eval() {
             <img src="cat.jpg" alt="cat">
           </div>
           <div class="title">Figure 1. Title</div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        ****
+        --
+        foo
+        --
+        ****
+      "#},
+      indoc! {r#"
+        <div class="sidebarblock">
+          <div class="content">
+            <div class="openblock">
+              <div class="content">
+                <div class="paragraph">
+                  <p>foo</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       "#},
     ),
