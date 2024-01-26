@@ -73,6 +73,31 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
+  fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
+    self.open_element("div", &["quoteblock"], &block.attrs);
+    self.visit_block_title(block.title.as_deref(), None);
+    self.push_str("<blockquote>");
+  }
+
+  fn exit_quote_block(&mut self, block: &Block, _content: &BlockContent) {
+    self.push_str("</blockquote>");
+    if let Some(attrs) = &block.attrs {
+      if let Some(attribution) = attrs.str_positional_at(1) {
+        self.push_str(r#"<div class="attribution">&#8212; "#);
+        self.push_str(attribution);
+        if let Some(cite) = attrs.str_positional_at(2) {
+          self.push_str(r#"<br><cite>"#);
+          self.push([cite, "</cite>"]);
+        }
+        self.push_str("</div>");
+      } else if let Some(cite) = attrs.str_positional_at(2) {
+        self.push_str(r#"<div class="attribution">&#8212; "#);
+        self.push([cite, "</div>"]);
+      }
+    }
+    self.push_str("</div>");
+  }
+
   fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["exampleblock"], &block.attrs);
     self.push_str(r#"<div class="content">"#);
@@ -81,6 +106,7 @@ impl Backend for AsciidoctorHtml {
   fn exit_example_block(&mut self, _block: &Block, _content: &BlockContent) {
     self.push_str("</div></div>");
   }
+
   fn enter_open_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["openblock"], &block.attrs);
     self.push_str(r#"<div class="content">"#);

@@ -33,6 +33,10 @@ impl<'bmp> InlineNodes<'bmp> {
     });
     text
   }
+
+  pub fn last_loc_end(&self) -> Option<usize> {
+    self.last().map(|node| node.loc.end)
+  }
 }
 
 impl<'bmp> Deref for InlineNodes<'bmp> {

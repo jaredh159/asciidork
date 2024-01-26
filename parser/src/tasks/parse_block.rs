@@ -42,7 +42,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       _ => {}
     }
 
-    self.parse_paragraph(lines, meta)
+    if lines.is_quoted_paragraph() {
+      self.parse_quoted_paragraph(lines, meta)
+    } else {
+      self.parse_paragraph(lines, meta)
+    }
   }
 
   fn parse_delimited_block(
@@ -115,18 +119,50 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ) -> Result<Option<Block<'bmp>>> {
     let context = meta.paragraph_context(&mut lines);
     let inlines = self.parse_inlines(&mut lines)?;
-    let result = match inlines.last() {
-      Some(last) => Ok(Some(Block {
-        title: meta.title,
-        attrs: meta.attrs,
-        loc: SourceLocation::new(meta.start, last.loc.end),
-        context,
-        content: Content::Simple(inlines),
-      })),
-      _ => Ok(None),
-    };
     self.restore_lines(lines);
-    result
+    let Some(end) = inlines.last_loc_end() else {
+      return Ok(None);
+    };
+    Ok(Some(Block {
+      title: meta.title,
+      attrs: meta.attrs,
+      loc: SourceLocation::new(meta.start, end),
+      context,
+      content: Content::Simple(inlines),
+    }))
+  }
+
+  fn parse_quoted_paragraph(
+    &mut self,
+    mut lines: ContiguousLines<'bmp, 'src>,
+    meta: BlockMetadata<'bmp>,
+  ) -> Result<Option<Block<'bmp>>> {
+    let mut attr_line = lines.remove_last_unchecked();
+    attr_line.discard_assert(TokenKind::Word); // `--`
+    attr_line.discard_assert(TokenKind::Whitespace);
+    let end = attr_line.last_location().unwrap().end;
+    let (attr, cite) = attr_line
+      .consume_to_string(self.bump)
+      .split_once(", ", self.bump);
+    lines
+      .current_mut()
+      .unwrap()
+      .discard_assert(TokenKind::DoubleQuote);
+    lines
+      .last_mut()
+      .unwrap()
+      .discard_assert_last(TokenKind::DoubleQuote);
+    Ok(Some(Block {
+      title: None,
+      attrs: None,
+      loc: SourceLocation::new(meta.start, end),
+      context: Context::QuotedParagraph,
+      content: Content::QuotedParagraph {
+        quote: self.parse_inlines(&mut lines)?,
+        attr,
+        cite,
+      },
+    }))
   }
 
   fn parse_block_metadata(
@@ -201,6 +237,8 @@ mod tests {
   use super::*;
   use crate::test::*;
   use ast::variants::inline::*;
+  use indoc::indoc;
+  use pretty_assertions::assert_eq;
 
   #[test]
   fn test_parse_simple_block() {
@@ -369,6 +407,99 @@ mod tests {
         ..Block::empty(b)
       }])),
       loc: l(0, 13),
+      ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_quoted_paragraph() {
+    let b = &Bump::new();
+    let input = indoc! {r#"
+      "I hold it that a little rebellion now and then is a good thing,
+      and as necessary in the political world as storms in the physical."
+      -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
+    "#};
+    let mut parser = Parser::new(b, input);
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      attrs: None,
+      context: Context::QuotedParagraph,
+      content: Content::QuotedParagraph {
+        quote: b.inodes([
+          n_text(
+            "I hold it that a little rebellion now and then is a good thing,",
+            1,
+            64,
+            b,
+          ),
+          n(Inline::JoiningNewline, l(64, 65)),
+          n_text(
+            "and as necessary in the political world as storms in the physical.",
+            65,
+            131,
+            b,
+          ),
+        ]),
+        attr: b.src("Thomas Jefferson", l(136, 152)),
+        cite: Some(b.src("Papers of Thomas Jefferson: Volume 11", l(154, 191))),
+      },
+      loc: l(0, 191),
+      ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_simple_blockquote() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "[quote,author,location]\nfoo\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      attrs: Some(AttrList {
+        positional: b.vec([
+          Some(b.inodes([n_text("quote", 1, 6, b)])),
+          Some(b.inodes([n_text("author", 7, 13, b)])),
+          Some(b.inodes([n_text("location", 14, 22, b)])),
+        ]),
+        ..AttrList::new(l(0, 23), b)
+      }),
+      context: Context::BlockQuote,
+      content: Content::Simple(b.inodes([n_text("foo", 24, 27, b)])),
+      loc: l(0, 27),
+      ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_blockquote() {
+    let b = &Bump::new();
+    let input = indoc! {"
+      [quote,author,location]
+      ____
+      foo
+      ____
+    "};
+    let mut parser = Parser::new(b, input);
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      attrs: Some(AttrList {
+        positional: b.vec([
+          Some(b.inodes([n_text("quote", 1, 6, b)])),
+          Some(b.inodes([n_text("author", 7, 13, b)])),
+          Some(b.inodes([n_text("location", 14, 22, b)])),
+        ]),
+        ..AttrList::new(l(0, 23), b)
+      }),
+      context: Context::BlockQuote,
+      content: Content::Compound(b.vec([Block {
+        context: Context::Paragraph,
+        content: Content::Simple(b.inodes([n_text("foo", 29, 32, b)])),
+        loc: l(29, 32),
+        ..Block::empty(b)
+      }])),
+      loc: l(0, 37),
       ..Block::empty(b)
     };
     assert_eq!(block, expected);

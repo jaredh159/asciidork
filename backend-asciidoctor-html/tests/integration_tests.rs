@@ -195,6 +195,90 @@ fn test_eval() {
       "#},
     ),
     (
+      "[quote,,cite]\nfoo bar",
+      indoc! {r#"
+        <div class="quoteblock">
+          <blockquote>
+            foo bar
+          </blockquote>
+          <div class="attribution">
+            &#8212; cite
+          </div>
+        </div>
+      "#},
+    ),
+    (
+      "[quote,source]\nfoo bar",
+      indoc! {r#"
+        <div class="quoteblock">
+          <blockquote>
+            foo bar
+          </blockquote>
+          <div class="attribution">
+            &#8212; source
+          </div>
+        </div>
+      "#},
+    ),
+    (
+      "[quote,source,location]\nfoo bar",
+      indoc! {r#"
+        <div class="quoteblock">
+          <blockquote>
+            foo bar
+          </blockquote>
+          <div class="attribution">
+            &#8212; source<br>
+            <cite>location</cite>
+          </div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        .After landing the cloaked Klingon bird of prey in Golden Gate park:
+        [quote,Captain James T. Kirk,Star Trek IV: The Voyage Home]
+        Everybody remember where we parked.
+      "#},
+      indoc! {r#"
+        <div class="quoteblock">
+          <div class="title">After landing the cloaked Klingon bird of prey in Golden Gate park:</div>
+          <blockquote>
+            Everybody remember where we parked.
+          </blockquote>
+          <div class="attribution">
+            &#8212; Captain James T. Kirk<br>
+            <cite>Star Trek IV: The Voyage Home</cite>
+          </div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        [quote,Monty Python and the Holy Grail]
+        ____
+        Dennis: Come and see the violence inherent in the system. Help! Help!
+
+        King Arthur: Bloody peasant!
+        ____
+      "#},
+      indoc! {r#"
+        <div class="quoteblock">
+          <blockquote>
+            <div class="paragraph">
+              <p>Dennis: Come and see the violence inherent in the system. Help! Help!</p>
+            </div>
+            <div class="paragraph">
+              <p>King Arthur: Bloody peasant!</p>
+            </div>
+          </blockquote>
+          <div class="attribution">
+            &#8212; Monty Python and the Holy Grail
+          </div>
+        </div>
+      "#},
+    ),
+    (
       indoc! {r#"
         ****
         --

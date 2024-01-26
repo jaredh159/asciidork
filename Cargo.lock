@@ -65,6 +65,7 @@ version = "0.1.0"
 dependencies = [
  "asciidork-ast",
  "bumpalo",
+ "indoc",
  "lazy_static",
  "pretty_assertions",
  "regex",

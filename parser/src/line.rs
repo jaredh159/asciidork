@@ -32,6 +32,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.all_tokens.get(self.pos + n)
   }
 
+  pub fn num_tokens(&self) -> usize {
+    self.all_tokens.len() - self.pos
+  }
+
   pub fn current_is(&self, kind: TokenKind) -> bool {
     self.current_token().map_or(false, |t| t.kind == kind)
   }
@@ -70,6 +74,19 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn discard_assert(&mut self, kind: TokenKind) {
     let token = self.consume_current();
+    debug_assert!(token.unwrap().is(kind));
+  }
+
+  pub fn discard_last(&mut self) -> Option<Token<'src>> {
+    let Some(token) = self.all_tokens.pop() else {
+      return None;
+    };
+    self.src = &self.src[..self.src.len() - token.lexeme.len()];
+    Some(token)
+  }
+
+  pub fn discard_assert_last(&mut self, kind: TokenKind) {
+    let token = self.discard_last();
     debug_assert!(token.unwrap().is(kind));
   }
 
@@ -118,6 +135,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn starts(&self, kind: TokenKind) -> bool {
     self.current_is(kind)
+  }
+
+  pub fn ends(&self, kind: TokenKind) -> bool {
+    self.last_token().is(kind)
   }
 
   pub fn starts_with_seq(&self, kinds: &[TokenKind]) -> bool {
@@ -299,10 +320,25 @@ mod tests {
     let mut lexer = Lexer::new("foo bar\nso baz\n");
     let mut line = lexer.consume_line(bump).unwrap();
     assert_eq!(line.src, "foo bar");
+    assert_eq!(line.num_tokens(), 3);
     line.discard(1);
     assert_eq!(line.src, " bar");
+    assert_eq!(line.num_tokens(), 2);
     line.discard(2);
     assert_eq!(line.src, "");
+    assert_eq!(line.num_tokens(), 0);
+  }
+
+  #[test]
+  fn test_discard_last() {
+    let bump = &Bump::new();
+    let mut lexer = Lexer::new("'foo'");
+    let mut line = lexer.consume_line(bump).unwrap();
+    assert_eq!(line.src, "'foo'");
+    line.discard_last();
+    assert_eq!(line.src, "'foo");
+    line.discard_last();
+    assert_eq!(line.src, "'");
   }
 
   #[test]

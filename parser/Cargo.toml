@@ -13,4 +13,5 @@ regex = { version = "1.10.2", features = ["std", "use_std"] }
 doctest = false
 
 [dev-dependencies]
+indoc = "2.0.4"
 pretty_assertions = "1.4.0"

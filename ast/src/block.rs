@@ -30,6 +30,11 @@ pub enum BlockContent<'bmp> {
   Empty(EmptyMetadata<'bmp>),
   Table,
   DocumentAttribute(String, AttrEntry),
+  QuotedParagraph {
+    quote: InlineNodes<'bmp>,
+    attr: SourceString<'bmp>,
+    cite: Option<SourceString<'bmp>>,
+  },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -48,6 +53,7 @@ pub enum BlockContext {
   AdmonitionTip,
   AdmonitionWarning,
   Audio,
+  BlockQuote,
   CalloutList,
   DescriptionList,
   DiscreteHeading,
@@ -62,7 +68,7 @@ pub enum BlockContext {
   PageBreak,
   Paragraph,
   Passthrough,
-  BlockQuote,
+  QuotedParagraph,
   Section,
   Sidebar,
   Table,
@@ -89,6 +95,7 @@ impl BlockContext {
   pub fn derive(string: &str) -> Option<Self> {
     match string {
       "sidebar" => Some(BlockContext::Sidebar),
+      "quote" => Some(BlockContext::BlockQuote),
       _ => Self::derive_admonition(string),
     }
   }

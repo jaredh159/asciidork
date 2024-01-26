@@ -108,7 +108,7 @@ impl<'src> Lexer<'src> {
   fn delimiter_line(&mut self) -> Option<Token<'src>> {
     if !self.is_line_start
       || self.is_eof()
-      || !matches!(self.peek, Some('-') | Some('*') | Some('='))
+      || !matches!(self.peek, Some('_') | Some('-') | Some('*') | Some('='))
     {
       return None;
     }
@@ -121,6 +121,7 @@ impl<'src> Lexer<'src> {
         Some(self.token(DelimiterLine, start, start + 2))
       }
       [Some('*'), Some('*'), Some('*'), Some('*'), Some('\n') | None]
+      | [Some('_'), Some('_'), Some('_'), Some('_'), Some('\n') | None]
       | [Some('='), Some('='), Some('='), Some('='), Some('\n') | None] => {
         self.skip(4);
         Some(self.token(DelimiterLine, start, start + 4))
@@ -398,6 +399,7 @@ mod tests {
       ("--\n", vec![(DelimiterLine, "--"), (Newline, "\n")]),
       ("****", vec![(DelimiterLine, "****")]),
       ("====", vec![(DelimiterLine, "====")]),
+      ("____", vec![(DelimiterLine, "____")]),
       (
         "****\nfoo",
         vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],

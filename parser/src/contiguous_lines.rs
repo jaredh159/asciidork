@@ -17,6 +17,26 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.lines.last()
   }
 
+  pub fn current_mut(&mut self) -> Option<&mut Line<'bmp, 'src>> {
+    self.lines.last_mut()
+  }
+
+  pub fn last(&self) -> Option<&Line<'bmp, 'src>> {
+    self.lines.first()
+  }
+
+  pub fn last_mut(&mut self) -> Option<&mut Line<'bmp, 'src>> {
+    self.lines.first_mut()
+  }
+
+  pub fn remove_last_unchecked(&mut self) -> Line<'bmp, 'src> {
+    self.lines.remove(0)
+  }
+
+  pub fn nth(&self, n: usize) -> Option<&Line<'bmp, 'src>> {
+    self.lines.get(self.lines.len() - n - 1)
+  }
+
   pub fn current_token(&self) -> Option<&Token<'src>> {
     self.current().and_then(|line| line.current_token())
   }
@@ -79,6 +99,53 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       line.location()
     } else {
       None
+    }
+  }
+
+  pub fn is_quoted_paragraph(&self) -> bool {
+    use TokenKind::*;
+    if self.lines.len() < 2 {
+      return false;
+    }
+    let last_line = self.last().unwrap();
+    if !last_line.starts_with_seq(&[Word, Whitespace])
+      || !last_line.src.starts_with("-- ")
+      || last_line.num_tokens() < 3
+    {
+      return false;
+    }
+    let first_line = self.current().unwrap();
+    if !first_line.starts(DoubleQuote) {
+      return false;
+    }
+    let penult = self.nth(self.lines.len() - 2).unwrap();
+    penult.ends(DoubleQuote)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_is_quoted_paragraph() {
+    let cases = vec![
+      ("\"foo bar\nso baz\"\n-- me", true),
+      ("foo bar\nso baz\"\n-- me", false),
+      ("\"foo bar\nso baz\n-- me", false),
+      ("\"foo bar\nso baz\"\n-- ", false),
+      ("\"foo bar\nso baz\"\nme -- too", false),
+    ];
+    let bump = &Bump::new();
+    for (input, expected) in cases {
+      let mut parser = Parser::new(bump, input);
+      let lines = parser.read_lines().unwrap();
+      assert_eq!(
+        lines.is_quoted_paragraph(),
+        expected,
+        "input was:\n\n```\n{}\n```\n",
+        input
+      );
     }
   }
 }

@@ -17,7 +17,6 @@
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example
 - [ ] h1 subtitle
-      https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/#email-autolinks
 - [•] soon: multi-file non corner painting
 - [√] unsetting doc attrs, e.g. `:version-label!:`
 - [√] contiguous sidebar with no delimiters using [sidebar]

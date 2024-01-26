@@ -20,6 +20,8 @@ pub trait Backend {
   fn exit_open_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_example_block(&mut self, block: &Block, content: &BlockContent);
   fn exit_example_block(&mut self, block: &Block, content: &BlockContent);
+  fn enter_quote_block(&mut self, block: &Block, content: &BlockContent);
+  fn exit_quote_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block);
   fn exit_image_block(&mut self, block: &Block);
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
