@@ -65,6 +65,11 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       backend.exit_compound_block_content(blocks, block);
       backend.exit_quote_block(block, &block.content);
     }
+    (Context::QuotedParagraph, Content::QuotedParagraph { quote, attr, cite }) => {
+      backend.enter_quoted_paragraph(block, attr, cite.as_deref());
+      quote.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_quoted_paragraph(block, attr, cite.as_deref());
+    }
     (Context::Open, Content::Compound(blocks)) => {
       backend.enter_open_block(block, &block.content);
       backend.enter_compound_block_content(blocks, block);

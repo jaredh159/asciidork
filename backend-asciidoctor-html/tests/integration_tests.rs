@@ -280,6 +280,24 @@ fn test_eval() {
     ),
     (
       indoc! {r#"
+        "I hold it that a little rebellion now and then is a good thing,
+        and as necessary in the political world as storms in the physical."
+        -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
+      "#},
+      indoc! {r#"
+        <div class="quoteblock">
+          <blockquote>
+            I hold it that a little rebellion now and then is a good thing, and as necessary in the political world as storms in the physical.
+          </blockquote>
+          <div class="attribution">
+            &#8212; Thomas Jefferson<br>
+            <cite>Papers of Thomas Jefferson: Volume 11</cite>
+          </div>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
         ****
         --
         foo

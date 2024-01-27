@@ -73,29 +73,28 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
+  fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
+    self.open_element("div", &["quoteblock"], &block.attrs);
+    self.visit_block_title(block.title.as_deref(), None);
+    self.push_str("<blockquote>");
+  }
+
   fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["quoteblock"], &block.attrs);
     self.visit_block_title(block.title.as_deref(), None);
     self.push_str("<blockquote>");
   }
 
+  fn exit_quoted_paragraph(&mut self, _block: &Block, attr: &str, cite: Option<&str>) {
+    self.exit_blockquote(Some(attr), cite);
+  }
+
   fn exit_quote_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.push_str("</blockquote>");
     if let Some(attrs) = &block.attrs {
-      if let Some(attribution) = attrs.str_positional_at(1) {
-        self.push_str(r#"<div class="attribution">&#8212; "#);
-        self.push_str(attribution);
-        if let Some(cite) = attrs.str_positional_at(2) {
-          self.push_str(r#"<br><cite>"#);
-          self.push([cite, "</cite>"]);
-        }
-        self.push_str("</div>");
-      } else if let Some(cite) = attrs.str_positional_at(2) {
-        self.push_str(r#"<div class="attribution">&#8212; "#);
-        self.push([cite, "</div>"]);
-      }
+      self.exit_blockquote(attrs.str_positional_at(1), attrs.str_positional_at(2));
+    } else {
+      self.exit_blockquote(None, None);
     }
-    self.push_str("</div>");
   }
 
   fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
@@ -454,6 +453,23 @@ impl AsciidoctorHtml {
       self.push_str("Untitled");
     }
     self.push_str(r#"</title>"#);
+  }
+
+  fn exit_blockquote(&mut self, attribution: Option<&str>, cite: Option<&str>) {
+    self.push_str("</blockquote>");
+    if let Some(attribution) = attribution {
+      self.push_str(r#"<div class="attribution">&#8212; "#);
+      self.push_str(attribution);
+      if let Some(cite) = cite {
+        self.push_str(r#"<br><cite>"#);
+        self.push([cite, "</cite>"]);
+      }
+      self.push_str("</div>");
+    } else if let Some(cite) = cite {
+      self.push_str(r#"<div class="attribution">&#8212; "#);
+      self.push([cite, "</div>"]);
+    }
+    self.push_str("</div>");
   }
 }
 

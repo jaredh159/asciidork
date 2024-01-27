@@ -26,6 +26,8 @@ pub trait Backend {
   fn exit_image_block(&mut self, block: &Block);
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
+  fn enter_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
+  fn exit_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
 
   // block content
   fn enter_simple_block_content(&mut self, children: &[InlineNode], block: &Block);

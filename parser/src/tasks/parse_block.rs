@@ -18,7 +18,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
 
-    let mut attr_entries = AttrEntries::new();
     match first_token.kind {
       DelimiterLine if self.ctx.delimiter == first_token.to_delimeter() => {
         self.restore_lines(lines);
@@ -29,6 +28,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         return self.parse_delimited_block(delimiter, lines, meta);
       }
       Colon => {
+        let mut attr_entries = AttrEntries::new(); // TODO: this is a little weird...
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines, &mut attr_entries)? {
           return Ok(Some(Block {
             title: None,
@@ -153,8 +153,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .unwrap()
       .discard_assert_last(TokenKind::DoubleQuote);
     Ok(Some(Block {
-      title: None,
-      attrs: None,
+      title: meta.title,
+      attrs: meta.attrs,
       loc: SourceLocation::new(meta.start, end),
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
@@ -416,8 +416,8 @@ mod tests {
   fn test_quoted_paragraph() {
     let b = &Bump::new();
     let input = indoc! {r#"
-      "I hold it that a little rebellion now and then is a good thing,
-      and as necessary in the political world as storms in the physical."
+      "I hold it that a little blah,
+      and as necessary in the blah."
       -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
     "#};
     let mut parser = Parser::new(b, input);
@@ -427,25 +427,48 @@ mod tests {
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
         quote: b.inodes([
-          n_text(
-            "I hold it that a little rebellion now and then is a good thing,",
-            1,
-            64,
-            b,
-          ),
-          n(Inline::JoiningNewline, l(64, 65)),
-          n_text(
-            "and as necessary in the political world as storms in the physical.",
-            65,
-            131,
-            b,
-          ),
+          n_text("I hold it that a little blah,", 1, 30, b),
+          n(Inline::JoiningNewline, l(30, 31)),
+          n_text("and as necessary in the blah.", 31, 60, b),
         ]),
-        attr: b.src("Thomas Jefferson", l(136, 152)),
-        cite: Some(b.src("Papers of Thomas Jefferson: Volume 11", l(154, 191))),
+        attr: b.src("Thomas Jefferson", l(65, 81)),
+        cite: Some(b.src("Papers of Thomas Jefferson: Volume 11", l(83, 120))),
       },
-      loc: l(0, 191),
+      loc: l(0, 120),
       ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_quoted_paragraph_no_cite_w_attr_meta() {
+    let b = &Bump::new();
+    let input = indoc! {r#"
+      .A Title
+      [#foo]
+      "I hold it that a little blah,
+      and as necessary in the blah."
+      -- Thomas Jefferson
+    "#};
+    let mut parser = Parser::new(b, input);
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      attrs: Some(AttrList {
+        id: Some(b.src("foo", l(11, 14))),
+        ..AttrList::new(l(9, 15), b)
+      }),
+      title: Some(b.src("A Title", l(1, 8))),
+      context: Context::QuotedParagraph,
+      content: Content::QuotedParagraph {
+        quote: b.inodes([
+          n_text("I hold it that a little blah,", 17, 46, b),
+          n(Inline::JoiningNewline, l(46, 47)),
+          n_text("and as necessary in the blah.", 47, 76, b),
+        ]),
+        attr: b.src("Thomas Jefferson", l(81, 97)),
+        cite: None,
+      },
+      loc: l(0, 97),
     };
     assert_eq!(block, expected);
   }
