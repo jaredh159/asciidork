@@ -5,19 +5,19 @@
       `html5.rb`
 - [ ] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
       folded into ContiguousLines so that it shows up as one line, i think
-- [ ] block quotes
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
 - [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] basic multi-byte char test
-- [ ] poc, non-corner-painting backend/interpreter
 - [ ] poc, non-corner-painting wasm
 - [ ] attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example
 - [ ] h1 subtitle
 - [•] soon: multi-file non corner painting
+- [√] block quotes
+- [√] poc, non-corner-painting backend/interpreter
 - [√] unsetting doc attrs, e.g. `:version-label!:`
 - [√] contiguous sidebar with no delimiters using [sidebar]
 - [√] whacky `.Optional title` block first line above blocks (search docs for "sidebar")

@@ -960,38 +960,4 @@ mod tests {
       assert_eq!(inlines, expected, "input was: `{}`", input);
     }
   }
-
-  // #[test]
-  // fn test_to_quoted_paragraph() {
-  //   let b = &Bump::new();
-  //   let cases = vec![
-  //     (
-  //       indoc! {r#"
-  //        "foo so bar,
-  //        and baz."
-  //        -- bar
-  //       "#},
-  //       Some((b.src("foo", l(1, 1)), None)),
-  //     ),
-  //     (
-  //       indoc! {r#"
-  //        "foo so bar,
-  //        and baz.
-  //        -- bar
-  //       "#},
-  //       None,
-  //     ),
-  //   ];
-  //   for (input, expected) in cases {
-  //     let mut parser = Parser::new(b, input);
-  //     let mut block = parser.read_lines().unwrap();
-  //     let mut inlines = parser.parse_inlines(&mut block).unwrap();
-  //     assert_eq!(
-  //       inlines.to_quoted_paragraph(),
-  //       expected,
-  //       "input was:\n\n```\n{}```",
-  //       input
-  //     );
-  //   }
-  // }
 }

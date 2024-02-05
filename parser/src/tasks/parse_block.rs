@@ -16,6 +16,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         "image:" => return Ok(Some(self.parse_image_block(lines, meta)?)),
         _ => todo!("block macro type: `{:?}`", first_token.lexeme),
       }
+    } else if lines.starts_list() {
+      let (variant, items) = self.parse_list(lines)?;
+      return Ok(Some(Block {
+        title: meta.title,
+        attrs: meta.attrs,
+        loc: SourceLocation::new(meta.start, items.last().unwrap().loc_end().unwrap()),
+        context: variant.to_context(),
+        content: Content::List { variant, items },
+      }));
     }
 
     match first_token.kind {
@@ -138,7 +147,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     meta: BlockMetadata<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let mut attr_line = lines.remove_last_unchecked();
-    attr_line.discard_assert(TokenKind::Word); // `--`
+    attr_line.discard_assert(TokenKind::Dashes); // `--`
     attr_line.discard_assert(TokenKind::Whitespace);
     let end = attr_line.last_location().unwrap().end;
     let (attr, cite) = attr_line
@@ -176,7 +185,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       match lines.current().unwrap() {
         line if line.is_block_title() => {
           let mut line = lines.consume_current().unwrap();
-          line.discard_assert(Dot);
+          line.discard_assert(Dots);
           title = Some(line.consume_to_string(self.bump));
         }
         line if line.is_attr_list() => {

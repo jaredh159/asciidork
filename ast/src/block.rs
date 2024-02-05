@@ -21,6 +21,11 @@ impl<'bmp> Block<'bmp> {
   }
 }
 
+// variant: ordered | unordered
+// principle: InlineNodes
+// list has items: Vec<ListItem>
+// list item has `marker`, like `*` (asg shows list having it too...)
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BlockContent<'bmp> {
   Compound(BumpVec<'bmp, Block<'bmp>>),
@@ -35,6 +40,38 @@ pub enum BlockContent<'bmp> {
     attr: SourceString<'bmp>,
     cite: Option<SourceString<'bmp>>,
   },
+  List {
+    variant: ListVariant,
+    items: BumpVec<'bmp, ListItem<'bmp>>,
+  },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ListItem<'bmp> {
+  pub marker: SourceString<'bmp>,
+  pub principle: InlineNodes<'bmp>,
+  pub blocks: BumpVec<'bmp, Block<'bmp>>,
+}
+
+impl<'bmp> ListItem<'bmp> {
+  pub fn loc_end(&self) -> Option<usize> {
+    self.principle.last_loc_end()
+  }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ListVariant {
+  Ordered,
+  Unordered,
+}
+
+impl ListVariant {
+  pub fn to_context(&self) -> BlockContext {
+    match self {
+      ListVariant::Ordered => BlockContext::OrderedList,
+      ListVariant::Unordered => BlockContext::UnorderedList,
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -136,6 +136,7 @@ impl<'src> Lexer<'src> {
     }
     match self.advance() {
       Some('=') => self.repeating('=', EqualSigns),
+      Some('-') => self.repeating('-', Dashes),
       Some(' ') | Some('\t') => self.whitespace(),
       Some('&') => self.single(Ampersand),
       Some('\n') => self.single(Newline),
@@ -148,7 +149,7 @@ impl<'src> Lexer<'src> {
       Some('~') => self.single(Tilde),
       Some('_') => self.single(Underscore),
       Some('*') => self.single(Star),
-      Some('.') => self.single(Dot),
+      Some('.') => self.repeating('.', Dots),
       Some('!') => self.single(Bang),
       Some('`') => self.single(Backtick),
       Some('+') => self.single(Plus),
@@ -160,6 +161,7 @@ impl<'src> Lexer<'src> {
       Some('/') if self.starts_comment() => self.comment(),
       Some('\'') => self.single(SingleQuote),
       Some('\\') => self.single(Backslash),
+      Some(ch) if ch.is_ascii_digit() => self.digits(),
       Some(_) => self.word(),
       None => self.token(Eof, self.offset(), self.offset()),
     }
@@ -206,6 +208,12 @@ impl<'src> Lexer<'src> {
     let start = self.offset() - 1;
     let end = self.advance_while(c);
     self.token(kind, start, end)
+  }
+
+  fn digits(&mut self) -> Token<'src> {
+    let start = self.offset() - 1;
+    let end = self.advance_while_with(|c| c.is_ascii_digit());
+    self.token(Digits, start, end)
   }
 
   fn advance_while_with(&mut self, f: impl Fn(char) -> bool) -> usize {
@@ -395,6 +403,18 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("  ", vec![(Whitespace, "  ")]),
+      (".", vec![(Dots, ".")]),
+      ("..", vec![(Dots, "..")]),
+      ("1", vec![(Digits, "1")]),
+      ("12345", vec![(Digits, "12345")]),
+      ("-", vec![(Dashes, "-")]),
+      ("---", vec![(Dashes, "---")]),
+      (
+        "---- foo",
+        vec![(Dashes, "----"), (Whitespace, " "), (Word, "foo")],
+      ),
+      ("-----", vec![(Dashes, "-----")]),
       ("--", vec![(DelimiterLine, "--")]),
       ("--\n", vec![(DelimiterLine, "--"), (Newline, "\n")]),
       ("****", vec![(DelimiterLine, "****")]),
@@ -417,12 +437,12 @@ mod tests {
       ("foo@bar", vec![(Word, "foo@bar")]),
       (
         "foo@bar.com@",
-        vec![(Word, "foo@bar"), (Dot, "."), (Word, "com@")],
+        vec![(Word, "foo@bar"), (Dots, "."), (Word, "com@")],
       ),
       ("@foo@bar", vec![(Word, "@foo@bar")]),
       ("foo@", vec![(Word, "foo@")]),
-      ("foo@.a", vec![(Word, "foo@"), (Dot, "."), (Word, "a")]),
-      ("foo.bar", vec![(Word, "foo"), (Dot, "."), (Word, "bar")]),
+      ("foo@.a", vec![(Word, "foo@"), (Dots, "."), (Word, "a")]),
+      ("foo.bar", vec![(Word, "foo"), (Dots, "."), (Word, "bar")]),
       (
         "roflfootnote:",
         vec![(Word, "rofl"), (MacroName, "footnote:")],
@@ -457,7 +477,7 @@ mod tests {
           (Tilde, "~"),
           (Underscore, "_"),
           (Star, "*"),
-          (Dot, "."),
+          (Dots, "."),
           (Bang, "!"),
           (Backtick, "`"),
           (Plus, "+"),
@@ -500,7 +520,7 @@ The document body starts here.
           (Word, "Kismet"),
           (Whitespace, " "),
           (Word, "R"),
-          (Dot, "."),
+          (Dots, "."),
           (Whitespace, " "),
           (Word, "Lee"),
           (Whitespace, " "),
@@ -519,7 +539,7 @@ The document body starts here.
           (Word, "s"),
           (Whitespace, " "),
           (Word, "description"),
-          (Dot, "."),
+          (Dots, "."),
           (Newline, "\n"),
           (Colon, ":"),
           (Word, "sectanchors"),
@@ -531,7 +551,7 @@ The document body starts here.
           (Whitespace, " "),
           (MacroName, "https:"),
           (Word, "//my-git-repo"),
-          (Dot, "."),
+          (Dots, "."),
           (Word, "com"),
           (Newline, "\n"),
           (Newline, "\n"),
@@ -544,7 +564,7 @@ The document body starts here.
           (Word, "starts"),
           (Whitespace, " "),
           (Word, "here"),
-          (Dot, "."),
+          (Dots, "."),
           (Newline, "\n"),
         ],
       ),

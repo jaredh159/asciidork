@@ -1,3 +1,6 @@
+use lazy_static::lazy_static;
+use regex::Regex;
+
 use crate::internal::*;
 use crate::variants::token::*;
 
@@ -63,7 +66,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn is_block_title(&self) -> bool {
     // dot followed by at least one non-whitespace token
-    self.starts(Dot) && self.tokens().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
+    self.starts(Dots) && self.tokens().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
   }
 
   pub fn discard(&mut self, n: usize) {
@@ -267,7 +270,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       }
     }
 
-    if num_tokens > 0 && self.all_tokens.get(self.pos + num_tokens - 1).is(Dot) {
+    if num_tokens > 0 && self.all_tokens.get(self.pos + num_tokens - 1).is(Dots) {
       num_tokens -= 1;
     }
 
@@ -306,6 +309,37 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   pub fn last_location(&self) -> Option<SourceLocation> {
     self.last_token().map(|t| t.loc)
   }
+
+  pub fn starts_list_item(&self) -> bool {
+    if self.current_is(Word) {
+      return false;
+    }
+    let offset = if self.current_token().is(Whitespace) {
+      1
+    } else {
+      0
+    };
+    if self.num_tokens() < 3 + offset {
+      return false;
+    }
+    match self.all_tokens[offset].kind {
+      Star | Dots if self.nth_token(offset + 1).is(Whitespace) => true,
+      Dashes if self.nth_token(offset + 1).is(Whitespace) => self.all_tokens[offset].len() == 1,
+      Star if self.nth_token(offset + 1).is(Star) => REPEAT_STAR_LI_START.is_match(self.src),
+      Digits => self.nth_token(offset + 1).is(Dots) && self.nth_token(offset + 2).is(Whitespace),
+      _ => false,
+    }
+  }
+
+  pub fn discard_leading_whitespace(&mut self) {
+    while self.current_is(Whitespace) {
+      self.discard(1);
+    }
+  }
+}
+
+lazy_static! {
+  pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?\*+\s+.+"#).unwrap();
 }
 
 #[cfg(test)]
@@ -313,6 +347,32 @@ mod tests {
   use crate::lexer::Lexer;
   use crate::token::{TokenKind::*, *};
   use bumpalo::Bump;
+
+  #[test]
+  fn test_starts_list_item() {
+    let cases = vec![
+      ("* foo", true),
+      ("foo", false),
+      ("- foo", true),
+      ("-- foo", false),
+      ("   - foo", true),
+      (". foo", true),
+      ("**** foo", true),
+      ("1. foo", true),
+      ("999. foo", true),
+      (" * foo", true),
+      ("   * foo", true),
+      ("*foo", false),
+      (".foo", false),
+      ("-foo", false),
+    ];
+    let bump = &Bump::new();
+    for (input, expected) in cases {
+      let mut lexer = Lexer::new(input);
+      let line = lexer.consume_line(bump).unwrap();
+      assert_eq!(line.starts_list_item(), expected, "input was: `{}`", input);
+    }
+  }
 
   #[test]
   fn test_discard() {

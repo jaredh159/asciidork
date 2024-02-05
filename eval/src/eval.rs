@@ -104,6 +104,24 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
     (Context::DocumentAttributeDecl, Content::DocumentAttribute(name, entry)) => {
       backend.visit_document_attribute_decl(name, entry);
     }
+    (Context::UnorderedList, Content::List { items, .. }) => {
+      backend.enter_unordered_list(block, items);
+      items.iter().for_each(|item| {
+        backend.enter_list_item_principal(item);
+        item
+          .principle
+          .iter()
+          .for_each(|node| eval_inline(node, backend));
+        backend.exit_list_item_principal(item);
+        backend.enter_list_item_blocks(&item.blocks, item);
+        item
+          .blocks
+          .iter()
+          .for_each(|block| eval_block(block, backend));
+        backend.exit_list_item_blocks(&item.blocks, item);
+      });
+      backend.exit_unordered_list(block, items);
+    }
     _ => {
       dbg!(block.context);
       todo!();

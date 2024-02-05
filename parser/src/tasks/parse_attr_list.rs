@@ -92,7 +92,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           state.escaping = true;
           continue;
         }
-        Dot
+        Dots
           if state.quotes == Default
             && (state.kind == Role || state.kind == Id || state.prev_token != Some(Word)) =>
         {

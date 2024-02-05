@@ -29,6 +29,14 @@ pub trait Backend {
   fn enter_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
   fn exit_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
 
+  // lists
+  fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem]);
+  fn exit_unordered_list(&mut self, block: &Block, items: &[ListItem]);
+  fn enter_list_item_principal(&mut self, item: &ListItem);
+  fn exit_list_item_principal(&mut self, item: &ListItem);
+  fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem);
+  fn exit_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem);
+
   // block content
   fn enter_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
   fn exit_simple_block_content(&mut self, children: &[InlineNode], block: &Block);

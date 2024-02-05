@@ -1,4 +1,4 @@
-use ast::{prelude::*, UrlScheme};
+use ast::{prelude::*, ListVariant, UrlScheme};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenKind {
@@ -12,9 +12,11 @@ pub enum TokenKind {
   Comma,
   CommentBlock,
   CommentLine,
+  Dashes,
   DelimiterLine,
+  Digits,
   DoubleQuote,
-  Dot,
+  Dots,
   EqualSigns,
   Eof,
   GreaterThan,
@@ -61,6 +63,20 @@ impl<'src> Token<'src> {
       },
       _ => None,
     }
+  }
+
+  pub fn to_list_type(&self) -> Option<ListVariant> {
+    match self.kind {
+      TokenKind::Star => Some(ListVariant::Unordered),
+      TokenKind::Dashes => Some(ListVariant::Unordered),
+      TokenKind::Digits => Some(ListVariant::Ordered),
+      TokenKind::Dots => Some(ListVariant::Ordered),
+      _ => None,
+    }
+  }
+
+  pub fn len(&self) -> usize {
+    self.lexeme.len()
   }
 }
 

@@ -13,7 +13,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return;
     };
 
-    if !line.current_is(Word) {
+    if !line.current_is(Word) && !line.current_is(Digits) {
       return;
     }
 

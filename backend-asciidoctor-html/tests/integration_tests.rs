@@ -487,6 +487,21 @@ fn test_eval() {
       </div>
     "##},
     ),
+    (
+      "* foo\n* bar",
+      indoc! {r#"
+        <div class="ulist">
+          <ul>
+            <li>
+              <p>foo</p>
+            </li>
+            <li>
+              <p>bar</p>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();

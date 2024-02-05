@@ -115,6 +115,29 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
+  fn enter_unordered_list(&mut self, block: &Block, _items: &[ListItem]) {
+    self.open_element("div", &["ulist"], &block.attrs);
+    self.push_str("<ul>");
+  }
+
+  fn exit_unordered_list(&mut self, _block: &Block, _items: &[ListItem]) {
+    self.push_str("</ul></div>");
+  }
+
+  fn enter_list_item_principal(&mut self, _item: &ListItem) {
+    self.push_str("<li><p>");
+  }
+
+  fn exit_list_item_principal(&mut self, _item: &ListItem) {
+    self.push_str("</p>");
+  }
+
+  fn enter_list_item_blocks(&mut self, _blocks: &[Block], _item: &ListItem) {}
+
+  fn exit_list_item_blocks(&mut self, _blocks: &[Block], _item: &ListItem) {
+    self.push_str("</li>");
+  }
+
   fn enter_paragraph_block(&mut self, block: &Block) {
     self.push_str(r#"<div class="paragraph">"#);
     self.visit_block_title(block.title.as_deref(), None);
