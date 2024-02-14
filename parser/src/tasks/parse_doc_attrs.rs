@@ -43,7 +43,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let attr = if let Some(re_match) = captures.get(2) {
       if is_negated {
-        let start = line.location().unwrap().start + re_match.start();
+        let start = line.loc().unwrap().start + re_match.start();
         self.err_at(
           "Cannot unset attr with `!` AND provide value",
           start,

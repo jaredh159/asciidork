@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
 
 use crate::internal::*;
 
@@ -18,10 +19,52 @@ pub struct ParseResult<'bmp> {
   pub warnings: Vec<Diagnostic>,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum ListMarker {
+  Dot(u8),
+  Digits,
+  Dash,
+  Star(u8),
+}
+
+impl From<ListMarker> for ListVariant {
+  fn from(marker: ListMarker) -> Self {
+    match marker {
+      ListMarker::Dot(_) => ListVariant::Ordered,
+      ListMarker::Digits => ListVariant::Ordered,
+      ListMarker::Dash => ListVariant::Unordered,
+      ListMarker::Star(_) => ListVariant::Unordered,
+    }
+  }
+}
+
 #[derive(Debug)]
 pub(crate) struct ParseContext {
   pub(crate) subs: Substitutions,
   pub(crate) delimiter: Option<Delimiter>,
+  pub(crate) list_stack: ListStack,
+}
+
+#[derive(Debug)]
+pub struct ListStack(Vec<ListMarker>);
+
+impl Default for ListStack {
+  fn default() -> Self {
+    Self(Vec::with_capacity(6))
+  }
+}
+
+impl Deref for ListStack {
+  type Target = Vec<ListMarker>;
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl DerefMut for ListStack {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.0
+  }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -45,6 +88,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       ctx: ParseContext {
         subs: Substitutions::all(),
         delimiter: None,
+        list_stack: ListStack::default(),
       },
       errors: RefCell::new(Vec::new()),
       bail: true,
@@ -53,6 +97,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn debug_loc(&self, loc: SourceLocation) {
     println!("{:?}, {}", loc, self.lexer.loc_src(loc));
+  }
+
+  pub(crate) fn loc(&self) -> SourceLocation {
+    self
+      .peeked_lines
+      .as_ref()
+      .and_then(|lines| lines.loc())
+      .unwrap_or_else(|| self.lexer.loc())
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {

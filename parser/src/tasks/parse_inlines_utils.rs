@@ -63,7 +63,7 @@ pub fn finish_macro<'bmp>(
   line_end: SourceLocation,
   text: &mut CollectText<'bmp>,
 ) {
-  if let Some(cur_location) = line.location() {
+  if let Some(cur_location) = line.loc() {
     loc.extend(cur_location);
     text.loc = loc.clamp_end();
     loc.end -= 1; // parsing attr list moves us one past end of macro

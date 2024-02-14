@@ -109,6 +109,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.all_tokens.iter().skip(self.pos)
   }
 
+  fn tokens_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Token<'src>> {
+    self.all_tokens.iter_mut().skip(self.pos)
+  }
+
   pub fn first_nonescaped(&self, kind: TokenKind) -> Option<&Token> {
     let mut prev: Option<TokenKind> = None;
     for token in self.tokens() {
@@ -212,7 +216,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     kind: TokenKind,
     bump: &'bmp Bump,
   ) -> SourceString<'bmp> {
-    let mut loc = self.location().expect("no tokens to consume");
+    let mut loc = self.loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
       s.push_str(token.lexeme);
@@ -223,7 +227,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   #[must_use]
   pub fn consume_to_string(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
-    let mut loc = self.location().expect("no tokens to consume");
+    let mut loc = self.loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_current() {
       s.push_str(token.lexeme);
@@ -260,7 +264,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   #[must_use]
   pub fn consume_url(&mut self, start: Option<&Token>, bump: &'bmp Bump) -> SourceString<'bmp> {
-    let mut loc = start.map_or_else(|| self.location().unwrap(), |t| t.loc);
+    let mut loc = start.map_or_else(|| self.loc().unwrap(), |t| t.loc);
     let mut num_tokens = 0;
 
     for token in self.tokens() {
@@ -302,7 +306,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     ContiguousLines::new(bvec![in bump; self])
   }
 
-  pub fn location(&self) -> Option<SourceLocation> {
+  pub fn loc(&self) -> Option<SourceLocation> {
     self.current_token().map(|t| t.loc)
   }
 
@@ -310,9 +314,9 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.last_token().map(|t| t.loc)
   }
 
-  pub fn starts_list_item(&self) -> bool {
+  pub fn list_marker(&self) -> Option<ListMarker> {
     if self.current_is(Word) {
-      return false;
+      return None;
     }
     let offset = if self.current_token().is(Whitespace) {
       1
@@ -320,33 +324,123 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       0
     };
     if self.num_tokens() < 3 + offset {
-      return false;
+      return None;
     }
-    match self.all_tokens[offset].kind {
-      Star | Dots if self.nth_token(offset + 1).is(Whitespace) => true,
-      Dashes if self.nth_token(offset + 1).is(Whitespace) => self.all_tokens[offset].len() == 1,
-      Star if self.nth_token(offset + 1).is(Star) => REPEAT_STAR_LI_START.is_match(self.src),
-      Digits => self.nth_token(offset + 1).is(Dots) && self.nth_token(offset + 2).is(Whitespace),
-      _ => false,
+    let token = &self.all_tokens[offset];
+    let next = self.nth_token(offset + 1);
+    match token.kind {
+      Star if next.is(Whitespace) => Some(ListMarker::Star(1)),
+      Dots if next.is(Whitespace) => Some(ListMarker::Dot(token.len() as u8)),
+      Dashes if next.is(Whitespace) && token.len() == 1 => Some(ListMarker::Dash),
+      Star if next.is(Star) => {
+        let Some(captures) = REPEAT_STAR_LI_START.captures(self.src) else {
+          return None;
+        };
+        Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
+      }
+      Digits if next.is(Dots) && self.nth_token(offset + 2).is(Whitespace) => {
+        Some(ListMarker::Digits)
+      }
+      _ => None,
+    }
+  }
+
+  pub fn starts_list_item(&self) -> bool {
+    self.list_marker().is_some()
+  }
+
+  pub fn continues_list_item_principle(&self) -> bool {
+    match self.current_token().map(|t| t.kind) {
+      Some(Word) => true,
+      Some(Plus) | Some(CommentLine) => false,
+      None => false,
+      _ => !self.starts_list_item(),
+    }
+  }
+
+  pub fn trim_leading_whitespace(&mut self) {
+    while self.current_is(Whitespace) {
+      self.discard(1);
     }
   }
 
   pub fn discard_leading_whitespace(&mut self) {
-    while self.current_is(Whitespace) {
-      self.discard(1);
+    if self.current_is(Whitespace) {
+      self.all_tokens[self.pos].kind = Discard;
+    }
+  }
+
+  pub fn starts_nested_list(&self, stack: &ListStack) -> bool {
+    if stack.is_empty() {
+      false
+    } else if let Some(marker) = self.list_marker() {
+      !stack.contains(&marker)
+    } else {
+      false
     }
   }
 }
 
 lazy_static! {
-  pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?\*+\s+.+"#).unwrap();
+  pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)\s+.+"#).unwrap();
 }
 
 #[cfg(test)]
 mod tests {
+  use crate::internal::*;
   use crate::lexer::Lexer;
   use crate::token::{TokenKind::*, *};
   use bumpalo::Bump;
+
+  #[test]
+  fn test_continues_list_item_principle() {
+    let cases = vec![
+      ("foo", true),
+      (" foo", true),
+      ("      foo", true),
+      ("* foo", false),
+      ("  * foo", false),
+      ("- foo", false),
+      ("// foo", false),
+    ];
+    let bump = &Bump::new();
+    for (input, expected) in cases {
+      let mut lexer = Lexer::new(input);
+      let line = lexer.consume_line(bump).unwrap();
+      assert_eq!(
+        line.continues_list_item_principle(),
+        expected,
+        "input was: `{}`",
+        input
+      );
+    }
+  }
+
+  #[test]
+  fn test_starts_nested_list() {
+    use ListMarker::*;
+    let cases: Vec<(&str, &[ListMarker], bool)> = vec![
+      ("* foo", &[Star(1)], false),
+      ("** foo", &[Star(1)], true),
+      ("* foo", &[Star(2)], true),
+      (". foo", &[Star(2), Star(1)], true),
+    ];
+    let bump = &Bump::new();
+    for (input, markers, expected) in cases {
+      let mut stack = ListStack::default();
+      for marker in markers {
+        stack.push(*marker);
+      }
+      let mut lexer = Lexer::new(input);
+      let line = lexer.consume_line(bump).unwrap();
+      assert_eq!(
+        line.starts_nested_list(&stack),
+        expected,
+        "input was: `{}`",
+        input
+      );
+    }
+  }
 
   #[test]
   fn test_starts_list_item() {

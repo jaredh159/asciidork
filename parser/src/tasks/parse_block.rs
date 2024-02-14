@@ -8,6 +8,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
 
+    if let Some(comment_block) = self.parse_comment_block(&mut lines) {
+      return Ok(Some(comment_block));
+    }
+
     let meta = self.parse_block_metadata(&mut lines)?;
     let first_token = lines.current_token().unwrap();
 
@@ -17,14 +21,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         _ => todo!("block macro type: `{:?}`", first_token.lexeme),
       }
     } else if lines.starts_list() {
-      let (variant, items) = self.parse_list(lines)?;
-      return Ok(Some(Block {
-        title: meta.title,
-        attrs: meta.attrs,
-        loc: SourceLocation::new(meta.start, items.last().unwrap().loc_end().unwrap()),
-        context: variant.to_context(),
-        content: Content::List { variant, items },
-      }));
+      return self.parse_list(lines, Some(meta)).map(Some);
     }
 
     match first_token.kind {
@@ -56,6 +53,30 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     } else {
       self.parse_paragraph(lines, meta)
     }
+  }
+
+  // important to represent these as an ast node because
+  // they are the documented way to separate adjacent lists
+  fn parse_comment_block(
+    &mut self,
+    lines: &mut ContiguousLines<'bmp, 'src>,
+  ) -> Option<Block<'bmp>> {
+    if lines.starts(CommentLine) {
+      let start = lines.current_token().unwrap().loc.start;
+      lines.consume_current();
+      while lines.starts(CommentLine) {
+        lines.consume_current();
+      }
+      if lines.is_empty() {
+        return Some(Block {
+          context: Context::Comment,
+          content: Content::Empty(EmptyMetadata::None),
+          loc: SourceLocation::new(start, self.loc().end),
+          ..Block::empty(self.bump)
+        });
+      }
+    }
+    None
   }
 
   fn parse_delimited_block(
@@ -107,7 +128,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     meta: BlockMetadata<'bmp>,
   ) -> Result<Block<'bmp>> {
     let mut line = lines.consume_current().unwrap();
-    let start = line.location().unwrap().start;
+    let start = line.loc().unwrap().start;
     line.discard_assert(MacroName);
     line.discard_assert(Colon);
     let target = line.consume_macro_target(self.bump);
@@ -197,45 +218,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
     Ok(BlockMetadata { attrs, title, start })
-  }
-}
-
-struct BlockMetadata<'bmp> {
-  title: Option<SourceString<'bmp>>,
-  attrs: Option<AttrList<'bmp>>,
-  start: usize,
-}
-
-impl BlockMetadata<'_> {
-  fn block_style_or(&self, default: BlockContext) -> BlockContext {
-    self
-      .attrs
-      .as_ref()
-      .and_then(|attrs| attrs.block_style())
-      .unwrap_or(default)
-  }
-
-  fn paragraph_context(&self, lines: &mut ContiguousLines) -> BlockContext {
-    // line from block attrs takes precedence
-    if let Some(block_style) = self.attrs.as_ref().and_then(|attrs| attrs.block_style()) {
-      return block_style;
-    }
-    // handle inline admonitions, e.g. `TIP: never start a land war in asia`
-    if lines
-      .current()
-      .map(|line| line.starts_with_seq(&[Word, Colon, Whitespace]))
-      .unwrap_or(false)
-    {
-      let lexeme = lines.current_token().unwrap().lexeme;
-      if let Some(context) = BlockContext::derive_admonition(lexeme) {
-        let mut line = lines.consume_current().unwrap();
-        line.discard(3); // word, colon, whitespace
-        lines.restore(line);
-        return context;
-      }
-    }
-    // default to pararagraph
-    BlockContext::Paragraph
   }
 }
 
@@ -362,6 +344,20 @@ mod tests {
         ..Block::empty(b)
       }])),
       loc: l(0, 29),
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_comment_block() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "//-");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      context: Context::Comment,
+      content: Content::Empty(EmptyMetadata::None),
+      loc: l(0, 3),
+      ..Block::empty(b)
     };
     assert_eq!(block, expected);
   }

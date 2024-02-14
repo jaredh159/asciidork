@@ -122,6 +122,7 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       });
       backend.exit_unordered_list(block, items);
     }
+    (Context::Comment, _) => {}
     _ => {
       dbg!(block.context);
       todo!();

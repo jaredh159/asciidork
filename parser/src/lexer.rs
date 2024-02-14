@@ -8,7 +8,7 @@ pub struct Lexer<'src> {
   src: &'src str,
   chars: Chars<'src>,
   peek: Option<char>,
-  is_line_start: bool,
+  at_line_start: bool,
 }
 
 impl<'src> Lexer<'src> {
@@ -17,7 +17,7 @@ impl<'src> Lexer<'src> {
       src,
       chars: src.chars(),
       peek: None,
-      is_line_start: true,
+      at_line_start: true,
     };
     lexer.peek = lexer.chars.next();
     lexer
@@ -106,7 +106,7 @@ impl<'src> Lexer<'src> {
   }
 
   fn delimiter_line(&mut self) -> Option<Token<'src>> {
-    if !self.is_line_start
+    if !self.at_line_start
       || self.is_eof()
       || !matches!(self.peek, Some('_') | Some('-') | Some('*') | Some('='))
     {
@@ -134,6 +134,7 @@ impl<'src> Lexer<'src> {
     if let Some(token) = self.delimiter_line() {
       return token;
     }
+    let at_line_start = self.at_line_start;
     match self.advance() {
       Some('=') => self.repeating('=', EqualSigns),
       Some('-') => self.repeating('-', Dashes),
@@ -158,7 +159,7 @@ impl<'src> Lexer<'src> {
       Some('#') => self.single(Hash),
       Some('%') => self.single(Percent),
       Some('"') => self.single(DoubleQuote),
-      Some('/') if self.starts_comment() => self.comment(),
+      Some('/') if at_line_start && self.peek == Some('/') => self.comment(),
       Some('\'') => self.single(SingleQuote),
       Some('\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
@@ -173,14 +174,14 @@ impl<'src> Lexer<'src> {
 
   fn advance(&mut self) -> Option<char> {
     let next = std::mem::replace(&mut self.peek, self.chars.next());
-    self.is_line_start = matches!(next, Some('\n'));
+    self.at_line_start = matches!(next, Some('\n'));
     next
   }
 
   pub fn skip(&mut self, n: usize) -> Option<char> {
     debug_assert!(n > 1);
     let next = std::mem::replace(&mut self.peek, self.chars.nth(n - 1));
-    self.is_line_start = matches!(next, Some('\n'));
+    self.at_line_start = matches!(next, Some('\n'));
     next
   }
 
@@ -363,19 +364,6 @@ impl<'src> Lexer<'src> {
     self.token(Whitespace, start, end)
   }
 
-  fn starts_comment(&self) -> bool {
-    if self.peek != Some('/') {
-      return false;
-    }
-    let offset = self.offset();
-    if offset == 1 {
-      return true;
-    }
-    let prev_offset = self.offset().saturating_sub(1);
-    // must be at the beginning of a line, so `https://foobar` not match
-    matches!(self.src.chars().nth(prev_offset), Some('\n') | None)
-  }
-
   fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'src> {
     Token {
       kind,
@@ -390,6 +378,7 @@ mod tests {
   use super::*;
   use crate::token::TokenKind;
   use ast::SourceLocation;
+  use indoc::indoc;
 
   #[test]
   fn test_consume_line() {
@@ -452,6 +441,16 @@ mod tests {
       ("===", vec![(EqualSigns, "===")]),
       ("// foo", vec![(CommentLine, "// foo")]),
       (
+        "foo\n//-\nbar",
+        vec![
+          (Word, "foo"),
+          (Newline, "\n"),
+          (CommentLine, "//-"),
+          (Newline, "\n"),
+          (Word, "bar"),
+        ],
+      ),
+      (
         "foo     ;", // whitespace is grouped
         vec![(Word, "foo"), (Whitespace, "     "), (SemiColon, ";")],
       ),
@@ -499,15 +498,16 @@ mod tests {
         vec![(EqualSigns, "=="), (Whitespace, " "), (Word, "Title")],
       ),
       (
-        "// this comment line is ignored
-= Document Title
-Kismet R. Lee <kismet@asciidoctor.org>
-:description: The document's description.
-:sectanchors:
-:url-repo: https://my-git-repo.com
+        indoc! { "
+          // this comment line is ignored
+          = Document Title
+          Kismet R. Lee <kismet@asciidoctor.org>
+          :description: The document's description.
+          :sectanchors:
+          :url-repo: https://my-git-repo.com
 
-The document body starts here.
-",
+          The document body starts here.
+        "},
         vec![
           (CommentLine, "// this comment line is ignored"),
           (Newline, "\n"),
@@ -580,7 +580,12 @@ The document body starts here.
           loc: SourceLocation::new(start, end),
           lexeme,
         };
-        assert_eq!(lexer.next_token(), expected_token);
+        assert_eq!(
+          lexer.next_token(),
+          expected_token,
+          "input was: \n```\n{}```\n",
+          input
+        );
         index = end;
       }
       assert_eq!(lexer.next_token().kind, Eof);

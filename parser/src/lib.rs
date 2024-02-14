@@ -27,6 +27,7 @@ mod internal {
   pub use crate::lexer::*;
   pub use crate::line::*;
   pub use crate::parser::*;
+  pub use crate::tasks::block_metadata::*;
   pub use crate::tasks::collect_text::*;
   pub use crate::token::*;
   pub use crate::utils::bump::*;

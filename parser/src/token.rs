@@ -1,4 +1,6 @@
-use ast::{prelude::*, ListVariant, UrlScheme};
+use ast::{prelude::*, UrlScheme};
+
+use crate::internal::ListMarker;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenKind {
@@ -15,6 +17,7 @@ pub enum TokenKind {
   Dashes,
   DelimiterLine,
   Digits,
+  Discard,
   DoubleQuote,
   Dots,
   EqualSigns,
@@ -65,12 +68,12 @@ impl<'src> Token<'src> {
     }
   }
 
-  pub fn to_list_type(&self) -> Option<ListVariant> {
+  pub fn to_list_marker(&self) -> Option<ListMarker> {
     match self.kind {
-      TokenKind::Star => Some(ListVariant::Unordered),
-      TokenKind::Dashes => Some(ListVariant::Unordered),
-      TokenKind::Digits => Some(ListVariant::Ordered),
-      TokenKind::Dots => Some(ListVariant::Ordered),
+      TokenKind::Star => Some(ListMarker::Star(self.len() as u8)),
+      TokenKind::Dashes => Some(ListMarker::Dash),
+      TokenKind::Digits => Some(ListMarker::Digits),
+      TokenKind::Dots => Some(ListMarker::Dot(self.len() as u8)),
       _ => None,
     }
   }

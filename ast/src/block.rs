@@ -54,6 +54,9 @@ pub struct ListItem<'bmp> {
 }
 
 impl<'bmp> ListItem<'bmp> {
+  pub fn loc_start(&self) -> usize {
+    self.marker.loc.start
+  }
   pub fn loc_end(&self) -> Option<usize> {
     self.principle.last_loc_end()
   }
@@ -80,6 +83,7 @@ pub enum EmptyMetadata<'bmp> {
     target: SourceString<'bmp>,
     attrs: AttrList<'bmp>,
   },
+  None, // weird..., or good?
 }
 
 #[derive(Copy, Debug, PartialEq, Eq, Clone)]
@@ -92,6 +96,7 @@ pub enum BlockContext {
   Audio,
   BlockQuote,
   CalloutList,
+  Comment,
   DescriptionList,
   DiscreteHeading,
   DocumentAttributeDecl,

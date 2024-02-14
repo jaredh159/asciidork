@@ -1,3 +1,4 @@
+pub(crate) mod block_metadata;
 pub(crate) mod collect_text;
 mod parse_attr_list;
 mod parse_author_line;

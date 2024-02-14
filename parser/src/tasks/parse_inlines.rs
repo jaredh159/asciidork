@@ -22,7 +22,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if lines.is_empty() {
       return Ok(inlines);
     }
-    let span_loc = lines.location().unwrap().clamp_start();
+    let span_loc = lines.loc().unwrap().clamp_start();
     let mut text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
 
@@ -32,7 +32,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           line.discard(stop_tokens.len());
           text.commit_inlines(&mut inlines);
           if !line.is_empty() {
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
           }
           return Ok(inlines);
         }
@@ -41,7 +41,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           if matches!(inlines.last().map(|n| &n.content), Some(JoiningNewline)) {
             inlines.pop();
           }
-          lines.restore(line);
+          lines.restore_if_nonempty(line);
           return Ok(inlines);
         }
 
@@ -86,7 +86,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               }
               "footnote:" => {
                 let id = line.consume_optional_macro_target(self.bump);
-                lines.restore(line);
+                lines.restore_if_nonempty(line);
                 let note = self.parse_inlines_until(lines, &[CloseBracket])?;
                 extend(&mut macro_loc, &note, 1);
                 inlines.push(node(Macro(Footnote { id, text: note }), macro_loc));
@@ -248,7 +248,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let mut wrap_loc = token.loc;
             line.discard_assert(Plus);
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             self.ctx.subs.inline_formatting = false;
             let mut inner = self.parse_inlines_until(lines, &[Plus, Backtick])?;
             extend(&mut wrap_loc, &inner, 2);
@@ -266,7 +266,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           Caret if subs.inline_formatting && line.is_continuous_thru(Caret) => {
             let mut loc = token.loc;
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             let inner = self.parse_inlines_until(lines, &[Caret])?;
             extend(&mut loc, &inner, 1);
             inlines.push(node(Superscript(inner), loc));
@@ -296,7 +296,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let mut loc = token.loc;
             line.discard_assert(Backtick);
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             let quoted = self.parse_inlines_until(lines, &[Backtick, DoubleQuote])?;
             extend(&mut loc, &quoted, 2);
             inlines.push(node(Quote(Double, quoted), loc));
@@ -312,7 +312,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let mut loc = token.loc;
             line.discard_assert(Backtick);
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             let quoted = self.parse_inlines_until(lines, &[Backtick, SingleQuote])?;
             extend(&mut loc, &quoted, 2);
             inlines.push(node(Quote(Single, quoted), loc));
@@ -323,7 +323,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           Tilde if subs.inline_formatting && line.is_continuous_thru(Tilde) => {
             let mut loc = token.loc;
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             let inner = self.parse_inlines_until(lines, &[Tilde])?;
             extend(&mut loc, &inner, 1);
             inlines.push(node(Subscript(inner), loc));
@@ -336,7 +336,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(DoubleQuote);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             inlines.push(node(Curly(RightDouble), loc));
             text.loc = loc.clamp_end();
             break;
@@ -349,7 +349,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(Backtick);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             inlines.push(node(Curly(LeftDouble), loc));
             text.loc = loc.clamp_end();
             break;
@@ -360,7 +360,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(SingleQuote);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             inlines.push(node(Curly(RightSingle), loc));
             text.loc = loc.clamp_end();
             break;
@@ -373,7 +373,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(Backtick);
             loc.end += 1;
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             inlines.push(node(Curly(LeftSingle), loc));
             text.loc = loc.clamp_end();
             break;
@@ -392,7 +392,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(Plus);
             line.discard_assert(Plus);
             text.commit_inlines(&mut inlines);
-            lines.restore(line);
+            lines.restore_if_nonempty(line);
             self.ctx.subs = Substitutions::none();
             let passthrough = self.parse_inlines_until(lines, &[Plus, Plus, Plus])?;
             extend(&mut loc, &passthrough, 3);
@@ -467,6 +467,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = token.loc.clamp_end();
           }
 
+          Discard => text.loc = token.loc.clamp_end(),
+
           Backslash
             if subs.macros
               && (line.current_is(MaybeEmail) || line.current_token().is_url_scheme()) =>
@@ -515,7 +517,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let line_end = line.last_location().unwrap().end;
     line.discard_assert(token.kind);
     text.commit_inlines(inlines);
-    lines.restore(line);
+    lines.restore_if_nonempty(line);
     let inner = self.parse_inlines_until(lines, &[token.kind, token.kind])?;
     extend(&mut loc, &inner, 2);
     inlines.push(node(wrap(inner), loc));
@@ -541,7 +543,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut loc = token.loc;
     let line_end = line.last_location().map_or(loc.end, |t| t.end);
     text.commit_inlines(inlines);
-    lines.restore(line);
+    lines.restore_if_nonempty(line);
     let inner = self.parse_inlines_until(lines, &[token.kind])?;
     extend(&mut loc, &inner, 1);
     inlines.push(node(wrap(inner), loc));

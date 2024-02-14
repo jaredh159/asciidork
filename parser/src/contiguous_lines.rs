@@ -59,7 +59,7 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       .and_then(|mut line| line.consume_current())
   }
 
-  pub fn restore(&mut self, line: Line<'bmp, 'src>) {
+  pub fn restore_if_nonempty(&mut self, line: Line<'bmp, 'src>) {
     if !line.is_empty() {
       self.reversed_lines.push(line);
     }
@@ -101,9 +101,9 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     }
   }
 
-  pub fn location(&self) -> Option<SourceLocation> {
+  pub fn loc(&self) -> Option<SourceLocation> {
     if let Some(line) = self.reversed_lines.last() {
-      line.location()
+      line.loc()
     } else {
       None
     }
@@ -134,6 +134,20 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       .first()
       .map(|line| line.starts_list_item())
       .unwrap_or(false)
+  }
+
+  pub fn starts(&self, kind: TokenKind) -> bool {
+    self.first().map(|line| line.starts(kind)).unwrap_or(false)
+  }
+
+  pub fn discard_leading_comment_lines(&mut self) {
+    while self
+      .current()
+      .map(|line| line.starts(TokenKind::CommentLine))
+      .unwrap_or(false)
+    {
+      self.consume_current();
+    }
   }
 }
 
