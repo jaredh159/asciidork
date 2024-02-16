@@ -32,6 +32,21 @@ impl<'bmp> AttrList<'bmp> {
     }
   }
 
+  // https://docs.asciidoctor.org/asciidoc/latest/lists/unordered/#custom-markers
+  pub fn list_custom_marker_style(&self) -> Option<&'static str> {
+    // documented to support these, but seems like in practice
+    // they actually pass through ANY first positional attr
+    match self.str_positional_at(0) {
+      Some("square") => Some("square"),
+      Some("circle") => Some("circle"),
+      Some("disc") => Some("disc"),
+      Some("none") => Some("none"),
+      Some("no-bullet") => Some("no-bullet"),
+      Some("unstyled") => Some("unstyled"),
+      _ => None,
+    }
+  }
+
   pub fn named(&self, key: &str) -> Option<&str> {
     self.named.get(key).map(|s| s.src.as_str())
   }

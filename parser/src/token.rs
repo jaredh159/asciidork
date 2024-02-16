@@ -1,7 +1,5 @@
 use ast::{prelude::*, UrlScheme};
 
-use crate::internal::ListMarker;
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenKind {
   Ampersand,
@@ -64,16 +62,6 @@ impl<'src> Token<'src> {
         "mailto:" => Some(UrlScheme::Mailto),
         _ => None,
       },
-      _ => None,
-    }
-  }
-
-  pub fn to_list_marker(&self) -> Option<ListMarker> {
-    match self.kind {
-      TokenKind::Star => Some(ListMarker::Star(self.len() as u8)),
-      TokenKind::Dashes => Some(ListMarker::Dash),
-      TokenKind::Digits => Some(ListMarker::Digits),
-      TokenKind::Dots => Some(ListMarker::Dot(self.len() as u8)),
       _ => None,
     }
   }

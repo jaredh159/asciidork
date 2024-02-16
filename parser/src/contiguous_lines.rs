@@ -136,6 +136,19 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       .unwrap_or(false)
   }
 
+  pub fn starts_nested_list(&self, stack: &ListStack, allow_attrs: bool) -> bool {
+    let Some(line) = self.first() else {
+      return false;
+    };
+    if !allow_attrs || !line.is_attr_list() {
+      return line.starts_nested_list(stack);
+    }
+    self
+      .nth(1)
+      .map(|line| line.starts_nested_list(stack))
+      .unwrap_or(false)
+  }
+
   pub fn starts(&self, kind: TokenKind) -> bool {
     self.first().map(|line| line.starts(kind)).unwrap_or(false)
   }

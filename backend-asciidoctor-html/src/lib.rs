@@ -13,6 +13,7 @@ mod internal {
 
   pub use lazy_static::lazy_static;
   pub use regex::Regex;
+  pub use smallvec::SmallVec;
 
   pub use ast::prelude::*;
   pub use ast::DocHeader;

@@ -351,6 +351,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn continues_list_item_principle(&self) -> bool {
     match self.current_token().map(|t| t.kind) {
+      Some(OpenBracket) => !self.is_attr_list(),
       Some(Word) => true,
       Some(Plus) | Some(CommentLine) => false,
       None => false,
@@ -402,6 +403,7 @@ mod tests {
       ("  * foo", false),
       ("- foo", false),
       ("// foo", false),
+      ("[circles]", false),
     ];
     let bump = &Bump::new();
     for (input, expected) in cases {

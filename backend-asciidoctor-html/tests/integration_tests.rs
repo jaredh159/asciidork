@@ -457,10 +457,10 @@ fn test_eval() {
     ),
     (
       indoc! {r#"
-      foo.footnote:[bar _baz_]
+        foo.footnote:[bar _baz_]
 
-      lol.footnote:cust[baz]
-    "#},
+        lol.footnote:cust[baz]
+      "#},
       indoc! {r##"
       <div class="paragraph">
         <p>foo.
@@ -504,24 +504,32 @@ fn test_eval() {
     ),
     (
       indoc! {r#"
-        * foo
+        * Apples
+        * Oranges
 
         //-
 
-        * bar
+        * Walnuts
+        * Almonds
       "#},
       indoc! {r#"
         <div class="ulist">
           <ul>
             <li>
-              <p>foo</p>
+              <p>Apples</p>
+            </li>
+            <li>
+              <p>Oranges</p>
             </li>
           </ul>
         </div>
         <div class="ulist">
           <ul>
             <li>
-              <p>bar</p>
+              <p>Walnuts</p>
+            </li>
+            <li>
+              <p>Almonds</p>
             </li>
           </ul>
         </div>
@@ -557,6 +565,159 @@ fn test_eval() {
                 <ul>
                   <li>
                     <p>bar</p>
+                  </li>
+                </ul>
+              </div>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        - Edgar Allan Poe
+        - Sheri S. Tepper
+        - Bill Bryson
+      "#},
+      indoc! {r#"
+        <div class="ulist">
+          <ul>
+            <li>
+              <p>Edgar Allan Poe</p>
+            </li>
+            <li>
+              <p>Sheri S. Tepper</p>
+            </li>
+            <li>
+              <p>Bill Bryson</p>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        .Kizmets Favorite Authors
+        * Edgar Allan Poe
+        * Sheri S. Tepper
+        * Bill Bryson
+      "#},
+      indoc! {r#"
+        <div class="ulist">
+          <div class="title">Kizmets Favorite Authors</div>
+          <ul>
+            <li>
+              <p>Edgar Allan Poe</p>
+            </li>
+            <li>
+              <p>Sheri S. Tepper</p>
+            </li>
+            <li>
+              <p>Bill Bryson</p>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        [square]
+        * Level 1 list item
+        - Level 2 list item
+        * Level 1 list item
+      "#},
+      indoc! {r#"
+        <div class="ulist square">
+          <ul class="square">
+            <li>
+              <p>Level 1 list item</p>
+              <div class="ulist">
+                <ul>
+                  <li>
+                    <p>Level 2 list item</p>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <p>Level 1 list item</p>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        .Possible DefOps manual locations
+        * West wood maze
+        ** Maze heart
+        *** Reflection pool
+        ** Secret exit
+        * Untracked file in git repository
+      "#},
+      indoc! {r#"
+        <div class="ulist">
+          <div class="title">Possible DefOps manual locations</div>
+          <ul>
+            <li>
+              <p>West wood maze</p>
+              <div class="ulist">
+                <ul>
+                  <li>
+                    <p>Maze heart</p>
+                    <div class="ulist">
+                      <ul>
+                        <li>
+                          <p>Reflection pool</p>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                  <li>
+                    <p>Secret exit</p>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <p>Untracked file in git repository</p>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        [square]
+        * squares
+        ** up top
+        [circle]
+        *** circles
+        **** down below
+      "#},
+      indoc! {r#"
+        <div class="ulist square">
+          <ul class="square">
+            <li>
+              <p>squares</p>
+              <div class="ulist">
+                <ul>
+                  <li>
+                    <p>up top</p>
+                    <div class="ulist circle">
+                      <ul class="circle">
+                        <li>
+                          <p>circles</p>
+                          <div class="ulist">
+                            <ul>
+                              <li>
+                                <p>down below</p>
+                              </li>
+                            </ul>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
                   </li>
                 </ul>
               </div>

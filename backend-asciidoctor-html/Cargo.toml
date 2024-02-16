@@ -9,6 +9,7 @@ asciidork-backend = { path = "../backend" }
 asciidork-eval = { path = "../eval" }
 lazy_static = "1.4.0"
 regex = "1.10.2"
+smallvec = "1.13.1"
 
 [dev-dependencies]
 asciidork-parser = { path = "../parser" }

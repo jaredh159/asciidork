@@ -8,20 +8,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     meta: Option<BlockMetadata<'bmp>>,
   ) -> Result<Block<'bmp>> {
     let mut first_line = lines.consume_current().unwrap();
+    // println!("\nbegin: parse_list, first_line: {:?}", first_line.src);
     first_line.trim_leading_whitespace();
-    let marker = first_line
-      .current_token()
-      .unwrap()
-      .to_list_marker()
-      .unwrap();
-    self.ctx.list_stack.push(marker);
+    let marker = first_line.list_marker().unwrap();
     lines.restore_if_nonempty(first_line);
     self.restore_lines(lines);
 
+    self.ctx.list_stack.push(marker);
+    // println!(" --> list_stack: {:?}", self.ctx.list_stack);
     let mut items = BumpVec::new_in(self.bump);
     while let Some(item) = self.parse_list_item()? {
+      // println!(" --> item: {:?}", item);
       items.push(item);
     }
+    self.ctx.list_stack.pop();
+
+    // println!("end: parse_list\n");
 
     let variant = ListVariant::from(marker);
     let (title, attrs, start) = meta.map(|m| (m.title, m.attrs, m.start)).unwrap_or((
@@ -39,13 +41,23 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   fn parse_list_item(&mut self) -> Result<Option<ListItem<'bmp>>> {
+    // println!("begin: parse_list_item");
     let Some(mut lines) = self.read_lines() else {
+      // println!("end: parse_list_item (no lines)");
       return Ok(None);
     };
-    if !lines.starts_list() {
+    let Some(marker) = lines.first().and_then(|line| line.list_marker()) else {
       self.restore_lines(lines);
+      // println!("end: parse_list_item (lines don't start list)");
+      return Ok(None);
+    };
+
+    if !self.continues_current_list(marker) {
+      self.restore_lines(lines);
+      // println!("end: parse_list_item (doesn't continue current list)");
       return Ok(None);
     }
+
     let mut line = lines.consume_current().unwrap();
     let marker = line.consume_to_string_until(Whitespace, self.bump);
     line.discard_assert(Whitespace);
@@ -63,8 +75,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let mut item_lines = ContiguousLines::new(item_lines);
     let principle = self.parse_inlines(&mut item_lines)?;
+    // println!(" --> principal: {:?}", principle);
     let blocks = self.parse_list_item_blocks(lines)?;
 
+    // println!("end: parse_list_item (fin)");
     Ok(Some(ListItem { blocks, marker, principle }))
   }
 
@@ -72,25 +86,44 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     lines: ContiguousLines<'bmp, 'src>,
   ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
+    // println!("begin: parse_list_item_blocks");
     let mut blocks = BumpVec::new_in(self.bump);
-    // if we're on a contiguous line, we parse off a block IF:
-    //  --> it's a NESTED list item
-    //  --> we have a list continuation followed by a block
-    if let Some(line) = lines.current() {
-      if line.starts_nested_list(&self.ctx.list_stack) {
-        println!("starts_nested_list");
-        blocks.push(self.parse_list(lines, None)?);
-        return Ok(blocks);
-      }
+
+    if lines.starts_nested_list(&self.ctx.list_stack, true) {
+      // println!("start parsing nested list");
+      self.restore_lines(lines);
+      blocks.push(self.parse_block()?.unwrap());
+      // println!("end: parse_list_item_blocks (parsed nested)");
+      return Ok(blocks);
+    } else if !lines.is_empty() {
+      self.restore_lines(lines);
+      return Ok(blocks);
     }
 
-    // ELSE IF the next Contiguous Lines starts a NESTED list, parse a block
-    // ELSE, we're done
+    let Some(lines) = self.read_lines() else {
+      // println!("end: parse_list_item_blocks (no nested, b/c no next lines)");
+      return Ok(blocks);
+    };
 
-    // this might need to be recursive, and we might need to pass in a &mut blocks vec...
+    // ELSE IF the next Contiguous Lines starts a NESTED list, parse a block
+    if lines.starts_nested_list(&self.ctx.list_stack, false) {
+      // println!("start parsing nested list (from next lines)");
+      blocks.push(self.parse_list(lines, None)?);
+      // println!("end: parse_list_item_blocks (parsed nested)");
+      return Ok(blocks);
+    }
 
     self.restore_lines(lines);
     Ok(blocks)
+  }
+
+  fn continues_current_list(&self, list_marker: ListMarker) -> bool {
+    self
+      .ctx
+      .list_stack
+      .last()
+      .map(|marker| *marker == list_marker)
+      .unwrap_or(false)
   }
 }
 
@@ -109,6 +142,7 @@ mod tests {
       ("* foo\n\n[]\n* bar", &[UnorderedList, UnorderedList]),
       ("* foo\n\n\n* bar", &[UnorderedList]),
       ("* foo\n\n\n** bar", &[UnorderedList]),
+      ("[square]\n* foo\n[circle]\n** bar", &[UnorderedList]),
       (
         "* foo\n\n//-\n\n. bar",
         &[UnorderedList, Comment, OrderedList],
@@ -125,6 +159,7 @@ mod tests {
       let content = parser.parse().unwrap().document.content;
       match content {
         DocContent::Blocks(blocks) => {
+          dbg!(&blocks);
           assert_eq!(
             blocks.len(),
             block_contexts.len(),
@@ -145,6 +180,35 @@ mod tests {
     let b = &Bump::new();
     let cases = vec![
       (
+        "* one\n** two\n* one again",
+        BlockContext::UnorderedList,
+        b.vec([
+          ListItem {
+            marker: b.src("*", l(0, 1)),
+            principle: b.inodes([n_text("one", 2, 5, b)]),
+            blocks: b.vec([Block {
+              title: None,
+              attrs: None,
+              content: BlockContent::List {
+                variant: ListVariant::Unordered,
+                items: b.vec([ListItem {
+                  marker: b.src("**", l(6, 8)),
+                  principle: b.inodes([n_text("two", 9, 12, b)]),
+                  blocks: b.vec([]),
+                }]),
+              },
+              context: BlockContext::UnorderedList,
+              loc: l(6, 12),
+            }]),
+          },
+          ListItem {
+            marker: b.src("*", l(13, 14)),
+            principle: b.inodes([n_text("one again", 15, 24, b)]),
+            blocks: b.vec([]),
+          },
+        ]),
+      ),
+      (
         "* foo bar\n  baz",
         BlockContext::UnorderedList,
         b.vec([ListItem {
@@ -155,6 +219,28 @@ mod tests {
             n_text("baz", 12, 15, b),
           ]),
           blocks: b.vec([]),
+        }]),
+      ),
+      (
+        "* foo\n[circles]\n** bar",
+        BlockContext::UnorderedList,
+        b.vec([ListItem {
+          marker: b.src("*", l(0, 1)),
+          principle: b.inodes([n_text("foo", 2, 5, b)]),
+          blocks: b.vec([Block {
+            title: None,
+            attrs: Some(AttrList::positional("circles", l(7, 14), b)),
+            content: BlockContent::List {
+              variant: ListVariant::Unordered,
+              items: b.vec([ListItem {
+                marker: b.src("**", l(16, 18)),
+                principle: b.inodes([n_text("bar", 19, 22, b)]),
+                blocks: b.vec([]),
+              }]),
+            },
+            context: BlockContext::UnorderedList,
+            loc: l(6, 22),
+          }]),
         }]),
       ),
       (
@@ -176,6 +262,28 @@ mod tests {
             },
             context: BlockContext::UnorderedList,
             loc: l(6, 12),
+          }]),
+        }]),
+      ),
+      (
+        "* foo\n\n\n** bar",
+        BlockContext::UnorderedList,
+        b.vec([ListItem {
+          marker: b.src("*", l(0, 1)),
+          principle: b.inodes([n_text("foo", 2, 5, b)]),
+          blocks: b.vec([Block {
+            title: None,
+            attrs: None,
+            content: BlockContent::List {
+              variant: ListVariant::Unordered,
+              items: b.vec([ListItem {
+                marker: b.src("**", l(8, 10)),
+                principle: b.inodes([n_text("bar", 11, 14, b)]),
+                blocks: b.vec([]),
+              }]),
+            },
+            context: BlockContext::UnorderedList,
+            loc: l(8, 14),
           }]),
         }]),
       ),
@@ -220,9 +328,13 @@ mod tests {
       let mut parser = Parser::new(bump, input);
       let lines = parser.read_lines().unwrap();
       let block = parser.parse_list(lines, None).unwrap();
-      assert_eq!(block.context, context, "input was: \n{}\n", input);
+      assert_eq!(
+        block.context, context,
+        "input was:\n\n```\n{}\n```\n",
+        input
+      );
       if let BlockContent::List { items, .. } = block.content {
-        assert_eq!(items, expected_items, "input was: \n{}\n", input);
+        assert_eq!(items, expected_items, "input was:\n\n```\n{}\n```\n", input);
       } else {
         panic!("expected list, got {:?}", block.content);
       }

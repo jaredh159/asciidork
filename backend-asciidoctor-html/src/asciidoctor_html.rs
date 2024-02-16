@@ -116,8 +116,21 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_unordered_list(&mut self, block: &Block, _items: &[ListItem]) {
-    self.open_element("div", &["ulist"], &block.attrs);
-    self.push_str("<ul>");
+    let custom = block
+      .attrs
+      .as_ref()
+      .and_then(|attrs| attrs.list_custom_marker_style());
+    let mut classes = SmallVec::<[&str; 2]>::from_slice(&["ulist"]);
+    if let Some(custom) = custom {
+      classes.push(custom);
+    }
+    self.open_element("div", &classes, &block.attrs);
+    self.visit_block_title(block.title.as_deref(), None);
+    self.push_str("<ul");
+    if let Some(custom) = custom {
+      self.push([r#" class=""#, custom, "\""]);
+    }
+    self.push_ch('>');
   }
 
   fn exit_unordered_list(&mut self, _block: &Block, _items: &[ListItem]) {
