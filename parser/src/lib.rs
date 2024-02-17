@@ -5,6 +5,7 @@ mod delimiter;
 mod diagnostic;
 mod lexer;
 mod line;
+mod list_stack;
 pub mod parser;
 mod tasks;
 mod token;
@@ -26,6 +27,7 @@ mod internal {
   pub use crate::diagnostic::*;
   pub use crate::lexer::*;
   pub use crate::line::*;
+  pub use crate::list_stack::*;
   pub use crate::parser::*;
   pub use crate::tasks::block_metadata::*;
   pub use crate::tasks::collect_text::*;

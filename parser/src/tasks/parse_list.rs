@@ -52,7 +52,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
 
-    if !self.continues_current_list(&marker) {
+    if !self.ctx.list_stack.continues_current_list(&marker) {
       self.restore_lines(lines);
       // println!("end: parse_list_item (doesn't continue current list)");
       return Ok(None);
@@ -120,18 +120,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     self.restore_lines(lines);
     Ok(blocks)
-  }
-
-  fn continues_current_list(&self, next: &ListMarker) -> bool {
-    self
-      .ctx
-      .list_stack
-      .last()
-      .map(|last| match (last, next) {
-        (ListMarker::Digits(_), ListMarker::Digits(_)) => true,
-        (last, next) => last == next,
-      })
-      .unwrap_or(false)
   }
 }
 

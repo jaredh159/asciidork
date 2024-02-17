@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::ops::{Deref, DerefMut};
 
 use crate::internal::*;
 
@@ -24,28 +23,6 @@ pub(crate) struct ParseContext {
   pub(crate) subs: Substitutions,
   pub(crate) delimiter: Option<Delimiter>,
   pub(crate) list_stack: ListStack,
-}
-
-#[derive(Debug)]
-pub struct ListStack(Vec<ListMarker>);
-
-impl Default for ListStack {
-  fn default() -> Self {
-    Self(Vec::with_capacity(6))
-  }
-}
-
-impl Deref for ListStack {
-  type Target = Vec<ListMarker>;
-  fn deref(&self) -> &Self::Target {
-    &self.0
-  }
-}
-
-impl DerefMut for ListStack {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.0
-  }
 }
 
 #[derive(Debug, Clone, Copy)]

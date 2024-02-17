@@ -372,15 +372,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn starts_nested_list(&self, stack: &ListStack) -> bool {
-    if stack.is_empty() {
-      false
-    } else {
-      match self.list_marker() {
-        Some(ListMarker::Digits(_)) => stack.iter().all(|m| !matches!(m, ListMarker::Digits(_))),
-        Some(marker) => !stack.contains(&marker),
-        None => false,
-      }
-    }
+    self
+      .list_marker()
+      .map(|marker| stack.starts_nested_list(marker))
+      .unwrap_or(false)
   }
 }
 
