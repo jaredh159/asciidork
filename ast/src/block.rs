@@ -47,37 +47,6 @@ pub enum BlockContent<'bmp> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ListItem<'bmp> {
-  pub marker: SourceString<'bmp>,
-  pub principle: InlineNodes<'bmp>,
-  pub blocks: BumpVec<'bmp, Block<'bmp>>,
-}
-
-impl<'bmp> ListItem<'bmp> {
-  pub fn loc_start(&self) -> usize {
-    self.marker.loc.start
-  }
-  pub fn loc_end(&self) -> Option<usize> {
-    self.principle.last_loc_end()
-  }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum ListVariant {
-  Ordered,
-  Unordered,
-}
-
-impl ListVariant {
-  pub fn to_context(&self) -> BlockContext {
-    match self {
-      ListVariant::Ordered => BlockContext::OrderedList,
-      ListVariant::Unordered => BlockContext::UnorderedList,
-    }
-  }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum EmptyMetadata<'bmp> {
   Image {
     target: SourceString<'bmp>,

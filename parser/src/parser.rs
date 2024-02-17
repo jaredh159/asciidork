@@ -19,25 +19,6 @@ pub struct ParseResult<'bmp> {
   pub warnings: Vec<Diagnostic>,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum ListMarker {
-  Dot(u8),
-  Digits,
-  Dash,
-  Star(u8),
-}
-
-impl From<ListMarker> for ListVariant {
-  fn from(marker: ListMarker) -> Self {
-    match marker {
-      ListMarker::Dot(_) => ListVariant::Ordered,
-      ListMarker::Digits => ListVariant::Ordered,
-      ListMarker::Dash => ListVariant::Unordered,
-      ListMarker::Star(_) => ListVariant::Unordered,
-    }
-  }
-}
-
 #[derive(Debug)]
 pub(crate) struct ParseContext {
   pub(crate) subs: Substitutions,

@@ -137,6 +137,46 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</ul></div>");
   }
 
+  fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem]) {
+    // TODO: duplication? or maybe not necessary?
+    let custom = block
+      .attrs
+      .as_ref()
+      .and_then(|attrs| attrs.list_custom_marker_style());
+
+    let mut classes = SmallVec::<[&str; 2]>::from_slice(&["olist arabic"]);
+    if let Some(custom) = custom {
+      classes.push(custom);
+    }
+    self.open_element("div", &classes, &block.attrs);
+    self.visit_block_title(block.title.as_deref(), None);
+    self.push_str(r#"<ol class="arabic"#);
+    if let Some(custom) = custom {
+      self.push([" ", custom]);
+    }
+
+    if let Some(attr_start) = block.attrs.as_ref().and_then(|attrs| attrs.named("start")) {
+      self.push(["\" start=\"", attr_start]);
+    } else {
+      match items[0].marker {
+        ListMarker::Digits(1) => {}
+        ListMarker::Digits(n) => {
+          // TODO: asciidoctor documents that this is OK,
+          // but it doesn't actually work, and emits a warning
+          let digits_start = n.to_string();
+          self.push(["\" start=\"", &digits_start]);
+        }
+        _ => {}
+      }
+    }
+
+    self.push_str("\">");
+  }
+
+  fn exit_ordered_list(&mut self, _block: &Block, _items: &[ListItem]) {
+    self.push_str("</ol></div>");
+  }
+
   fn enter_list_item_principal(&mut self, _item: &ListItem) {
     self.push_str("<li><p>");
   }

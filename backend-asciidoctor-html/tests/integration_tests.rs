@@ -492,12 +492,8 @@ fn test_eval() {
       indoc! {r#"
         <div class="ulist">
           <ul>
-            <li>
-              <p>foo</p>
-            </li>
-            <li>
-              <p>bar</p>
-            </li>
+            <li><p>foo</p></li>
+            <li><p>bar</p></li>
           </ul>
         </div>
       "#},
@@ -515,22 +511,14 @@ fn test_eval() {
       indoc! {r#"
         <div class="ulist">
           <ul>
-            <li>
-              <p>Apples</p>
-            </li>
-            <li>
-              <p>Oranges</p>
-            </li>
+            <li><p>Apples</p></li>
+            <li><p>Oranges</p></li>
           </ul>
         </div>
         <div class="ulist">
           <ul>
-            <li>
-              <p>Walnuts</p>
-            </li>
-            <li>
-              <p>Almonds</p>
-            </li>
+            <li><p>Walnuts</p></li>
+            <li><p>Almonds</p></li>
           </ul>
         </div>
       "#},
@@ -563,9 +551,7 @@ fn test_eval() {
               <p>foo</p>
               <div class="ulist">
                 <ul>
-                  <li>
-                    <p>bar</p>
-                  </li>
+                  <li><p>bar</p></li>
                 </ul>
               </div>
             </li>
@@ -582,15 +568,9 @@ fn test_eval() {
       indoc! {r#"
         <div class="ulist">
           <ul>
-            <li>
-              <p>Edgar Allan Poe</p>
-            </li>
-            <li>
-              <p>Sheri S. Tepper</p>
-            </li>
-            <li>
-              <p>Bill Bryson</p>
-            </li>
+            <li><p>Edgar Allan Poe</p></li>
+            <li><p>Sheri S. Tepper</p></li>
+            <li><p>Bill Bryson</p></li>
           </ul>
         </div>
       "#},
@@ -606,15 +586,9 @@ fn test_eval() {
         <div class="ulist">
           <div class="title">Kizmets Favorite Authors</div>
           <ul>
-            <li>
-              <p>Edgar Allan Poe</p>
-            </li>
-            <li>
-              <p>Sheri S. Tepper</p>
-            </li>
-            <li>
-              <p>Bill Bryson</p>
-            </li>
+            <li><p>Edgar Allan Poe</p></li>
+            <li><p>Sheri S. Tepper</p></li>
+            <li><p>Bill Bryson</p></li>
           </ul>
         </div>
       "#},
@@ -633,15 +607,11 @@ fn test_eval() {
               <p>Level 1 list item</p>
               <div class="ulist">
                 <ul>
-                  <li>
-                    <p>Level 2 list item</p>
-                  </li>
+                  <li><p>Level 2 list item</p></li>
                 </ul>
               </div>
             </li>
-            <li>
-              <p>Level 1 list item</p>
-            </li>
+            <li><p>Level 1 list item</p></li>
           </ul>
         </div>
       "#},
@@ -667,21 +637,15 @@ fn test_eval() {
                     <p>Maze heart</p>
                     <div class="ulist">
                       <ul>
-                        <li>
-                          <p>Reflection pool</p>
-                        </li>
+                        <li><p>Reflection pool</p></li>
                       </ul>
                     </div>
                   </li>
-                  <li>
-                    <p>Secret exit</p>
-                  </li>
+                  <li><p>Secret exit</p></li>
                 </ul>
               </div>
             </li>
-            <li>
-              <p>Untracked file in git repository</p>
-            </li>
+            <li><p>Untracked file in git repository</p></li>
           </ul>
         </div>
       "#},
@@ -723,6 +687,55 @@ fn test_eval() {
               </div>
             </li>
           </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        1. Protons
+        2. Electrons
+        3. Neutrons
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <ol class="arabic">
+            <li><p>Protons</p></li>
+            <li><p>Electrons</p></li>
+            <li><p>Neutrons</p></li>
+          </ol>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        4. Protons
+        5. Electrons
+        6. Neutrons
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <ol class="arabic" start="4">
+            <li><p>Protons</p></li>
+            <li><p>Electrons</p></li>
+            <li><p>Neutrons</p></li>
+          </ol>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        [start=4]
+        . Protons
+        . Electrons
+        . Neutrons
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <ol class="arabic" start="4">
+            <li><p>Protons</p></li>
+            <li><p>Electrons</p></li>
+            <li><p>Neutrons</p></li>
+          </ol>
         </div>
       "#},
     ),

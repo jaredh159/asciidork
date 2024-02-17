@@ -52,14 +52,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
 
-    if !self.continues_current_list(marker) {
+    if !self.continues_current_list(&marker) {
       self.restore_lines(lines);
       // println!("end: parse_list_item (doesn't continue current list)");
       return Ok(None);
     }
 
     let mut line = lines.consume_current().unwrap();
-    let marker = line.consume_to_string_until(Whitespace, self.bump);
+    let marker_src = line.consume_to_string_until(Whitespace, self.bump);
     line.discard_assert(Whitespace);
 
     let mut item_lines = bvec![in self.bump; line];
@@ -79,7 +79,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let blocks = self.parse_list_item_blocks(lines)?;
 
     // println!("end: parse_list_item (fin)");
-    Ok(Some(ListItem { blocks, marker, principle }))
+    Ok(Some(ListItem {
+      blocks,
+      marker,
+      marker_src,
+      principle,
+    }))
   }
 
   fn parse_list_item_blocks(
@@ -117,12 +122,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Ok(blocks)
   }
 
-  fn continues_current_list(&self, list_marker: ListMarker) -> bool {
+  fn continues_current_list(&self, next: &ListMarker) -> bool {
     self
       .ctx
       .list_stack
       .last()
-      .map(|marker| *marker == list_marker)
+      .map(|last| match (last, next) {
+        (ListMarker::Digits(_), ListMarker::Digits(_)) => true,
+        (last, next) => last == next,
+      })
       .unwrap_or(false)
   }
 }
@@ -184,7 +192,8 @@ mod tests {
         BlockContext::UnorderedList,
         b.vec([
           ListItem {
-            marker: b.src("*", l(0, 1)),
+            marker: ListMarker::Star(1),
+            marker_src: b.src("*", l(0, 1)),
             principle: b.inodes([n_text("one", 2, 5, b)]),
             blocks: b.vec([Block {
               title: None,
@@ -192,7 +201,8 @@ mod tests {
               content: BlockContent::List {
                 variant: ListVariant::Unordered,
                 items: b.vec([ListItem {
-                  marker: b.src("**", l(6, 8)),
+                  marker: ListMarker::Star(2),
+                  marker_src: b.src("**", l(6, 8)),
                   principle: b.inodes([n_text("two", 9, 12, b)]),
                   blocks: b.vec([]),
                 }]),
@@ -202,7 +212,8 @@ mod tests {
             }]),
           },
           ListItem {
-            marker: b.src("*", l(13, 14)),
+            marker: ListMarker::Star(1),
+            marker_src: b.src("*", l(13, 14)),
             principle: b.inodes([n_text("one again", 15, 24, b)]),
             blocks: b.vec([]),
           },
@@ -212,7 +223,8 @@ mod tests {
         "* foo bar\n  baz",
         BlockContext::UnorderedList,
         b.vec([ListItem {
-          marker: b.src("*", l(0, 1)),
+          marker: ListMarker::Star(1),
+          marker_src: b.src("*", l(0, 1)),
           principle: b.inodes([
             n_text("foo bar", 2, 9, b),
             n(Inline::JoiningNewline, l(9, 10)),
@@ -225,7 +237,8 @@ mod tests {
         "* foo\n[circles]\n** bar",
         BlockContext::UnorderedList,
         b.vec([ListItem {
-          marker: b.src("*", l(0, 1)),
+          marker: ListMarker::Star(1),
+          marker_src: b.src("*", l(0, 1)),
           principle: b.inodes([n_text("foo", 2, 5, b)]),
           blocks: b.vec([Block {
             title: None,
@@ -233,7 +246,8 @@ mod tests {
             content: BlockContent::List {
               variant: ListVariant::Unordered,
               items: b.vec([ListItem {
-                marker: b.src("**", l(16, 18)),
+                marker: ListMarker::Star(2),
+                marker_src: b.src("**", l(16, 18)),
                 principle: b.inodes([n_text("bar", 19, 22, b)]),
                 blocks: b.vec([]),
               }]),
@@ -247,7 +261,8 @@ mod tests {
         "* foo\n** bar",
         BlockContext::UnorderedList,
         b.vec([ListItem {
-          marker: b.src("*", l(0, 1)),
+          marker: ListMarker::Star(1),
+          marker_src: b.src("*", l(0, 1)),
           principle: b.inodes([n_text("foo", 2, 5, b)]),
           blocks: b.vec([Block {
             title: None,
@@ -255,7 +270,8 @@ mod tests {
             content: BlockContent::List {
               variant: ListVariant::Unordered,
               items: b.vec([ListItem {
-                marker: b.src("**", l(6, 8)),
+                marker: ListMarker::Star(2),
+                marker_src: b.src("**", l(6, 8)),
                 principle: b.inodes([n_text("bar", 9, 12, b)]),
                 blocks: b.vec([]),
               }]),
@@ -269,7 +285,8 @@ mod tests {
         "* foo\n\n\n** bar",
         BlockContext::UnorderedList,
         b.vec([ListItem {
-          marker: b.src("*", l(0, 1)),
+          marker: ListMarker::Star(1),
+          marker_src: b.src("*", l(0, 1)),
           principle: b.inodes([n_text("foo", 2, 5, b)]),
           blocks: b.vec([Block {
             title: None,
@@ -277,7 +294,8 @@ mod tests {
             content: BlockContent::List {
               variant: ListVariant::Unordered,
               items: b.vec([ListItem {
-                marker: b.src("**", l(8, 10)),
+                marker: ListMarker::Star(2),
+                marker_src: b.src("**", l(8, 10)),
                 principle: b.inodes([n_text("bar", 11, 14, b)]),
                 blocks: b.vec([]),
               }]),
@@ -292,12 +310,14 @@ mod tests {
         BlockContext::UnorderedList,
         b.vec([
           ListItem {
-            marker: b.src("*", l(0, 1)),
+            marker: ListMarker::Star(1),
+            marker_src: b.src("*", l(0, 1)),
             principle: b.inodes([n_text("foo", 2, 5, b)]),
             blocks: b.vec([]),
           },
           ListItem {
-            marker: b.src("*", l(6, 7)),
+            marker: ListMarker::Star(1),
+            marker_src: b.src("*", l(6, 7)),
             principle: b.inodes([n_text("bar", 8, 11, b)]),
             blocks: b.vec([]),
           },
@@ -308,12 +328,14 @@ mod tests {
         BlockContext::OrderedList,
         b.vec([
           ListItem {
-            marker: b.src(".", l(0, 1)),
+            marker: ListMarker::Dot(1),
+            marker_src: b.src(".", l(0, 1)),
             principle: b.inodes([n_text("foo", 2, 5, b)]),
             blocks: b.vec([]),
           },
           ListItem {
-            marker: b.src(".", l(7, 8)),
+            marker: ListMarker::Dot(1),
+            marker_src: b.src(".", l(7, 8)),
             principle: b.inodes([n_text("bar", 9, 12, b)]),
             blocks: b.vec([]),
           },

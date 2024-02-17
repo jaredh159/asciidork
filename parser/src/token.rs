@@ -1,4 +1,4 @@
-use ast::{prelude::*, UrlScheme};
+use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenKind {
@@ -52,6 +52,11 @@ impl Default for TokenKind {
 }
 
 impl<'src> Token<'src> {
+  pub fn to_source_string<'bmp>(&self, bump: &'bmp Bump) -> SourceString<'bmp> {
+    let bump_str = BumpString::from_str_in(self.lexeme, bump);
+    SourceString::new(bump_str, self.loc)
+  }
+
   pub fn to_url_scheme(&self) -> Option<UrlScheme> {
     match self.kind {
       TokenKind::MacroName => match self.lexeme {

@@ -339,7 +339,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
       }
       Digits if next.is(Dots) && self.nth_token(offset + 2).is(Whitespace) => {
-        Some(ListMarker::Digits)
+        Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
       _ => None,
     }
@@ -374,10 +374,12 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   pub fn starts_nested_list(&self, stack: &ListStack) -> bool {
     if stack.is_empty() {
       false
-    } else if let Some(marker) = self.list_marker() {
-      !stack.contains(&marker)
     } else {
-      false
+      match self.list_marker() {
+        Some(ListMarker::Digits(_)) => stack.iter().all(|m| !matches!(m, ListMarker::Digits(_))),
+        Some(marker) => !stack.contains(&marker),
+        None => false,
+      }
     }
   }
 }
@@ -426,6 +428,7 @@ mod tests {
       ("** foo", &[Star(1)], true),
       ("* foo", &[Star(2)], true),
       (". foo", &[Star(2), Star(1)], true),
+      ("2. foo", &[Digits(1)], false),
     ];
     let bump = &Bump::new();
     for (input, markers, expected) in cases {
@@ -441,6 +444,30 @@ mod tests {
         "input was: `{}`",
         input
       );
+    }
+  }
+
+  #[test]
+  fn test_list_marker() {
+    use ListMarker::*;
+    let cases = vec![
+      ("* foo", Some(Star(1))),
+      ("** foo", Some(Star(2))),
+      (". foo", Some(Dot(1))),
+      (".. foo", Some(Dot(2))),
+      ("... foo", Some(Dot(3))),
+      ("- foo", Some(Dash)),
+      ("1. foo", Some(Digits(1))),
+      ("999. foo", Some(Digits(999))),
+      ("2. foo", Some(Digits(2))),
+      ("--- foo", None),
+      ("33.44. foo", None),
+    ];
+    let bump = &Bump::new();
+    for (input, marker) in cases {
+      let mut lexer = Lexer::new(input);
+      let line = lexer.consume_line(bump).unwrap();
+      assert_eq!(line.list_marker(), marker, "input was: `{}`", input);
     }
   }
 
