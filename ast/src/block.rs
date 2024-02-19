@@ -21,11 +21,6 @@ impl<'bmp> Block<'bmp> {
   }
 }
 
-// variant: ordered | unordered
-// principle: InlineNodes
-// list has items: Vec<ListItem>
-// list item has `marker`, like `*` (asg shows list having it too...)
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BlockContent<'bmp> {
   Compound(BumpVec<'bmp, Block<'bmp>>),
@@ -42,6 +37,7 @@ pub enum BlockContent<'bmp> {
   },
   List {
     variant: ListVariant,
+    depth: u8,
     items: BumpVec<'bmp, ListItem<'bmp>>,
   },
 }

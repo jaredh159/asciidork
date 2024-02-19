@@ -739,6 +739,156 @@ fn test_eval() {
         </div>
       "#},
     ),
+    (
+      indoc! {r#"
+        [%reversed]
+        .Parts of an atom
+        . Protons
+        . Electrons
+        . Neutrons
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <div class="title">Parts of an atom</div>
+          <ol class="arabic" reversed>
+            <li><p>Protons</p></li>
+            <li><p>Electrons</p></li>
+            <li><p>Neutrons</p></li>
+          </ol>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        . Step 1
+        . Step 2
+        .. Step 2a
+        .. Step 2b
+        . Step 3
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <ol class="arabic">
+            <li><p>Step 1</p></li>
+            <li>
+              <p>Step 2</p>
+              <div class="olist loweralpha">
+                <ol class="loweralpha" type="a">
+                  <li><p>Step 2a</p></li>
+                  <li><p>Step 2b</p></li>
+                </ol>
+              </div>
+            </li>
+            <li><p>Step 3</p></li>
+          </ol>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        . Linux
+        * Fedora
+        * Ubuntu
+        * Slackware
+        . BSD
+        * FreeBSD
+        * NetBSD
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <ol class="arabic">
+            <li>
+              <p>Linux</p>
+              <div class="ulist">
+                <ul>
+                  <li><p>Fedora</p></li>
+                  <li><p>Ubuntu</p></li>
+                  <li><p>Slackware</p></li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <p>BSD</p>
+              <div class="ulist">
+                <ul>
+                  <li><p>FreeBSD</p></li>
+                  <li><p>NetBSD</p></li>
+                </ul>
+              </div>
+            </li>
+          </ol>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        . Linux
+
+          * Fedora
+          * Ubuntu
+          * Slackware
+
+        . BSD
+
+          * FreeBSD
+          * NetBSD
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <ol class="arabic">
+            <li>
+              <p>Linux</p>
+              <div class="ulist">
+                <ul>
+                  <li><p>Fedora</p></li>
+                  <li><p>Ubuntu</p></li>
+                  <li><p>Slackware</p></li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <p>BSD</p>
+              <div class="ulist">
+                <ul>
+                  <li><p>FreeBSD</p></li>
+                  <li><p>NetBSD</p></li>
+                </ul>
+              </div>
+            </li>
+          </ol>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        [lowerroman,start=5]
+        . Five
+        . Six
+        [loweralpha]
+        .. a
+        .. b
+        .. c
+        . Seven
+      "#},
+      indoc! {r#"
+        <div class="olist lowerroman">
+          <ol class="lowerroman" type="i" start="5">
+            <li><p>Five</p></li>
+            <li>
+              <p>Six</p>
+              <div class="olist loweralpha">
+                <ol class="loweralpha" type="a">
+                  <li><p>a</p></li>
+                  <li><p>b</p></li>
+                  <li><p>c</p></li>
+                </ol>
+              </div>
+            </li>
+            <li><p>Seven</p></li>
+          </ol>
+        </div>
+      "#},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();

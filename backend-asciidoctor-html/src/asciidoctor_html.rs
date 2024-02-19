@@ -115,11 +115,11 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
-  fn enter_unordered_list(&mut self, block: &Block, _items: &[ListItem]) {
+  fn enter_unordered_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     let custom = block
       .attrs
       .as_ref()
-      .and_then(|attrs| attrs.list_custom_marker_style());
+      .and_then(|attrs| attrs.unordered_list_custom_marker_style());
     let mut classes = SmallVec::<[&str; 2]>::from_slice(&["ulist"]);
     if let Some(custom) = custom {
       classes.push(custom);
@@ -133,30 +133,28 @@ impl Backend for AsciidoctorHtml {
     self.push_ch('>');
   }
 
-  fn exit_unordered_list(&mut self, _block: &Block, _items: &[ListItem]) {
+  fn exit_unordered_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
     self.push_str("</ul></div>");
   }
 
-  fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem]) {
-    // TODO: duplication? or maybe not necessary?
-    let custom = block
-      .attrs
-      .as_ref()
-      .and_then(|attrs| attrs.list_custom_marker_style());
-
-    let mut classes = SmallVec::<[&str; 2]>::from_slice(&["olist arabic"]);
-    if let Some(custom) = custom {
-      classes.push(custom);
-    }
-    self.open_element("div", &classes, &block.attrs);
+  fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
+    let attrs = block.attrs.as_ref();
+    let custom = attrs.and_then(|attrs| attrs.ordered_list_custom_number_style());
+    let list_type = custom
+      .and_then(list_type_from_class)
+      .unwrap_or_else(|| list_type_from_depth(depth));
+    let class = custom.unwrap_or_else(|| list_class_from_depth(depth));
+    let classes = &["olist", class];
+    self.open_element("div", classes, &block.attrs);
     self.visit_block_title(block.title.as_deref(), None);
-    self.push_str(r#"<ol class="arabic"#);
-    if let Some(custom) = custom {
-      self.push([" ", custom]);
+    self.push([r#"<ol class=""#, class, "\""]);
+
+    if list_type != "1" {
+      self.push([" type=\"", list_type, "\""]);
     }
 
-    if let Some(attr_start) = block.attrs.as_ref().and_then(|attrs| attrs.named("start")) {
-      self.push(["\" start=\"", attr_start]);
+    if let Some(attr_start) = attrs.and_then(|attrs| attrs.named("start")) {
+      self.push([" start=\"", attr_start, "\""]);
     } else {
       match items[0].marker {
         ListMarker::Digits(1) => {}
@@ -164,16 +162,20 @@ impl Backend for AsciidoctorHtml {
           // TODO: asciidoctor documents that this is OK,
           // but it doesn't actually work, and emits a warning
           let digits_start = n.to_string();
-          self.push(["\" start=\"", &digits_start]);
+          self.push([" start=\"", &digits_start, "\""]);
         }
         _ => {}
       }
     }
 
-    self.push_str("\">");
+    if attrs.map_or(false, |attrs| attrs.has_option("reversed")) {
+      self.push_str(" reversed>");
+    } else {
+      self.push_str(">");
+    }
   }
 
-  fn exit_ordered_list(&mut self, _block: &Block, _items: &[ListItem]) {
+  fn exit_ordered_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
     self.push_str("</ol></div>");
   }
 
@@ -546,6 +548,37 @@ impl AsciidoctorHtml {
       self.push([cite, "</div>"]);
     }
     self.push_str("</div>");
+  }
+}
+
+fn list_type_from_depth(depth: u8) -> &'static str {
+  match depth {
+    1 => "1",
+    2 => "a",
+    3 => "i",
+    4 => "A",
+    _ => "I",
+  }
+}
+
+fn list_type_from_class(class: &str) -> Option<&'static str> {
+  match class {
+    "arabic" => Some("1"),
+    "loweralpha" => Some("a"),
+    "lowerroman" => Some("i"),
+    "upperalpha" => Some("A"),
+    "upperroman" => Some("I"),
+    _ => None,
+  }
+}
+
+fn list_class_from_depth(depth: u8) -> &'static str {
+  match depth {
+    1 => "arabic",
+    2 => "loweralpha",
+    3 => "lowerroman",
+    4 => "upperalpha",
+    _ => "upperroman",
   }
 }
 

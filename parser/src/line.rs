@@ -326,8 +326,9 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     if self.num_tokens() < 3 + offset {
       return None;
     }
-    let token = &self.all_tokens[offset];
+    let token = self.nth_token(offset).unwrap();
     let next = self.nth_token(offset + 1);
+
     match token.kind {
       Star if next.is(Whitespace) => Some(ListMarker::Star(1)),
       Dots if next.is(Whitespace) => Some(ListMarker::Dot(token.len() as u8)),

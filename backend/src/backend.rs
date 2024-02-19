@@ -30,10 +30,10 @@ pub trait Backend {
   fn exit_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
 
   // lists
-  fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem]);
-  fn exit_unordered_list(&mut self, block: &Block, items: &[ListItem]);
-  fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem]);
-  fn exit_ordered_list(&mut self, block: &Block, items: &[ListItem]);
+  fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
+  fn exit_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
+  fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
+  fn exit_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn enter_list_item_principal(&mut self, item: &ListItem);
   fn exit_list_item_principal(&mut self, item: &ListItem);
   fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem);

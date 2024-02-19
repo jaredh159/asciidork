@@ -33,7 +33,7 @@ impl<'bmp> AttrList<'bmp> {
   }
 
   // https://docs.asciidoctor.org/asciidoc/latest/lists/unordered/#custom-markers
-  pub fn list_custom_marker_style(&self) -> Option<&'static str> {
+  pub fn unordered_list_custom_marker_style(&self) -> Option<&'static str> {
     // documented to support these, but seems like in practice
     // they actually pass through ANY first positional attr
     match self.str_positional_at(0) {
@@ -43,6 +43,20 @@ impl<'bmp> AttrList<'bmp> {
       Some("none") => Some("none"),
       Some("no-bullet") => Some("no-bullet"),
       Some("unstyled") => Some("unstyled"),
+      _ => None,
+    }
+  }
+
+  // https://docs.asciidoctor.org/asciidoc/latest/lists/ordered/#styles
+  pub fn ordered_list_custom_number_style(&self) -> Option<&'static str> {
+    match self.str_positional_at(0) {
+      Some("arabic") => Some("arabic"),
+      Some("decimal") => Some("decimal"), // html only
+      Some("loweralpha") => Some("loweralpha"),
+      Some("upperalpha") => Some("upperalpha"),
+      Some("lowerroman") => Some("lowerroman"),
+      Some("upperroman") => Some("upperroman"),
+      Some("lowergreek") => Some("lowergreek"), // html only
       _ => None,
     }
   }
@@ -64,7 +78,11 @@ impl<'bmp> AttrList<'bmp> {
     Some(positional.as_str())
   }
 
-  // todo: rename, make test or something...
+  pub fn has_option(&self, option: &str) -> bool {
+    self.options.iter().any(|s| s.src == option)
+  }
+
+  // TODO: rename, make test or something...
   pub fn positional(
     positional: &'static str,
     loc: SourceLocation,

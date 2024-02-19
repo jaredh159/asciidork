@@ -15,6 +15,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.restore_lines(lines);
 
     self.ctx.list_stack.push(marker);
+    let depth = self.ctx.list_stack.len() as u8;
     // println!(" --> list_stack: {:?}", self.ctx.list_stack);
     let mut items = BumpVec::new_in(self.bump);
     while let Some(item) = self.parse_list_item()? {
@@ -36,7 +37,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       attrs,
       loc: SourceLocation::new(start, items.last().unwrap().loc_end().unwrap()),
       context: variant.to_context(),
-      content: BlockContent::List { variant, items },
+      content: BlockContent::List { variant, depth, items },
     })
   }
 
@@ -59,6 +60,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     let mut line = lines.consume_current().unwrap();
+    line.trim_leading_whitespace();
     let marker_src = line.consume_to_string_until(Whitespace, self.bump);
     line.discard_assert(Whitespace);
 
@@ -129,6 +131,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 mod tests {
   use super::*;
   use crate::test::*;
+  use indoc::indoc;
   use pretty_assertions::assert_eq;
 
   #[test]
@@ -188,6 +191,7 @@ mod tests {
               attrs: None,
               content: BlockContent::List {
                 variant: ListVariant::Unordered,
+                depth: 2,
                 items: b.vec([ListItem {
                   marker: ListMarker::Star(2),
                   marker_src: b.src("**", l(6, 8)),
@@ -232,6 +236,7 @@ mod tests {
             title: None,
             attrs: Some(AttrList::positional("circles", l(7, 14), b)),
             content: BlockContent::List {
+              depth: 2,
               variant: ListVariant::Unordered,
               items: b.vec([ListItem {
                 marker: ListMarker::Star(2),
@@ -256,6 +261,7 @@ mod tests {
             title: None,
             attrs: None,
             content: BlockContent::List {
+              depth: 2,
               variant: ListVariant::Unordered,
               items: b.vec([ListItem {
                 marker: ListMarker::Star(2),
@@ -280,6 +286,7 @@ mod tests {
             title: None,
             attrs: None,
             content: BlockContent::List {
+              depth: 2,
               variant: ListVariant::Unordered,
               items: b.vec([ListItem {
                 marker: ListMarker::Star(2),
@@ -328,6 +335,44 @@ mod tests {
             blocks: b.vec([]),
           },
         ]),
+      ),
+      (
+        indoc! {"
+          . Linux
+
+            * Fedora
+            * Ubuntu
+        "},
+        BlockContext::OrderedList,
+        b.vec([ListItem {
+          marker: ListMarker::Dot(1),
+          marker_src: b.src(".", l(0, 1)),
+          principle: b.inodes([n_text("Linux", 2, 7, b)]),
+          blocks: b.vec([Block {
+            title: None,
+            attrs: None,
+            content: BlockContent::List {
+              depth: 2,
+              variant: ListVariant::Unordered,
+              items: b.vec([
+                ListItem {
+                  marker: ListMarker::Star(1),
+                  marker_src: b.src("*", l(11, 12)),
+                  principle: b.inodes([n_text("Fedora", 13, 19, b)]),
+                  blocks: b.vec([]),
+                },
+                ListItem {
+                  marker: ListMarker::Star(1),
+                  marker_src: b.src("*", l(22, 23)),
+                  principle: b.inodes([n_text("Ubuntu", 24, 30, b)]),
+                  blocks: b.vec([]),
+                },
+              ]),
+            },
+            context: BlockContext::UnorderedList,
+            loc: l(11, 30),
+          }]),
+        }]),
       ),
     ];
     run(cases, b);

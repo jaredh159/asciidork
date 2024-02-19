@@ -43,6 +43,12 @@ bump-allocated version
   right below it shows using a value `q` not on the list!
 - docs seems to say that a block _title_ needs to be _above_ the attr list, but dr. seems
   to parse it the same in either order
+- https://docs.asciidoctor.org/asciidoc/latest/lists/ordered/#escaping-the-list-marker -
+  shows how to escape `P. O. Box`, but I can't find any documentation on why `P.` should
+  be considered a list marker - arbitrary letters don't show up anywhere in the ordered
+  list documentation, and the current implementation doesn't get tripped up by
+  `P. O. Box`, so I skipped this for now, until i can get some clarity from the
+  asciidoctor team
 
 ## weirdnesses...
 
