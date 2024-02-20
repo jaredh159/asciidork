@@ -889,6 +889,56 @@ fn test_eval() {
         </div>
       "#},
     ),
+    (
+      indoc! {r#"
+        [.custom-class]
+        * [*] checked
+        * [x] also checked
+        * [ ] not checked
+        * normal list item
+      "#},
+      indoc! {r#"
+        <div class="ulist checklist custom-class">
+          <ul class="checklist">
+            <li><p>&#10003; checked</p></li>
+            <li><p>&#10003; also checked</p></li>
+            <li><p>&#10063; not checked</p></li>
+            <li><p>normal list item</p></li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        [%interactive]
+        * [*] checked
+        * [x] also checked
+        * [ ] not checked
+      "#},
+      indoc! {r#"
+        <div class="ulist checklist">
+          <ul class="checklist">
+            <li><p><input type="checkbox" data-item-complete="1" checked> checked</p></li>
+            <li><p><input type="checkbox" data-item-complete="1" checked> also checked</p></li>
+            <li><p><input type="checkbox" data-item-complete="0"> not checked</p></li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        . [*] checked
+        . [ ] not checked
+      "#},
+      indoc! {r#"
+        <div class="olist arabic">
+          <ol class="arabic">
+            <li><p>[*] checked</p></li>
+            <li><p>[ ] not checked</p></li>
+          </ol>
+        </div>
+      "#},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();

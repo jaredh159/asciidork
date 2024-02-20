@@ -8,6 +8,7 @@ pub struct AsciidoctorHtml {
   doc_attrs: AttrEntries,
   fig_caption_num: usize,
   flags: Flags,
+  list_stack: Vec<bool>,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -115,30 +116,36 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
-  fn enter_unordered_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
-    let custom = block
-      .attrs
-      .as_ref()
-      .and_then(|attrs| attrs.unordered_list_custom_marker_style());
-    let mut classes = SmallVec::<[&str; 2]>::from_slice(&["ulist"]);
+  fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], _depth: u8) {
+    let attrs = block.attrs.as_ref();
+    let custom = attrs.and_then(|attrs| attrs.unordered_list_custom_marker_style());
+    let interactive = attrs.map(|a| a.has_option("interactive")).unwrap_or(false);
+    self.list_stack.push(interactive);
+    let mut wrap_classes = SmallVec::<[&str; 3]>::from_slice(&["ulist"]);
+    let mut list_classes = SmallVec::<[&str; 2]>::new();
     if let Some(custom) = custom {
-      classes.push(custom);
+      wrap_classes.push(custom);
+      list_classes.push(custom);
     }
-    self.open_element("div", &classes, &block.attrs);
+    if items.iter().any(|item| item.checklist.is_some()) {
+      wrap_classes.push("checklist");
+      list_classes.push("checklist");
+    }
+    self.open_element("div", &wrap_classes, &block.attrs);
     self.visit_block_title(block.title.as_deref(), None);
     self.push_str("<ul");
-    if let Some(custom) = custom {
-      self.push([r#" class=""#, custom, "\""]);
-    }
+    self.add_classes(&list_classes);
     self.push_ch('>');
   }
 
   fn exit_unordered_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
+    self.list_stack.pop();
     self.push_str("</ul></div>");
   }
 
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
     let attrs = block.attrs.as_ref();
+    self.list_stack.push(false);
     let custom = attrs.and_then(|attrs| attrs.ordered_list_custom_number_style());
     let list_type = custom
       .and_then(list_type_from_class)
@@ -176,11 +183,13 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_ordered_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
+    self.list_stack.pop();
     self.push_str("</ol></div>");
   }
 
-  fn enter_list_item_principal(&mut self, _item: &ListItem) {
+  fn enter_list_item_principal(&mut self, item: &ListItem) {
     self.push_str("<li><p>");
+    self.render_checklist_item(item);
   }
 
   fn exit_list_item_principal(&mut self, _item: &ListItem) {
@@ -548,6 +557,29 @@ impl AsciidoctorHtml {
       self.push([cite, "</div>"]);
     }
     self.push_str("</div>");
+  }
+
+  fn add_classes(&mut self, classes: &[&str]) {
+    if !classes.is_empty() {
+      self.push_str(" class=\"");
+      for class in classes.iter().take(classes.len() - 1) {
+        self.push_str(class);
+        self.push_ch(' ');
+      }
+      self.push_str(classes.last().unwrap());
+      self.push_ch('"');
+    }
+  }
+
+  fn render_checklist_item(&mut self, item: &ListItem) {
+    if let Some((checked, _)) = &item.checklist {
+      match (self.list_stack.last() == Some(&true), checked) {
+        (false, true) => self.push_str("&#10003;"),
+        (false, false) => self.push_str("&#10063;"),
+        (true, true) => self.push_str(r#"<input type="checkbox" data-item-complete="1" checked>"#),
+        (true, false) => self.push_str(r#"<input type="checkbox" data-item-complete="0">"#),
+      }
+    }
   }
 }
 

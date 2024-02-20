@@ -378,6 +378,24 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       .map(|marker| stack.starts_nested_list(marker))
       .unwrap_or(false)
   }
+
+  pub fn consume_checklist_item(&mut self, bump: &'bmp Bump) -> Option<(bool, SourceString<'bmp>)> {
+    if !self.starts(OpenBracket) || !self.has_seq_at(&[CloseBracket, Whitespace], 2) {
+      return None;
+    }
+    let inside = self.nth_token(1).unwrap();
+    let (src, checked) = match inside {
+      Token { kind: Star, .. } => ("[*]", true),
+      Token { kind: Whitespace, .. } => ("[ ]", false),
+      Token { kind: Word, lexeme, .. } if *lexeme == "x" => ("[x]", true),
+      _ => return None,
+    };
+    let mut loc = self.loc().unwrap();
+    loc.end += 2;
+    self.discard(3);
+    let src = BumpString::from_str_in(src, bump);
+    Some((checked, SourceString::new(src, loc)))
+  }
 }
 
 lazy_static! {

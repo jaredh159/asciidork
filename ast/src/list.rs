@@ -5,6 +5,7 @@ pub struct ListItem<'bmp> {
   pub marker: ListMarker,
   pub marker_src: SourceString<'bmp>,
   pub principle: InlineNodes<'bmp>,
+  pub checklist: Option<(bool, SourceString<'bmp>)>,
   pub blocks: BumpVec<'bmp, Block<'bmp>>,
 }
 
@@ -35,7 +36,7 @@ impl ListVariant {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum ListMarker {
   Dot(u8),
-  Digits(u32),
+  Digits(u16),
   Dash,
   Star(u8),
 }
