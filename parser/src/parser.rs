@@ -22,7 +22,13 @@ pub struct ParseResult<'bmp> {
 pub(crate) struct ParseContext {
   pub(crate) subs: Substitutions,
   pub(crate) delimiter: Option<Delimiter>,
-  pub(crate) list_stack: ListStack,
+  pub(crate) list: ListContext,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct ListContext {
+  pub(crate) stack: ListStack,
+  pub(crate) parsing_continuations: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -46,7 +52,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       ctx: ParseContext {
         subs: Substitutions::all(),
         delimiter: None,
-        list_stack: ListStack::default(),
+        list: ListContext::default(),
       },
       errors: RefCell::new(Vec::new()),
       bail: true,
@@ -71,7 +77,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn line_from(
     &self,
-    tokens: bumpalo::collections::Vec<'bmp, crate::token::Token<'src>>,
+    tokens: BumpVec<'bmp, Token<'src>>,
     loc: SourceLocation,
   ) -> Line<'bmp, 'src> {
     Line::new(tokens, self.lexer.loc_src(loc))

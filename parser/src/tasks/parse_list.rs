@@ -15,15 +15,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     lines.restore_if_nonempty(first_line);
     self.restore_lines(lines);
 
-    self.ctx.list_stack.push(marker);
-    let depth = self.ctx.list_stack.len() as u8;
+    self.ctx.list.stack.push(marker);
+    let depth = self.ctx.list.stack.len() as u8;
     // println!(" --> list_stack: {:?}", self.ctx.list_stack);
     let mut items = BumpVec::new_in(self.bump);
     while let Some(item) = self.parse_list_item(variant)? {
       // println!(" --> item: {:?}", item);
       items.push(item);
     }
-    self.ctx.list_stack.pop();
+    self.ctx.list.stack.pop();
 
     // println!("end: parse_list\n");
 
@@ -53,7 +53,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
 
-    if !self.ctx.list_stack.continues_current_list(&marker) {
+    if !self.ctx.list.stack.continues_current_list(&marker) {
       self.restore_lines(lines);
       // println!("end: parse_list_item (doesn't continue current list)");
       return Ok(None);
@@ -102,13 +102,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     // println!("begin: parse_list_item_blocks");
     let mut blocks = BumpVec::new_in(self.bump);
 
-    if lines.starts_nested_list(&self.ctx.list_stack, true) {
+    if lines.starts_nested_list(&self.ctx.list.stack, true) {
       // println!("start parsing nested list");
       self.restore_lines(lines);
       blocks.push(self.parse_block()?.unwrap());
       // println!("end: parse_list_item_blocks (parsed nested)");
       return Ok(blocks);
-    } else if !lines.is_empty() {
+    }
+
+    if lines.starts_list_continuation() {
+      self.restore_lines(lines);
+      return self.parse_list_continuation_blocks(blocks);
+    }
+
+    if !lines.is_empty() {
       self.restore_lines(lines);
       return Ok(blocks);
     }
@@ -119,7 +126,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
 
     // ELSE IF the next Contiguous Lines starts a NESTED list, parse a block
-    if lines.starts_nested_list(&self.ctx.list_stack, false) {
+    if lines.starts_nested_list(&self.ctx.list.stack, false) {
       // println!("start parsing nested list (from next lines)");
       blocks.push(self.parse_list(lines, None)?);
       // println!("end: parse_list_item_blocks (parsed nested)");
@@ -128,6 +135,25 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     self.restore_lines(lines);
     Ok(blocks)
+  }
+
+  fn parse_list_continuation_blocks(
+    &mut self,
+    mut accum: BumpVec<'bmp, Block<'bmp>>,
+  ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
+    let Some(mut lines) = self.read_lines() else {
+      return Ok(accum);
+    };
+    if !lines.starts_list_continuation() {
+      self.restore_lines(lines);
+      return Ok(accum);
+    }
+    lines.consume_current();
+    self.restore_lines(lines);
+    self.ctx.list.parsing_continuations = true;
+    accum.push(self.parse_block()?.unwrap());
+    self.ctx.list.parsing_continuations = false;
+    self.parse_list_continuation_blocks(accum)
   }
 }
 
@@ -428,6 +454,59 @@ mod tests {
           },
         ]),
       ),
+      (
+        indoc! {"
+          * principle
+          +
+          with continuation
+        "},
+        BlockContext::UnorderedList,
+        b.vec([ListItem {
+          marker: ListMarker::Star(1),
+          marker_src: b.src("*", l(0, 1)),
+          checklist: None,
+          principle: b.inodes([n_text("principle", 2, 11, b)]),
+          blocks: b.vec([Block {
+            title: None,
+            attrs: None,
+            content: BlockContent::Simple(b.inodes([n_text("with continuation", 14, 31, b)])),
+            context: BlockContext::Paragraph,
+            loc: l(14, 31),
+          }]),
+        }]),
+      ),
+      (
+        indoc! {"
+          * principle
+          +
+          with continuation
+          +
+          and another
+        "},
+        BlockContext::UnorderedList,
+        b.vec([ListItem {
+          marker: ListMarker::Star(1),
+          marker_src: b.src("*", l(0, 1)),
+          checklist: None,
+          principle: b.inodes([n_text("principle", 2, 11, b)]),
+          blocks: b.vec([
+            Block {
+              title: None,
+              attrs: None,
+              content: BlockContent::Simple(b.inodes([n_text("with continuation", 14, 31, b)])),
+              context: BlockContext::Paragraph,
+              loc: l(14, 31),
+            },
+            Block {
+              title: None,
+              attrs: None,
+              content: BlockContent::Simple(b.inodes([n_text("and another", 34, 45, b)])),
+              context: BlockContext::Paragraph,
+              loc: l(34, 45),
+            },
+          ]),
+        }]),
+      ),
     ];
     run(cases, b);
   }
@@ -437,13 +516,9 @@ mod tests {
       let mut parser = Parser::new(bump, input);
       let lines = parser.read_lines().unwrap();
       let block = parser.parse_list(lines, None).unwrap();
-      assert_eq!(
-        block.context, context,
-        "input was:\n\n```\n{}\n```\n",
-        input
-      );
+      assert_eq!(block.context, context, "input was:\n\n```\n{}```\n", input);
       if let BlockContent::List { items, .. } = block.content {
-        assert_eq!(items, expected_items, "input was:\n\n```\n{}\n```\n", input);
+        assert_eq!(items, expected_items, "input was:\n\n```\n{}```\n", input);
       } else {
         panic!("expected list, got {:?}", block.content);
       }

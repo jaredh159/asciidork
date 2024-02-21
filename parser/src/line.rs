@@ -360,6 +360,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
+  pub fn is_list_continuation(&self) -> bool {
+    self.num_tokens() == 1 && self.starts(Plus)
+  }
+
   pub fn trim_leading_whitespace(&mut self) {
     while self.current_is(Whitespace) {
       self.discard(1);

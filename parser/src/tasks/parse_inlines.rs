@@ -27,20 +27,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let subs = self.ctx.subs;
 
     while let Some(mut line) = lines.consume_current() {
+      if self.ctx.list.parsing_continuations && line.is_list_continuation() {
+        inlines.remove_trailing_newline();
+        lines.restore_if_nonempty(line);
+        return Ok(inlines);
+      }
+
       loop {
         if line.starts_with_seq(stop_tokens) {
           line.discard(stop_tokens.len());
           text.commit_inlines(&mut inlines);
-          if !line.is_empty() {
-            lines.restore_if_nonempty(line);
-          }
+          lines.restore_if_nonempty(line);
           return Ok(inlines);
         }
 
         if self.ctx.delimiter.is_some() && line.current_is(DelimiterLine) {
-          if matches!(inlines.last().map(|n| &n.content), Some(JoiningNewline)) {
-            inlines.pop();
-          }
+          inlines.remove_trailing_newline();
           lines.restore_if_nonempty(line);
           return Ok(inlines);
         }

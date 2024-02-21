@@ -13,6 +13,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     ContiguousLines { reversed_lines: lines }
   }
 
+  pub fn num_lines(&self) -> usize {
+    self.reversed_lines.len()
+  }
+
   pub fn current(&self) -> Option<&Line<'bmp, 'src>> {
     self.reversed_lines.last()
   }
@@ -147,6 +151,16 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       .nth(1)
       .map(|line| line.starts_nested_list(stack))
       .unwrap_or(false)
+  }
+
+  pub fn starts_list_continuation(&self) -> bool {
+    if self.num_lines() < 2 {
+      return false;
+    }
+    let Some(line) = self.first() else {
+      return false;
+    };
+    line.is_list_continuation()
   }
 
   pub fn starts(&self, kind: TokenKind) -> bool {

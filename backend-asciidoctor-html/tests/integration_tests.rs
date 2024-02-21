@@ -939,6 +939,49 @@ fn test_eval() {
         </div>
       "#},
     ),
+    (
+      indoc! {r#"
+        * principle
+        +
+        with continuation
+      "#},
+      indoc! {r#"
+        <div class="ulist">
+          <ul>
+            <li>
+              <p>principle</p>
+              <div class="paragraph">
+                <p>with continuation</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+        * principle
+        +
+        with continuation
+        +
+        and another
+      "#},
+      indoc! {r#"
+        <div class="ulist">
+          <ul>
+            <li>
+              <p>principle</p>
+              <div class="paragraph">
+                <p>with continuation</p>
+              </div>
+              <div class="paragraph">
+                <p>and another</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();

@@ -37,6 +37,15 @@ impl<'bmp> InlineNodes<'bmp> {
   pub fn last_loc_end(&self) -> Option<usize> {
     self.last().map(|node| node.loc.end)
   }
+
+  pub fn remove_trailing_newline(&mut self) {
+    if matches!(
+      self.last().map(|n| &n.content),
+      Some(Inline::JoiningNewline)
+    ) {
+      self.pop();
+    }
+  }
 }
 
 impl<'bmp> Deref for InlineNodes<'bmp> {
