@@ -74,6 +74,18 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
+  // 👍 sat: jared, need to test a couple more things, not sure if <pre> is right
+  // especially preserving newlines, might need a new context prop to track
+  // then replicate the gnarly examples from complex lists
+  fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
+    self.open_element("div", &["listingblock"], &block.attrs);
+    self.push_str(r#"<div class="content"><pre>"#);
+  }
+
+  fn exit_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
+    self.push_str("</pre></div></div>");
+  }
+
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
     self.open_element("div", &["quoteblock"], &block.attrs);
     self.visit_block_title(block.title.as_deref(), None);

@@ -122,6 +122,7 @@ impl<'src> Lexer<'src> {
       }
       [Some('*'), Some('*'), Some('*'), Some('*'), Some('\n') | None]
       | [Some('_'), Some('_'), Some('_'), Some('_'), Some('\n') | None]
+      | [Some('-'), Some('-'), Some('-'), Some('-'), Some('\n') | None]
       | [Some('='), Some('='), Some('='), Some('='), Some('\n') | None] => {
         self.skip(4);
         Some(self.token(DelimiterLine, start, start + 4))
@@ -418,6 +419,7 @@ mod tests {
       ("****", vec![(DelimiterLine, "****")]),
       ("====", vec![(DelimiterLine, "====")]),
       ("____", vec![(DelimiterLine, "____")]),
+      ("----", vec![(DelimiterLine, "----")]),
       (
         "****\nfoo",
         vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],

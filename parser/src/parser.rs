@@ -24,6 +24,20 @@ pub(crate) struct ParseContext {
   pub(crate) delimiter: Option<Delimiter>,
   pub(crate) list: ListContext,
 }
+impl ParseContext {
+  pub(crate) fn set_subs_for(&mut self, block_context: BlockContext) -> Substitutions {
+    let restore = self.subs;
+    #[allow(clippy::single_match)]
+    match block_context {
+      BlockContext::Listing => {
+        self.subs = Substitutions::none();
+        self.subs.special_chars = true;
+      }
+      _ => {}
+    }
+    restore
+  }
+}
 
 #[derive(Debug, Default)]
 pub(crate) struct ListContext {

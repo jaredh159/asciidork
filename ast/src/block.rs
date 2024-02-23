@@ -103,6 +103,7 @@ impl BlockContext {
     match string {
       "sidebar" => Some(BlockContext::Sidebar),
       "quote" => Some(BlockContext::BlockQuote),
+      "listing" => Some(BlockContext::Listing),
       _ => Self::derive_admonition(string),
     }
   }

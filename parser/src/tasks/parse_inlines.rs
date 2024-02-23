@@ -398,8 +398,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             lines.restore_if_nonempty(line);
             self.ctx.subs = Substitutions::none();
             let passthrough = self.parse_inlines_until(lines, &[Plus, Plus, Plus])?;
-            extend(&mut loc, &passthrough, 3);
             self.ctx.subs = subs;
+            extend(&mut loc, &passthrough, 3);
             inlines.push(node(InlinePassthrough(passthrough), loc));
             text.loc = loc.clamp_end();
             break;

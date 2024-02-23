@@ -90,9 +90,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let delimiter_token = lines.consume_current_token().unwrap();
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
+    let restore_subs = self.ctx.set_subs_for(Context::from(delimiter));
     while let Some(inner) = self.parse_block()? {
       blocks.push(inner);
     }
+    self.ctx.subs = restore_subs;
     let end = if let Some(mut block) = self.read_lines() {
       let token = block.consume_current_token().unwrap();
       debug_assert!(token.is(DelimiterLine));
@@ -147,8 +149,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     mut lines: ContiguousLines<'bmp, 'src>,
     meta: BlockMetadata<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
-    let context = meta.paragraph_context(&mut lines);
+    let block_context = meta.paragraph_context(&mut lines);
+
+    // TODO: probably a better stack-like context API is possible here...
+    let restore_subs = self.ctx.set_subs_for(block_context);
     let inlines = self.parse_inlines(&mut lines)?;
+    self.ctx.subs = restore_subs;
+
     self.restore_lines(lines);
     let Some(end) = inlines.last_loc_end() else {
       return Ok(None);
@@ -157,7 +164,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       title: meta.title,
       attrs: meta.attrs,
       loc: SourceLocation::new(meta.start, end),
-      context,
+      context: block_context,
       content: Content::Simple(inlines),
     }))
   }
@@ -244,6 +251,40 @@ mod tests {
         inode(Text(b.s("hello papa")), l(13, 23)),
       ])),
       loc: l(0, 23),
+      ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_listing_block() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "[listing]\nfoo `bar`\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      attrs: Some(AttrList::positional("listing", l(1, 8), b)),
+      context: Context::Listing,
+      content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
+      loc: l(0, 19),
+      ..Block::empty(b)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_listing_block() {
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, "----\nfoo `bar`\n----\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      context: Context::Listing,
+      content: Content::Compound(b.vec([Block {
+        context: Context::Paragraph,
+        content: Content::Simple(b.inodes([n_text("foo `bar`", 5, 14, b)])),
+        loc: l(5, 14),
+        ..Block::empty(b)
+      }])),
+      loc: l(0, 19),
       ..Block::empty(b)
     };
     assert_eq!(block, expected);
