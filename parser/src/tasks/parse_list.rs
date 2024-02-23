@@ -35,7 +35,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Ok(Block {
       title,
       attrs,
-      loc: SourceLocation::new(start, items.last().unwrap().loc_end().unwrap()),
+      loc: SourceLocation::new(start, items.last().unwrap().last_loc_end().unwrap()),
       context: variant.to_context(),
       content: BlockContent::List { variant, depth, items },
     })

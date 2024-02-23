@@ -54,6 +54,9 @@ bump-allocated version
   list documentation, and the current implementation doesn't get tripped up by
   `P. O. Box`, so I skipped this for now, until i can get some clarity from the
   asciidoctor team
+- inside listing blocks, newlines are preserved, but DR. seems to trim leading/trailing
+  newlines, and only honor those between, test "----\n\n\nfoo\n\nbar\n\n\n----", is this
+  "spec", or just an accident/bug? (dork does not work this way currently)
 
 ## weirdnesses...
 

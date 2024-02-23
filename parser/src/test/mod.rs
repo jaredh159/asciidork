@@ -5,6 +5,7 @@ pub trait BumpTestHelpers<'bmp> {
   fn s(&'bmp self, s: &'static str) -> BumpString<'bmp>;
   fn src(&'bmp self, s: &'static str, loc: SourceLocation) -> SourceString<'bmp>;
   fn inodes<const N: usize>(&'bmp self, nodes: [InlineNode<'bmp>; N]) -> InlineNodes<'bmp>;
+  fn empty_block(&'bmp self) -> Block<'bmp>;
 }
 
 impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
@@ -14,6 +15,16 @@ impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
       vec.push(node.clone());
     }
     vec
+  }
+
+  fn empty_block(&'bmp self) -> Block<'bmp> {
+    Block {
+      title: None,
+      attrs: None,
+      context: BlockContext::Paragraph,
+      content: BlockContent::Simple(InlineNodes::new(self)),
+      loc: SourceLocation::new(0, 0),
+    }
   }
 
   fn s(&'bmp self, s: &'static str) -> BumpString<'bmp> {

@@ -24,6 +24,7 @@ pub(crate) struct ParseContext {
   pub(crate) delimiter: Option<Delimiter>,
   pub(crate) list: ListContext,
 }
+
 impl ParseContext {
   pub(crate) fn set_subs_for(&mut self, block_context: BlockContext) -> Substitutions {
     let restore = self.subs;
@@ -85,16 +86,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .unwrap_or_else(|| self.lexer.loc())
   }
 
-  pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
-    self.lexer.consume_line(self.bump)
-  }
-
   pub(crate) fn line_from(
     &self,
     tokens: BumpVec<'bmp, Token<'src>>,
     loc: SourceLocation,
   ) -> Line<'bmp, 'src> {
     Line::new(tokens, self.lexer.loc_src(loc))
+  }
+
+  pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
+    self.lexer.consume_line(self.bump)
   }
 
   pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'bmp, 'src>> {
@@ -116,7 +117,30 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Some(ContiguousLines::new(lines))
   }
 
-  pub fn restore_lines(&mut self, lines: ContiguousLines<'bmp, 'src>) {
+  pub(crate) fn read_lines_until(
+    &mut self,
+    delimiter: Delimiter,
+  ) -> Option<ContiguousLines<'bmp, 'src>> {
+    let mut lines = self.read_lines()?;
+    while !self.lexer.is_eof() && !self.at_delimiter(delimiter) {
+      // PERF: pushing a bunch is bad, because this is actually
+      // vec.insert(0, line), probably better to accum and concat
+      lines.push(self.read_line().unwrap());
+    }
+    Some(lines)
+  }
+
+  fn at_delimiter(&self, delimiter: Delimiter) -> bool {
+    match delimiter {
+      Delimiter::BlockQuote => self.lexer.at_delimiter_line() == Some((4, '_')),
+      Delimiter::Example => self.lexer.at_delimiter_line() == Some((4, '=')),
+      Delimiter::Open => self.lexer.at_delimiter_line() == Some((2, '-')),
+      Delimiter::Sidebar => self.lexer.at_delimiter_line() == Some((4, '*')),
+      Delimiter::Listing => self.lexer.at_delimiter_line() == Some((4, '-')),
+    }
+  }
+
+  pub(crate) fn restore_lines(&mut self, lines: ContiguousLines<'bmp, 'src>) {
     debug_assert!(self.peeked_lines.is_none());
     if !lines.is_empty() {
       self.peeked_lines = Some(lines);

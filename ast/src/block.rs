@@ -9,18 +9,6 @@ pub struct Block<'bmp> {
   pub loc: SourceLocation,
 }
 
-impl<'bmp> Block<'bmp> {
-  pub fn empty(b: &'bmp Bump) -> Self {
-    Block {
-      title: None,
-      attrs: None,
-      context: BlockContext::Paragraph,
-      content: BlockContent::Simple(InlineNodes::new(b)),
-      loc: SourceLocation::new(0, 0),
-    }
-  }
-}
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BlockContent<'bmp> {
   Compound(BumpVec<'bmp, Block<'bmp>>),
@@ -85,6 +73,24 @@ pub enum BlockContext {
   UnorderedList,
   Verse,
   Video,
+}
+
+impl<'bmp> BlockContent<'bmp> {
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    match self {
+      BlockContent::Compound(blocks) => blocks.last().map(|b| b.loc),
+      BlockContent::Simple(inline_nodes) => inline_nodes.last_loc(),
+      BlockContent::Verbatim => todo!(),
+      BlockContent::Raw => todo!(),
+      BlockContent::Empty(_) => todo!(),
+      BlockContent::Table => todo!(),
+      BlockContent::DocumentAttribute(_, _) => None,
+      BlockContent::QuotedParagraph { attr, cite, .. } => {
+        cite.as_ref().map(|c| c.loc).or(Some(attr.loc))
+      }
+      BlockContent::List { items, .. } => items.last().and_then(|i| i.last_loc()),
+    }
+  }
 }
 
 impl BlockContext {

@@ -35,6 +35,10 @@ impl<'bmp> InlineNodes<'bmp> {
     text
   }
 
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self.last().map(|node| node.loc)
+  }
+
   pub fn last_loc_end(&self) -> Option<usize> {
     self.last().map(|node| node.loc.end)
   }

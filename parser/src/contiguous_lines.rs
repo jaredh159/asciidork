@@ -63,6 +63,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       .and_then(|mut line| line.consume_current())
   }
 
+  pub fn push(&mut self, line: Line<'bmp, 'src>) {
+    self.reversed_lines.insert(0, line);
+  }
+
   pub fn restore_if_nonempty(&mut self, line: Line<'bmp, 'src>) {
     if !line.is_empty() {
       self.reversed_lines.push(line);

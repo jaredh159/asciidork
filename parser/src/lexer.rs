@@ -45,6 +45,12 @@ impl<'src> Lexer<'src> {
     &self.src[loc.start..loc.end]
   }
 
+  pub fn print_current_line(&self) {
+    let (line_num, _) = self.line_number_with_offset(self.offset());
+    let line = self.line_of(self.offset());
+    println!("{}: {}", line_num, line);
+  }
+
   pub fn line_of(&self, location: usize) -> &'src str {
     let mut start = location;
     let mut end = location;
@@ -105,30 +111,36 @@ impl<'src> Lexer<'src> {
     Some(Line::new(tokens, &self.src[start..end]))
   }
 
-  fn delimiter_line(&mut self) -> Option<Token<'src>> {
+  pub fn at_empty_line(&self) -> bool {
+    self.at_line_start && self.peek_is('\n')
+  }
+
+  pub fn at_delimiter_line(&self) -> Option<(usize, char)> {
     if !self.at_line_start
       || self.is_eof()
       || !matches!(self.peek, Some('_') | Some('-') | Some('*') | Some('='))
     {
       return None;
     }
-    let start = self.offset();
     let mut c = self.chars.clone();
     let sequence = [self.peek, c.next(), c.next(), c.next(), c.next()];
     match sequence {
-      [Some('-'), Some('-'), Some('\n') | None, _, _] => {
-        self.skip(2);
-        Some(self.token(DelimiterLine, start, start + 2))
-      }
+      [Some('-'), Some('-'), Some('\n') | None, _, _] => Some((2, '-')),
       [Some('*'), Some('*'), Some('*'), Some('*'), Some('\n') | None]
       | [Some('_'), Some('_'), Some('_'), Some('_'), Some('\n') | None]
       | [Some('-'), Some('-'), Some('-'), Some('-'), Some('\n') | None]
       | [Some('='), Some('='), Some('='), Some('='), Some('\n') | None] => {
-        self.skip(4);
-        Some(self.token(DelimiterLine, start, start + 4))
+        Some((4, sequence[0].unwrap()))
       }
       _ => None,
     }
+  }
+
+  fn delimiter_line(&mut self) -> Option<Token<'src>> {
+    let (len, _) = self.at_delimiter_line()?;
+    let start = self.offset();
+    self.skip(len);
+    Some(self.token(DelimiterLine, start, start + len))
   }
 
   pub fn next_token(&mut self) -> Token<'src> {

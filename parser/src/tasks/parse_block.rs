@@ -69,10 +69,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
       if lines.is_empty() {
         return Some(Block {
+          title: None,
+          attrs: None,
           context: Context::Comment,
           content: Content::Empty(EmptyMetadata::None),
           loc: SourceLocation::new(start, self.loc().end),
-          ..Block::empty(self.bump)
         });
       }
     }
@@ -89,11 +90,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.ctx.delimiter = Some(delimiter);
     let delimiter_token = lines.consume_current_token().unwrap();
     self.restore_lines(lines);
-    let mut blocks = BumpVec::new_in(self.bump);
-    let restore_subs = self.ctx.set_subs_for(Context::from(delimiter));
-    while let Some(inner) = self.parse_block()? {
-      blocks.push(inner);
-    }
+    let context = meta.block_style_or(Context::from(delimiter));
+    let restore_subs = self.ctx.set_subs_for(context);
+
+    // newlines have a different meaning in a listing block, so we have to
+    // manually gather all (including empty) lines until the end delimiter
+    let content = if matches!(context, Context::Listing) {
+      let mut lines = self
+        .read_lines_until(delimiter)
+        .unwrap_or_else(|| ContiguousLines::new(bvec![in self.bump]));
+      let content = Content::Simple(self.parse_inlines(&mut lines)?);
+      self.restore_lines(lines);
+      content
+    } else {
+      let mut blocks = BumpVec::new_in(self.bump);
+      while let Some(inner) = self.parse_block()? {
+        blocks.push(inner);
+      }
+      Content::Compound(blocks)
+    };
+
     self.ctx.subs = restore_subs;
     let end = if let Some(mut block) = self.read_lines() {
       let token = block.consume_current_token().unwrap();
@@ -101,10 +117,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       self.restore_lines(block);
       token.loc.end
     } else {
-      let end = blocks
-        .last()
-        .map(|b| b.loc.end)
-        .unwrap_or(delimiter_token.loc.end);
+      let end = content.last_loc().unwrap_or(delimiter_token.loc).end;
       let message = format!(
         "unclosed delimiter block, expected `{}`, opened on line {}",
         delimiter_token.lexeme,
@@ -114,11 +127,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       end
     };
     self.ctx.delimiter = prev;
-    let context = meta.block_style_or(Context::from(delimiter));
     Ok(Some(Block {
       title: meta.title,
       attrs: meta.attrs,
-      content: Content::Compound(blocks),
+      content,
       context,
       loc: SourceLocation::new(meta.start, end),
     }))
@@ -251,7 +263,7 @@ mod tests {
         inode(Text(b.s("hello papa")), l(13, 23)),
       ])),
       loc: l(0, 23),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -266,7 +278,7 @@ mod tests {
       context: Context::Listing,
       content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
       loc: l(0, 19),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -274,18 +286,49 @@ mod tests {
   #[test]
   fn test_parse_delimited_listing_block() {
     let b = &Bump::new();
-    let mut parser = Parser::new(b, "----\nfoo `bar`\n----\n\n");
+    let input = indoc! {"
+      ----
+      foo `bar`
+      baz
+      ----
+    "};
+    let mut parser = Parser::new(b, input);
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
       context: Context::Listing,
-      content: Content::Compound(b.vec([Block {
-        context: Context::Paragraph,
-        content: Content::Simple(b.inodes([n_text("foo `bar`", 5, 14, b)])),
-        loc: l(5, 14),
-        ..Block::empty(b)
-      }])),
-      loc: l(0, 19),
-      ..Block::empty(b)
+      content: Content::Simple(b.inodes([
+        n_text("foo `bar`", 5, 14, b),
+        n(Inline::JoiningNewline, l(14, 15)),
+        n_text("baz", 15, 18, b),
+      ])),
+      loc: l(0, 23),
+      ..b.empty_block()
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_listing_block_w_double_newline() {
+    let b = &Bump::new();
+    let input = indoc! {"
+      ----
+      foo `bar`
+
+      baz
+      ----
+    "};
+    let mut parser = Parser::new(b, input);
+    let block = parser.parse_block().unwrap().unwrap();
+    let expected = Block {
+      context: Context::Listing,
+      content: Content::Simple(b.inodes([
+        n_text("foo `bar`", 5, 14, b),
+        n(Inline::JoiningNewline, l(14, 15)),
+        n(Inline::JoiningNewline, l(15, 16)),
+        n_text("baz", 16, 19, b),
+      ])),
+      loc: l(0, 24),
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -299,7 +342,7 @@ mod tests {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
       loc: l(0, 17),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -328,7 +371,7 @@ mod tests {
       context: Context::AdmonitionTip,
       content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(5, 8))])),
       loc: l(0, 8),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
 
@@ -339,7 +382,7 @@ mod tests {
       context: Context::AdmonitionTip,
       content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(11, 14))])),
       loc: l(0, 14),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
 
@@ -352,7 +395,7 @@ mod tests {
         inode(Text(b.s("TIP: foo")), l(10, 18)), // <-- attr list wins
       ])),
       loc: l(0, 18),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
 
@@ -366,7 +409,7 @@ mod tests {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
         loc: l(15, 18),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 23),
     };
@@ -382,7 +425,7 @@ mod tests {
         context: Context::AdmonitionNote,
         content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(21, 24))])),
         loc: l(15, 24),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 29),
     };
@@ -398,7 +441,7 @@ mod tests {
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
       loc: l(0, 3),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -415,7 +458,7 @@ mod tests {
         attrs: AttrList::new(l(15, 17), b),
       }),
       loc: l(0, 17),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -431,10 +474,10 @@ mod tests {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 3, 6, b)])),
         loc: l(3, 6),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 9),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -450,10 +493,10 @@ mod tests {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
         loc: l(5, 8),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 13),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -481,7 +524,7 @@ mod tests {
         cite: Some(b.src("Papers of Thomas Jefferson: Volume 11", l(83, 120))),
       },
       loc: l(0, 120),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -536,7 +579,7 @@ mod tests {
       context: Context::BlockQuote,
       content: Content::Simple(b.inodes([n_text("foo", 24, 27, b)])),
       loc: l(0, 27),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -566,10 +609,10 @@ mod tests {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 29, 32, b)])),
         loc: l(29, 32),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 37),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -584,7 +627,7 @@ mod tests {
       context: Context::Sidebar,
       content: Content::Simple(b.inodes([n_text("foo", 10, 13, b)])),
       loc: l(0, 13),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -598,7 +641,7 @@ mod tests {
       context: Context::Open,
       content: Content::Compound(b.vec([])),
       loc: l(0, 5),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -614,10 +657,10 @@ mod tests {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
         loc: l(5, 8),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 13),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -641,13 +684,13 @@ foo
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([n_text("foo", 8, 11, b)])),
           loc: l(8, 11),
-          ..Block::empty(b)
+          ..b.empty_block()
         }])),
         loc: l(5, 14),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 19),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
 
@@ -674,13 +717,13 @@ foo
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
           loc: l(15, 18),
-          ..Block::empty(b)
+          ..b.empty_block()
         }])),
         loc: l(6, 23),
-        ..Block::empty(b)
+        ..b.empty_block()
       }])),
       loc: l(0, 29),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }
@@ -708,7 +751,7 @@ This is more content in the sidebar block.
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([para_1_txt])),
           loc: l(5, 40),
-          ..Block::empty(b)
+          ..b.empty_block()
         },
         Block {
           context: Context::Image,
@@ -717,17 +760,17 @@ This is more content in the sidebar block.
             attrs: AttrList::new(l(57, 59), b),
           }),
           loc: l(42, 59),
-          ..Block::empty(b)
+          ..b.empty_block()
         },
         Block {
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([para_2_txt])),
           loc: l(61, 103),
-          ..Block::empty(b)
+          ..b.empty_block()
         },
       ])),
       loc: l(0, 108),
-      ..Block::empty(b)
+      ..b.empty_block()
     };
     assert_eq!(block, expected);
   }

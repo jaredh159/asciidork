@@ -9,6 +9,7 @@ pub struct AsciidoctorHtml {
   fig_caption_num: usize,
   flags: Flags,
   list_stack: Vec<bool>,
+  preserve_newlines: bool,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -80,10 +81,12 @@ impl Backend for AsciidoctorHtml {
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["listingblock"], &block.attrs);
     self.push_str(r#"<div class="content"><pre>"#);
+    self.preserve_newlines = true
   }
 
   fn exit_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
     self.push_str("</pre></div></div>");
+    self.preserve_newlines = false;
   }
 
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
@@ -237,7 +240,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn visit_joining_newline(&mut self) {
-    self.push_ch(' ');
+    self.push_ch(if self.preserve_newlines { '\n' } else { ' ' });
   }
 
   fn visit_attribute_reference(&mut self, name: &str) {

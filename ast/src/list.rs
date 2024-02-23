@@ -13,8 +13,15 @@ impl<'bmp> ListItem<'bmp> {
   pub fn loc_start(&self) -> usize {
     self.marker_src.loc.start
   }
-  pub fn loc_end(&self) -> Option<usize> {
-    self.principle.last_loc_end()
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self
+      .blocks
+      .last()
+      .map(|block| block.loc)
+      .or_else(|| self.principle.last_loc())
+  }
+  pub fn last_loc_end(&self) -> Option<usize> {
+    self.last_loc().map(|loc| loc.end)
   }
 }
 

@@ -8,7 +8,10 @@ use regex::Regex;
 
 test_eval!(
   simple_inline_w_newline,
-  "_foo_\nbar\n\n",
+  indoc! {r#"
+    _foo_
+    bar
+  "#},
   r#"<div class="paragraph"><p><em>foo</em> bar</p></div>"#
 );
 
@@ -596,6 +599,53 @@ test_eval!(
   "#}
 );
 
+#[test]
+fn test_listing_block_newline_preservation() {
+  let input = indoc! {r#"
+    ----
+    foo bar
+    so baz
+    ----
+  "#};
+  let expected = indoc! {r#"
+    <div class="listingblock"><div class="content"><pre>foo bar
+    so baz</pre></div></div>
+  "#};
+  let bump = &Bump::new();
+  let parser = Parser::new(bump, input);
+  let doc = parser.parse().unwrap().document;
+  assert_eq!(
+    eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
+    expected.trim_end(),
+    "input was\n\n```\n{}```",
+    input
+  );
+}
+
+#[test]
+fn test_masquerading_listing_block_newline_preservation() {
+  let input = indoc! {r#"
+    [listing]
+    --
+    foo bar
+    so baz
+    --
+  "#};
+  let expected = indoc! {r#"
+    <div class="listingblock"><div class="content"><pre>foo bar
+    so baz</pre></div></div>
+  "#};
+  let bump = &Bump::new();
+  let parser = Parser::new(bump, input);
+  let doc = parser.parse().unwrap().document;
+  assert_eq!(
+    eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
+    expected.trim_end(),
+    "input was\n\n```\n{}```",
+    input
+  );
+}
+
 enum SubstrTest {
   Contains(&'static str),
   DoesNotContain(&'static str),
@@ -689,7 +739,7 @@ fn test_non_embedded() {
 
     foo
   "#};
-  let expected = indoc! {r##"
+  let expected = indoc! {r#"
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -705,7 +755,7 @@ fn test_non_embedded() {
         </div>
       </body>
     </html>
-  "##};
+  "#};
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();
   let expected = re.replace_all(expected, "");
@@ -718,29 +768,6 @@ fn test_non_embedded() {
     input
   );
 }
-
-// #[test]
-// fn test_listing_block_newline_preservation() {
-//   let input = indoc! {r#"
-//     ----
-//     foo bar
-//     so baz
-//     ----
-//   "#};
-//   let expected = indoc! {r##"
-//     <div class="listingblock"><div class="content"><pre>foo bar
-//     so baz</pre></div></div>
-//   "##};
-//   let bump = &Bump::new();
-//   let parser = Parser::new(bump, input);
-//   let doc = parser.parse().unwrap().document;
-//   assert_eq!(
-//     eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
-//     expected,
-//     "input was\n\n```\n{}```",
-//     input
-//   );
-// }
 
 // helpers
 
