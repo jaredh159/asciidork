@@ -503,6 +503,8 @@ mod tests {
       ("999. foo", true),
       (" * foo", true),
       ("   * foo", true),
+      ("* {foo}", true),
+      (". {foo}", true),
       ("*foo", false),
       (".foo", false),
       ("-foo", false),

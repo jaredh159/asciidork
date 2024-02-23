@@ -33,16 +33,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         return Ok(inlines);
       }
 
+      if self.ctx.delimiter.is_some() && line.current_is(DelimiterLine) {
+        inlines.remove_trailing_newline();
+        lines.restore_if_nonempty(line);
+        return Ok(inlines);
+      }
+
       loop {
         if line.starts_with_seq(stop_tokens) {
           line.discard(stop_tokens.len());
           text.commit_inlines(&mut inlines);
-          lines.restore_if_nonempty(line);
-          return Ok(inlines);
-        }
-
-        if self.ctx.delimiter.is_some() && line.current_is(DelimiterLine) {
-          inlines.remove_trailing_newline();
           lines.restore_if_nonempty(line);
           return Ok(inlines);
         }
@@ -252,6 +252,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.commit_inlines(&mut inlines);
             lines.restore_if_nonempty(line);
             self.ctx.subs.inline_formatting = false;
+            self.ctx.subs.attr_refs = false;
             let mut inner = self.parse_inlines_until(lines, &[Plus, Backtick])?;
             extend(&mut wrap_loc, &inner, 2);
             self.ctx.subs = subs;
@@ -469,16 +470,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = token.loc.clamp_end();
           }
 
+          OpenBrace if subs.attr_refs && line.is_continuous_thru(CloseBrace) => {
+            let mut loc = token.loc;
+            let aref = line.consume_to_string_until(CloseBrace, self.bump).src;
+            let close_brace = line.consume_current().unwrap();
+            loc.end = close_brace.loc.end;
+            inlines.push(node(AttributeReference(aref), loc));
+            text.loc = loc.clamp_end();
+          }
+
           Discard => text.loc = token.loc.clamp_end(),
 
-          Backslash
-            if subs.macros
-              && (line.current_is(MaybeEmail) || line.current_token().is_url_scheme()) =>
-          {
+          Backslash if escapes_pattern(&line, &subs) => {
             text.commit_inlines(&mut inlines);
-            inlines.push(node(Discarded, token.loc));
+            inlines.push(node(Discarded, token.loc)); // discard backslash
             text.loc = token.loc.clamp_end();
-            // pushing the next token as text prevents macro subs for escaped token
+            // pushing the next token as text prevents recognizing the pattern
             let next_token = line.consume_current().unwrap();
             text.push_token(&next_token);
           }
@@ -578,6 +585,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 }
 
+fn escapes_pattern(line: &Line, subs: &Substitutions) -> bool {
+  // escaped email
+  subs.macros && (line.current_is(MaybeEmail) || line.current_token().is_url_scheme())
+  // escaped attr ref
+  || subs.attr_refs && line.current_is(OpenBrace) && line.is_continuous_thru(CloseBrace)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -588,6 +602,14 @@ mod tests {
   fn test_joining_newlines() {
     let b = &Bump::new();
     let cases = vec![
+      (
+        "{foo}",
+        b.inodes([n(AttributeReference(b.s("foo")), l(0, 5))]),
+      ),
+      (
+        "\\{foo}",
+        b.inodes([n(Discarded, l(0, 1)), n_text("{foo}", 1, 6, b)]),
+      ),
       (
         "_foo_\nbar",
         b.inodes([

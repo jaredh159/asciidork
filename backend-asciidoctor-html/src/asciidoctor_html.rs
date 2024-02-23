@@ -228,6 +228,28 @@ impl Backend for AsciidoctorHtml {
     self.push_ch(' ');
   }
 
+  fn visit_attribute_reference(&mut self, name: &str) {
+    let val = self.doc_attrs.str(name).map(|s| s.to_string());
+    if let Some(val) = val {
+      self.push_str(&val);
+      return;
+    }
+    if name == "empty" {
+      return;
+    }
+    match self.flags.attribute_missing {
+      AttributeMissing::Drop => {}
+      AttributeMissing::Skip => {
+        self.push_str("{");
+        self.push_str(name);
+        self.push_ch('}');
+      }
+      AttributeMissing::Warn => {
+        // TODO: warning
+      }
+    }
+  }
+
   fn enter_inline_mono(&mut self, _children: &[InlineNode]) {
     self.push_str("<code>");
   }

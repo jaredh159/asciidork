@@ -53,6 +53,7 @@ pub trait Backend {
   fn visit_multichar_whitespace(&mut self, whitespace: &str);
   fn visit_button_macro(&mut self, text: &str);
   fn visit_menu_macro(&mut self, items: &[&str]);
+  fn visit_attribute_reference(&mut self, name: &str);
   fn enter_inline_italic(&mut self, children: &[InlineNode]);
   fn exit_inline_italic(&mut self, children: &[InlineNode]);
   fn enter_inline_mono(&mut self, children: &[InlineNode]);
@@ -82,10 +83,25 @@ pub trait Backend {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Flags {
   pub embedded: bool,
+  pub attribute_missing: AttributeMissing,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AttributeMissing {
+  Warn,
+  Drop,
+  Skip,
+  // dr. also has "drop-line", i'd rather not support it
+}
+
+impl Default for AttributeMissing {
+  fn default() -> Self {
+    Self::Skip
+  }
 }
 
 impl Flags {
   pub fn embedded() -> Self {
-    Self { embedded: true }
+    Self { embedded: true, ..Self::default() }
   }
 }

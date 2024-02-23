@@ -982,6 +982,89 @@ fn test_eval() {
         </div>
       "#},
     ),
+    (
+      indoc! {r#"
+        * principle
+        +
+        --
+        para 1
+
+        para 2
+        --
+
+        * another item
+        +
+        --
+        para 3
+
+        para 4
+        --
+      "#},
+      indoc! {r#"
+        <div class="ulist">
+          <ul>
+            <li>
+              <p>principle</p>
+              <div class="openblock">
+                <div class="content">
+                  <div class="paragraph"><p>para 1</p></div>
+                  <div class="paragraph"><p>para 2</p></div>
+                </div>
+              </div>
+            </li>
+            <li>
+              <p>another item</p>
+              <div class="openblock">
+                <div class="content">
+                  <div class="paragraph"><p>para 3</p></div>
+                  <div class="paragraph"><p>para 4</p></div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      "#},
+    ),
+    (
+      indoc! {r#"
+         . {empty}
+         +
+         --
+         para
+         --
+       "#},
+      indoc! {r#"
+         <div class="olist arabic">
+           <ol class="arabic">
+             <li>
+               <p></p>
+               <div class="openblock">
+                 <div class="content">
+                   <div class="paragraph"><p>para</p></div>
+                 </div>
+               </div>
+             </li>
+           </ol>
+         </div>
+       "#},
+    ),
+    (
+      indoc! {r#"
+        para
+
+        :foo: bar
+
+        . {foo}
+      "#},
+      indoc! {r#"
+        <div class="paragraph"><p>para</p></div>
+        <div class="olist arabic">
+          <ol class="arabic">
+            <li><p>bar</p></li>
+          </ol>
+        </div>
+      "#},
+    ),
   ];
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();
@@ -989,6 +1072,7 @@ fn test_eval() {
     let expected = re.replace_all(expected, "");
     let parser = Parser::new(bump, input);
     let doc = parser.parse().unwrap().document;
+    // dbg!(&doc);
     assert_eq!(
       eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
       expected,

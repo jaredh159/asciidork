@@ -1,5 +1,10 @@
 ## todo
 
+- [ ] should `--embedded` be passed to Parser? so it doesn't try to parse a doc header?
+- [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
+      tests
+- [ ] definition lists
+- [ ] listing blocks (delimited and non-delimited)
 - [ ] asciidoctor html backend _stylesheets,_ @see
       https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
       `html5.rb`

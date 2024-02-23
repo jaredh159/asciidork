@@ -156,6 +156,8 @@ impl<'src> Lexer<'src> {
       Some('+') => self.single(Plus),
       Some('[') => self.single(OpenBracket),
       Some(']') => self.single(CloseBracket),
+      Some('{') => self.single(OpenBrace),
+      Some('}') => self.single(CloseBrace),
       Some('#') => self.single(Hash),
       Some('%') => self.single(Percent),
       Some('"') => self.single(DoubleQuote),
@@ -244,6 +246,8 @@ impl<'src> Lexer<'src> {
       '.',
       '[',
       ']',
+      '{',
+      '}',
       '=',
       '"',
       '\'',
@@ -392,6 +396,11 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("{}", vec![(OpenBrace, "{"), (CloseBrace, "}")]),
+      (
+        "{foo}",
+        vec![(OpenBrace, "{"), (Word, "foo"), (CloseBrace, "}")],
+      ),
       ("  ", vec![(Whitespace, "  ")]),
       (".", vec![(Dots, ".")]),
       ("..", vec![(Dots, "..")]),
@@ -583,7 +592,7 @@ mod tests {
         assert_eq!(
           lexer.next_token(),
           expected_token,
-          "input was: \n```\n{}```\n",
+          "input was:\n\n```\n{}\n```\n",
           input
         );
         index = end;

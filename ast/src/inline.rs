@@ -15,6 +15,7 @@ impl<'bmp> InlineNode<'bmp> {
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Inline<'bmp> {
+  AttributeReference(BumpString<'bmp>),
   Bold(InlineNodes<'bmp>),
   Curly(CurlyKind),
   Discarded,
