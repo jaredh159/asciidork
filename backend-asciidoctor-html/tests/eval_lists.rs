@@ -2,17 +2,16 @@ use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
 use asciidork_eval::{eval, Flags};
 use asciidork_parser::prelude::*;
 
-use indoc::indoc;
 use pretty_assertions::assert_eq;
 use regex::Regex;
 
 test_eval!(
   most_basic_unordered_list,
-  indoc! {r#"
+  adoc! {r#"
     * foo
     * bar
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li><p>foo</p></li>
@@ -24,7 +23,7 @@ test_eval!(
 
 test_eval!(
   comment_separated_lists,
-  indoc! {r#"
+  adoc! {r#"
     * Apples
     * Oranges
 
@@ -33,7 +32,7 @@ test_eval!(
     * Walnuts
     * Almonds
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li><p>Apples</p></li>
@@ -51,12 +50,12 @@ test_eval!(
 
 test_eval!(
   multiline_list_principle_w_indent,
-  indoc! {r#"
+  adoc! {r#"
     * foo _bar_
       so *baz*
     * two
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li><p>foo <em>bar</em> so <strong>baz</strong></p></li>
@@ -68,11 +67,11 @@ test_eval!(
 
 test_eval!(
   simple_nested_list,
-  indoc! {r#"
+  adoc! {r#"
     * foo
     ** bar
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li>
@@ -90,12 +89,12 @@ test_eval!(
 
 test_eval!(
   dashed_list,
-  indoc! {r#"
+  adoc! {r#"
     - Edgar Allan Poe
     - Sheri S. Tepper
     - Bill Bryson
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li><p>Edgar Allan Poe</p></li>
@@ -108,13 +107,13 @@ test_eval!(
 
 test_eval!(
   list_w_title,
-  indoc! {r#"
+  adoc! {r#"
     .Kizmets Favorite Authors
     * Edgar Allan Poe
     * Sheri S. Tepper
     * Bill Bryson
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <div class="title">Kizmets Favorite Authors</div>
       <ul>
@@ -128,13 +127,13 @@ test_eval!(
 
 test_eval!(
   list_custom_marker,
-  indoc! {r#"
+  adoc! {r#"
     [square]
     * Level 1 list item
     - Level 2 list item
     * Level 1 list item
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist square">
       <ul class="square">
         <li>
@@ -153,7 +152,7 @@ test_eval!(
 
 test_eval!(
   nested_list_example,
-  indoc! {r#"
+  adoc! {r#"
     .Possible DefOps manual locations
     * West wood maze
     ** Maze heart
@@ -161,7 +160,7 @@ test_eval!(
     ** Secret exit
     * Untracked file in git repository
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <div class="title">Possible DefOps manual locations</div>
       <ul>
@@ -189,7 +188,7 @@ test_eval!(
 
 test_eval!(
   list_marker_mid_override,
-  indoc! {r#"
+  adoc! {r#"
     [square]
     * squares
     ** up top
@@ -197,7 +196,7 @@ test_eval!(
     *** circles
     **** down below
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist square">
       <ul class="square">
         <li>
@@ -231,12 +230,12 @@ test_eval!(
 
 test_eval!(
   list_numbered,
-  indoc! {r#"
+  adoc! {r#"
     1. Protons
     2. Electrons
     3. Neutrons
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <ol class="arabic">
         <li><p>Protons</p></li>
@@ -249,12 +248,12 @@ test_eval!(
 
 test_eval!(
   list_numbered_manual_start,
-  indoc! {r#"
+  adoc! {r#"
     4. Protons
     5. Electrons
     6. Neutrons
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <ol class="arabic" start="4">
         <li><p>Protons</p></li>
@@ -267,13 +266,13 @@ test_eval!(
 
 test_eval!(
   numbered_list_attr_start,
-  indoc! {r#"
+  adoc! {r#"
     [start=4]
     . Protons
     . Electrons
     . Neutrons
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <ol class="arabic" start="4">
         <li><p>Protons</p></li>
@@ -286,14 +285,14 @@ test_eval!(
 
 test_eval!(
   reversed_ordered_list,
-  indoc! {r#"
+  adoc! {r#"
     [%reversed]
     .Parts of an atom
     . Protons
     . Electrons
     . Neutrons
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <div class="title">Parts of an atom</div>
       <ol class="arabic" reversed>
@@ -307,14 +306,14 @@ test_eval!(
 
 test_eval!(
   list_nested_ordered,
-  indoc! {r#"
+  adoc! {r#"
     . Step 1
     . Step 2
     .. Step 2a
     .. Step 2b
     . Step 3
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <ol class="arabic">
         <li><p>Step 1</p></li>
@@ -335,7 +334,7 @@ test_eval!(
 
 test_eval!(
   list_unordered_within_ordered,
-  indoc! {r#"
+  adoc! {r#"
     . Linux
     * Fedora
     * Ubuntu
@@ -344,7 +343,7 @@ test_eval!(
     * FreeBSD
     * NetBSD
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <ol class="arabic">
         <li>
@@ -373,7 +372,7 @@ test_eval!(
 
 test_eval!(
   list_unordered_within_ordered_spaced,
-  indoc! {r#"
+  adoc! {r#"
     . Linux
 
       * Fedora
@@ -385,7 +384,7 @@ test_eval!(
       * FreeBSD
       * NetBSD
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <ol class="arabic">
         <li>
@@ -414,7 +413,7 @@ test_eval!(
 
 test_eval!(
   list_ordered_marker_override,
-  indoc! {r#"
+  adoc! {r#"
     [lowerroman,start=5]
     . Five
     . Six
@@ -424,7 +423,7 @@ test_eval!(
     .. c
     . Seven
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist lowerroman">
       <ol class="lowerroman" type="i" start="5">
         <li><p>Five</p></li>
@@ -446,14 +445,14 @@ test_eval!(
 
 test_eval!(
   checklist,
-  indoc! {r#"
+  adoc! {r#"
     [.custom-class]
     * [*] checked
     * [x] also checked
     * [ ] not checked
     * normal list item
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist checklist custom-class">
       <ul class="checklist">
         <li><p>&#10003; checked</p></li>
@@ -467,13 +466,13 @@ test_eval!(
 
 test_eval!(
   list_interactive_checklist,
-  indoc! {r#"
+  adoc! {r#"
     [%interactive]
     * [*] checked
     * [x] also checked
     * [ ] not checked
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist checklist">
       <ul class="checklist">
         <li><p><input type="checkbox" data-item-complete="1" checked> checked</p></li>
@@ -486,11 +485,11 @@ test_eval!(
 
 test_eval!(
   ordered_list_not_checklist,
-  indoc! {r#"
+  adoc! {r#"
     . [*] checked
     . [ ] not checked
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="olist arabic">
       <ol class="arabic">
         <li><p>[*] checked</p></li>
@@ -502,12 +501,12 @@ test_eval!(
 
 test_eval!(
   list_item_continuation,
-  indoc! {r#"
+  adoc! {r#"
     * principle
     +
     with continuation
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li>
@@ -523,14 +522,14 @@ test_eval!(
 
 test_eval!(
   list_item_2_continuations,
-  indoc! {r#"
+  adoc! {r#"
     * principle
     +
     with continuation
     +
     and another
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li>
@@ -549,7 +548,7 @@ test_eval!(
 
 test_eval!(
   list_items_w_delimited_blocks,
-  indoc! {r#"
+  adoc! {r#"
     * principle
     +
     --
@@ -566,7 +565,7 @@ test_eval!(
     para 4
     --
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="ulist">
       <ul>
         <li>
@@ -594,14 +593,14 @@ test_eval!(
 
 test_eval!(
   list_empty_principle,
-  indoc! {r#"
+  adoc! {r#"
      . {empty}
      +
      --
      para
      --
    "#},
-  indoc! {r#"
+  html! {r#"
      <div class="olist arabic">
        <ol class="arabic">
          <li>
@@ -619,14 +618,14 @@ test_eval!(
 
 test_eval!(
   list_item_principle_from_attr_ref,
-  indoc! {r#"
+  adoc! {r#"
     para
 
     :foo: bar
 
     . {foo}
   "#},
-  indoc! {r#"
+  html! {r#"
     <div class="paragraph"><p>para</p></div>
     <div class="olist arabic">
       <ol class="arabic">
@@ -639,18 +638,32 @@ test_eval!(
 // helpers
 
 #[macro_export]
+macro_rules! html {
+  ($s:expr) => {{
+    let re = Regex::new(r"(?m)\n\s*").unwrap();
+    let expected = ::indoc::indoc!($s);
+    re.replace_all(expected, "")
+  }};
+}
+
+#[macro_export]
+macro_rules! adoc {
+  ($s:expr) => {
+    ::indoc::indoc!($s)
+  };
+}
+
+#[macro_export]
 macro_rules! test_eval {
   ($name:ident, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
       let bump = &Bump::new();
-      let re = Regex::new(r"(?m)\n\s*").unwrap();
-      let expected = re.replace_all($expected, "");
       let parser = Parser::new(bump, $input);
       let doc = parser.parse().unwrap().document;
       assert_eq!(
         eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
-        expected,
+        $expected.to_string(),
         "input was\n\n{}",
         $input
       );
