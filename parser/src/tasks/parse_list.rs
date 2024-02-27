@@ -163,8 +163,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 mod tests {
   use super::*;
   use crate::test::*;
-  use indoc::indoc;
-  use pretty_assertions::assert_eq;
+  use test_utils::{adoc, assert_eq};
 
   #[test]
   fn test_list_separation() {
@@ -190,13 +189,7 @@ mod tests {
       let content = parser.parse().unwrap().document.content;
       match content {
         DocContent::Blocks(blocks) => {
-          dbg!(&blocks);
-          assert_eq!(
-            blocks.len(),
-            block_contexts.len(),
-            "input was: \n\n```\n{}\n```",
-            input
-          );
+          assert_eq!( blocks.len(), block_contexts.len(), from: input);
           for (block, context) in blocks.iter().zip(block_contexts.iter()) {
             assert_eq!(block.context, *context);
           }
@@ -383,7 +376,7 @@ mod tests {
         ]),
       ),
       (
-        indoc! {"
+        adoc! {"
           . Linux
 
             * Fedora
@@ -424,7 +417,7 @@ mod tests {
         }]),
       ),
       (
-        indoc! {"
+        adoc! {"
           * [*] checked
           * [x] also checked
           * [ ] not checked
@@ -455,7 +448,7 @@ mod tests {
         ]),
       ),
       (
-        indoc! {"
+        adoc! {"
           * principle
           +
           with continuation
@@ -476,7 +469,7 @@ mod tests {
         }]),
       ),
       (
-        indoc! {"
+        adoc! {"
           * principle
           +
           with continuation
@@ -507,6 +500,61 @@ mod tests {
           ]),
         }]),
       ),
+      (
+        adoc! {"
+          * principle
+          +
+          ----
+          listing 1
+          ----
+          +
+          some more principle
+
+          * second principle
+          +
+          ----
+          listing 2
+          ----
+        "},
+        BlockContext::UnorderedList,
+        b.vec([
+          ListItem {
+            marker: ListMarker::Star(1),
+            marker_src: b.src("*", l(0, 1)),
+            checklist: None,
+            principle: b.inodes([n_text("principle", 2, 11, b)]),
+            blocks: b.vec([
+              Block {
+                title: None,
+                attrs: None,
+                content: BlockContent::Simple(b.inodes([n_text("listing 1", 19, 28, b)])),
+                context: BlockContext::Listing,
+                loc: l(14, 33),
+              },
+              Block {
+                title: None,
+                attrs: None,
+                content: BlockContent::Simple(b.inodes([n_text("some more principle", 36, 55, b)])),
+                context: BlockContext::Paragraph,
+                loc: l(36, 55),
+              },
+            ]),
+          },
+          ListItem {
+            marker: ListMarker::Star(1),
+            marker_src: b.src("*", l(57, 58)),
+            checklist: None,
+            principle: b.inodes([n_text("second principle", 59, 75, b)]),
+            blocks: b.vec([Block {
+              title: None,
+              attrs: None,
+              content: BlockContent::Simple(b.inodes([n_text("listing 2", 83, 92, b)])),
+              context: BlockContext::Listing,
+              loc: l(78, 97),
+            }]),
+          },
+        ]),
+      ),
     ];
     run(cases, b);
   }
@@ -516,9 +564,9 @@ mod tests {
       let mut parser = Parser::new(bump, input);
       let lines = parser.read_lines().unwrap();
       let block = parser.parse_list(lines, None).unwrap();
-      assert_eq!(block.context, context, "input was:\n\n```\n{}```\n", input);
+      assert_eq!(block.context, context, from: input);
       if let BlockContent::List { items, .. } = block.content {
-        assert_eq!(items, expected_items, "input was:\n\n```\n{}```\n", input);
+        assert_eq!(items, expected_items, from: input);
       } else {
         panic!("expected list, got {:?}", block.content);
       }

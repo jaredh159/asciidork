@@ -122,6 +122,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     delimiter: Delimiter,
   ) -> Option<ContiguousLines<'bmp, 'src>> {
     let mut lines = self.read_lines()?;
+    if lines.any(|l| l.is_delimiter(delimiter)) {
+      return Some(lines);
+    }
     while !self.lexer.is_eof() && !self.at_delimiter(delimiter) {
       // PERF: pushing a bunch is bad, because this is actually
       // vec.insert(0, line), probably better to accum and concat

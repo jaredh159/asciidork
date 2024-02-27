@@ -29,6 +29,13 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.reversed_lines.last()
   }
 
+  pub fn iter(&'bmp self) -> impl ExactSizeIterator<Item = &Line<'bmp, 'src>> + '_ {
+    LinesIter {
+      lines: self,
+      pos: self.num_lines() - 1,
+    }
+  }
+
   pub fn last(&self) -> Option<&Line<'bmp, 'src>> {
     self.reversed_lines.first()
   }
@@ -182,9 +189,39 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
   }
 }
 
+struct LinesIter<'bmp, 'src> {
+  lines: &'bmp ContiguousLines<'bmp, 'src>,
+  pos: usize,
+}
+
+impl<'bmp, 'src> Iterator for LinesIter<'bmp, 'src> {
+  type Item = &'bmp Line<'bmp, 'src>;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    if self.pos == usize::MAX {
+      None
+    } else {
+      let item = self.lines.reversed_lines.get(self.pos);
+      self.pos = if self.pos == 0 {
+        usize::MAX
+      } else {
+        self.pos - 1
+      };
+      item
+    }
+  }
+}
+
+impl<'bmp, 'src> ExactSizeIterator for LinesIter<'bmp, 'src> {
+  fn len(&self) -> usize {
+    self.lines.reversed_lines.len()
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::assert_eq;
 
   #[test]
   fn test_is_quoted_paragraph() {
@@ -199,12 +236,7 @@ mod tests {
     for (input, expected) in cases {
       let mut parser = Parser::new(bump, input);
       let lines = parser.read_lines().unwrap();
-      assert_eq!(
-        lines.is_quoted_paragraph(),
-        expected,
-        "input was:\n\n```\n{}\n```\n",
-        input
-      );
+      assert_eq!(lines.is_quoted_paragraph(), expected, from: input);
     }
   }
 }

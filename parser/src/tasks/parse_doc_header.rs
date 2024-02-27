@@ -60,5 +60,64 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 }
 
 pub fn is_doc_header(lines: &ContiguousLines) -> bool {
-  lines.any(|l| l.is_header(1) || l.starts_with_seq(&[Colon, Word, Colon]))
+  for line in lines.iter() {
+    if line.is_header(1)
+      || line.starts_with_seq(&[Colon, Word, Colon])
+      || line.starts_with_seq(&[Colon, Bang, Word, Colon])
+    {
+      return true;
+    } else if line.starts(TokenKind::CommentLine) {
+      continue;
+    } else {
+      return false;
+    }
+  }
+  false
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use test_utils::{adoc, assert_eq};
+
+  #[test]
+  fn test_is_doc_header() {
+    let cases = vec![
+      (
+        adoc! {"
+          // ignored
+          = Title
+          :foo: bar
+        "},
+        true,
+      ),
+      (
+        adoc! {"
+          = Title
+          :foo: bar
+        "},
+        true,
+      ),
+      (":foo: bar\n", true),
+      (":!foo:\n", true),
+      (":!foo-bar:\n", true),
+      (
+        adoc! {"
+          ----
+          = Title
+          ----
+        "},
+        false,
+      ),
+    ];
+    let bump = &Bump::new();
+    for (input, expected) in cases {
+      let lines = Parser::new(bump, input).read_lines().unwrap();
+      assert_eq!(
+        is_doc_header(&lines),
+        expected,
+        from: input
+      );
+    }
+  }
 }

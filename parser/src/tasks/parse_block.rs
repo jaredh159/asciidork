@@ -247,14 +247,12 @@ mod tests {
   use super::*;
   use crate::test::*;
   use ast::variants::inline::*;
-  use indoc::indoc;
-  use pretty_assertions::assert_eq;
+  use test_utils::{adoc, assert_eq, parse_block};
 
   #[test]
   fn test_parse_simple_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "hello mamma,\nhello papa\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    let input = "hello mamma,\nhello papa\n\n";
+    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Paragraph,
       content: Content::Simple(b.inodes([
@@ -270,9 +268,11 @@ mod tests {
 
   #[test]
   fn test_parse_listing_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "[listing]\nfoo `bar`\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    let input = adoc! {"
+      [listing]
+      foo `bar`
+    "};
+    parse_block!(input, block, b);
     let expected = Block {
       attrs: Some(AttrList::positional("listing", l(1, 8), b)),
       context: Context::Listing,
@@ -285,15 +285,13 @@ mod tests {
 
   #[test]
   fn test_parse_delimited_listing_block() {
-    let b = &Bump::new();
-    let input = indoc! {"
+    let input = adoc! {"
       ----
       foo `bar`
       baz
       ----
     "};
-    let mut parser = Parser::new(b, input);
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Listing,
       content: Content::Simple(b.inodes([
@@ -309,16 +307,14 @@ mod tests {
 
   #[test]
   fn test_parse_delimited_listing_block_w_double_newline() {
-    let b = &Bump::new();
-    let input = indoc! {"
+    let input = adoc! {"
       ----
       foo `bar`
 
       baz
       ----
     "};
-    let mut parser = Parser::new(b, input);
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Listing,
       content: Content::Simple(b.inodes([
@@ -335,9 +331,7 @@ mod tests {
 
   #[test]
   fn test_parse_doc_attr_entry() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, ":!figure-caption:\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!(":!figure-caption:\n\n", block, b);
     let expected = Block {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
@@ -349,9 +343,7 @@ mod tests {
 
   #[test]
   fn test_parse_block_titles() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, ".My Title\nfoo\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!(".My Title\nfoo\n\n", block, b);
     let expected = Block {
       title: Some(b.src("My Title", l(1, 9))),
       attrs: None,
@@ -364,9 +356,7 @@ mod tests {
 
   #[test]
   fn test_parse_admonitions() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "TIP: foo\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("TIP: foo\n\n", block, b);
     let expected = Block {
       context: Context::AdmonitionTip,
       content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(5, 8))])),
@@ -375,8 +365,7 @@ mod tests {
     };
     assert_eq!(block, expected);
 
-    let mut parser = Parser::new(b, "[pos]\nTIP: foo\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("[pos]\nTIP: foo\n\n", block, b);
     let expected = Block {
       attrs: Some(AttrList::positional("pos", l(1, 4), b)),
       context: Context::AdmonitionTip,
@@ -386,8 +375,7 @@ mod tests {
     };
     assert_eq!(block, expected);
 
-    let mut parser = Parser::new(b, "[WARNING]\nTIP: foo\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("[WARNING]\nTIP: foo\n\n", block, b);
     let expected = Block {
       attrs: Some(AttrList::positional("WARNING", l(1, 8), b)),
       context: Context::AdmonitionWarning,
@@ -399,8 +387,7 @@ mod tests {
     };
     assert_eq!(block, expected);
 
-    let mut parser = Parser::new(b, "[WARNING]\n====\nfoo\n====\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("[WARNING]\n====\nfoo\n====\n\n", block, b);
     let expected = Block {
       title: None,
       attrs: Some(AttrList::positional("WARNING", l(1, 8), b)),
@@ -415,8 +402,7 @@ mod tests {
     };
     assert_eq!(block, expected);
 
-    let mut parser = Parser::new(b, "[CAUTION]\n====\nNOTE: foo\n====\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("[CAUTION]\n====\nNOTE: foo\n====\n\n", block, b);
     let expected = Block {
       title: None,
       attrs: Some(AttrList::positional("CAUTION", l(1, 8), b)),
@@ -434,9 +420,7 @@ mod tests {
 
   #[test]
   fn test_parse_comment_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "//-");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("//-", block, b);
     let expected = Block {
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
@@ -448,9 +432,7 @@ mod tests {
 
   #[test]
   fn test_parse_image_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "image::name.png[]\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("image::name.png[]\n\n", block, b);
     let expected = Block {
       context: Context::Image,
       content: Content::Empty(EmptyMetadata::Image {
@@ -465,9 +447,7 @@ mod tests {
 
   #[test]
   fn test_parse_delimited_open_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "--\nfoo\n--\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("--\nfoo\n--\n\n", block, b);
     let expected = Block {
       context: Context::Open,
       content: Content::Compound(b.vec([Block {
@@ -484,9 +464,7 @@ mod tests {
 
   #[test]
   fn test_parse_delimited_example_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "====\nfoo\n====\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("====\nfoo\n====\n\n", block, b);
     let expected = Block {
       context: Context::Example,
       content: Content::Compound(b.vec([Block {
@@ -503,14 +481,12 @@ mod tests {
 
   #[test]
   fn test_quoted_paragraph() {
-    let b = &Bump::new();
-    let input = indoc! {r#"
+    let input = adoc! {r#"
       "I hold it that a little blah,
       and as necessary in the blah."
       -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
     "#};
-    let mut parser = Parser::new(b, input);
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!(input, block, b);
     let expected = Block {
       attrs: None,
       context: Context::QuotedParagraph,
@@ -531,16 +507,14 @@ mod tests {
 
   #[test]
   fn test_quoted_paragraph_no_cite_w_attr_meta() {
-    let b = &Bump::new();
-    let input = indoc! {r#"
+    let input = adoc! {r#"
       .A Title
       [#foo]
       "I hold it that a little blah,
       and as necessary in the blah."
       -- Thomas Jefferson
     "#};
-    let mut parser = Parser::new(b, input);
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!(input, block, b);
     let expected = Block {
       attrs: Some(AttrList {
         id: Some(b.src("foo", l(11, 14))),
@@ -564,9 +538,7 @@ mod tests {
 
   #[test]
   fn test_simple_blockquote() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "[quote,author,location]\nfoo\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("[quote,author,location]\nfoo\n\n", block, b);
     let expected = Block {
       attrs: Some(AttrList {
         positional: b.vec([
@@ -586,15 +558,13 @@ mod tests {
 
   #[test]
   fn test_parse_delimited_blockquote() {
-    let b = &Bump::new();
-    let input = indoc! {"
+    let input = adoc! {"
       [quote,author,location]
       ____
       foo
       ____
     "};
-    let mut parser = Parser::new(b, input);
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!(input, block, b);
     let expected = Block {
       attrs: Some(AttrList {
         positional: b.vec([
@@ -619,9 +589,7 @@ mod tests {
 
   #[test]
   fn test_undelimited_sidebar() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "[sidebar]\nfoo\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("[sidebar]\nfoo\n\n", block, b);
     let expected = Block {
       attrs: Some(AttrList::positional("sidebar", l(1, 8), b)),
       context: Context::Sidebar,
@@ -634,9 +602,7 @@ mod tests {
 
   #[test]
   fn test_parse_empty_delimited_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "--\n--\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("--\n--\n\n", block, b);
     let expected = Block {
       context: Context::Open,
       content: Content::Compound(b.vec([])),
@@ -648,9 +614,7 @@ mod tests {
 
   #[test]
   fn test_parse_delimited_sidebar_block() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "****\nfoo\n****\n\n");
-    let block = parser.parse_block().unwrap().unwrap();
+    parse_block!("****\nfoo\n****\n\n", block, b);
     let expected = Block {
       context: Context::Sidebar,
       content: Content::Compound(b.vec([Block {
@@ -667,15 +631,14 @@ mod tests {
 
   #[test]
   fn test_nested_delimiter_blocks() {
-    let b = &Bump::new();
-    let input = "
-****
---
-foo
---
-****";
-    let mut parser = Parser::new(b, input.trim());
-    let block = parser.parse_block().unwrap().unwrap();
+    let input = adoc! {"
+      ****
+      --
+      foo
+      --
+      ****
+    "};
+    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Sidebar,
       content: Content::Compound(b.vec([Block {
@@ -694,20 +657,20 @@ foo
     };
     assert_eq!(block, expected);
 
-    let input = "
-****
+    let input = adoc! {"
+      ****
 
-.Bar
---
+      .Bar
+      --
 
-foo
+      foo
 
 
---
+      --
 
-****";
-    let mut parser = Parser::new(b, input.trim());
-    let block = parser.parse_block().unwrap().unwrap();
+      ****
+    "};
+    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Sidebar,
       content: Content::Compound(b.vec([Block {
@@ -730,18 +693,16 @@ foo
 
   #[test]
   fn test_parse_multi_para_delimited_sidebar_block() {
-    let b = &Bump::new();
-    let input = "
-****
-This is content in a sidebar block.
+    let input = adoc! {"
+      ****
+      This is content in a sidebar block.
 
-image::name.png[]
+      image::name.png[]
 
-This is more content in the sidebar block.
-****
-      ";
-    let mut parser = Parser::new(b, input.trim());
-    let block = parser.parse_block().unwrap().unwrap();
+      This is more content in the sidebar block.
+      ****
+    "};
+    parse_block!(input, block, b);
     let para_1_txt = n_text("This is content in a sidebar block.", 5, 40, b);
     let para_2_txt = n_text("This is more content in the sidebar block.", 61, 103, b);
     let expected = Block {

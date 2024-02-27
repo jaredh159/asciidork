@@ -3,11 +3,14 @@ name = "test-utils"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 indoc = "2.0.4"
-tl = "0.7.7"
+asciidork-parser = { path = "../parser" }
+pretty_assertions = "1.4.0"
+asciidork-ast = { path = "../ast" }
+lazy_static = "1.4.0"
+regex = { version = "1.10.2", features = ["std", "use_std"] }
 
 [lib]
 doctest = false

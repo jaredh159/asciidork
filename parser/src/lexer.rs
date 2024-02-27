@@ -395,7 +395,7 @@ mod tests {
   use super::*;
   use crate::token::TokenKind;
   use ast::SourceLocation;
-  use indoc::indoc;
+  use test_utils::{adoc, assert_eq};
 
   #[test]
   fn test_consume_line() {
@@ -521,7 +521,7 @@ mod tests {
         vec![(EqualSigns, "=="), (Whitespace, " "), (Word, "Title")],
       ),
       (
-        indoc! { "
+        adoc! { "
           // this comment line is ignored
           = Document Title
           Kismet R. Lee <kismet@asciidoctor.org>
@@ -603,12 +603,7 @@ mod tests {
           loc: SourceLocation::new(start, end),
           lexeme,
         };
-        assert_eq!(
-          lexer.next_token(),
-          expected_token,
-          "input was:\n\n```\n{}\n```\n",
-          input
-        );
+        assert_eq!(lexer.next_token(), expected_token, from: input);
         index = end;
       }
       assert_eq!(lexer.next_token().kind, Eof);

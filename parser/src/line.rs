@@ -69,6 +69,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.starts(Dots) && self.tokens().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
   }
 
+  pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
+    self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter() == Some(delimiter)
+  }
+
   pub fn discard(&mut self, n: usize) {
     for _ in 0..n {
       _ = self.consume_current();
@@ -412,6 +416,7 @@ mod tests {
   use crate::lexer::Lexer;
   use crate::token::{TokenKind::*, *};
   use bumpalo::Bump;
+  use test_utils::assert_eq;
 
   #[test]
   fn test_continues_list_item_principle() {
@@ -429,12 +434,7 @@ mod tests {
     for (input, expected) in cases {
       let mut lexer = Lexer::new(input);
       let line = lexer.consume_line(bump).unwrap();
-      assert_eq!(
-        line.continues_list_item_principle(),
-        expected,
-        "input was: `{}`",
-        input
-      );
+      assert_eq!(line.continues_list_item_principle(), expected, from: input);
     }
   }
 
@@ -456,12 +456,7 @@ mod tests {
       }
       let mut lexer = Lexer::new(input);
       let line = lexer.consume_line(bump).unwrap();
-      assert_eq!(
-        line.starts_nested_list(&stack),
-        expected,
-        "input was: `{}`",
-        input
-      );
+      assert_eq!(line.starts_nested_list(&stack), expected, from: input);
     }
   }
 
@@ -485,7 +480,7 @@ mod tests {
     for (input, marker) in cases {
       let mut lexer = Lexer::new(input);
       let line = lexer.consume_line(bump).unwrap();
-      assert_eq!(line.list_marker(), marker, "input was: `{}`", input);
+      assert_eq!(line.list_marker(), marker, from: input);
     }
   }
 
@@ -513,7 +508,7 @@ mod tests {
     for (input, expected) in cases {
       let mut lexer = Lexer::new(input);
       let line = lexer.consume_line(bump).unwrap();
-      assert_eq!(line.starts_list_item(), expected, "input was: `{}`", input);
+      assert_eq!(line.starts_list_item(), expected, from: input);
     }
   }
 

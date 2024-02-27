@@ -1,9 +1,7 @@
 use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
 use asciidork_eval::{eval, Flags};
 use asciidork_parser::prelude::*;
-
-use pretty_assertions::assert_eq;
-use regex::Regex;
+use test_utils::{adoc, assert_eq, html};
 
 test_eval!(
   most_basic_unordered_list,
@@ -547,6 +545,45 @@ test_eval!(
 );
 
 test_eval!(
+  list_items_w_delimited_listing_blocks,
+  adoc! {r#"
+    * item 1
+    +
+    ----
+    cont 1
+    ----
+
+    * item 2
+    +
+    ----
+    cont 2
+    ----
+  "#},
+  html! {r#"
+    <div class="ulist">
+      <ul>
+        <li>
+          <p>item 1</p>
+          <div class="listingblock">
+            <div class="content">
+              <pre>cont 1</pre>
+            </div>
+          </div>
+        </li>
+        <li>
+          <p>item 2</p>
+          <div class="listingblock">
+            <div class="content">
+              <pre>cont 2</pre>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  "#}
+);
+
+test_eval!(
   list_items_w_delimited_blocks,
   adoc! {r#"
     * principle
@@ -635,23 +672,31 @@ test_eval!(
   "#}
 );
 
+test_eval!(
+  complex_continuation_example,
+  adoc! {r#"
+    * The header in AsciiDoc must start with a document title.
+    +
+    ----
+    = Document Title
+    ----
+    +
+    Keep in mind that the header is optional.
+
+    * Optional author and revision information lines immediately follow the document title.
+    +
+    ----
+    = Document Title
+    Doc Writer <doc.writer@asciidoc.org>
+    v1.0, 2022-01-01
+    ----
+  "#},
+  r#"<div class="ulist"><ul><li><p>The header in AsciiDoc must start with a document title.</p><div class="listingblock"><div class="content"><pre>= Document Title</pre></div></div><div class="paragraph"><p>Keep in mind that the header is optional.</p></div></li><li><p>Optional author and revision information lines immediately follow the document title.</p><div class="listingblock"><div class="content"><pre>= Document Title
+Doc Writer &lt;doc.writer@asciidoc.org&gt;
+v1.0, 2022-01-01</pre></div></div></li></ul></div>"#
+);
+
 // helpers
-
-#[macro_export]
-macro_rules! html {
-  ($s:expr) => {{
-    let re = Regex::new(r"(?m)\n\s*").unwrap();
-    let expected = ::indoc::indoc!($s);
-    re.replace_all(expected, "")
-  }};
-}
-
-#[macro_export]
-macro_rules! adoc {
-  ($s:expr) => {
-    ::indoc::indoc!($s)
-  };
-}
 
 #[macro_export]
 macro_rules! test_eval {
@@ -661,12 +706,8 @@ macro_rules! test_eval {
       let bump = &Bump::new();
       let parser = Parser::new(bump, $input);
       let doc = parser.parse().unwrap().document;
-      assert_eq!(
-        eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
-        $expected.to_string(),
-        "input was\n\n{}",
-        $input
-      );
+      let actual = eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap();
+      assert_eq!(actual, $expected.to_string(), from: $input);
     }
   };
 }

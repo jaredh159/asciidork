@@ -596,7 +596,7 @@ fn escapes_pattern(line: &Line, subs: &Substitutions) -> bool {
 mod tests {
   use super::*;
   use crate::test::*;
-  use pretty_assertions::assert_eq;
+  use test_utils::assert_eq;
 
   #[test]
   fn test_joining_newlines() {
@@ -983,7 +983,7 @@ mod tests {
       let mut parser = Parser::new(bump, input);
       let mut block = parser.read_lines().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
-      assert_eq!(inlines, expected, "input was: `{}`", input);
+      assert_eq!(inlines, expected, from: input);
     }
   }
 }
