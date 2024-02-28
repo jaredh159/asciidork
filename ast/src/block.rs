@@ -110,6 +110,7 @@ impl BlockContext {
       "sidebar" => Some(BlockContext::Sidebar),
       "quote" => Some(BlockContext::BlockQuote),
       "listing" => Some(BlockContext::Listing),
+      "literal" => Some(BlockContext::Literal),
       _ => Self::derive_admonition(string),
     }
   }

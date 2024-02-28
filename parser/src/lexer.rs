@@ -118,7 +118,10 @@ impl<'src> Lexer<'src> {
   pub fn at_delimiter_line(&self) -> Option<(usize, char)> {
     if !self.at_line_start
       || self.is_eof()
-      || !matches!(self.peek, Some('_') | Some('-') | Some('*') | Some('='))
+      || !matches!(
+        self.peek,
+        Some('_') | Some('-') | Some('*') | Some('=') | Some('.')
+      )
     {
       return None;
     }
@@ -129,6 +132,7 @@ impl<'src> Lexer<'src> {
       [Some('*'), Some('*'), Some('*'), Some('*'), Some('\n') | None]
       | [Some('_'), Some('_'), Some('_'), Some('_'), Some('\n') | None]
       | [Some('-'), Some('-'), Some('-'), Some('-'), Some('\n') | None]
+      | [Some('.'), Some('.'), Some('.'), Some('.'), Some('\n') | None]
       | [Some('='), Some('='), Some('='), Some('='), Some('\n') | None] => {
         Some((4, sequence[0].unwrap()))
       }
@@ -432,6 +436,7 @@ mod tests {
       ("====", vec![(DelimiterLine, "====")]),
       ("____", vec![(DelimiterLine, "____")]),
       ("----", vec![(DelimiterLine, "----")]),
+      ("....", vec![(DelimiterLine, "....")]),
       (
         "****\nfoo",
         vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],

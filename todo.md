@@ -1,10 +1,11 @@
 ## todo
 
+- [ ] indented listing/literal blocks
 - [ ] should `--embedded` be passed to Parser? so it doesn't try to parse a doc header?
+      (pretty confident: yes)
 - [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
       tests
 - [ ] definition lists
-- [ ] listing blocks (delimited and non-delimited)
 - [ ] asciidoctor html backend _stylesheets,_ @see
       https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
       `html5.rb`
@@ -20,6 +21,8 @@
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example
 - [ ] h1 subtitle
+- [√] literal blocks (delimited and non-delimited)
+- [√] listing blocks (delimited and non-delimited)
 - [•] soon: multi-file non corner painting
 - [√] block quotes
 - [√] poc, non-corner-painting backend/interpreter
@@ -38,6 +41,8 @@ bump-allocated version
 
 ## questions
 
+- listing/literal block indent method: is multiline supported? asciidoc does support, but
+  it's not documented...
 - do we track source locations for attr_lists?
 - how can i see how asciidoctor emits asg?
 - special char substitution... when? what do asg source locations look like for these?

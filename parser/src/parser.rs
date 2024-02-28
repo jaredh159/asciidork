@@ -30,7 +30,7 @@ impl ParseContext {
     let restore = self.subs;
     #[allow(clippy::single_match)]
     match block_context {
-      BlockContext::Listing => {
+      BlockContext::Listing | BlockContext::Literal => {
         self.subs = Substitutions::none();
         self.subs.special_chars = true;
       }
@@ -140,6 +140,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Delimiter::Open => self.lexer.at_delimiter_line() == Some((2, '-')),
       Delimiter::Sidebar => self.lexer.at_delimiter_line() == Some((4, '*')),
       Delimiter::Listing => self.lexer.at_delimiter_line() == Some((4, '-')),
+      Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, '.')),
     }
   }
 

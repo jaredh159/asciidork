@@ -6,6 +6,7 @@ pub enum Delimiter {
   Example,
   Open,
   Sidebar,
+  Literal,
   Listing,
 }
 
@@ -17,6 +18,7 @@ impl From<Delimiter> for BlockContext {
       Delimiter::Example => BlockContext::Example,
       Delimiter::BlockQuote => BlockContext::BlockQuote,
       Delimiter::Listing => BlockContext::Listing,
+      Delimiter::Literal => BlockContext::Literal,
     }
   }
 }
@@ -31,6 +33,7 @@ impl<'src> Token<'src> {
       "====" => Some(Delimiter::Example),
       "____" => Some(Delimiter::BlockQuote),
       "----" => Some(Delimiter::Listing),
+      "...." => Some(Delimiter::Literal),
       "--" => Some(Delimiter::Open),
       _ => None,
     }

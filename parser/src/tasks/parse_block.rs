@@ -25,7 +25,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     match first_token.kind {
-      DelimiterLine if self.ctx.delimiter == first_token.to_delimeter() => {
+      DelimiterLine
+        if self.ctx.delimiter.is_some() && self.ctx.delimiter == first_token.to_delimeter() =>
+      {
         self.restore_lines(lines);
         return Ok(None);
       }
@@ -93,9 +95,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let context = meta.block_style_or(Context::from(delimiter));
     let restore_subs = self.ctx.set_subs_for(context);
 
-    // newlines have a different meaning in a listing block, so we have to
+    // newlines have a different meaning in a listing/literal block, so we have to
     // manually gather all (including empty) lines until the end delimiter
-    let content = if matches!(context, Context::Listing) {
+    let content = if matches!(context, Context::Listing | Context::Literal) {
       let mut lines = self
         .read_lines_until(delimiter)
         .unwrap_or_else(|| ContiguousLines::new(bvec![in self.bump]));
@@ -267,6 +269,69 @@ mod tests {
   }
 
   #[test]
+  fn test_parse_literal_block() {
+    let input = adoc! {"
+      [literal]
+      foo `bar`
+    "};
+    parse_block!(input, block, b);
+    let expected = Block {
+      attrs: Some(AttrList::positional("literal", l(1, 8), b)),
+      context: Context::Literal,
+      content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
+      loc: l(0, 19),
+      ..b.empty_block()
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_literal_block() {
+    let input = adoc! {"
+      ....
+      foo `bar`
+      baz
+      ....
+    "};
+    parse_block!(input, block, b);
+    let expected = Block {
+      context: Context::Literal,
+      content: Content::Simple(b.inodes([
+        n_text("foo `bar`", 5, 14, b),
+        n(Inline::JoiningNewline, l(14, 15)),
+        n_text("baz", 15, 18, b),
+      ])),
+      loc: l(0, 23),
+      ..b.empty_block()
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_literal_block_w_double_newline() {
+    let input = adoc! {"
+      ....
+      foo `bar`
+
+      baz
+      ....
+    "};
+    parse_block!(input, block, b);
+    let expected = Block {
+      context: Context::Literal,
+      content: Content::Simple(b.inodes([
+        n_text("foo `bar`", 5, 14, b),
+        n(Inline::JoiningNewline, l(14, 15)),
+        n(Inline::JoiningNewline, l(15, 16)),
+        n_text("baz", 16, 19, b),
+      ])),
+      loc: l(0, 24),
+      ..b.empty_block()
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
   fn test_parse_listing_block() {
     let input = adoc! {"
       [listing]
@@ -328,6 +393,19 @@ mod tests {
     };
     assert_eq!(block, expected);
   }
+
+  // jared
+  // #[test]
+  // fn test_parse_indent_method_literal_block() {
+  //   parse_block!(" foo `bar`", block, b);
+  //   let expected = Block {
+  //     context: Context::Literal,
+  //     content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
+  //     loc: l(0, 19),
+  //     ..b.empty_block()
+  //   };
+  //   assert_eq!(block, expected);
+  // }
 
   #[test]
   fn test_parse_doc_attr_entry() {
