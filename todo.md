@@ -9,8 +9,6 @@
 - [ ] asciidoctor html backend _stylesheets,_ @see
       https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
       `html5.rb`
-- [ ] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
-      folded into ContiguousLines so that it shows up as one line, i think
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
@@ -21,6 +19,8 @@
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example
 - [ ] h1 subtitle
+- [√] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
+  folded into ContiguousLines so that it shows up as one line, i think
 - [√] literal blocks (delimited and non-delimited)
 - [√] listing blocks (delimited and non-delimited)
 - [•] soon: multi-file non corner painting

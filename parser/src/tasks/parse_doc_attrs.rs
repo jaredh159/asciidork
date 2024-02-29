@@ -1,5 +1,8 @@
+use std::borrow::Cow;
+
 use lazy_static::lazy_static;
 use regex::Regex;
+use smallvec::SmallVec;
 
 use crate::internal::*;
 
@@ -51,8 +54,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         )?;
       }
 
-      let value = SUBS_RE.replace_all(re_match.as_str(), |caps: &regex::Captures| {
-        println!("caps: {:?}", caps);
+      let joined = self.join_wrapped_value(re_match.as_str(), lines);
+      let value = SUBS_RE.replace_all(&joined, |caps: &regex::Captures| {
         if let Some(AttrEntry::String(replace)) = attrs.get(caps.get(1).unwrap().as_str()) {
           replace
         } else {
@@ -69,6 +72,37 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       attr,
       line.last_location().unwrap().end,
     )))
+  }
+
+  fn join_wrapped_value(
+    &self,
+    mut first_line_src: &'src str,
+    lines: &mut ContiguousLines,
+  ) -> Cow<str> {
+    let has_continuation = if first_line_src.ends_with(" \\") {
+      first_line_src = &first_line_src[..first_line_src.len() - 2];
+      true
+    } else {
+      false
+    };
+
+    if lines.is_empty() || !has_continuation {
+      return Cow::Borrowed(first_line_src);
+    }
+
+    let mut pieces = SmallVec::<[&str; 8]>::new();
+    pieces.push(first_line_src);
+
+    while !lines.is_empty() {
+      let next_line = lines.consume_current().unwrap();
+      if next_line.src.ends_with(" \\") {
+        pieces.push(&next_line.src[..next_line.src.len() - 2]);
+      } else {
+        pieces.push(next_line.src);
+        break;
+      }
+    }
+    Cow::Owned(pieces.join(" "))
   }
 }
 
@@ -103,6 +137,18 @@ mod tests {
       (
         ":foo-bar: baz, rofl, lol",
         ("foo-bar", AttrEntry::String("baz, rofl, lol".to_string())),
+      ),
+      (
+        ":foo: bar \\\nand baz",
+        ("foo", AttrEntry::String("bar and baz".to_string())),
+      ),
+      (
+        ":foo: bar \\\nand baz \\\nand qux",
+        ("foo", AttrEntry::String("bar and baz and qux".to_string())),
+      ),
+      (
+        ":foo: bar \\\n",
+        ("foo", AttrEntry::String("bar".to_string())),
       ),
     ];
     for (input, (expected_key, expected_val)) in cases {

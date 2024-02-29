@@ -673,6 +673,27 @@ test_eval!(
 );
 
 test_eval!(
+  list_item_principle_from_multiline_attr_ref,
+  adoc! {r#"
+    para
+
+    :foo: one \
+    and two \
+    and three
+
+    . {foo}
+  "#},
+  html! {r#"
+    <div class="paragraph"><p>para</p></div>
+    <div class="olist arabic">
+      <ol class="arabic">
+        <li><p>one and two and three</p></li>
+      </ol>
+    </div>
+  "#}
+);
+
+test_eval!(
   complex_continuation_example,
   adoc! {r#"
     * The header in AsciiDoc must start with a document title.
