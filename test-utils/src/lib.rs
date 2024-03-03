@@ -28,7 +28,13 @@ macro_rules! assert_eq {
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");
   }};
   ($left:expr, $right:expr, from: $adoc:expr) => {{
-    ::pretty_assertions::assert_eq!($left, $right, "input was:\n\n```\n{}```\n", $adoc);
+    ::pretty_assertions::assert_eq!(
+      $left,
+      $right,
+      "input was:\n\n```\n{}{}```\n",
+      $adoc,
+      if $adoc.ends_with('\n') { "" } else { "\n" }
+    );
   }};
 }
 
@@ -38,5 +44,15 @@ macro_rules! parse_block {
     let $bump = &Bump::new();
     let mut parser = Parser::new($bump, $input);
     let $block = parser.parse_block().unwrap().unwrap();
+  };
+}
+
+#[macro_export]
+macro_rules! parse_list {
+  ($input:expr, $list:ident, $bump:ident) => {
+    let $bump = &Bump::new();
+    let mut parser = Parser::new($bump, $input);
+    let lines = parser.read_lines().unwrap();
+    let $list = parser.parse_list(lines, None).unwrap();
   };
 }

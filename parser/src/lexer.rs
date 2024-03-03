@@ -9,6 +9,7 @@ pub struct Lexer<'src> {
   chars: Chars<'src>,
   peek: Option<char>,
   at_line_start: bool,
+  pattern_breaker: Option<TokenKind>,
 }
 
 impl<'src> Lexer<'src> {
@@ -18,6 +19,7 @@ impl<'src> Lexer<'src> {
       chars: src.chars(),
       peek: None,
       at_line_start: true,
+      pattern_breaker: None,
     };
     lexer.peek = lexer.chars.next();
     lexer
@@ -148,6 +150,7 @@ impl<'src> Lexer<'src> {
   }
 
   pub fn next_token(&mut self) -> Token<'src> {
+    let breaker = self.pattern_breaker.take();
     if let Some(token) = self.delimiter_line() {
       return token;
     }
@@ -155,11 +158,9 @@ impl<'src> Lexer<'src> {
     match self.advance() {
       Some('=') => self.repeating('=', EqualSigns),
       Some('-') => self.repeating('-', Dashes),
-      Some(' ') | Some('\t') => self.whitespace(),
+      Some(' ' | '\t') => self.whitespace(),
       Some('&') => self.single(Ampersand),
       Some('\n') => self.single(Newline),
-      Some(':') => self.single(Colon),
-      Some(';') => self.single(SemiColon),
       Some('<') => self.single(LessThan),
       Some('>') => self.single(GreaterThan),
       Some(',') => self.single(Comma),
@@ -178,10 +179,11 @@ impl<'src> Lexer<'src> {
       Some('#') => self.single(Hash),
       Some('%') => self.single(Percent),
       Some('"') => self.single(DoubleQuote),
-      Some('/') if at_line_start && self.peek == Some('/') => self.comment(),
       Some('\'') => self.single(SingleQuote),
       Some('\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
+      Some(ch) if ch == ';' || ch == ':' => self.maybe_term_delimiter(ch, breaker),
+      Some('/') if at_line_start && self.peek == Some('/') => self.comment(),
       Some(_) => self.word(),
       None => self.token(Eof, self.offset(), self.offset()),
     }
@@ -284,7 +286,7 @@ impl<'src> Lexer<'src> {
     // special cases
     match self.peek {
       // macros
-      Some(':') => {
+      Some(':') if !self.peek_term_delimiter() => {
         if self.is_macro_name(lexeme) {
           self.advance();
           return self.token(MacroName, start, end + 1);
@@ -311,6 +313,7 @@ impl<'src> Lexer<'src> {
     }
     self.token(Word, start, end)
   }
+
   fn reverse_by(&mut self, n: usize) {
     self.chars = self.src[self.offset() - n..].chars();
     self.peek = self.chars.next();
@@ -391,6 +394,57 @@ impl<'src> Lexer<'src> {
       loc: SourceLocation::new(start, end),
       lexeme: &self.src[start..end],
     }
+  }
+
+  fn maybe_term_delimiter(&mut self, ch: char, breaker: Option<TokenKind>) -> Token<'src> {
+    let kind = if ch == ':' { Colon } else { SemiColon };
+    if self.peek != Some(ch) {
+      return self.single(kind);
+    }
+    if breaker == Some(kind) {
+      self.pattern_breaker = Some(kind); // propagate the pattern breaker
+      return self.single(kind);
+    }
+    let mut c = self.chars.clone();
+    match c.next() {
+      None | Some(' ' | '\n' | '\t') => {
+        self.advance();
+        let end = self.offset();
+        return self.token(TermDelimiter, end - 2, end);
+      }
+      Some(n) if ch == ':' && n == ':' => {
+        let mut num_colons = 3;
+        let mut next = c.next();
+        if next == Some(':') {
+          num_colons += 1;
+          next = c.next();
+        }
+        if matches!(next, None | Some(' ' | '\n' | '\t')) {
+          self.skip(num_colons - 1);
+          let end = self.offset();
+          return self.token(TermDelimiter, end - num_colons, end);
+        }
+      }
+      _ => {}
+    }
+    // if we get here, we've determined there are repeating colons or semicolons
+    // but the pattern is NOT a term delimiter, so we set the pattern breaker so
+    // that the next time around we don't find a term delimiter
+    self.pattern_breaker = Some(kind);
+    self.single(kind)
+  }
+
+  fn peek_term_delimiter(&self) -> bool {
+    let mut c = self.chars.clone();
+    if c.next() != Some(':') {
+      return false;
+    }
+    matches!(
+      (c.next(), c.next(), c.next()),
+      (Some(' ' | '\t' | '\n') | None, _, _)
+        | (Some(':'), Some(' ' | '\t' | '\n') | None, _)
+        | (Some(':'), Some(':'), Some(' ' | '\t' | '\n') | None)
+    )
   }
 }
 
@@ -595,6 +649,58 @@ mod tests {
           (Dots, "."),
           (Newline, "\n"),
         ],
+      ),
+    ];
+    for (input, expected) in cases {
+      let mut lexer = Lexer::new(input);
+      let mut index = 0;
+      for (token_type, lexeme) in expected {
+        let start = index;
+        let end = start + lexeme.len();
+        let expected_token = Token {
+          kind: token_type,
+          loc: SourceLocation::new(start, end),
+          lexeme,
+        };
+        assert_eq!(lexer.next_token(), expected_token, from: input);
+        index = end;
+      }
+      assert_eq!(lexer.next_token().kind, Eof);
+    }
+  }
+
+  #[test]
+  fn test_tokens_description_list_delimiters() {
+    let col = (Colon, ":");
+    let semi = (SemiColon, ";");
+    let foo = (Word, "foo");
+    let space = (Whitespace, " ");
+    let cases = vec![
+      ("foo:: foo", vec![foo, (TermDelimiter, "::"), space, foo]),
+      ("foo::foo", vec![foo, col, col, foo]),
+      ("foo::", vec![foo, (TermDelimiter, "::")]),
+      ("foo;;", vec![foo, (TermDelimiter, ";;")]),
+      ("foo;;;", vec![foo, semi, semi, semi]),
+      ("foo:::", vec![foo, (TermDelimiter, ":::")]),
+      ("foo::::", vec![foo, (TermDelimiter, "::::")]),
+      ("foo:::::", vec![foo, col, col, col, col, col]),
+      ("foo:::::foo", vec![foo, col, col, col, col, col, foo]),
+      // doesn't trip up on macros
+      (
+        "image:: foo",
+        vec![(Word, "image"), (TermDelimiter, "::"), space, foo],
+      ),
+      (
+        "xfootnote:: foo",
+        vec![(Word, "xfootnote"), (TermDelimiter, "::"), space, foo],
+      ),
+      (
+        "kbd::: foo",
+        vec![(Word, "kbd"), (TermDelimiter, ":::"), space, foo],
+      ),
+      (
+        "footnote:::: foo",
+        vec![(Word, "footnote"), (TermDelimiter, "::::"), space, foo],
       ),
     ];
     for (input, expected) in cases {

@@ -1,11 +1,13 @@
 ## todo
 
+- [ ] breaks
+- [ ] hard returns
 - [ ] indented listing/literal blocks
 - [ ] should `--embedded` be passed to Parser? so it doesn't try to parse a doc header?
       (pretty confident: yes)
 - [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
       tests
-- [ ] definition lists
+- [ ] description lists
 - [ ] asciidoctor html backend _stylesheets,_ @see
       https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
       `html5.rb`
@@ -62,6 +64,7 @@ bump-allocated version
 - inside listing blocks, newlines are preserved, but DR. seems to trim leading/trailing
   newlines, and only honor those between, test "----\n\n\nfoo\n\nbar\n\n\n----", is this
   "spec", or just an accident/bug? (dork does not work this way currently)
+- thematic break doesn't seem to support an attr list for adding classes to it?
 
 ## weirdnesses...
 

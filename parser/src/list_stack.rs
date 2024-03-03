@@ -18,10 +18,10 @@ impl ListStack {
     }
   }
 
-  pub fn continues_current_list(&self, next: &ListMarker) -> bool {
+  pub fn continues_current_list(&self, next: ListMarker) -> bool {
     self.last().map_or(false, |last| match (last, next) {
       (ListMarker::Digits(_), ListMarker::Digits(_)) => true,
-      (last, next) => last == next,
+      (last, next) => *last == next,
     })
   }
 }
@@ -62,7 +62,7 @@ fn test_continues_current_list() {
     for marker in markers {
       stack.push(*marker);
     }
-    assert_eq!(stack.continues_current_list(&next), expected);
+    assert_eq!(stack.continues_current_list(next), expected);
   }
 }
 

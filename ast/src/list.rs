@@ -29,6 +29,7 @@ impl<'bmp> ListItem<'bmp> {
 pub enum ListVariant {
   Ordered,
   Unordered,
+  Description,
 }
 
 impl ListVariant {
@@ -36,16 +37,22 @@ impl ListVariant {
     match self {
       ListVariant::Ordered => BlockContext::OrderedList,
       ListVariant::Unordered => BlockContext::UnorderedList,
+      ListVariant::Description => BlockContext::DescriptionList,
     }
   }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum ListMarker {
+  // ordered
   Dot(u8),
   Digits(u16),
+  // unordered
   Dash,
   Star(u8),
+  // description
+  Colons(u8),
+  SemiColons,
 }
 
 impl From<ListMarker> for ListVariant {
@@ -55,6 +62,8 @@ impl From<ListMarker> for ListVariant {
       ListMarker::Digits(_) => ListVariant::Ordered,
       ListMarker::Dash => ListVariant::Unordered,
       ListMarker::Star(_) => ListVariant::Unordered,
+      ListMarker::Colons(_) => ListVariant::Description,
+      ListMarker::SemiColons => ListVariant::Description,
     }
   }
 }

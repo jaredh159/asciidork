@@ -319,9 +319,8 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn list_marker(&self) -> Option<ListMarker> {
-    if self.current_is(Word) {
-      return None;
-    }
+    // PERF: checking for list markers seems sort of sad, wonder if the
+    // Line could be created with some markers to speed these tests up
     let offset = if self.current_token().is(Whitespace) {
       1
     } else {
@@ -346,7 +345,22 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       Digits if next.is(Dots) && self.nth_token(offset + 2).is(Whitespace) => {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
-      _ => None,
+      _ => {
+        if !self.contains(Colon) && !self.contains(SemiColon) {
+          None
+        } else {
+          match DESCRIPTION_RE.captures(self.src) {
+            None => None,
+            Some(captures) => match captures.get(1).unwrap().as_str() {
+              "::" => Some(ListMarker::Colons(2)),
+              ":::" => Some(ListMarker::Colons(3)),
+              "::::" => Some(ListMarker::Colons(4)),
+              ";;" => Some(ListMarker::SemiColons),
+              _ => unreachable!(),
+            },
+          }
+        }
+      }
     }
   }
 
@@ -408,6 +422,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
 lazy_static! {
   pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)\s+.+"#).unwrap();
+}
+
+lazy_static! {
+  pub static ref DESCRIPTION_RE: Regex = Regex::new(r#"[^:;]+(:::?:?|;;)(?:\s|$)"#).unwrap();
 }
 
 #[cfg(test)]
@@ -475,6 +493,16 @@ mod tests {
       ("2. foo", Some(Digits(2))),
       ("--- foo", None),
       ("33.44. foo", None),
+      (":: bar", None),
+      ("foo:: bar", Some(Colons(2))),
+      ("foo::", Some(Colons(2))),
+      ("image:: baz", Some(Colons(2))),
+      ("image::cat.png[]", None),
+      ("foo::: bar", Some(Colons(3))),
+      ("foo:::: bar", Some(Colons(4))),
+      ("foo;; bar", Some(SemiColons)),
+      ("_foo_::", Some(Colons(2))),
+      ("foo bar:: baz", Some(Colons(2))),
     ];
     let bump = &Bump::new();
     for (input, marker) in cases {

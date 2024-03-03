@@ -34,6 +34,7 @@ pub enum TokenKind {
   SemiColon,
   SingleQuote,
   Star,
+  TermDelimiter,
   Tilde,
   Underscore,
   Whitespace,
