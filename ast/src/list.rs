@@ -13,6 +13,7 @@ impl<'bmp> ListItem<'bmp> {
   pub fn loc_start(&self) -> usize {
     self.marker_src.loc.start
   }
+
   pub fn last_loc(&self) -> Option<SourceLocation> {
     self
       .blocks
@@ -20,6 +21,7 @@ impl<'bmp> ListItem<'bmp> {
       .map(|block| block.loc)
       .or_else(|| self.principle.last_loc())
   }
+
   pub fn last_loc_end(&self) -> Option<usize> {
     self.last_loc().map(|loc| loc.end)
   }
@@ -53,6 +55,12 @@ pub enum ListMarker {
   // description
   Colons(u8),
   SemiColons,
+}
+
+impl ListMarker {
+  pub fn is_description(&self) -> bool {
+    matches!(self, ListMarker::Colons(_) | ListMarker::SemiColons)
+  }
 }
 
 impl From<ListMarker> for ListVariant {

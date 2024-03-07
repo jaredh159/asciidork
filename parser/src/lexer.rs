@@ -182,7 +182,7 @@ impl<'src> Lexer<'src> {
       Some('\'') => self.single(SingleQuote),
       Some('\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
-      Some(ch) if ch == ';' || ch == ':' => self.maybe_term_delimiter(ch, breaker),
+      Some(ch) if ch == ';' || ch == ':' => self.maybe_term_delimiter(ch, at_line_start, breaker),
       Some('/') if at_line_start && self.peek == Some('/') => self.comment(),
       Some(_) => self.word(),
       None => self.token(Eof, self.offset(), self.offset()),
@@ -396,9 +396,14 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  fn maybe_term_delimiter(&mut self, ch: char, breaker: Option<TokenKind>) -> Token<'src> {
+  fn maybe_term_delimiter(
+    &mut self,
+    ch: char,
+    at_line_start: bool,
+    breaker: Option<TokenKind>,
+  ) -> Token<'src> {
     let kind = if ch == ':' { Colon } else { SemiColon };
-    if self.peek != Some(ch) {
+    if at_line_start || self.peek != Some(ch) {
       return self.single(kind);
     }
     if breaker == Some(kind) {
@@ -670,7 +675,7 @@ mod tests {
   }
 
   #[test]
-  fn test_tokens_description_list_delimiters() {
+  fn test_term_delimiters() {
     let col = (Colon, ":");
     let semi = (SemiColon, ";");
     let foo = (Word, "foo");
@@ -685,6 +690,7 @@ mod tests {
       ("foo::::", vec![foo, (TermDelimiter, "::::")]),
       ("foo:::::", vec![foo, col, col, col, col, col]),
       ("foo:::::foo", vec![foo, col, col, col, col, col, foo]),
+      (":: foo", vec![col, col, space, foo]),
       // doesn't trip up on macros
       (
         "image:: foo",

@@ -1,8 +1,11 @@
 use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
 use asciidork_eval::{eval, Flags};
 use asciidork_parser::prelude::*;
-use test_utils::{adoc, assert_eq};
+use test_utils::{adoc, assert_eq, html};
 
+mod helpers;
+
+use indoc::indoc;
 use regex::Regex;
 
 test_eval!(
@@ -107,7 +110,7 @@ test_eval!(
 test_eval!(
   menu_macro,
   "select menu:File[Save].",
-  adoc! {r#"
+  html! {r#"
     <div class="paragraph">
       <p>select <span class="menuseq"><span class="menu">File</span>&#160;&#9656;<span class="menuitem">Save</span></span>.</p>
     </div>
@@ -117,7 +120,7 @@ test_eval!(
 test_eval!(
   menu_macro_2,
   "select menu:File[Save > Reset].",
-  adoc! {r#"
+  html! {r#"
     <div class="paragraph">
       <p>
         select <span class="menuseq"
@@ -133,7 +136,7 @@ test_eval!(
 test_eval!(
   sidebar,
   "[sidebar]\nfoo bar",
-  adoc! {r#"
+  html! {r#"
     <div class="sidebarblock">
       <div class="content">
         foo bar
@@ -145,7 +148,7 @@ test_eval!(
 test_eval!(
   title,
   ".Title\nfoo",
-  adoc! {r#"
+  html! {r#"
     <div class="paragraph">
       <div class="title">Title</div>
       <p>foo</p>
@@ -160,7 +163,7 @@ test_eval!(
     foo
     --
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="openblock">
       <div class="content">
         <div class="paragraph">
@@ -178,7 +181,7 @@ test_eval!(
     foo
     ====
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="exampleblock">
       <div class="content">
         <div class="paragraph">
@@ -195,7 +198,7 @@ test_eval!(
     [#my-id.some-class]
     TIP: never start a land war in Asia
   "#},
-  adoc! {r#"
+  html! {r#"
     <div id="my-id" class="admonitionblock tip some-class">
       <table>
         <tr>
@@ -217,7 +220,7 @@ test_eval!(
     .Title
     NOTE: foo
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="admonitionblock note">
       <table>
         <tr>
@@ -237,7 +240,7 @@ test_eval!(
 test_eval!(
   image_macro,
   "image::name.png[]",
-  adoc! {r#"
+  html! {r#"
     <div class="imageblock">
       <div class="content">
         <img src="name.png" alt="name">
@@ -253,7 +256,7 @@ test_eval!(
     [#lol.rofl]
     image::cat.jpg[]
   "#},
-  adoc! {r#"
+  html! {r#"
     <div id="lol" class="imageblock rofl">
       <div class="content">
         <img src="cat.jpg" alt="cat">
@@ -269,7 +272,7 @@ test_eval!(
     [quote,,cite]
     foo bar
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="quoteblock">
       <blockquote>foo bar</blockquote>
       <div class="attribution">&#8212; cite</div>
@@ -283,7 +286,7 @@ test_eval!(
     [quote,source]
     foo bar
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="quoteblock">
       <blockquote>foo bar</blockquote>
       <div class="attribution">&#8212; source</div>
@@ -297,7 +300,7 @@ test_eval!(
     [quote,source,location]
     foo bar
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="quoteblock">
       <blockquote>foo bar</blockquote>
       <div class="attribution">
@@ -315,7 +318,7 @@ test_eval!(
     [quote,Captain James T. Kirk,Star Trek IV: The Voyage Home]
     Everybody remember where we parked.
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="quoteblock">
       <div class="title">After landing the cloaked Klingon bird of prey in Golden Gate park:</div>
       <blockquote>
@@ -339,7 +342,7 @@ test_eval!(
     King Arthur: Bloody peasant!
     ____
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="quoteblock">
       <blockquote>
         <div class="paragraph">
@@ -363,7 +366,7 @@ test_eval!(
     and as necessary in the political world as storms in the physical."
     -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="quoteblock">
       <blockquote>
         I hold it that a little rebellion now and then is a good thing, and as necessary in the political world as storms in the physical.
@@ -385,7 +388,7 @@ test_eval!(
     --
     ****
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="sidebarblock">
       <div class="content">
         <div class="openblock">
@@ -409,7 +412,7 @@ test_eval!(
     .Dog
     image::dog.png[]
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="imageblock">
       <div class="content">
         <img src="cat.png" alt="cat">
@@ -437,7 +440,7 @@ test_eval!(
     .Dog
     image::dog.png[]
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="imageblock">
       <div class="content">
         <img src="cat.png" alt="cat">
@@ -460,7 +463,7 @@ test_eval!(
     [#img-sunset,link=https://www.flickr.com/photos/javh/5448336655]
     image::sunset.jpg[Sunset,200,100]
   "#},
-  adoc! {r#"
+  html! {r#"
     <div id="img-sunset" class="imageblock">
       <div class="content">
         <a class="image" href="https://www.flickr.com/photos/javh/5448336655">
@@ -483,7 +486,7 @@ test_eval!(
     .Next
     image::bar.png[]
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="imageblock">
       <div class="content">
         <img src="foo.png" alt="foo">
@@ -502,7 +505,7 @@ test_eval!(
 test_eval!(
   footnote,
   "foo.footnote:[bar _baz_]",
-  adoc! {r##"
+  html! {r##"
     <div class="paragraph">
       <p>foo.
         <sup class="footnote">
@@ -530,7 +533,7 @@ test_eval!(
     This is more content in the sidebar block.
     ****
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="sidebarblock">
       <div class="content">
         <div class="paragraph">
@@ -556,7 +559,7 @@ test_eval!(
 
     lol.footnote:cust[baz]
   "#},
-  adoc! {r##"
+  html! {r##"
   <div class="paragraph">
     <p>foo.
       <sup class="footnote">
@@ -589,7 +592,7 @@ test_eval!(
     [listing]
     foo `bar`
   "#},
-  adoc! {r#"
+  html! {r#"
     <div class="listingblock">
       <div class="content">
         <pre>foo `bar`</pre>
@@ -606,7 +609,7 @@ fn test_listing_block_newline_preservation() {
     so baz
     ----
   "#};
-  let expected = adoc! {r#"
+  let expected = indoc! {r#"
     <div class="listingblock"><div class="content"><pre>foo bar
     so baz</pre></div></div>
   "#};
@@ -629,7 +632,7 @@ fn test_masquerading_listing_block_newline_preservation() {
     so baz
     --
   "#};
-  let expected = adoc! {r#"
+  let expected = indoc! {r#"
     <div class="listingblock"><div class="content"><pre>foo bar
     so baz</pre></div></div>
   "#};
@@ -763,25 +766,4 @@ fn test_non_embedded() {
     expected,
     from: input
   );
-}
-
-// helpers
-
-#[macro_export]
-macro_rules! test_eval {
-  ($name:ident, $input:expr, $expected:expr) => {
-    #[test]
-    fn $name() {
-      let bump = &Bump::new();
-      let re = Regex::new(r"(?m)\n\s*").unwrap();
-      let expected = re.replace_all($expected, "");
-      let parser = Parser::new(bump, $input);
-      let doc = parser.parse().unwrap().document;
-      assert_eq!(
-        eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
-        expected,
-        from: $input
-      );
-    }
-  };
 }

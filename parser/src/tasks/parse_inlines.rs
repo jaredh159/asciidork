@@ -27,13 +27,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let subs = self.ctx.subs;
 
     while let Some(mut line) = lines.consume_current() {
-      if self.ctx.list.parsing_continuations && line.is_list_continuation() {
-        inlines.remove_trailing_newline();
-        lines.restore_if_nonempty(line);
-        return Ok(inlines);
-      }
-
-      if self.ctx.delimiter.is_some() && line.current_is(DelimiterLine) {
+      if self.should_stop_at(&line) {
         inlines.remove_trailing_newline();
         lines.restore_if_nonempty(line);
         return Ok(inlines);
@@ -582,6 +576,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       (Some(append), _) => a.push(Text(BumpString::from_str_in(append, self.bump))),
       _ => {}
     }
+  }
+
+  fn should_stop_at(&self, line: &Line<'bmp, 'src>) -> bool {
+    // description list
+    (self.ctx.list.stack.parsing_description_list() && (line.starts_description_list_item()) || line.is_list_continuation())
+      // list continuation
+      || (self.ctx.list.parsing_continuations && line.is_list_continuation())
+      // ending delimited block
+      || (self.ctx.delimiter.is_some() && line.current_is(DelimiterLine))
   }
 }
 

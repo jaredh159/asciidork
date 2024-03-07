@@ -7,25 +7,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     mut lines: ContiguousLines<'bmp, 'src>,
     meta: Option<BlockMetadata<'bmp>>,
   ) -> Result<Block<'bmp>> {
-    let mut first_line = lines.consume_current().unwrap();
-    // println!("\nbegin: parse_list, first_line: {:?}", first_line.src);
-    first_line.trim_leading_whitespace();
+    let first_line = lines.consume_current().unwrap();
     let marker = first_line.list_marker().unwrap();
     let variant = ListVariant::from(marker);
     lines.restore_if_nonempty(first_line);
     self.restore_lines(lines);
 
     self.ctx.list.stack.push(marker);
-    let depth = self.ctx.list.stack.len() as u8;
-    // println!(" --> list_stack: {:?}", self.ctx.list_stack);
+    let depth = self.ctx.list.stack.depth();
     let mut items = BumpVec::new_in(self.bump);
     while let Some(item) = self.parse_list_item(variant)? {
-      // println!(" --> item: {:?}", item);
       items.push(item);
     }
     self.ctx.list.stack.pop();
-
-    // println!("end: parse_list\n");
 
     let (title, attrs, start) = meta.map(|m| (m.title, m.attrs, m.start)).unwrap_or((
       None,
@@ -42,25 +36,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   fn parse_list_item(&mut self, list_variant: ListVariant) -> Result<Option<ListItem<'bmp>>> {
-    // println!("begin: parse_list_item");
     let Some(mut lines) = self.read_lines() else {
-      // println!("end: parse_list_item (no lines)");
-      return Ok(None);
-    };
-    let Some(marker) = lines.first().and_then(|line| line.list_marker()) else {
-      self.restore_lines(lines);
-      // println!("end: parse_list_item (lines don't start list)");
       return Ok(None);
     };
 
-    if !self.ctx.list.stack.continues_current_list(&marker) {
+    let Some(marker) = lines.first().and_then(|line| line.list_marker()) else {
       self.restore_lines(lines);
-      // println!("end: parse_list_item (doesn't continue current list)");
+      return Ok(None);
+    };
+
+    if !self.ctx.list.stack.continues_current_list(marker) {
+      self.restore_lines(lines);
       return Ok(None);
     }
 
     let mut line = lines.consume_current().unwrap();
     line.trim_leading_whitespace();
+    if list_variant == ListVariant::Description {
+      return self.parse_description_list_item(marker, line, lines);
+    }
+
     let marker_src = line.consume_to_string_until(Whitespace, self.bump);
     line.discard_assert(Whitespace);
     let checklist = if list_variant == ListVariant::Unordered {
@@ -82,10 +77,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let mut item_lines = ContiguousLines::new(item_lines);
     let principle = self.parse_inlines(&mut item_lines)?;
-    // println!(" --> principal: {:?}", principle);
-    let blocks = self.parse_list_item_blocks(lines)?;
+    let blocks = self.parse_list_item_blocks(lines, BumpVec::new_in(self.bump))?;
 
-    // println!("end: parse_list_item (fin)");
     Ok(Some(ListItem {
       blocks,
       marker,
@@ -98,15 +91,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_list_item_blocks(
     &mut self,
     lines: ContiguousLines<'bmp, 'src>,
+    mut blocks: BumpVec<'bmp, Block<'bmp>>,
   ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
-    // println!("begin: parse_list_item_blocks");
-    let mut blocks = BumpVec::new_in(self.bump);
-
     if lines.starts_nested_list(&self.ctx.list.stack, true) {
-      // println!("start parsing nested list");
       self.restore_lines(lines);
       blocks.push(self.parse_block()?.unwrap());
-      // println!("end: parse_list_item_blocks (parsed nested)");
       return Ok(blocks);
     }
 
@@ -121,15 +110,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     let Some(lines) = self.read_lines() else {
-      // println!("end: parse_list_item_blocks (no nested, b/c no next lines)");
       return Ok(blocks);
     };
 
     // ELSE IF the next Contiguous Lines starts a NESTED list, parse a block
     if lines.starts_nested_list(&self.ctx.list.stack, false) {
-      // println!("start parsing nested list (from next lines)");
       blocks.push(self.parse_list(lines, None)?);
-      // println!("end: parse_list_item_blocks (parsed nested)");
       return Ok(blocks);
     }
 
@@ -155,6 +141,53 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.ctx.list.parsing_continuations = false;
     self.parse_list_continuation_blocks(accum)
   }
+
+  pub fn parse_description_list_item(
+    &mut self,
+    marker: ListMarker,
+    mut line: Line<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp, 'src>,
+  ) -> Result<Option<ListItem<'bmp>>> {
+    let principle = {
+      let before_delim = line.extract_line_before(TermDelimiter, self.bump);
+      self.parse_inlines(&mut before_delim.into_lines_in(self.bump))?
+    };
+
+    let marker_token = line.consume_current().unwrap();
+    let marker_src = marker_token.to_source_string(self.bump);
+
+    line.trim_leading_whitespace();
+    lines.restore_if_nonempty(line);
+    let blocks = self.parse_description_list_item_blocks(lines)?;
+
+    Ok(Some(ListItem {
+      blocks,
+      marker,
+      marker_src,
+      checklist: None,
+      principle,
+    }))
+  }
+
+  pub fn parse_description_list_item_blocks(
+    &mut self,
+    lines: ContiguousLines<'bmp, 'src>,
+  ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
+    self.restore_lines(lines);
+    let mut blocks = BumpVec::new_in(self.bump);
+    if let Some(block) = self.parse_block()? {
+      blocks.push(block);
+    }
+    let Some(lines) = self.read_lines() else {
+      return Ok(blocks);
+    };
+    if lines.starts_list_continuation() {
+      self.restore_lines(lines);
+      return self.parse_list_continuation_blocks(blocks);
+    }
+    self.restore_lines(lines);
+    Ok(blocks)
+  }
 }
 
 // tests
@@ -163,7 +196,55 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 mod tests {
   use super::*;
   use crate::test::*;
-  use test_utils::{adoc, assert_eq};
+  use test_utils::{adoc, assert_eq, parse_list};
+
+  #[test]
+  fn test_simple_description_list() {
+    let input = "foo:: bar";
+    parse_list!(input, list, bump);
+    assert_list(
+      input,
+      list,
+      BlockContext::DescriptionList,
+      &[ListItem {
+        marker: ListMarker::Colons(2),
+        marker_src: bump.src("::", l(3, 5)),
+        principle: bump.inodes([n_text("foo", 0, 3, bump)]),
+        checklist: None,
+        blocks: bump.vec([Block {
+          title: None,
+          attrs: None,
+          content: BlockContent::Simple(bump.inodes([n_text("bar", 6, 9, bump)])),
+          context: BlockContext::Paragraph,
+          loc: l(6, 9),
+        }]),
+      }],
+    );
+  }
+
+  #[test]
+  fn test_two_line_description_list() {
+    let input = "foo::\nbar";
+    parse_list!(input, list, bump);
+    assert_list(
+      input,
+      list,
+      BlockContext::DescriptionList,
+      &[ListItem {
+        marker: ListMarker::Colons(2),
+        marker_src: bump.src("::", l(3, 5)),
+        principle: bump.inodes([n_text("foo", 0, 3, bump)]),
+        checklist: None,
+        blocks: bump.vec([Block {
+          title: None,
+          attrs: None,
+          content: BlockContent::Simple(bump.inodes([n_text("bar", 6, 9, bump)])),
+          context: BlockContext::Paragraph,
+          loc: l(6, 9),
+        }]),
+      }],
+    );
+  }
 
   #[test]
   fn test_list_separation() {
@@ -564,12 +645,21 @@ mod tests {
       let mut parser = Parser::new(bump, input);
       let lines = parser.read_lines().unwrap();
       let block = parser.parse_list(lines, None).unwrap();
-      assert_eq!(block.context, context, from: input);
-      if let BlockContent::List { items, .. } = block.content {
-        assert_eq!(items, expected_items, from: input);
-      } else {
-        panic!("expected list, got {:?}", block.content);
-      }
+      assert_list(input, block, context, &expected_items);
+    }
+  }
+
+  fn assert_list(
+    input: &str,
+    block: Block<'_>,
+    expected_context: BlockContext,
+    expected_items: &[ListItem<'_>],
+  ) {
+    assert_eq!(block.context, expected_context, from: input);
+    if let BlockContent::List { items, .. } = block.content {
+      assert_eq!(items, expected_items, from: input);
+    } else {
+      panic!("expected list, got {:?}", block.content);
     }
   }
 }

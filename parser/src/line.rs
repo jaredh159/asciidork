@@ -321,13 +321,9 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   pub fn list_marker(&self) -> Option<ListMarker> {
     // PERF: checking for list markers seems sort of sad, wonder if the
     // Line could be created with some markers to speed these tests up
-    let offset = if self.current_token().is(Whitespace) {
-      1
-    } else {
-      0
-    };
-    if self.num_tokens() < 3 + offset {
-      return None;
+    let mut offset = 0;
+    if self.current_token().is(Whitespace) {
+      offset += 1;
     }
     let token = self.nth_token(offset).unwrap();
     let next = self.nth_token(offset + 1);
@@ -346,20 +342,18 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
       _ => {
-        if !self.contains(Colon) && !self.contains(SemiColon) {
-          None
-        } else {
-          match DESCRIPTION_RE.captures(self.src) {
-            None => None,
-            Some(captures) => match captures.get(1).unwrap().as_str() {
+        for token in self.tokens().skip(offset) {
+          if token.is(TermDelimiter) {
+            return match token.lexeme {
               "::" => Some(ListMarker::Colons(2)),
               ":::" => Some(ListMarker::Colons(3)),
               "::::" => Some(ListMarker::Colons(4)),
               ";;" => Some(ListMarker::SemiColons),
               _ => unreachable!(),
-            },
+            };
           }
         }
+        None
       }
     }
   }
@@ -368,10 +362,16 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.list_marker().is_some()
   }
 
+  pub fn starts_description_list_item(&self) -> bool {
+    self
+      .list_marker()
+      .map(|marker| marker.is_description())
+      .unwrap_or(false)
+  }
+
   pub fn continues_list_item_principle(&self) -> bool {
     match self.current_token().map(|t| t.kind) {
       Some(OpenBracket) => !self.is_attr_list(),
-      Some(Word) => true,
       Some(Plus) | Some(CommentLine) => false,
       None => false,
       _ => !self.starts_list_item(),
@@ -418,14 +418,22 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     let src = BumpString::from_str_in(src, bump);
     Some((checked, SourceString::new(src, loc)))
   }
+
+  pub fn extract_line_before(&mut self, kind: TokenKind, bump: &'bmp Bump) -> Line<'bmp, 'src> {
+    let mut tokens = BumpVec::with_capacity_in(self.num_tokens(), bump);
+    let orig_src = self.src;
+    let mut src_len = 0;
+    while self.current_token().is_not(kind) {
+      let token = self.consume_current().unwrap();
+      src_len += token.lexeme.len();
+      tokens.push(token);
+    }
+    Line::new(tokens, &orig_src[..src_len])
+  }
 }
 
 lazy_static! {
   pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)\s+.+"#).unwrap();
-}
-
-lazy_static! {
-  pub static ref DESCRIPTION_RE: Regex = Regex::new(r#"[^:;]+(:::?:?|;;)(?:\s|$)"#).unwrap();
 }
 
 #[cfg(test)]
@@ -447,6 +455,8 @@ mod tests {
       ("- foo", false),
       ("// foo", false),
       ("[circles]", false),
+      ("term::", false),
+      ("term:: desc", false),
     ];
     let bump = &Bump::new();
     for (input, expected) in cases {

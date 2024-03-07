@@ -7,7 +7,6 @@
       (pretty confident: yes)
 - [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
       tests
-- [ ] description lists
 - [ ] asciidoctor html backend _stylesheets,_ @see
       https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
       `html5.rb`
@@ -21,6 +20,7 @@
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example
 - [ ] h1 subtitle
+- [√] description lists
 - [√] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
   folded into ContiguousLines so that it shows up as one line, i think
 - [√] literal blocks (delimited and non-delimited)

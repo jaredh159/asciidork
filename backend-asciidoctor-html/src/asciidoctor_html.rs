@@ -10,6 +10,7 @@ pub struct AsciidoctorHtml {
   flags: Flags,
   list_stack: Vec<bool>,
   preserve_newlines: bool,
+  visiting_simple_term_description: bool,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -158,6 +159,36 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</ul></div>");
   }
 
+  fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
+    self.open_element("div", &["dlist"], &block.attrs);
+    self.push_str("<dl>");
+  }
+
+  fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
+    self.push_str("</dl></div>");
+  }
+
+  fn enter_description_list_term(&mut self, _item: &ListItem) {
+    self.push_str(r#"<dt class="hdlist1">"#);
+  }
+
+  fn exit_description_list_term(&mut self, _item: &ListItem) {
+    self.push_str("</dt>");
+  }
+
+  fn enter_description_list_description(&mut self, blocks: &[Block], _item: &ListItem) {
+    if blocks.first().map_or(false, |block| {
+      block.context == BlockContext::Paragraph && matches!(block.content, BlockContent::Simple(_))
+    }) {
+      self.visiting_simple_term_description = true;
+    }
+    self.push_str("<dd>");
+  }
+
+  fn exit_description_list_description(&mut self, _blocks: &[Block], _item: &ListItem) {
+    self.push_str("</dd>");
+  }
+
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
     let attrs = block.attrs.as_ref();
     self.list_stack.push(false);
@@ -218,13 +249,19 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_paragraph_block(&mut self, block: &Block) {
-    self.push_str(r#"<div class="paragraph">"#);
-    self.visit_block_title(block.title.as_deref(), None);
+    if !self.visiting_simple_term_description {
+      self.push_str(r#"<div class="paragraph">"#);
+      self.visit_block_title(block.title.as_deref(), None);
+    }
     self.push_str("<p>");
   }
 
   fn exit_paragraph_block(&mut self, _block: &Block) {
-    self.push_str("</p></div>");
+    self.push_str("</p>");
+    if !self.visiting_simple_term_description {
+      self.push_str("</div>");
+    }
+    self.visiting_simple_term_description = false;
   }
 
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {

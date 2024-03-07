@@ -154,6 +154,24 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       });
       backend.exit_unordered_list(block, items, *depth);
     }
+    (Context::DescriptionList, Content::List { items, depth, .. }) => {
+      backend.enter_description_list(block, items, *depth);
+      items.iter().for_each(|item| {
+        backend.enter_description_list_term(item);
+        item
+          .principle
+          .iter()
+          .for_each(|node| eval_inline(node, backend));
+        backend.exit_description_list_term(item);
+        backend.enter_description_list_description(&item.blocks, item);
+        item
+          .blocks
+          .iter()
+          .for_each(|block| eval_block(block, backend));
+        backend.exit_description_list_description(&item.blocks, item);
+      });
+      backend.exit_description_list(block, items, *depth);
+    }
     (Context::Comment, _) => {}
     _ => {
       dbg!(block.context);

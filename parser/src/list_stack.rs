@@ -24,6 +24,14 @@ impl ListStack {
       (last, next) => *last == next,
     })
   }
+
+  pub fn parsing_description_list(&self) -> bool {
+    self.last().map_or(false, |last| last.is_description())
+  }
+
+  pub fn depth(&self) -> u8 {
+    self.iter().filter(|m| !m.is_description()).count() as u8
+  }
 }
 
 impl Default for ListStack {

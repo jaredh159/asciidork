@@ -1,7 +1,5 @@
-use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
-use asciidork_eval::{eval, Flags};
-use asciidork_parser::prelude::*;
-use test_utils::{adoc, assert_eq, html};
+use test_utils::{adoc, html};
+mod helpers;
 
 test_eval!(
   most_basic_unordered_list,
@@ -716,19 +714,3 @@ test_eval!(
 Doc Writer &lt;doc.writer@asciidoc.org&gt;
 v1.0, 2022-01-01</pre></div></div></li></ul></div>"#
 );
-
-// helpers
-
-#[macro_export]
-macro_rules! test_eval {
-  ($name:ident, $input:expr, $expected:expr) => {
-    #[test]
-    fn $name() {
-      let bump = &Bump::new();
-      let parser = Parser::new(bump, $input);
-      let doc = parser.parse().unwrap().document;
-      let actual = eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap();
-      assert_eq!(actual, $expected.to_string(), from: $input);
-    }
-  };
-}

@@ -36,6 +36,12 @@ pub trait Backend {
   fn exit_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn exit_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
+  fn enter_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
+  fn exit_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
+  fn enter_description_list_term(&mut self, item: &ListItem);
+  fn exit_description_list_term(&mut self, item: &ListItem);
+  fn enter_description_list_description(&mut self, blocks: &[Block], item: &ListItem);
+  fn exit_description_list_description(&mut self, blocks: &[Block], item: &ListItem);
   fn enter_list_item_principal(&mut self, item: &ListItem);
   fn exit_list_item_principal(&mut self, item: &ListItem);
   fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem);
