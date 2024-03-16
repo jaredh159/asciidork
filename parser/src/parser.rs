@@ -23,6 +23,7 @@ pub(crate) struct ParseContext {
   pub(crate) subs: Substitutions,
   pub(crate) delimiter: Option<Delimiter>,
   pub(crate) list: ListContext,
+  pub(crate) section_level: u8,
 }
 
 impl ParseContext {
@@ -62,12 +63,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Parser {
       bump,
       lexer: Lexer::new(src),
-      document: Document::new_in(bump),
+      document: Document::new(bump),
       peeked_lines: None,
       ctx: ParseContext {
         subs: Substitutions::all(),
         delimiter: None,
         list: ListContext::default(),
+        section_level: 1,
       },
       errors: RefCell::new(Vec::new()),
       bail: true,
@@ -154,8 +156,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
 
-    while let Some(block) = self.parse_block()? {
-      self.document.content.push_block(block);
+    while let Some(chunk) = self.parse_chunk()? {
+      match chunk {
+        Chunk::Block(block) => self.document.content.push_block(block),
+        Chunk::Section(section) => self.document.content.push_section(section),
+      }
     }
 
     Ok(ParseResult {
@@ -163,6 +168,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       warnings: vec![],
     })
   }
+
+  pub fn parse_chunk(&mut self) -> Result<Option<Chunk<'bmp>>> {
+    match self.parse_section()? {
+      Some(SectionOutput::Section(section)) => Ok(Some(Chunk::Section(section))),
+      Some(SectionOutput::PeekedMeta(meta)) => Ok(self.parse_block(Some(meta))?.map(Chunk::Block)),
+      None => Ok(None),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub enum Chunk<'bmp> {
+  Block(Block<'bmp>),
+  Section(Section<'bmp>),
 }
 
 impl Substitutions {

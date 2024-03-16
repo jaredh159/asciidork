@@ -8,7 +8,7 @@ pub struct Document<'bmp> {
 }
 
 impl<'bmp> Document<'bmp> {
-  pub fn new_in(bump: &'bmp bumpalo::Bump) -> Self {
+  pub fn new(bump: &'bmp bumpalo::Bump) -> Self {
     Self {
       header: None,
       content: DocContent::Blocks(bumpalo::vec![in bump]),
@@ -18,12 +18,17 @@ impl<'bmp> Document<'bmp> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Section<'bmp> {
-  level: u8,
-  heading: Heading<'bmp>,
-  blocks: BumpVec<'bmp, Block<'bmp>>,
+  pub level: u8,
+  pub heading: InlineNodes<'bmp>,
+  pub blocks: BumpVec<'bmp, Block<'bmp>>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Heading<'bmp> {
-  inlines: BumpVec<'bmp, Inline<'bmp>>,
+impl<'bmp> Section<'bmp> {
+  pub fn new_in(bump: &'bmp bumpalo::Bump) -> Self {
+    Self {
+      level: 1,
+      heading: InlineNodes::new(bump),
+      blocks: BumpVec::new_in(bump),
+    }
+  }
 }

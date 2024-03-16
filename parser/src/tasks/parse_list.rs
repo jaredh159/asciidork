@@ -95,7 +95,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
     if lines.starts_nested_list(&self.ctx.list.stack, true) {
       self.restore_lines(lines);
-      blocks.push(self.parse_block()?.unwrap());
+      blocks.push(self.parse_block(None)?.unwrap());
       return Ok(blocks);
     }
 
@@ -137,7 +137,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     lines.consume_current();
     self.restore_lines(lines);
     self.ctx.list.parsing_continuations = true;
-    accum.push(self.parse_block()?.unwrap());
+    accum.push(self.parse_block(None)?.unwrap());
     self.ctx.list.parsing_continuations = false;
     self.parse_list_continuation_blocks(accum)
   }
@@ -175,7 +175,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
-    if let Some(block) = self.parse_block()? {
+    if let Some(block) = self.parse_block(None)? {
       blocks.push(block);
     }
     let Some(lines) = self.read_lines() else {

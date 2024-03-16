@@ -31,6 +31,7 @@ mod internal {
   pub use crate::parser::*;
   pub use crate::tasks::block_metadata::*;
   pub use crate::tasks::collect_text::*;
+  pub use crate::tasks::parse_section::*;
   pub use crate::token::*;
   pub use crate::utils::bump::*;
   pub use ast::*;

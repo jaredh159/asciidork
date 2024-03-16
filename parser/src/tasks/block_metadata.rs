@@ -40,3 +40,30 @@ impl BlockMetadata<'_> {
     BlockContext::Paragraph
   }
 }
+
+impl<'bmp, 'src> Parser<'bmp, 'src> {
+  pub(crate) fn parse_block_metadata(
+    &mut self,
+    lines: &mut ContiguousLines<'bmp, 'src>,
+  ) -> Result<BlockMetadata<'bmp>> {
+    let start = lines.current_token().unwrap().loc.start;
+    let mut attrs = None;
+    let mut title = None;
+    loop {
+      match lines.current().unwrap() {
+        line if line.is_block_title() => {
+          let mut line = lines.consume_current().unwrap();
+          line.discard_assert(Dots);
+          title = Some(line.consume_to_string(self.bump));
+        }
+        line if line.is_attr_list() => {
+          let mut line = lines.consume_current().unwrap();
+          line.discard_assert(OpenBracket);
+          attrs = Some(self.parse_attr_list(&mut line)?);
+        }
+        _ => break,
+      }
+    }
+    Ok(BlockMetadata { attrs, title, start })
+  }
+}

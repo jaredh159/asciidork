@@ -3,7 +3,10 @@ use crate::variants::token::*;
 use ast::short::block::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'bmp>>> {
+  pub(crate) fn parse_block(
+    &mut self,
+    meta: Option<BlockMetadata<'bmp>>,
+  ) -> Result<Option<Block<'bmp>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
@@ -12,7 +15,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(Some(comment_block));
     }
 
-    let meta = self.parse_block_metadata(&mut lines)?;
+    let meta = match meta {
+      Some(meta) => meta,
+      None => self.parse_block_metadata(&mut lines)?,
+    };
+
     let first_token = lines.current_token().unwrap();
 
     if lines.is_block_macro() {
@@ -106,7 +113,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       content
     } else {
       let mut blocks = BumpVec::new_in(self.bump);
-      while let Some(inner) = self.parse_block()? {
+      while let Some(inner) = self.parse_block(None)? {
         blocks.push(inner);
       }
       Content::Compound(blocks)
@@ -214,31 +221,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         cite,
       },
     }))
-  }
-
-  fn parse_block_metadata(
-    &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
-  ) -> Result<BlockMetadata<'bmp>> {
-    let start = lines.current_token().unwrap().loc.start;
-    let mut attrs = None;
-    let mut title = None;
-    loop {
-      match lines.current().unwrap() {
-        line if line.is_block_title() => {
-          let mut line = lines.consume_current().unwrap();
-          line.discard_assert(Dots);
-          title = Some(line.consume_to_string(self.bump));
-        }
-        line if line.is_attr_list() => {
-          let mut line = lines.consume_current().unwrap();
-          line.discard_assert(OpenBracket);
-          attrs = Some(self.parse_attr_list(&mut line)?);
-        }
-        _ => break,
-      }
-    }
-    Ok(BlockMetadata { attrs, title, start })
   }
 }
 
@@ -818,7 +800,7 @@ mod tests {
   fn test_unclosed_delimited_block_err() {
     let b = &Bump::new();
     let mut parser = Parser::new(b, "--\nfoo\n\n");
-    let err = parser.parse_block().err().unwrap();
+    let err = parser.parse_block(None).err().unwrap();
     assert_eq!(
       err,
       Diagnostic {

@@ -47,11 +47,16 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.pos >= self.all_tokens.len()
   }
 
-  pub fn is_header(&self, len: usize) -> bool {
-    if !self.starts_with_seq(&[EqualSigns, Whitespace]) {
-      return false;
+  pub fn is_header(&self, level: u8) -> bool {
+    self.header_level() == Some(level)
+  }
+
+  pub fn header_level(&self) -> Option<u8> {
+    if self.starts_with_seq(&[EqualSigns, Whitespace]) {
+      Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
+    } else {
+      None
     }
-    self.current_token().unwrap().lexeme.len() == len
   }
 
   pub fn is_block_macro(&self) -> bool {

@@ -33,7 +33,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     doc_header: &mut DocHeader<'bmp>,
   ) -> Result<()> {
     let first_line = lines.current().expect("non-empty doc header");
-    if !first_line.is_header(1) {
+    if !first_line.is_header(0) {
       // author and revision must follow doc title, so if non title, skip
       return Ok(());
     }
@@ -61,7 +61,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 pub fn is_doc_header(lines: &ContiguousLines) -> bool {
   for line in lines.iter() {
-    if line.is_header(1)
+    if line.is_header(0)
       || line.starts_with_seq(&[Colon, Word, Colon])
       || line.starts_with_seq(&[Colon, Bang, Word, Colon])
     {

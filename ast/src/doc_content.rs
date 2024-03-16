@@ -23,6 +23,13 @@ impl<'bmp> DocContent<'bmp> {
     }
   }
 
+  pub fn push_section(&mut self, section: Section<'bmp>) {
+    match self {
+      DocContent::Sectioned { sections, .. } => sections.push(section),
+      _ => unreachable!(),
+    }
+  }
+
   pub fn is_sectioned(&self) -> bool {
     matches!(self, DocContent::Sectioned { .. })
   }

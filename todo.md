@@ -16,9 +16,10 @@
 - [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] basic multi-byte char test
 - [ ] poc, non-corner-painting wasm
-- [ ] attribute refs, see
+- [ ] all attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
-      `{docdate}` example
+      `{docdate}` example, see also
+      https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#note-docdatetime
 - [ ] h1 subtitle
 - [√] description lists
 - [√] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be

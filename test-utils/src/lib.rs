@@ -43,7 +43,7 @@ macro_rules! parse_block {
   ($input:expr, $block:ident, $bump:ident) => {
     let $bump = &Bump::new();
     let mut parser = Parser::new($bump, $input);
-    let $block = parser.parse_block().unwrap().unwrap();
+    let $block = parser.parse_block(None).unwrap().unwrap();
   };
 }
 

@@ -82,6 +82,14 @@ impl<'bmp> AttrList<'bmp> {
     self.options.iter().any(|s| s.src == option)
   }
 
+  pub fn has_str_positional(&self, positional: &str) -> bool {
+    self
+      .positional
+      .iter()
+      .enumerate()
+      .any(|(i, _)| self.str_positional_at(i) == Some(positional))
+  }
+
   // TODO: rename, make test or something...
   pub fn positional(
     positional: &'static str,
