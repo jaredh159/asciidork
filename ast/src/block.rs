@@ -64,7 +64,7 @@ pub enum BlockContext {
   Paragraph,
   Passthrough,
   QuotedParagraph,
-  Section,
+  Section, // TODO: do i need this? we have a different node...
   Sidebar,
   Table,
   TableCell,

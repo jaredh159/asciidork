@@ -8,10 +8,10 @@ pub struct Document<'bmp> {
 }
 
 impl<'bmp> Document<'bmp> {
-  pub fn new(bump: &'bmp bumpalo::Bump) -> Self {
+  pub fn new(bump: &'bmp Bump) -> Self {
     Self {
       header: None,
-      content: DocContent::Blocks(bumpalo::vec![in bump]),
+      content: DocContent::Blocks(bvec![in bump]),
     }
   }
 }
@@ -24,7 +24,7 @@ pub struct Section<'bmp> {
 }
 
 impl<'bmp> Section<'bmp> {
-  pub fn new_in(bump: &'bmp bumpalo::Bump) -> Self {
+  pub fn new_in(bump: &'bmp Bump) -> Self {
     Self {
       level: 1,
       heading: InlineNodes::new(bump),

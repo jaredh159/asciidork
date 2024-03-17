@@ -157,9 +157,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.document.header = self.parse_document_header()?;
 
     while let Some(chunk) = self.parse_chunk()? {
+      dbg!(&chunk);
       match chunk {
-        Chunk::Block(block) => self.document.content.push_block(block),
-        Chunk::Section(section) => self.document.content.push_section(section),
+        Chunk::Block(block) => self.document.content.push_block(block, self.bump),
+        Chunk::Section(section) => self.document.content.push_section(section, self.bump),
       }
     }
 

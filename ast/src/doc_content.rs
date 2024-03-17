@@ -10,23 +10,20 @@ pub enum DocContent<'bmp> {
 }
 
 impl<'bmp> DocContent<'bmp> {
-  pub fn push_block(&mut self, block: Block<'bmp>) {
-    match block.context {
-      BlockContext::Section => {
-        self.ensure_sectioned();
-        todo!("push_block: section")
-      }
-      _ => match self {
-        DocContent::Blocks(blocks) => blocks.push(block),
-        _ => unreachable!(),
-      },
+  pub fn push_block(&mut self, block: Block<'bmp>, _bump: &'bmp Bump) {
+    match self {
+      DocContent::Blocks(blocks) => blocks.push(block),
+      _ => todo!("¯\\_(ツ)_/¯ not sure what to do here..."),
     }
   }
 
-  pub fn push_section(&mut self, section: Section<'bmp>) {
+  pub fn push_section(&mut self, section: Section<'bmp>, bump: &'bmp Bump) {
     match self {
       DocContent::Sectioned { sections, .. } => sections.push(section),
-      _ => unreachable!(),
+      _ => {
+        self.ensure_sectioned(bump);
+        self.push_section(section, bump);
+      }
     }
   }
 
@@ -34,7 +31,11 @@ impl<'bmp> DocContent<'bmp> {
     matches!(self, DocContent::Sectioned { .. })
   }
 
-  pub fn ensure_sectioned(&mut self) {
-    todo!("ensure_sectioned")
+  pub fn ensure_sectioned(&mut self, bump: &'bmp Bump) {
+    if let DocContent::Blocks(blocks) = self {
+      let preamble = std::mem::replace(blocks, BumpVec::new_in(bump));
+      let sections = BumpVec::with_capacity_in(1, bump);
+      *self = DocContent::Sectioned { preamble: Some(preamble), sections };
+    }
   }
 }

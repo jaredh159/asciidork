@@ -11,6 +11,12 @@ pub trait Backend {
   fn exit_document(&mut self, document: &Document, header_attrs: &AttrEntries);
   fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry);
 
+  // sections
+  fn enter_section(&mut self, section: &Section);
+  fn exit_section(&mut self, section: &Section);
+  fn enter_section_heading(&mut self, section: &Section);
+  fn exit_section_heading(&mut self, section: &Section);
+
   // blocks contexts
   fn enter_paragraph_block(&mut self, block: &Block);
   fn exit_paragraph_block(&mut self, block: &Block);

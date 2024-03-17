@@ -62,6 +62,30 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
+  fn enter_section(&mut self, _section: &Section) {
+    self.open_element("div", &["sect1"], &None); // weird, no attrs...
+  }
+
+  // sun jared: maybe rename BlockMetadata to ChunkMetadata, set it
+  // individually on blocks and sections, instead of attrs + title
+  // consider adding convenience fns to avoid all the map/unwrap/ref stuff
+
+  fn exit_section(&mut self, _section: &Section) {
+    self.push_str("</div></div>");
+  }
+
+  fn enter_section_heading(&mut self, section: &Section) {
+    self.push_str(r#"<h"#);
+    self.push_str(&(section.level + 1).to_string());
+    self.push_str(r#" id="_section_1">"#); // lol hardcoded
+  }
+
+  fn exit_section_heading(&mut self, section: &Section) {
+    self.push_str(r#"</h"#);
+    self.push_str(&(section.level + 1).to_string());
+    self.push_str(r#"><div class="sectionbody">"#);
+  }
+
   fn enter_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
   fn exit_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
   fn enter_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {}
@@ -76,9 +100,6 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
-  // 👍 sat: jared, need to test a couple more things, not sure if <pre> is right
-  // especially preserving newlines, might need a new context prop to track
-  // then replicate the gnarly examples from complex lists
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["listingblock"], &block.attrs);
     self.push_str(r#"<div class="content"><pre>"#);

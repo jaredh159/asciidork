@@ -19,11 +19,27 @@ pub fn visit<B: Backend>(document: Document, flags: Flags, backend: &mut B) {
   backend.enter_document(&document, doc_attrs, flags);
   match &document.content {
     DocContent::Blocks(blocks) => {
-      for block in blocks {
-        eval_block(block, backend);
-      }
+      blocks.iter().for_each(|block| eval_block(block, backend));
     }
-    DocContent::Sectioned { .. } => todo!(),
+    DocContent::Sectioned { sections, .. } => {
+      // TODO: handle preamble
+      // maybe move this out into an `eval_section` fn?
+      sections.iter().for_each(|section| {
+        backend.enter_section(section);
+        backend.enter_section_heading(section);
+        // might need enter/exit_section_body...
+        section
+          .heading
+          .iter()
+          .for_each(|node| eval_inline(node, backend));
+        backend.exit_section_heading(section);
+        section
+          .blocks
+          .iter()
+          .for_each(|block| eval_block(block, backend));
+        backend.exit_section(section);
+      });
+    }
   }
   backend.exit_document(&document, doc_attrs);
 }
