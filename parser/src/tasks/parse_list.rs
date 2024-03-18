@@ -5,7 +5,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn parse_list(
     &mut self,
     mut lines: ContiguousLines<'bmp, 'src>,
-    meta: Option<BlockMetadata<'bmp>>,
+    meta: Option<ChunkMeta<'bmp>>,
   ) -> Result<Block<'bmp>> {
     let first_line = lines.consume_current().unwrap();
     let marker = first_line.list_marker().unwrap();
@@ -21,15 +21,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
     self.ctx.list.stack.pop();
 
-    let (title, attrs, start) = meta.map(|m| (m.title, m.attrs, m.start)).unwrap_or((
-      None,
-      None,
-      items.first().unwrap().loc_start(),
-    ));
+    let meta = meta.unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc_start()));
     Ok(Block {
-      title,
-      attrs,
-      loc: SourceLocation::new(start, items.last().unwrap().last_loc_end().unwrap()),
+      loc: SourceLocation::new(meta.start, items.last().unwrap().last_loc_end().unwrap()),
+      meta,
       context: variant.to_context(),
       content: BlockContent::List { variant, depth, items },
     })
@@ -212,8 +207,7 @@ mod tests {
         principle: bump.inodes([n_text("foo", 0, 3, bump)]),
         checklist: None,
         blocks: bump.vec([Block {
-          title: None,
-          attrs: None,
+          meta: ChunkMeta::empty(6),
           content: BlockContent::Simple(bump.inodes([n_text("bar", 6, 9, bump)])),
           context: BlockContext::Paragraph,
           loc: l(6, 9),
@@ -236,8 +230,7 @@ mod tests {
         principle: bump.inodes([n_text("foo", 0, 3, bump)]),
         checklist: None,
         blocks: bump.vec([Block {
-          title: None,
-          attrs: None,
+          meta: ChunkMeta::empty(6),
           content: BlockContent::Simple(bump.inodes([n_text("bar", 6, 9, bump)])),
           context: BlockContext::Paragraph,
           loc: l(6, 9),
@@ -294,8 +287,7 @@ mod tests {
             principle: b.inodes([n_text("one", 2, 5, b)]),
             checklist: None,
             blocks: b.vec([Block {
-              title: None,
-              attrs: None,
+              meta: ChunkMeta::empty(6),
               content: BlockContent::List {
                 variant: ListVariant::Unordered,
                 depth: 2,
@@ -344,8 +336,7 @@ mod tests {
           principle: b.inodes([n_text("foo", 2, 5, b)]),
           checklist: None,
           blocks: b.vec([Block {
-            title: None,
-            attrs: Some(AttrList::positional("circles", l(7, 14), b)),
+            meta: ChunkMeta::new(Some(b.positional_attrs("circles", l(7, 14))), None, 6),
             content: BlockContent::List {
               depth: 2,
               variant: ListVariant::Unordered,
@@ -371,8 +362,7 @@ mod tests {
           principle: b.inodes([n_text("foo", 2, 5, b)]),
           checklist: None,
           blocks: b.vec([Block {
-            title: None,
-            attrs: None,
+            meta: ChunkMeta::empty(6),
             content: BlockContent::List {
               depth: 2,
               variant: ListVariant::Unordered,
@@ -398,8 +388,7 @@ mod tests {
           principle: b.inodes([n_text("foo", 2, 5, b)]),
           checklist: None,
           blocks: b.vec([Block {
-            title: None,
-            attrs: None,
+            meta: ChunkMeta::empty(8),
             content: BlockContent::List {
               depth: 2,
               variant: ListVariant::Unordered,
@@ -470,8 +459,7 @@ mod tests {
           principle: b.inodes([n_text("Linux", 2, 7, b)]),
           checklist: None,
           blocks: b.vec([Block {
-            title: None,
-            attrs: None,
+            meta: ChunkMeta::empty(11),
             content: BlockContent::List {
               depth: 2,
               variant: ListVariant::Unordered,
@@ -541,8 +529,7 @@ mod tests {
           checklist: None,
           principle: b.inodes([n_text("principle", 2, 11, b)]),
           blocks: b.vec([Block {
-            title: None,
-            attrs: None,
+            meta: ChunkMeta::empty(14),
             content: BlockContent::Simple(b.inodes([n_text("with continuation", 14, 31, b)])),
             context: BlockContext::Paragraph,
             loc: l(14, 31),
@@ -565,15 +552,13 @@ mod tests {
           principle: b.inodes([n_text("principle", 2, 11, b)]),
           blocks: b.vec([
             Block {
-              title: None,
-              attrs: None,
+              meta: ChunkMeta::empty(14),
               content: BlockContent::Simple(b.inodes([n_text("with continuation", 14, 31, b)])),
               context: BlockContext::Paragraph,
               loc: l(14, 31),
             },
             Block {
-              title: None,
-              attrs: None,
+              meta: ChunkMeta::empty(34),
               content: BlockContent::Simple(b.inodes([n_text("and another", 34, 45, b)])),
               context: BlockContext::Paragraph,
               loc: l(34, 45),
@@ -606,15 +591,13 @@ mod tests {
             principle: b.inodes([n_text("principle", 2, 11, b)]),
             blocks: b.vec([
               Block {
-                title: None,
-                attrs: None,
+                meta: ChunkMeta::empty(14),
                 content: BlockContent::Simple(b.inodes([n_text("listing 1", 19, 28, b)])),
                 context: BlockContext::Listing,
                 loc: l(14, 33),
               },
               Block {
-                title: None,
-                attrs: None,
+                meta: ChunkMeta::empty(36),
                 content: BlockContent::Simple(b.inodes([n_text("some more principle", 36, 55, b)])),
                 context: BlockContext::Paragraph,
                 loc: l(36, 55),
@@ -627,8 +610,7 @@ mod tests {
             checklist: None,
             principle: b.inodes([n_text("second principle", 59, 75, b)]),
             blocks: b.vec([Block {
-              title: None,
-              attrs: None,
+              meta: ChunkMeta::empty(78),
               content: BlockContent::Simple(b.inodes([n_text("listing 2", 83, 92, b)])),
               context: BlockContext::Listing,
               loc: l(78, 97),

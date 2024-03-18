@@ -18,17 +18,8 @@ impl<'bmp> Document<'bmp> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Section<'bmp> {
+  pub meta: ChunkMeta<'bmp>,
   pub level: u8,
   pub heading: InlineNodes<'bmp>,
   pub blocks: BumpVec<'bmp, Block<'bmp>>,
-}
-
-impl<'bmp> Section<'bmp> {
-  pub fn new_in(bump: &'bmp Bump) -> Self {
-    Self {
-      level: 1,
-      heading: InlineNodes::new(bump),
-      blocks: BumpVec::new_in(bump),
-    }
-  }
 }

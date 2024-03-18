@@ -2,8 +2,7 @@ use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Block<'bmp> {
-  pub title: Option<SourceString<'bmp>>,
-  pub attrs: Option<AttrList<'bmp>>,
+  pub meta: ChunkMeta<'bmp>,
   pub content: BlockContent<'bmp>,
   pub context: BlockContext,
   pub loc: SourceLocation,

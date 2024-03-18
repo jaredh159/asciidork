@@ -5,7 +5,8 @@ pub trait BumpTestHelpers<'bmp> {
   fn s(&'bmp self, s: &'static str) -> BumpString<'bmp>;
   fn src(&'bmp self, s: &'static str, loc: SourceLocation) -> SourceString<'bmp>;
   fn inodes<const N: usize>(&'bmp self, nodes: [InlineNode<'bmp>; N]) -> InlineNodes<'bmp>;
-  fn empty_block(&'bmp self) -> Block<'bmp>;
+  fn empty_block(&'bmp self, start: usize, end: usize) -> Block<'bmp>;
+  fn positional_attrs(&'bmp self, positional: &'static str, loc: SourceLocation) -> AttrList<'bmp>;
 }
 
 impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
@@ -17,13 +18,24 @@ impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
     vec
   }
 
-  fn empty_block(&'bmp self) -> Block<'bmp> {
+  fn empty_block(&'bmp self, start: usize, end: usize) -> Block<'bmp> {
     Block {
-      title: None,
-      attrs: None,
+      meta: ChunkMeta::empty(start),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(InlineNodes::new(self)),
-      loc: SourceLocation::new(0, 0),
+      loc: SourceLocation::new(start, end),
+    }
+  }
+
+  fn positional_attrs(&'bmp self, positional: &'static str, loc: SourceLocation) -> AttrList<'bmp> {
+    AttrList {
+      positional: bvec![in self; Some(bvec![in self;
+        InlineNode::new(
+          Inline::Text(BumpString::from_str_in(positional, self)),
+          SourceLocation::new(loc.start, loc.end),
+        )
+      ].into())],
+      ..AttrList::new(SourceLocation::new(loc.start - 1, loc.end + 1), self)
     }
   }
 

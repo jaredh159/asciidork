@@ -5,7 +5,7 @@ use ast::short::block::*;
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn parse_block(
     &mut self,
-    meta: Option<BlockMetadata<'bmp>>,
+    meta: Option<ChunkMeta<'bmp>>,
   ) -> Result<Option<Block<'bmp>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
@@ -46,9 +46,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         let mut attr_entries = AttrEntries::new(); // TODO: this is a little weird...
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines, &mut attr_entries)? {
           return Ok(Some(Block {
-            title: None,
-            attrs: None,
             loc: SourceLocation::new(meta.start, end),
+            meta,
             context: Context::DocumentAttributeDecl,
             content: Content::DocumentAttribute(key, value),
           }));
@@ -78,8 +77,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
       if lines.is_empty() {
         return Some(Block {
-          title: None,
-          attrs: None,
+          meta: ChunkMeta::empty(start),
           context: Context::Comment,
           content: Content::Empty(EmptyMetadata::None),
           loc: SourceLocation::new(start, self.loc().end),
@@ -93,7 +91,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     delimiter: Delimiter,
     mut lines: ContiguousLines<'bmp, 'src>,
-    meta: BlockMetadata<'bmp>,
+    meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let prev = self.ctx.delimiter;
     self.ctx.delimiter = Some(delimiter);
@@ -137,18 +135,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
     self.ctx.delimiter = prev;
     Ok(Some(Block {
-      title: meta.title,
-      attrs: meta.attrs,
+      loc: SourceLocation::new(meta.start, end),
+      meta,
       content,
       context,
-      loc: SourceLocation::new(meta.start, end),
     }))
   }
 
   fn parse_image_block(
     &mut self,
     mut lines: ContiguousLines<'bmp, 'src>,
-    meta: BlockMetadata<'bmp>,
+    meta: ChunkMeta<'bmp>,
   ) -> Result<Block<'bmp>> {
     let mut line = lines.consume_current().unwrap();
     let start = line.loc().unwrap().start;
@@ -157,8 +154,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let target = line.consume_macro_target(self.bump);
     let attrs = self.parse_attr_list(&mut line)?;
     Ok(Block {
-      title: meta.title,
-      attrs: meta.attrs,
+      meta,
       loc: SourceLocation::new(start, attrs.loc.end),
       context: Context::Image,
       content: Content::Empty(EmptyMetadata::Image { target, attrs }),
@@ -168,9 +164,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_paragraph(
     &mut self,
     mut lines: ContiguousLines<'bmp, 'src>,
-    meta: BlockMetadata<'bmp>,
+    meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
-    let block_context = meta.paragraph_context(&mut lines);
+    let block_context = meta.block_paragraph_context(&mut lines);
 
     // TODO: probably a better stack-like context API is possible here...
     let restore_subs = self.ctx.set_subs_for(block_context);
@@ -182,9 +178,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
     Ok(Some(Block {
-      title: meta.title,
-      attrs: meta.attrs,
       loc: SourceLocation::new(meta.start, end),
+      meta,
       context: block_context,
       content: Content::Simple(inlines),
     }))
@@ -193,7 +188,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_quoted_paragraph(
     &mut self,
     mut lines: ContiguousLines<'bmp, 'src>,
-    meta: BlockMetadata<'bmp>,
+    meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let mut attr_line = lines.remove_last_unchecked();
     attr_line.discard_assert(TokenKind::Dashes); // `--`
@@ -211,9 +206,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .unwrap()
       .discard_assert_last(TokenKind::DoubleQuote);
     Ok(Some(Block {
-      title: meta.title,
-      attrs: meta.attrs,
       loc: SourceLocation::new(meta.start, end),
+      meta,
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
         quote: self.parse_inlines(&mut lines)?,
@@ -244,8 +238,7 @@ mod tests {
         inode(JoiningNewline, l(12, 13)),
         inode(Text(b.s("hello papa")), l(13, 23)),
       ])),
-      loc: l(0, 23),
-      ..b.empty_block()
+      ..b.empty_block(0, 23)
     };
     assert_eq!(block, expected);
   }
@@ -258,11 +251,10 @@ mod tests {
     "};
     parse_block!(input, block, b);
     let expected = Block {
-      attrs: Some(AttrList::positional("literal", l(1, 8), b)),
+      meta: ChunkMeta::new(Some(b.positional_attrs("literal", l(1, 8))), None, 0),
       context: Context::Literal,
       content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
-      loc: l(0, 19),
-      ..b.empty_block()
+      ..b.empty_block(0, 19)
     };
     assert_eq!(block, expected);
   }
@@ -283,8 +275,7 @@ mod tests {
         n(Inline::JoiningNewline, l(14, 15)),
         n_text("baz", 15, 18, b),
       ])),
-      loc: l(0, 23),
-      ..b.empty_block()
+      ..b.empty_block(0, 23)
     };
     assert_eq!(block, expected);
   }
@@ -307,8 +298,7 @@ mod tests {
         n(Inline::JoiningNewline, l(15, 16)),
         n_text("baz", 16, 19, b),
       ])),
-      loc: l(0, 24),
-      ..b.empty_block()
+      ..b.empty_block(0, 24)
     };
     assert_eq!(block, expected);
   }
@@ -321,11 +311,10 @@ mod tests {
     "};
     parse_block!(input, block, b);
     let expected = Block {
-      attrs: Some(AttrList::positional("listing", l(1, 8), b)),
+      meta: ChunkMeta::new(Some(b.positional_attrs("listing", l(1, 8))), None, 0),
       context: Context::Listing,
       content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
-      loc: l(0, 19),
-      ..b.empty_block()
+      ..b.empty_block(0, 19)
     };
     assert_eq!(block, expected);
   }
@@ -346,8 +335,7 @@ mod tests {
         n(Inline::JoiningNewline, l(14, 15)),
         n_text("baz", 15, 18, b),
       ])),
-      loc: l(0, 23),
-      ..b.empty_block()
+      ..b.empty_block(0, 23)
     };
     assert_eq!(block, expected);
   }
@@ -370,8 +358,7 @@ mod tests {
         n(Inline::JoiningNewline, l(15, 16)),
         n_text("baz", 16, 19, b),
       ])),
-      loc: l(0, 24),
-      ..b.empty_block()
+      ..b.empty_block(0, 24)
     };
     assert_eq!(block, expected);
   }
@@ -395,8 +382,7 @@ mod tests {
     let expected = Block {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
-      loc: l(0, 17),
-      ..b.empty_block()
+      ..b.empty_block(0, 17)
     };
     assert_eq!(block, expected);
   }
@@ -405,8 +391,7 @@ mod tests {
   fn test_parse_block_titles() {
     parse_block!(".My Title\nfoo\n\n", block, b);
     let expected = Block {
-      title: Some(b.src("My Title", l(1, 9))),
-      attrs: None,
+      meta: ChunkMeta::new(None, Some(b.src("My Title", l(1, 9))), 0),
       context: Context::Paragraph,
       content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(10, 13))])),
       loc: l(0, 13),
@@ -420,43 +405,38 @@ mod tests {
     let expected = Block {
       context: Context::AdmonitionTip,
       content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(5, 8))])),
-      loc: l(0, 8),
-      ..b.empty_block()
+      ..b.empty_block(0, 8)
     };
     assert_eq!(block, expected);
 
     parse_block!("[pos]\nTIP: foo\n\n", block, b);
     let expected = Block {
-      attrs: Some(AttrList::positional("pos", l(1, 4), b)),
+      meta: ChunkMeta::new(Some(b.positional_attrs("pos", l(1, 4))), None, 0),
       context: Context::AdmonitionTip,
       content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(11, 14))])),
       loc: l(0, 14),
-      ..b.empty_block()
     };
     assert_eq!(block, expected);
 
     parse_block!("[WARNING]\nTIP: foo\n\n", block, b);
     let expected = Block {
-      attrs: Some(AttrList::positional("WARNING", l(1, 8), b)),
+      meta: ChunkMeta::new(Some(b.positional_attrs("WARNING", l(1, 8))), None, 0),
       context: Context::AdmonitionWarning,
       content: Content::Simple(b.inodes([
         inode(Text(b.s("TIP: foo")), l(10, 18)), // <-- attr list wins
       ])),
-      loc: l(0, 18),
-      ..b.empty_block()
+      ..b.empty_block(0, 18)
     };
     assert_eq!(block, expected);
 
     parse_block!("[WARNING]\n====\nfoo\n====\n\n", block, b);
     let expected = Block {
-      title: None,
-      attrs: Some(AttrList::positional("WARNING", l(1, 8), b)),
+      meta: ChunkMeta::new(Some(b.positional_attrs("WARNING", l(1, 8))), None, 0),
       context: Context::AdmonitionWarning, // <-- turns example into warning
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
-        loc: l(15, 18),
-        ..b.empty_block()
+        ..b.empty_block(15, 18)
       }])),
       loc: l(0, 23),
     };
@@ -464,14 +444,12 @@ mod tests {
 
     parse_block!("[CAUTION]\n====\nNOTE: foo\n====\n\n", block, b);
     let expected = Block {
-      title: None,
-      attrs: Some(AttrList::positional("CAUTION", l(1, 8), b)),
+      meta: ChunkMeta::new(Some(b.positional_attrs("CAUTION", l(1, 8))), None, 0),
       context: Context::AdmonitionCaution,
       content: Content::Compound(b.vec([Block {
         context: Context::AdmonitionNote,
         content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(21, 24))])),
-        loc: l(15, 24),
-        ..b.empty_block()
+        ..b.empty_block(15, 24)
       }])),
       loc: l(0, 29),
     };
@@ -484,8 +462,7 @@ mod tests {
     let expected = Block {
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
-      loc: l(0, 3),
-      ..b.empty_block()
+      ..b.empty_block(0, 3)
     };
     assert_eq!(block, expected);
   }
@@ -499,8 +476,7 @@ mod tests {
         target: b.src("name.png", l(7, 15)),
         attrs: AttrList::new(l(15, 17), b),
       }),
-      loc: l(0, 17),
-      ..b.empty_block()
+      ..b.empty_block(0, 17)
     };
     assert_eq!(block, expected);
   }
@@ -513,11 +489,9 @@ mod tests {
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 3, 6, b)])),
-        loc: l(3, 6),
-        ..b.empty_block()
+        ..b.empty_block(3, 6)
       }])),
-      loc: l(0, 9),
-      ..b.empty_block()
+      ..b.empty_block(0, 9)
     };
     assert_eq!(block, expected);
   }
@@ -530,11 +504,9 @@ mod tests {
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
-        loc: l(5, 8),
-        ..b.empty_block()
+        ..b.empty_block(5, 8)
       }])),
-      loc: l(0, 13),
-      ..b.empty_block()
+      ..b.empty_block(0, 13)
     };
     assert_eq!(block, expected);
   }
@@ -548,7 +520,6 @@ mod tests {
     "#};
     parse_block!(input, block, b);
     let expected = Block {
-      attrs: None,
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
         quote: b.inodes([
@@ -559,8 +530,7 @@ mod tests {
         attr: b.src("Thomas Jefferson", l(65, 81)),
         cite: Some(b.src("Papers of Thomas Jefferson: Volume 11", l(83, 120))),
       },
-      loc: l(0, 120),
-      ..b.empty_block()
+      ..b.empty_block(0, 120)
     };
     assert_eq!(block, expected);
   }
@@ -576,11 +546,14 @@ mod tests {
     "#};
     parse_block!(input, block, b);
     let expected = Block {
-      attrs: Some(AttrList {
-        id: Some(b.src("foo", l(11, 14))),
-        ..AttrList::new(l(9, 15), b)
-      }),
-      title: Some(b.src("A Title", l(1, 8))),
+      meta: ChunkMeta::new(
+        Some(AttrList {
+          id: Some(b.src("foo", l(11, 14))),
+          ..AttrList::new(l(9, 15), b)
+        }),
+        Some(b.src("A Title", l(1, 8))),
+        0,
+      ),
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
         quote: b.inodes([
@@ -600,18 +573,21 @@ mod tests {
   fn test_simple_blockquote() {
     parse_block!("[quote,author,location]\nfoo\n\n", block, b);
     let expected = Block {
-      attrs: Some(AttrList {
-        positional: b.vec([
-          Some(b.inodes([n_text("quote", 1, 6, b)])),
-          Some(b.inodes([n_text("author", 7, 13, b)])),
-          Some(b.inodes([n_text("location", 14, 22, b)])),
-        ]),
-        ..AttrList::new(l(0, 23), b)
-      }),
+      meta: ChunkMeta::new(
+        Some(AttrList {
+          positional: b.vec([
+            Some(b.inodes([n_text("quote", 1, 6, b)])),
+            Some(b.inodes([n_text("author", 7, 13, b)])),
+            Some(b.inodes([n_text("location", 14, 22, b)])),
+          ]),
+          ..AttrList::new(l(0, 23), b)
+        }),
+        None,
+        0,
+      ),
       context: Context::BlockQuote,
       content: Content::Simple(b.inodes([n_text("foo", 24, 27, b)])),
-      loc: l(0, 27),
-      ..b.empty_block()
+      ..b.empty_block(0, 27)
     };
     assert_eq!(block, expected);
   }
@@ -626,23 +602,25 @@ mod tests {
     "};
     parse_block!(input, block, b);
     let expected = Block {
-      attrs: Some(AttrList {
-        positional: b.vec([
-          Some(b.inodes([n_text("quote", 1, 6, b)])),
-          Some(b.inodes([n_text("author", 7, 13, b)])),
-          Some(b.inodes([n_text("location", 14, 22, b)])),
-        ]),
-        ..AttrList::new(l(0, 23), b)
-      }),
+      meta: ChunkMeta::new(
+        Some(AttrList {
+          positional: b.vec([
+            Some(b.inodes([n_text("quote", 1, 6, b)])),
+            Some(b.inodes([n_text("author", 7, 13, b)])),
+            Some(b.inodes([n_text("location", 14, 22, b)])),
+          ]),
+          ..AttrList::new(l(0, 23), b)
+        }),
+        None,
+        0,
+      ),
       context: Context::BlockQuote,
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 29, 32, b)])),
-        loc: l(29, 32),
-        ..b.empty_block()
+        ..b.empty_block(29, 32)
       }])),
-      loc: l(0, 37),
-      ..b.empty_block()
+      ..b.empty_block(0, 37)
     };
     assert_eq!(block, expected);
   }
@@ -651,11 +629,10 @@ mod tests {
   fn test_undelimited_sidebar() {
     parse_block!("[sidebar]\nfoo\n\n", block, b);
     let expected = Block {
-      attrs: Some(AttrList::positional("sidebar", l(1, 8), b)),
+      meta: ChunkMeta::new(Some(b.positional_attrs("sidebar", l(1, 8))), None, 0),
       context: Context::Sidebar,
       content: Content::Simple(b.inodes([n_text("foo", 10, 13, b)])),
-      loc: l(0, 13),
-      ..b.empty_block()
+      ..b.empty_block(0, 13)
     };
     assert_eq!(block, expected);
   }
@@ -666,8 +643,7 @@ mod tests {
     let expected = Block {
       context: Context::Open,
       content: Content::Compound(b.vec([])),
-      loc: l(0, 5),
-      ..b.empty_block()
+      ..b.empty_block(0, 5)
     };
     assert_eq!(block, expected);
   }
@@ -680,11 +656,9 @@ mod tests {
       content: Content::Compound(b.vec([Block {
         context: Context::Paragraph,
         content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
-        loc: l(5, 8),
-        ..b.empty_block()
+        ..b.empty_block(5, 8)
       }])),
-      loc: l(0, 13),
-      ..b.empty_block()
+      ..b.empty_block(0, 13)
     };
     assert_eq!(block, expected);
   }
@@ -706,14 +680,11 @@ mod tests {
         content: Content::Compound(b.vec([Block {
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([n_text("foo", 8, 11, b)])),
-          loc: l(8, 11),
-          ..b.empty_block()
+          ..b.empty_block(8, 11)
         }])),
-        loc: l(5, 14),
-        ..b.empty_block()
+        ..b.empty_block(5, 14)
       }])),
-      loc: l(0, 19),
-      ..b.empty_block()
+      ..b.empty_block(0, 19)
     };
     assert_eq!(block, expected);
 
@@ -734,19 +705,16 @@ mod tests {
     let expected = Block {
       context: Context::Sidebar,
       content: Content::Compound(b.vec([Block {
-        title: Some(b.src("Bar", l(7, 10))),
+        meta: ChunkMeta::new(None, Some(b.src("Bar", l(7, 10))), 6),
         context: Context::Open,
         content: Content::Compound(b.vec([Block {
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
-          loc: l(15, 18),
-          ..b.empty_block()
+          ..b.empty_block(15, 18)
         }])),
         loc: l(6, 23),
-        ..b.empty_block()
       }])),
-      loc: l(0, 29),
-      ..b.empty_block()
+      ..b.empty_block(0, 29)
     };
     assert_eq!(block, expected);
   }
@@ -771,8 +739,7 @@ mod tests {
         Block {
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([para_1_txt])),
-          loc: l(5, 40),
-          ..b.empty_block()
+          ..b.empty_block(5, 40)
         },
         Block {
           context: Context::Image,
@@ -780,18 +747,15 @@ mod tests {
             target: b.src("name.png", l(49, 57)),
             attrs: AttrList::new(l(57, 59), b),
           }),
-          loc: l(42, 59),
-          ..b.empty_block()
+          ..b.empty_block(42, 59)
         },
         Block {
           context: Context::Paragraph,
           content: Content::Simple(b.inodes([para_2_txt])),
-          loc: l(61, 103),
-          ..b.empty_block()
+          ..b.empty_block(61, 103)
         },
       ])),
-      loc: l(0, 108),
-      ..b.empty_block()
+      ..b.empty_block(0, 108)
     };
     assert_eq!(block, expected);
   }

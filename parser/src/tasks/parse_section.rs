@@ -37,6 +37,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     Ok(Some(SectionOutput::Section(Section {
+      meta,
       level,
       heading,
       blocks,
@@ -47,7 +48,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 #[derive(Debug)]
 pub enum SectionOutput<'bmp> {
   Section(Section<'bmp>),
-  PeekedMeta(BlockMetadata<'bmp>),
+  PeekedMeta(ChunkMeta<'bmp>),
 }
 
 #[cfg(test)]
@@ -69,13 +70,13 @@ mod tests {
     assert_eq!(
       section,
       Section {
+        meta: ChunkMeta::empty(0),
         level: 1,
         heading: b.inodes([n_text("foo", 3, 6, b)]),
         blocks: b.vec([Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(b.inodes([n_text("bar", 8, 11, b),])),
-          loc: l(8, 11),
-          ..b.empty_block()
+          ..b.empty_block(8, 11)
         }])
       }
     );

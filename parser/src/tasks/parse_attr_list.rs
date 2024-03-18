@@ -38,7 +38,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(super) fn parse_attr_list(&mut self, line: &mut Line<'bmp, 'src>) -> Result<AttrList<'bmp>> {
+  pub(crate) fn parse_attr_list(&mut self, line: &mut Line<'bmp, 'src>) -> Result<AttrList<'bmp>> {
     self.parse_attrs(line, false)
   }
 

@@ -89,23 +89,6 @@ impl<'bmp> AttrList<'bmp> {
       .enumerate()
       .any(|(i, _)| self.str_positional_at(i) == Some(positional))
   }
-
-  // TODO: rename, make test or something...
-  pub fn positional(
-    positional: &'static str,
-    loc: SourceLocation,
-    bump: &'bmp Bump,
-  ) -> AttrList<'bmp> {
-    AttrList {
-      positional: bvec![in bump; Some(bvec![in bump;
-        InlineNode::new(
-          Inline::Text(BumpString::from_str_in(positional, bump)),
-          SourceLocation::new(loc.start, loc.end),
-        )
-      ].into())],
-      ..AttrList::new(SourceLocation::new(loc.start - 1, loc.end + 1), bump)
-    }
-  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

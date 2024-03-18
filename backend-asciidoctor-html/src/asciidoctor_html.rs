@@ -92,7 +92,7 @@ impl Backend for AsciidoctorHtml {
   fn exit_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {}
 
   fn enter_sidebar_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["sidebarblock"], &block.attrs);
+    self.open_element("div", &["sidebarblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
   }
 
@@ -101,7 +101,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["listingblock"], &block.attrs);
+    self.open_element("div", &["listingblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content"><pre>"#);
     self.preserve_newlines = true
   }
@@ -112,14 +112,14 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
-    self.open_element("div", &["quoteblock"], &block.attrs);
-    self.visit_block_title(block.title.as_deref(), None);
+    self.open_element("div", &["quoteblock"], &block.meta.attrs);
+    self.visit_block_title(block.meta.title.as_deref(), None);
     self.push_str("<blockquote>");
   }
 
   fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["quoteblock"], &block.attrs);
-    self.visit_block_title(block.title.as_deref(), None);
+    self.open_element("div", &["quoteblock"], &block.meta.attrs);
+    self.visit_block_title(block.meta.title.as_deref(), None);
     self.push_str("<blockquote>");
   }
 
@@ -128,7 +128,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_quote_block(&mut self, block: &Block, _content: &BlockContent) {
-    if let Some(attrs) = &block.attrs {
+    if let Some(attrs) = &block.meta.attrs {
       self.exit_blockquote(attrs.str_positional_at(1), attrs.str_positional_at(2));
     } else {
       self.exit_blockquote(None, None);
@@ -136,7 +136,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["exampleblock"], &block.attrs);
+    self.open_element("div", &["exampleblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
   }
 
@@ -145,7 +145,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_open_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["openblock"], &block.attrs);
+    self.open_element("div", &["openblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
   }
 
@@ -154,8 +154,8 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], _depth: u8) {
-    let attrs = block.attrs.as_ref();
-    let custom = attrs.and_then(|attrs| attrs.unordered_list_custom_marker_style());
+    let attrs = block.meta.attrs.as_ref();
+    let custom = attrs.and_then(|a| a.unordered_list_custom_marker_style());
     let interactive = attrs.map(|a| a.has_option("interactive")).unwrap_or(false);
     self.list_stack.push(interactive);
     let mut wrap_classes = SmallVec::<[&str; 3]>::from_slice(&["ulist"]);
@@ -168,8 +168,8 @@ impl Backend for AsciidoctorHtml {
       wrap_classes.push("checklist");
       list_classes.push("checklist");
     }
-    self.open_element("div", &wrap_classes, &block.attrs);
-    self.visit_block_title(block.title.as_deref(), None);
+    self.open_element("div", &wrap_classes, &block.meta.attrs);
+    self.visit_block_title(block.meta.title.as_deref(), None);
     self.push_str("<ul");
     self.add_classes(&list_classes);
     self.push_ch('>');
@@ -181,7 +181,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
-    self.open_element("div", &["dlist"], &block.attrs);
+    self.open_element("div", &["dlist"], &block.meta.attrs);
     self.push_str("<dl>");
   }
 
@@ -211,16 +211,16 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    let attrs = block.attrs.as_ref();
     self.list_stack.push(false);
+    let attrs = block.meta.attrs.as_ref();
     let custom = attrs.and_then(|attrs| attrs.ordered_list_custom_number_style());
     let list_type = custom
       .and_then(list_type_from_class)
       .unwrap_or_else(|| list_type_from_depth(depth));
     let class = custom.unwrap_or_else(|| list_class_from_depth(depth));
     let classes = &["olist", class];
-    self.open_element("div", classes, &block.attrs);
-    self.visit_block_title(block.title.as_deref(), None);
+    self.open_element("div", classes, &block.meta.attrs);
+    self.visit_block_title(block.meta.title.as_deref(), None);
     self.push([r#"<ol class=""#, class, "\""]);
 
     if list_type != "1" {
@@ -272,7 +272,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_paragraph_block(&mut self, block: &Block) {
     if !self.visiting_simple_term_description {
       self.push_str(r#"<div class="paragraph">"#);
-      self.visit_block_title(block.title.as_deref(), None);
+      self.visit_block_title(block.meta.title.as_deref(), None);
     }
     self.push_str("<p>");
   }
@@ -430,11 +430,11 @@ impl Backend for AsciidoctorHtml {
 
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
     let classes = &["admonitionblock", kind.lowercase_str()];
-    self.open_element("div", classes, &block.attrs);
+    self.open_element("div", classes, &block.meta.attrs);
     self.push_str(r#"<table><tr><td class="icon"><div class="title">"#);
     self.push_str(kind.str());
     self.push_str(r#"</div></td><td class="content">"#);
-    self.visit_block_title(block.title.as_deref(), None);
+    self.visit_block_title(block.meta.title.as_deref(), None);
   }
 
   fn exit_admonition_block(&mut self, _kind: AdmonitionKind, _block: &Block) {
@@ -449,10 +449,10 @@ impl Backend for AsciidoctorHtml {
         img_target
       }
     });
-    self.open_element("div", &["imageblock"], &block.attrs);
+    self.open_element("div", &["imageblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
     let mut has_link = false;
-    if let Some(href) = &block.attrs.as_ref().and_then(|attrs| attrs.named("link")) {
+    if let Some(href) = &block.meta.attrs.as_ref().and_then(|a| a.named("link")) {
       self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
       has_link = true;
     }
@@ -477,7 +477,7 @@ impl Backend for AsciidoctorHtml {
       self.fig_caption_num += 1;
       Some(Cow::Owned(format!("Figure {}. ", self.fig_caption_num)))
     };
-    self.visit_block_title(block.title.as_deref(), prefix);
+    self.visit_block_title(block.meta.title.as_deref(), prefix);
     self.push_str(r#"</div>"#);
   }
 

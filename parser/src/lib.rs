@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+mod chunk;
 mod contiguous_lines;
 mod delimiter;
 mod diagnostic;
@@ -22,6 +23,7 @@ pub use diagnostic::Diagnostic;
 pub use parser::Parser;
 
 mod internal {
+  pub use crate::chunk::*;
   pub use crate::contiguous_lines::ContiguousLines;
   pub use crate::delimiter::*;
   pub use crate::diagnostic::*;
@@ -29,7 +31,6 @@ mod internal {
   pub use crate::line::*;
   pub use crate::list_stack::*;
   pub use crate::parser::*;
-  pub use crate::tasks::block_metadata::*;
   pub use crate::tasks::collect_text::*;
   pub use crate::tasks::parse_section::*;
   pub use crate::token::*;

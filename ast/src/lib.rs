@@ -1,6 +1,7 @@
 mod attr_entries;
 mod attr_list;
 mod block;
+mod chunk_meta;
 mod doc_content;
 mod doc_header;
 mod inline;
@@ -18,6 +19,7 @@ mod internal {
     pub use crate::attr_entries::{AttrEntries, AttrEntry};
     pub use crate::attr_list::{AttrList, Named};
     pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
+    pub use crate::chunk_meta::ChunkMeta;
     pub use crate::doc_content::DocContent;
     pub use crate::doc_header::{Author, DocHeader, DocTitle, Revision};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
