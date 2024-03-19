@@ -47,11 +47,15 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.pos >= self.all_tokens.len()
   }
 
-  pub fn is_header(&self, level: u8) -> bool {
-    self.header_level() == Some(level)
+  pub fn is_heading(&self) -> bool {
+    self.heading_level().is_some()
   }
 
-  pub fn header_level(&self) -> Option<u8> {
+  pub fn is_heading_level(&self, level: u8) -> bool {
+    self.heading_level() == Some(level)
+  }
+
+  pub fn heading_level(&self) -> Option<u8> {
     if self.starts_with_seq(&[EqualSigns, Whitespace]) {
       Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
     } else {
@@ -69,7 +73,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.starts(OpenBracket) && self.ends_with_nonescaped(CloseBracket)
   }
 
-  pub fn is_block_title(&self) -> bool {
+  pub fn is_chunk_title(&self) -> bool {
     // dot followed by at least one non-whitespace token
     self.starts(Dots) && self.tokens().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
   }

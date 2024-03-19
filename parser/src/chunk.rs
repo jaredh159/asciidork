@@ -4,6 +4,7 @@ use crate::variants::token::*;
 pub trait ChunkMetaExt<'bmp> {
   fn block_style_or(&self, default: BlockContext) -> BlockContext;
   fn block_paragraph_context(&self, lines: &mut ContiguousLines) -> BlockContext;
+  fn attrs_has_str_positional(&self, positional: &str) -> bool;
 }
 
 impl<'bmp> ChunkMetaExt<'bmp> for ChunkMeta<'bmp> {
@@ -36,5 +37,12 @@ impl<'bmp> ChunkMetaExt<'bmp> for ChunkMeta<'bmp> {
     }
     // default to pararagraph
     BlockContext::Paragraph
+  }
+
+  fn attrs_has_str_positional(&self, positional: &str) -> bool {
+    self
+      .attrs
+      .as_ref()
+      .map_or(false, |attrs| attrs.has_str_positional(positional))
   }
 }

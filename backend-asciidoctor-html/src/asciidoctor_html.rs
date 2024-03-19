@@ -66,10 +66,6 @@ impl Backend for AsciidoctorHtml {
     self.open_element("div", &["sect1"], &None); // weird, no attrs...
   }
 
-  // sun jared: maybe rename BlockMetadata to ChunkMetadata, set it
-  // individually on blocks and sections, instead of attrs + title
-  // consider adding convenience fns to avoid all the map/unwrap/ref stuff
-
   fn exit_section(&mut self, _section: &Section) {
     self.push_str("</div></div>");
   }

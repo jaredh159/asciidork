@@ -1,28 +1,27 @@
 use crate::internal::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(crate) fn parse_section(&mut self) -> Result<Option<SectionOutput<'bmp>>> {
+  pub(crate) fn parse_section(&mut self) -> Result<Option<Section<'bmp>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
 
-    let meta = self.parse_block_metadata(&mut lines)?;
+    let meta = self.parse_chunk_meta(&mut lines)?;
     let Some(line) = lines.current() else {
-      return Ok(Some(SectionOutput::PeekedMeta(meta)));
+      self.restore_peeked_meta(meta);
+      return Ok(None);
     };
 
-    let Some(level) = line.header_level() else {
+    let Some(level) = line.heading_level() else {
       self.restore_lines(lines);
-      return Ok(Some(SectionOutput::PeekedMeta(meta)));
+      self.restore_peeked_meta(meta);
+      return Ok(None);
     };
 
-    if meta
-      .attrs
-      .as_ref()
-      .map_or(false, |attrs| attrs.has_str_positional("discrete"))
-    {
+    if meta.attrs_has_str_positional("discrete") {
       self.restore_lines(lines);
-      return Ok(Some(SectionOutput::PeekedMeta(meta)));
+      self.restore_peeked_meta(meta);
+      return Ok(None);
     }
 
     let mut heading_line = lines.consume_current().unwrap();
@@ -32,23 +31,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     // blocks
     let mut blocks = BumpVec::new_in(self.bump);
-    while let Some(inner) = self.parse_block(None)? {
+    while let Some(inner) = self.parse_block()? {
       blocks.push(inner);
     }
 
-    Ok(Some(SectionOutput::Section(Section {
-      meta,
-      level,
-      heading,
-      blocks,
-    })))
+    Ok(Some(Section { meta, level, heading, blocks }))
   }
-}
-
-#[derive(Debug)]
-pub enum SectionOutput<'bmp> {
-  Section(Section<'bmp>),
-  PeekedMeta(ChunkMeta<'bmp>),
 }
 
 #[cfg(test)]
@@ -62,11 +50,7 @@ mod tests {
     let input = "== foo\n\nbar";
     let b = &Bump::new();
     let mut parser = Parser::new(b, input);
-    let out = parser.parse_section().unwrap().unwrap();
-    let section = match out {
-      SectionOutput::Section(section) => section,
-      _ => panic!("expected section"),
-    };
+    let section = parser.parse_section().unwrap().unwrap();
     assert_eq!(
       section,
       Section {
@@ -77,6 +61,41 @@ mod tests {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(b.inodes([n_text("bar", 8, 11, b),])),
           ..b.empty_block(8, 11)
+        }])
+      }
+    );
+  }
+
+  #[test]
+  fn test_parse_2_sections() {
+    let input = "== one\n\nfoo\n\n== two\n\nbar";
+    let b = &Bump::new();
+    let mut parser = Parser::new(b, input);
+    let section = parser.parse_section().unwrap().unwrap();
+    assert_eq!(
+      section,
+      Section {
+        meta: ChunkMeta::empty(0),
+        level: 1,
+        heading: b.inodes([n_text("one", 3, 6, b)]),
+        blocks: b.vec([Block {
+          context: BlockContext::Paragraph,
+          content: BlockContent::Simple(b.inodes([n_text("foo", 8, 11, b),])),
+          ..b.empty_block(8, 11)
+        }])
+      }
+    );
+    let section = parser.parse_section().unwrap().unwrap();
+    assert_eq!(
+      section,
+      Section {
+        meta: ChunkMeta::empty(13),
+        level: 1,
+        heading: b.inodes([n_text("two", 16, 19, b)]),
+        blocks: b.vec([Block {
+          context: BlockContext::Paragraph,
+          content: BlockContent::Simple(b.inodes([n_text("bar", 21, 24, b),])),
+          ..b.empty_block(21, 24)
         }])
       }
     );

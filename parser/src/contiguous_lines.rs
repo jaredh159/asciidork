@@ -187,6 +187,19 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       self.consume_current();
     }
   }
+
+  pub fn starts_section(&self, meta: &ChunkMeta<'bmp>) -> bool {
+    for line in self.iter() {
+      if line.is_attr_list() || line.is_chunk_title() {
+        continue;
+      } else if line.is_heading() {
+        return !meta.attrs_has_str_positional("discrete");
+      } else {
+        return false;
+      }
+    }
+    false
+  }
 }
 
 struct LinesIter<'bmp, 'src> {

@@ -8,6 +8,7 @@ pub struct Parser<'bmp: 'src, 'src> {
   pub(super) lexer: Lexer<'src>,
   pub(super) document: Document<'bmp>,
   pub(super) peeked_lines: Option<ContiguousLines<'bmp, 'src>>,
+  pub(super) peeked_meta: Option<ChunkMeta<'bmp>>,
   pub(super) ctx: ParseContext,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
@@ -65,6 +66,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       lexer: Lexer::new(src),
       document: Document::new(bump),
       peeked_lines: None,
+      peeked_meta: None,
       ctx: ParseContext {
         subs: Substitutions::all(),
         delimiter: None,
@@ -153,11 +155,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
+  pub(crate) fn restore_peeked_meta(&mut self, meta: ChunkMeta<'bmp>) {
+    debug_assert!(self.peeked_meta.is_none());
+    self.peeked_meta = Some(meta);
+  }
+
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
 
     while let Some(chunk) = self.parse_chunk()? {
-      dbg!(&chunk);
       match chunk {
         Chunk::Block(block) => self.document.content.push_block(block, self.bump),
         Chunk::Section(section) => self.document.content.push_section(section, self.bump),
@@ -172,22 +178,24 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn parse_chunk(&mut self) -> Result<Option<Chunk<'bmp>>> {
     match self.parse_section()? {
-      Some(SectionOutput::Section(section)) => Ok(Some(Chunk::Section(section))),
-      Some(SectionOutput::PeekedMeta(meta)) => Ok(self.parse_block(Some(meta))?.map(Chunk::Block)),
-      None => Ok(None),
+      Some(section) => Ok(Some(Chunk::Section(section))),
+      None => Ok(self.parse_block()?.map(Chunk::Block)),
     }
   }
 
-  pub(crate) fn parse_block_metadata(
+  pub(crate) fn parse_chunk_meta(
     &mut self,
     lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<ChunkMeta<'bmp>> {
+    if let Some(meta) = self.peeked_meta.take() {
+      return Ok(meta);
+    }
     let start = lines.current_token().unwrap().loc.start;
     let mut attrs = None;
     let mut title = None;
     loop {
       match lines.current().unwrap() {
-        line if line.is_block_title() => {
+        line if line.is_chunk_title() => {
           let mut line = lines.consume_current().unwrap();
           line.discard_assert(TokenKind::Dots);
           title = Some(line.consume_to_string(self.bump));

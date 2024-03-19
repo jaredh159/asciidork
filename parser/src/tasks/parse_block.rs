@@ -3,10 +3,7 @@ use crate::variants::token::*;
 use ast::short::block::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(crate) fn parse_block(
-    &mut self,
-    meta: Option<ChunkMeta<'bmp>>,
-  ) -> Result<Option<Block<'bmp>>> {
+  pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'bmp>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
@@ -15,10 +12,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(Some(comment_block));
     }
 
-    let meta = match meta {
-      Some(meta) => meta,
-      None => self.parse_block_metadata(&mut lines)?,
-    };
+    let meta = self.parse_chunk_meta(&mut lines)?;
+    if lines.starts_section(&meta) {
+      self.restore_lines(lines);
+      return Ok(None);
+    }
 
     let first_token = lines.current_token().unwrap();
 
@@ -111,7 +109,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       content
     } else {
       let mut blocks = BumpVec::new_in(self.bump);
-      while let Some(inner) = self.parse_block(None)? {
+      while let Some(inner) = self.parse_block()? {
         blocks.push(inner);
       }
       Content::Compound(blocks)
@@ -764,7 +762,7 @@ mod tests {
   fn test_unclosed_delimited_block_err() {
     let b = &Bump::new();
     let mut parser = Parser::new(b, "--\nfoo\n\n");
-    let err = parser.parse_block(None).err().unwrap();
+    let err = parser.parse_block().err().unwrap();
     assert_eq!(
       err,
       Diagnostic {
