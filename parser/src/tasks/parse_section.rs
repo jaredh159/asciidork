@@ -13,14 +13,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
 
     let Some(level) = line.heading_level() else {
-      self.restore_lines(lines);
-      self.restore_peeked_meta(meta);
+      self.restore_peeked(lines, meta);
       return Ok(None);
     };
 
     if meta.attrs_has_str_positional("discrete") {
-      self.restore_lines(lines);
-      self.restore_peeked_meta(meta);
+      self.restore_peeked(lines, meta);
       return Ok(None);
     }
 
@@ -30,6 +28,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let heading = self.parse_inlines(&mut heading_line.into_lines_in(self.bump))?;
 
     // blocks
+    self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
     while let Some(inner) = self.parse_block()? {
       blocks.push(inner);

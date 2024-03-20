@@ -70,7 +70,15 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn is_attr_list(&self) -> bool {
-    self.starts(OpenBracket) && self.ends_with_nonescaped(CloseBracket)
+    if !self.starts(OpenBracket) || !self.ends_with_nonescaped(CloseBracket) {
+      false
+    // support legacy [[id,pos]] anchor syntax
+    } else if self.starts_with_seq(&[OpenBracket, OpenBracket]) {
+      self.ends_with_nonescaped(CloseBracket)
+        && self.nth_token(self.num_tokens() - 2).is(CloseBracket)
+    } else {
+      true
+    }
   }
 
   pub fn is_chunk_title(&self) -> bool {

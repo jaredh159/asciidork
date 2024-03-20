@@ -21,8 +21,10 @@ pub fn visit<B: Backend>(document: Document, flags: Flags, backend: &mut B) {
     DocContent::Blocks(blocks) => {
       blocks.iter().for_each(|block| eval_block(block, backend));
     }
-    DocContent::Sectioned { sections, .. } => {
-      // TODO: handle preamble
+    DocContent::Sectioned { sections, preamble } => {
+      if let Some(blocks) = preamble {
+        blocks.iter().for_each(|block| eval_block(block, backend));
+      }
       // maybe move this out into an `eval_section` fn?
       sections.iter().for_each(|section| {
         backend.enter_section(section);

@@ -31,6 +31,7 @@ struct AttrState<'bmp: 'src, 'src> {
   parse_range: (usize, usize),
   formatted_text: bool,
   prev_token: Option<TokenKind>,
+  is_legacy_anchor: bool,
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -58,19 +59,29 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     line: &mut Line<'bmp, 'src>,
     formatted_text: bool,
   ) -> Result<AttrList<'bmp>> {
-    debug_assert!(!line.current_is(OpenBracket));
-    debug_assert!(line.contains_nonescaped(CloseBracket));
-
-    if line.current_is(CloseBracket) {
-      let close = line.consume_current().unwrap(); // `]`
-      return Ok(AttrList::new(close.loc.decr_start(), self.bump));
-    }
-
     use AttrKind::*;
     use Quotes::*;
     let parse_start = line.current_token().unwrap().loc.start;
     let parse_end = line.first_nonescaped(CloseBracket).unwrap().loc.end - 1;
     let mut state = AttrState::new_in(self.bump, formatted_text, (parse_start, parse_end));
+
+    if line.current_is(OpenBracket) {
+      line.consume_current().unwrap(); // `[`
+      state.attr_list.loc.end += 1;
+      state.attr.loc.start += 1;
+      state.is_legacy_anchor = true;
+    }
+
+    if line.current_is(CloseBracket) {
+      let mut close = line.consume_current().unwrap(); // `]`
+      if state.is_legacy_anchor {
+        close = line.consume_current().unwrap(); // second
+      }
+      return Ok(AttrList::new(
+        SourceLocation::new(parse_start - 1, close.loc.end),
+        self.bump,
+      ));
+    }
 
     while let Some(token) = line.consume_current() {
       let kind = token.kind;
@@ -185,6 +196,7 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
       parse_range,
       formatted_text,
       prev_token: None,
+      is_legacy_anchor: false,
     }
   }
 
@@ -219,12 +231,19 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
       match &self.kind {
         // could be optimized to not call parse_inlines more exhaustively by
         // tracking every type of token that would indicate we need to parse
-        Positional if self.tokens.iter().all(|t| t.is(Word) || t.is(Whitespace)) => {
+        Positional
+          if (self.is_legacy_anchor
+            || self.tokens.iter().all(|t| t.is(Word) || t.is(Whitespace))) =>
+        {
           self.err_if_formatted(parser)?;
           let src = self.attr.take_src();
-          self.attr_list.positional.push(Some(
-            bvec![in self.bump; InlineNode::new(Text(src.src), src.loc)].into(),
-          ));
+          if self.is_legacy_anchor && self.attr_list.id.is_none() {
+            self.attr_list.id = Some(src);
+          } else {
+            self.attr_list.positional.push(Some(
+              bvec![in self.bump; InlineNode::new(Text(src.src), src.loc)].into(),
+            ));
+          }
         }
         Positional => {
           self.err_if_formatted(parser)?;
@@ -235,10 +254,12 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
         }
         Named => {
           self.err_if_formatted(parser)?;
-          self
-            .attr_list
-            .named
-            .insert(self.name.take_src(), self.attr.take_src());
+          let name = self.name.take_src();
+          if &name == "id" {
+            self.attr_list.id = Some(self.attr.take_src());
+          } else {
+            self.attr_list.named.insert(name, self.attr.take_src());
+          }
         }
         Role => {
           self.attr.loc = self.attr.loc.incr_start(); // skip `.`
@@ -343,6 +364,13 @@ mod tests {
         AttrList {
           id: Some(b.src("someid", l(2, 8))),
           ..AttrList::new(l(0, 9), b)
+        },
+      ),
+      (
+        "[id=someid]",
+        AttrList {
+          id: Some(b.src("someid", l(4, 10))),
+          ..AttrList::new(l(0, 11), b)
         },
       ),
       (
@@ -504,6 +532,43 @@ mod tests {
           ..AttrList::new(l(0, 19), b)
         },
       ),
+    ];
+    for (input, expected) in cases {
+      let mut parser = Parser::new(b, input);
+      let mut line = parser.read_line().unwrap();
+      line.discard(1); // `[`
+      let attr_list = parser.parse_attr_list(&mut line).unwrap();
+      assert_eq!(attr_list, expected);
+    }
+  }
+
+  #[test]
+  fn test_parse_legacy_attr_list() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "[[foo]]",
+        AttrList {
+          id: Some(b.src("foo", l(2, 5))),
+          ..AttrList::new(l(0, 7), b)
+        },
+      ),
+      (
+        "[[f.o]]",
+        AttrList {
+          id: Some(b.src("f.o", l(2, 5))),
+          ..AttrList::new(l(0, 7), b)
+        },
+      ),
+      (
+        "[[foo,bar]]",
+        AttrList {
+          id: Some(b.src("foo", l(2, 5))),
+          positional: b.vec([Some(b.inodes([n_text("bar", 6, 9, b)]))]),
+          ..AttrList::new(l(0, 11), b)
+        },
+      ),
+      ("[[]]", AttrList { ..AttrList::new(l(0, 4), b) }),
     ];
     for (input, expected) in cases {
       let mut parser = Parser::new(b, input);

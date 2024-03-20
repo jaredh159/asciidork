@@ -160,6 +160,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.peeked_meta = Some(meta);
   }
 
+  pub(crate) fn restore_peeked(
+    &mut self,
+    lines: ContiguousLines<'bmp, 'src>,
+    meta: ChunkMeta<'bmp>,
+  ) {
+    self.restore_lines(lines);
+    self.restore_peeked_meta(meta);
+  }
+
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
 

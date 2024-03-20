@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::internal::*;
 
 #[derive(Debug, Default)]
@@ -11,6 +13,7 @@ pub struct AsciidoctorHtml {
   list_stack: Vec<bool>,
   preserve_newlines: bool,
   visiting_simple_term_description: bool,
+  section_ids: HashSet<String>,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -70,16 +73,32 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
-  fn enter_section_heading(&mut self, section: &Section) {
-    self.push_str(r#"<h"#);
-    self.push_str(&(section.level + 1).to_string());
-    self.push_str(r#" id="_section_1">"#); // lol hardcoded
+  fn enter_section_heading(&mut self, _section: &Section) {
+    self.start_buffering();
   }
 
   fn exit_section_heading(&mut self, section: &Section) {
-    self.push_str(r#"</h"#);
-    self.push_str(&(section.level + 1).to_string());
-    self.push_str(r#"><div class="sectionbody">"#);
+    let heading_html = self.stop_buffering();
+    let level = (section.level + 1).to_string();
+    if !self.doc_attrs.is_unset("sectids") {
+      let id = {
+        match section.meta.attrs.as_ref().and_then(|a| a.id.as_ref()) {
+          Some(id) => id.to_string(),
+          None => section::autogenerate_id(
+            &heading_html,
+            section::id_prefix(&self.doc_attrs),
+            section::id_separator(&self.doc_attrs),
+            &self.section_ids,
+          ),
+        }
+      };
+      self.push(["<h", &level, r#" id=""#, &id, "\">"]);
+      self.section_ids.insert(id);
+    } else {
+      self.push(["<h", &level, ">"]);
+    }
+    self.push_str(&heading_html);
+    self.push(["</h", &level, r#"><div class="sectionbody">"#]);
   }
 
   fn enter_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
@@ -482,13 +501,11 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_footnote(&mut self, _id: Option<&str>, _content: &[InlineNode]) {
-    mem::swap(&mut self.html, &mut self.alt_html);
+    self.start_buffering();
   }
 
   fn exit_footnote(&mut self, id: Option<&str>, _content: &[InlineNode]) {
-    mem::swap(&mut self.alt_html, &mut self.html);
-    let mut footnote = String::new();
-    mem::swap(&mut footnote, &mut self.alt_html);
+    let footnote = self.stop_buffering();
     let num = (self.footnotes.len() + 1).to_string();
     self.push_str(r#"<sup class="footnote""#);
     if let Some(id) = id {
@@ -671,6 +688,17 @@ impl AsciidoctorHtml {
         (true, false) => self.push_str(r#"<input type="checkbox" data-item-complete="0">"#),
       }
     }
+  }
+
+  fn start_buffering(&mut self) {
+    mem::swap(&mut self.html, &mut self.alt_html);
+  }
+
+  fn stop_buffering(&mut self) -> String {
+    mem::swap(&mut self.alt_html, &mut self.html);
+    let mut buffered = String::new();
+    mem::swap(&mut buffered, &mut self.alt_html);
+    buffered
   }
 }
 

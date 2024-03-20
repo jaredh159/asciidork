@@ -14,7 +14,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let meta = self.parse_chunk_meta(&mut lines)?;
     if lines.starts_section(&meta) {
-      self.restore_lines(lines);
+      self.restore_peeked(lines, meta);
       return Ok(None);
     }
 
@@ -43,6 +43,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Colon => {
         let mut attr_entries = AttrEntries::new(); // TODO: this is a little weird...
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines, &mut attr_entries)? {
+          self.restore_lines(lines);
           return Ok(Some(Block {
             loc: SourceLocation::new(meta.start, end),
             meta,
