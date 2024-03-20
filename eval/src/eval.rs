@@ -25,25 +25,25 @@ pub fn visit<B: Backend>(document: Document, flags: Flags, backend: &mut B) {
       if let Some(blocks) = preamble {
         blocks.iter().for_each(|block| eval_block(block, backend));
       }
-      // maybe move this out into an `eval_section` fn?
-      sections.iter().for_each(|section| {
-        backend.enter_section(section);
-        backend.enter_section_heading(section);
-        // might need enter/exit_section_body...
-        section
-          .heading
-          .iter()
-          .for_each(|node| eval_inline(node, backend));
-        backend.exit_section_heading(section);
-        section
-          .blocks
-          .iter()
-          .for_each(|block| eval_block(block, backend));
-        backend.exit_section(section);
-      });
+      sections.iter().for_each(|sect| eval_section(sect, backend));
     }
   }
   backend.exit_document(&document, doc_attrs);
+}
+
+fn eval_section(section: &Section, backend: &mut impl Backend) {
+  backend.enter_section(section);
+  backend.enter_section_heading(section);
+  section
+    .heading
+    .iter()
+    .for_each(|node| eval_inline(node, backend));
+  backend.exit_section_heading(section);
+  section
+    .blocks
+    .iter()
+    .for_each(|block| eval_block(block, backend));
+  backend.exit_section(section);
 }
 
 fn eval_block(block: &Block, backend: &mut impl Backend) {
@@ -189,6 +189,9 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
         backend.exit_description_list_description(&item.blocks, item);
       });
       backend.exit_description_list(block, items, *depth);
+    }
+    (Context::Section, Content::Section(section)) => {
+      eval_section(section, backend);
     }
     (Context::Comment, _) => {}
     _ => {

@@ -71,7 +71,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         subs: Substitutions::all(),
         delimiter: None,
         list: ListContext::default(),
-        section_level: 1,
+        section_level: 0,
       },
       errors: RefCell::new(Vec::new()),
       bail: true,

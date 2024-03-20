@@ -189,16 +189,23 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
   }
 
   pub fn starts_section(&self, meta: &ChunkMeta<'bmp>) -> bool {
+    self.section_start_level(meta).is_some()
+  }
+
+  pub fn section_start_level(&self, meta: &ChunkMeta<'bmp>) -> Option<u8> {
     for line in self.iter() {
       if line.is_attr_list() || line.is_chunk_title() {
         continue;
-      } else if line.is_heading() {
-        return !meta.attrs_has_str_positional("discrete");
+      } else if let Some(level) = line.heading_level() {
+        return match meta.attrs_has_str_positional("discrete") {
+          true => None,
+          false => Some(level),
+        };
       } else {
-        return false;
+        return None;
       }
     }
-    false
+    None
   }
 }
 

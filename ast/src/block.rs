@@ -16,6 +16,7 @@ pub enum BlockContent<'bmp> {
   Raw,
   Empty(EmptyMetadata<'bmp>),
   Table,
+  Section(Section<'bmp>),
   DocumentAttribute(String, AttrEntry),
   QuotedParagraph {
     quote: InlineNodes<'bmp>,
@@ -79,6 +80,13 @@ impl<'bmp> BlockContent<'bmp> {
     match self {
       BlockContent::Compound(blocks) => blocks.last().map(|b| b.loc),
       BlockContent::Simple(inline_nodes) => inline_nodes.last_loc(),
+      BlockContent::Section(Section { heading, blocks, .. }) => {
+        if !blocks.is_empty() {
+          blocks.last().map(|b| b.loc)
+        } else {
+          heading.last_loc()
+        }
+      }
       BlockContent::Verbatim => todo!(),
       BlockContent::Raw => todo!(),
       BlockContent::Empty(_) => todo!(),

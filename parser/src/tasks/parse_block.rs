@@ -13,9 +13,23 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     let meta = self.parse_chunk_meta(&mut lines)?;
-    if lines.starts_section(&meta) {
-      self.restore_peeked(lines, meta);
-      return Ok(None);
+
+    match lines.section_start_level(&meta) {
+      Some(level) if level <= self.ctx.section_level => {
+        self.restore_peeked(lines, meta);
+        return Ok(None);
+      }
+      Some(_) => {
+        self.restore_peeked(lines, meta);
+        let section = self.parse_section()?.unwrap();
+        return Ok(Some(Block {
+          loc: SourceLocation::new(section.meta.start, self.loc().end),
+          meta: ChunkMeta::empty(section.meta.start),
+          context: Context::Section,
+          content: Content::Section(section),
+        }));
+      }
+      _ => {}
     }
 
     let first_token = lines.current_token().unwrap();

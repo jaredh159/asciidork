@@ -1,5 +1,7 @@
 ## todo
 
+- [ ] section (and elsewhere?) auxiliary ids:
+      https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
 - [ ] breaks
 - [ ] hard returns
 - [ ] indented listing/literal blocks

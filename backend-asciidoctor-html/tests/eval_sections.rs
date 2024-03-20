@@ -189,3 +189,25 @@ test_eval!(
     </div>
   "#}
 );
+
+test_eval!(
+  nested_sections,
+  adoc! {r#"
+    == sect 1
+
+    === sect 1.1
+
+    foo
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">sect 1</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_sect_1_1">sect 1.1</h3>
+          <div class="paragraph"><p>foo</p></div>
+        </div>
+      </div>
+    </div>
+  "#}
+);

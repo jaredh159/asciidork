@@ -65,12 +65,16 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
-  fn enter_section(&mut self, _section: &Section) {
-    self.open_element("div", &["sect1"], &None); // weird, no attrs...
+  fn enter_section(&mut self, section: &Section) {
+    let class = format!("sect{}", section.level);
+    self.open_element("div", &[&class], &None);
   }
 
-  fn exit_section(&mut self, _section: &Section) {
-    self.push_str("</div></div>");
+  fn exit_section(&mut self, section: &Section) {
+    if section.level == 1 {
+      self.push_str("</div>");
+    }
+    self.push_str("</div>");
   }
 
   fn enter_section_heading(&mut self, _section: &Section) {
@@ -98,7 +102,10 @@ impl Backend for AsciidoctorHtml {
       self.push(["<h", &level, ">"]);
     }
     self.push_str(&heading_html);
-    self.push(["</h", &level, r#"><div class="sectionbody">"#]);
+    self.push(["</h", &level, ">"]);
+    if section.level == 1 {
+      self.push_str(r#"<div class="sectionbody">"#);
+    }
   }
 
   fn enter_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
