@@ -85,6 +85,13 @@ fn autogenerate_id_impl(
   id
 }
 
+lazy_static! {
+  static ref ENTITY_RE: Regex = Regex::new(
+    r"&(?:[A-Za-z][A-Za-z]+\d{0,2}|#\d\d\d{0,4}|#x[\dA-Fa-f][\dA-Fa-f][\dA-Fa-f]{0,3});"
+  )
+  .unwrap();
+}
+
 pub fn id_separator(doc_attrs: &ast::AttrEntries) -> Option<char> {
   match doc_attrs.get("idseparator") {
     Some(AttrEntry::Bool(true)) => None,
@@ -101,11 +108,24 @@ pub fn id_prefix(doc_attrs: &ast::AttrEntries) -> &str {
   }
 }
 
-lazy_static! {
-  static ref ENTITY_RE: Regex = Regex::new(
-    r"&(?:[A-Za-z][A-Za-z]+\d{0,2}|#\d\d\d{0,4}|#x[\dA-Fa-f][\dA-Fa-f][\dA-Fa-f]{0,3});"
-  )
-  .unwrap();
+pub fn number_str(level: u8, sect_nums: &mut [u16; 5]) -> String {
+  debug_assert!(level > 0 && level < 6);
+  let level_idx = (level - 1) as usize;
+  sect_nums[level_idx] += 1;
+  sect_nums
+    .iter_mut()
+    .take(5)
+    .skip(level_idx + 1)
+    .for_each(|n| *n = 0);
+  let mut out = String::with_capacity(10);
+  let mut idx = 0;
+  while idx <= level_idx {
+    out.push_str(&sect_nums[idx].to_string());
+    out.push('.');
+    idx += 1;
+  }
+  out.push(' ');
+  out
 }
 
 // tests
@@ -113,6 +133,23 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::assert_eq;
+
+  #[test]
+  fn test_number_str() {
+    let cases = vec![
+      (1, [0, 0, 0, 0, 0], "1. ", [1, 0, 0, 0, 0]),
+      (1, [1, 0, 0, 0, 0], "2. ", [2, 0, 0, 0, 0]),
+      (2, [1, 0, 0, 0, 0], "1.1. ", [1, 1, 0, 0, 0]),
+      (2, [1, 1, 0, 0, 0], "1.2. ", [1, 2, 0, 0, 0]),
+      (1, [1, 1, 0, 0, 0], "2. ", [2, 0, 0, 0, 0]),
+      (3, [2, 4, 0, 0, 0], "2.4.1. ", [2, 4, 1, 0, 0]),
+    ];
+    for (level, mut sect_nums, expected, after_mutation) in cases {
+      assert_eq!(number_str(level, &mut sect_nums), expected.to_string());
+      assert_eq!(sect_nums, after_mutation);
+    }
+  }
 
   macro_rules! test_sect_id {
     ($name:ident, $html:expr, $expected:expr) => {

@@ -211,3 +211,221 @@ test_eval!(
     </div>
   "#}
 );
+
+test_eval!(
+  section_numbers,
+  adoc! {r#"
+    :sectnums:
+
+    == sect 1
+
+    === sect 1.1
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">1. sect 1</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_sect_1_1">1.1. sect 1.1</h3>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  section_numbers_w_level_1,
+  adoc! {r#"
+    :sectnums:
+    :sectnumlevels: 1
+
+    == sect 1
+
+    === sect 1.1
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">1. sect 1</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_sect_1_1">sect 1.1</h3>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  section_numbers_w_level_0,
+  adoc! {r#"
+    :sectnums:
+    :sectnumlevels: 0
+
+    == sect 1
+
+    === sect 1.1
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">sect 1</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_sect_1_1">sect 1.1</h3>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  section_numbers_default,
+  adoc! {r#"
+    :sectnums:
+
+    == sect 1
+
+    === sect 1.1
+
+    ==== sect 1.1.1
+
+    ===== sect 1.1.1.1
+
+    ====== sect 1.1.1.1.1
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">1. sect 1</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_sect_1_1">1.1. sect 1.1</h3>
+          <div class="sect3">
+            <h4 id="_sect_1_1_1">1.1.1. sect 1.1.1</h4>
+            <div class="sect4">
+              <h5 id="_sect_1_1_1_1">sect 1.1.1.1</h5>
+              <div class="sect5">
+                <h6 id="_sect_1_1_1_1_1">sect 1.1.1.1.1</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  section_nums_level_3,
+  adoc! {r#"
+    :sectnums:
+    :sectnumlevels: 3
+
+    == sect 1
+
+    === sect 1.1
+
+    ==== sect 1.1.1
+
+    ===== sect 1.1.1.1
+
+    ====== sect 1.1.1.1.1
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">1. sect 1</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_sect_1_1">1.1. sect 1.1</h3>
+          <div class="sect3">
+            <h4 id="_sect_1_1_1">1.1.1. sect 1.1.1</h4>
+            <div class="sect4">
+              <h5 id="_sect_1_1_1_1">sect 1.1.1.1</h5>
+              <div class="sect5">
+                <h6 id="_sect_1_1_1_1_1">sect 1.1.1.1.1</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  section_nums_level_5,
+  adoc! {r#"
+    :sectnums:
+    :sectnumlevels: 5
+
+    == sect 1
+
+    === sect 1.1
+
+    ==== sect 1.1.1
+
+    ===== sect 1.1.1.1
+
+    ====== sect 1.1.1.1.1
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">1. sect 1</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_sect_1_1">1.1. sect 1.1</h3>
+          <div class="sect3">
+            <h4 id="_sect_1_1_1">1.1.1. sect 1.1.1</h4>
+            <div class="sect4">
+              <h5 id="_sect_1_1_1_1">1.1.1.1. sect 1.1.1.1</h5>
+              <div class="sect5">
+                <h6 id="_sect_1_1_1_1_1">1.1.1.1.1. sect 1.1.1.1.1</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  section_nums_flipflop,
+  adoc! {r#"
+    :sectnums:
+
+    == Numbered Section
+
+    :sectnums!:
+
+    == Unnumbered Section
+
+    == Unnumbered Section
+
+    === Unnumbered Section
+
+    :sectnums:
+
+    == Numbered Section
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_numbered_section">1. Numbered Section</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_unnumbered_section">Unnumbered Section</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_unnumbered_section_2">Unnumbered Section</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_unnumbered_section_3">Unnumbered Section</h3>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_numbered_section_2">2. Numbered Section</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "#}
+);

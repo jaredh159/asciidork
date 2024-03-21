@@ -37,6 +37,20 @@ impl AttrEntries {
     }
   }
 
+  pub fn u8(&self, key: &str) -> Option<u8> {
+    match self.get(key) {
+      Some(AttrEntry::String(s)) => s.parse().ok(),
+      _ => None,
+    }
+  }
+
+  pub fn isize(&self, key: &str) -> Option<isize> {
+    match self.get(key) {
+      Some(AttrEntry::String(s)) => s.parse().ok(),
+      _ => None,
+    }
+  }
+
   pub fn str_or(&self, key: &str, default: &'static str) -> &str {
     match self.get(key) {
       Some(AttrEntry::String(s)) => s,

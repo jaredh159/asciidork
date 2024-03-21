@@ -14,6 +14,8 @@ pub struct AsciidoctorHtml {
   preserve_newlines: bool,
   visiting_simple_term_description: bool,
   section_ids: HashSet<String>,
+  section_nums: [u16; 5],
+  section_num_levels: isize,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -23,6 +25,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_document(&mut self, document: &Document, attrs: &AttrEntries, flags: Flags) {
     self.flags = flags;
     self.doc_attrs = attrs.clone();
+    self.section_num_levels = attrs.isize("sectnumlevels").unwrap_or(3);
     if flags.embedded {
       return;
     }
@@ -83,7 +86,7 @@ impl Backend for AsciidoctorHtml {
 
   fn exit_section_heading(&mut self, section: &Section) {
     let heading_html = self.stop_buffering();
-    let level = (section.level + 1).to_string();
+    let level_str = &(section.level + 1).to_string();
     if !self.doc_attrs.is_unset("sectids") {
       let id = {
         match section.meta.attrs.as_ref().and_then(|a| a.id.as_ref()) {
@@ -96,13 +99,17 @@ impl Backend for AsciidoctorHtml {
           ),
         }
       };
-      self.push(["<h", &level, r#" id=""#, &id, "\">"]);
+      self.push(["<h", level_str, r#" id=""#, &id, "\">"]);
       self.section_ids.insert(id);
     } else {
-      self.push(["<h", &level, ">"]);
+      self.push(["<h", level_str, ">"]);
+    }
+    if self.doc_attrs.is_set("sectnums") && self.section_num_levels >= section.level as isize {
+      let sect_num = section::number_str(section.level, &mut self.section_nums);
+      self.push_str(&sect_num);
     }
     self.push_str(&heading_html);
-    self.push(["</h", &level, ">"]);
+    self.push(["</h", level_str, ">"]);
     if section.level == 1 {
       self.push_str(r#"<div class="sectionbody">"#);
     }
