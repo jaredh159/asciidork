@@ -473,3 +473,17 @@ test_eval!(
     </div>
   "#}
 );
+
+test_eval!(
+  custom_attrs,
+  adoc! {r#"
+    [#custom-id.custom-class]
+    == section
+  "#},
+  html! {r#"
+    <div class="sect1 custom-class">
+      <h2 id="custom-id">section</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "#}
+);

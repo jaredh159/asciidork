@@ -69,8 +69,11 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_section(&mut self, section: &Section) {
-    let class = format!("sect{}", section.level);
-    self.open_element("div", &[&class], &None);
+    let mut classes = SmallVec::<[&str; 5]>::from_slice(&[section::class(section)]);
+    if let Some(roles) = section.meta.attrs.as_ref().map(|a| &a.roles) {
+      roles.iter().for_each(|role| classes.push(role));
+    }
+    self.open_element("div", &classes, &None);
   }
 
   fn exit_section(&mut self, section: &Section) {

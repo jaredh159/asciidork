@@ -130,6 +130,18 @@ pub fn number_prefix(level: u8, sect_nums: &mut [u16; 5]) -> String {
   out
 }
 
+pub fn class(section: &Section) -> &'static str {
+  match section.level {
+    1 => "sect1",
+    2 => "sect2",
+    3 => "sect3",
+    4 => "sect4",
+    5 => "sect5",
+    6 => "sect6",
+    _ => unreachable!(),
+  }
+}
+
 impl AsciidoctorHtml {
   pub(super) fn should_number_section(&self, section: &Section) -> bool {
     let Some(sectnums) = self.doc_attrs.get("sectnums") else {
