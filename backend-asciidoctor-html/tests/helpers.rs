@@ -8,7 +8,7 @@ macro_rules! test_eval {
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         document,
-        ::asciidork_eval::Flags::embedded(),
+        ::asciidork_eval::Opts::embedded(),
         ::asciidork_backend_asciidoctor_html::AsciidoctorHtml::new()).unwrap();
       ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
     }

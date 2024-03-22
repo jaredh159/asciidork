@@ -4,29 +4,29 @@ use crate::internal::*;
 
 #[derive(Debug, Default)]
 pub struct AsciidoctorHtml {
-  html: String,
-  alt_html: String,
-  footnotes: Vec<(String, String)>,
-  doc_attrs: AttrEntries,
-  fig_caption_num: usize,
-  flags: Flags,
-  list_stack: Vec<bool>,
-  preserve_newlines: bool,
-  visiting_simple_term_description: bool,
-  section_ids: HashSet<String>,
-  section_nums: [u16; 5],
-  section_num_levels: isize,
+  pub(crate) html: String,
+  pub(crate) alt_html: String,
+  pub(crate) footnotes: Vec<(String, String)>,
+  pub(crate) doc_attrs: AttrEntries,
+  pub(crate) fig_caption_num: usize,
+  pub(crate) opts: Opts,
+  pub(crate) list_stack: Vec<bool>,
+  pub(crate) preserve_newlines: bool,
+  pub(crate) visiting_simple_term_description: bool,
+  pub(crate) section_ids: HashSet<String>,
+  pub(crate) section_nums: [u16; 5],
+  pub(crate) section_num_levels: isize,
 }
 
 impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
 
-  fn enter_document(&mut self, document: &Document, attrs: &AttrEntries, flags: Flags) {
-    self.flags = flags;
+  fn enter_document(&mut self, document: &Document, attrs: &AttrEntries, opts: Opts) {
+    self.opts = opts;
     self.doc_attrs = attrs.clone();
     self.section_num_levels = attrs.isize("sectnumlevels").unwrap_or(3);
-    if flags.embedded {
+    if opts.doc_type == DocType::Inline {
       return;
     }
     self.push_str(r#"<!DOCTYPE html><html"#);
@@ -63,7 +63,7 @@ impl Backend for AsciidoctorHtml {
     if !self.footnotes.is_empty() {
       self.render_footnotes();
     }
-    if !self.flags.embedded {
+    if self.opts.doc_type != DocType::Inline {
       self.push_str("</body></html>");
     }
   }
@@ -104,9 +104,9 @@ impl Backend for AsciidoctorHtml {
     } else {
       self.push(["<h", level_str, ">"]);
     }
-    if self.doc_attrs.is_set("sectnums") && self.section_num_levels >= section.level as isize {
-      let sect_num = section::number_str(section.level, &mut self.section_nums);
-      self.push_str(&sect_num);
+    if self.should_number_section(section) {
+      let prefix = section::number_prefix(section.level, &mut self.section_nums);
+      self.push_str(&prefix);
     }
     self.push_str(&heading_html);
     self.push(["</h", level_str, ">"]);
@@ -339,7 +339,7 @@ impl Backend for AsciidoctorHtml {
     if name == "empty" {
       return;
     }
-    match self.flags.attribute_missing {
+    match self.opts.attribute_missing {
       AttributeMissing::Drop => {}
       AttributeMissing::Skip => {
         self.push_str("{");

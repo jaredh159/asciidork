@@ -4,7 +4,7 @@ use std::result::Result;
 use std::{env, error::Error, fs};
 
 use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
-use asciidork_eval::{eval, Flags};
+use asciidork_eval::{eval, Opts};
 use asciidork_parser::parser::Parser;
 use asciidork_parser::Diagnostic;
 use bumpalo::Bump;
@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       "print-html" => {
         let html = eval(
           parse_result.document,
-          Flags::default(),
+          Opts::default(),
           AsciidoctorHtml::new(),
         )?;
         println!("\n{}", format_html(html));

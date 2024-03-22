@@ -23,6 +23,7 @@ name = "asciidork-backend"
 version = "0.1.0"
 dependencies = [
  "asciidork-ast",
+ "asciidork-opts",
 ]
 
 [[package]]
@@ -58,7 +59,12 @@ version = "0.1.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
+ "asciidork-opts",
 ]
+
+[[package]]
+name = "asciidork-opts"
+version = "0.1.0"
 
 [[package]]
 name = "asciidork-parser"

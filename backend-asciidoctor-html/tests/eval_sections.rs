@@ -429,3 +429,47 @@ test_eval!(
     </div>
   "#}
 );
+
+test_eval!(
+  special_sections_not_numbered,
+  adoc! {r#"
+    :sectnums:
+
+    == sect 1
+
+    [abstract]
+    == abstract
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">1. sect 1</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_abstract">abstract</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  special_sections_numbered_w_all,
+  adoc! {r#"
+    :sectnums: all
+
+    == sect 1
+
+    [abstract]
+    == abstract
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_sect_1">1. sect 1</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_abstract">2. abstract</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "#}
+);

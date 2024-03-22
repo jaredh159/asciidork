@@ -17,6 +17,7 @@ mod internal {
   pub use smallvec::SmallVec;
 
   pub use crate::section;
+  pub use crate::AsciidoctorHtml;
   pub use ast::prelude::*;
   pub use ast::DocHeader;
   pub use backend::prelude::*;

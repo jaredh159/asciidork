@@ -4,6 +4,8 @@ use ast::AttrEntry;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::internal::*;
+
 /// @see https://docs.asciidoctor.org/asciidoc/latest/sections/auto-ids/#how-a-section-id-is-computed
 pub fn autogenerate_id(
   html: &str,
@@ -108,7 +110,7 @@ pub fn id_prefix(doc_attrs: &ast::AttrEntries) -> &str {
   }
 }
 
-pub fn number_str(level: u8, sect_nums: &mut [u16; 5]) -> String {
+pub fn number_prefix(level: u8, sect_nums: &mut [u16; 5]) -> String {
   debug_assert!(level > 0 && level < 6);
   let level_idx = (level - 1) as usize;
   sect_nums[level_idx] += 1;
@@ -128,6 +130,33 @@ pub fn number_str(level: u8, sect_nums: &mut [u16; 5]) -> String {
   out
 }
 
+impl AsciidoctorHtml {
+  pub(super) fn should_number_section(&self, section: &Section) -> bool {
+    let Some(sectnums) = self.doc_attrs.get("sectnums") else {
+      return false;
+    };
+    if self.section_num_levels < section.level as isize {
+      return false;
+    }
+    match sectnums {
+      AttrEntry::String(val) if val == "all" => true,
+      AttrEntry::Bool(true) => {
+        if let Some(special) = section
+          .meta
+          .attrs
+          .as_ref()
+          .and_then(|a| a.str_positional_at(0))
+        {
+          self.opts.doc_type.supports_special_section(special)
+        } else {
+          true
+        }
+      }
+      _ => false,
+    }
+  }
+}
+
 // tests
 
 #[cfg(test)]
@@ -136,7 +165,7 @@ mod tests {
   use test_utils::assert_eq;
 
   #[test]
-  fn test_number_str() {
+  fn test_number_prefix() {
     let cases = vec![
       (1, [0, 0, 0, 0, 0], "1. ", [1, 0, 0, 0, 0]),
       (1, [1, 0, 0, 0, 0], "2. ", [2, 0, 0, 0, 0]),
@@ -146,7 +175,7 @@ mod tests {
       (3, [2, 4, 0, 0, 0], "2.4.1. ", [2, 4, 1, 0, 0]),
     ];
     for (level, mut sect_nums, expected, after_mutation) in cases {
-      assert_eq!(number_str(level, &mut sect_nums), expected.to_string());
+      assert_eq!(number_prefix(level, &mut sect_nums), expected.to_string());
       assert_eq!(sect_nums, after_mutation);
     }
   }

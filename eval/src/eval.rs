@@ -2,21 +2,21 @@ use crate::internal::*;
 
 pub fn eval<B: Backend>(
   document: Document,
-  flags: Flags,
+  opts: Opts,
   mut backend: B,
 ) -> Result<B::Output, B::Error> {
-  visit(document, flags, &mut backend);
+  visit(document, opts, &mut backend);
   backend.into_result()
 }
 
-pub fn visit<B: Backend>(document: Document, flags: Flags, backend: &mut B) {
+pub fn visit<B: Backend>(document: Document, opts: Opts, backend: &mut B) {
   let empty_attrs = AttrEntries::new();
   let doc_attrs = document
     .header
     .as_ref()
     .map(|h| &h.attrs)
     .unwrap_or(&empty_attrs);
-  backend.enter_document(&document, doc_attrs, flags);
+  backend.enter_document(&document, doc_attrs, opts);
   match &document.content {
     DocContent::Blocks(blocks) => {
       blocks.iter().for_each(|block| eval_block(block, backend));

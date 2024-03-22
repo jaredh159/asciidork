@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 asciidork-ast = { path = "../ast" }
+asciidork-opts = { path = "../opts" }

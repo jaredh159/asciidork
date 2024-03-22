@@ -1,13 +1,13 @@
-use ast::prelude::*;
-
 use super::admonition::AdmonitionKind;
+use ast::prelude::*;
+use opts::Opts;
 
 pub trait Backend {
   type Output;
   type Error;
 
   // document
-  fn enter_document(&mut self, document: &Document, header_attrs: &AttrEntries, flags: Flags);
+  fn enter_document(&mut self, document: &Document, header_attrs: &AttrEntries, opts: Opts);
   fn exit_document(&mut self, document: &Document, header_attrs: &AttrEntries);
   fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry);
 
@@ -91,32 +91,4 @@ pub trait Backend {
   // result
   fn into_result(self) -> Result<Self::Output, Self::Error>;
   fn result(&self) -> Result<&Self::Output, Self::Error>;
-}
-
-// todo: naming, which crate?... (settings?, meta?, opts?)
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Flags {
-  pub embedded: bool,
-  pub attribute_missing: AttributeMissing,
-}
-
-// todo: probably a different crate?
-#[derive(Debug, Clone, Copy)]
-pub enum AttributeMissing {
-  Warn,
-  Drop,
-  Skip,
-  // dr. also has "drop-line", i'd rather not support it
-}
-
-impl Default for AttributeMissing {
-  fn default() -> Self {
-    Self::Skip
-  }
-}
-
-impl Flags {
-  pub fn embedded() -> Self {
-    Self { embedded: true, ..Self::default() }
-  }
 }

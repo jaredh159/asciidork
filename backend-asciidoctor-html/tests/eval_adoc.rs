@@ -1,5 +1,5 @@
 use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
-use asciidork_eval::{eval, Flags};
+use asciidork_eval::{eval, Opts};
 use asciidork_parser::prelude::*;
 use test_utils::{adoc, assert_eq, html};
 
@@ -617,7 +617,7 @@ fn test_listing_block_newline_preservation() {
   let parser = Parser::new(bump, input);
   let doc = parser.parse().unwrap().document;
   assert_eq!(
-    eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
+    eval(doc, Opts::embedded(), AsciidoctorHtml::new()).unwrap(),
     expected.trim_end(),
     from: input
   );
@@ -640,7 +640,7 @@ fn test_masquerading_listing_block_newline_preservation() {
   let parser = Parser::new(bump, input);
   let doc = parser.parse().unwrap().document;
   assert_eq!(
-    eval(doc, Flags::embedded(), AsciidoctorHtml::new()).unwrap(),
+    eval(doc, Opts::embedded(), AsciidoctorHtml::new()).unwrap(),
     expected.trim_end(),
     from: input
   );
@@ -707,7 +707,7 @@ fn test_head_opts() {
     let input = format!("= Doc Header\n{}\n\nignore me\n\n", opts);
     let parser = Parser::new(bump, &input);
     let document = parser.parse().unwrap().document;
-    let html = eval(document, Flags::default(), AsciidoctorHtml::new()).unwrap();
+    let html = eval(document, Opts::default(), AsciidoctorHtml::new()).unwrap();
     match expectation {
       Contains(s) => assert!(
         html.contains(s),
@@ -728,7 +728,7 @@ fn test_head_opts() {
   // one test with no doc header
   let parser = Parser::new(bump, "without doc header");
   let document = parser.parse().unwrap().document;
-  let html = eval(document, Flags::default(), AsciidoctorHtml::new()).unwrap();
+  let html = eval(document, Opts::default(), AsciidoctorHtml::new()).unwrap();
   assert!(html.contains("<title>Untitled</title>"));
 }
 
@@ -762,7 +762,7 @@ fn test_non_embedded() {
   let parser = Parser::new(bump, input);
   let doc = parser.parse().unwrap().document;
   assert_eq!(
-    eval(doc, Flags::default(), AsciidoctorHtml::new()).unwrap(),
+    eval(doc, Opts::default(), AsciidoctorHtml::new()).unwrap(),
     expected,
     from: input
   );
