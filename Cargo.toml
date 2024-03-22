@@ -9,6 +9,7 @@ members = [
   "parser",
   "opts",
   "test-utils",
+  "wasm-dr",
 ]
 
 resolver = "2"

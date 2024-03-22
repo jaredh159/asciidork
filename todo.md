@@ -17,12 +17,13 @@
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
 - [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] basic multi-byte char test
-- [ ] poc, non-corner-painting wasm
 - [ ] all attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example, see also
       https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#note-docdatetime
 - [ ] h1 subtitle
+- [√] sections
+- [√] poc, non-corner-painting wasm
 - [√] description lists
 - [√] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
   folded into ContiguousLines so that it shows up as one line, i think

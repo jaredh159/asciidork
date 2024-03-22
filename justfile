@@ -1,6 +1,10 @@
 _default:
   @just --choose
 
+playground:
+  @cd wasm-dr && wasm-pack build --target web --out-dir ../dr-playground/public/wasm
+  @cd dr-playground && pnpm run dev
+
 check:
   @export RUSTFLAGS="-D warnings" && \
   cargo check && \
@@ -30,7 +34,6 @@ watch-print-html file:
   --watch parser/src \
   --watch {{file}} \
   cargo run print-html {{file}}
-
 
 watch-test isolate="":
   @watchexec --restart --clear \
