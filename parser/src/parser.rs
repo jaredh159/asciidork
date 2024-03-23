@@ -113,7 +113,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut lines = BumpVec::new_in(self.bump);
     while let Some(line) = self.lexer.consume_line(self.bump) {
       lines.push(line);
-      if self.lexer.peek_is('\n') {
+      if self.lexer.peek_is(b'\n') {
         break;
       }
     }
@@ -139,12 +139,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn at_delimiter(&self, delimiter: Delimiter) -> bool {
     match delimiter {
-      Delimiter::BlockQuote => self.lexer.at_delimiter_line() == Some((4, '_')),
-      Delimiter::Example => self.lexer.at_delimiter_line() == Some((4, '=')),
-      Delimiter::Open => self.lexer.at_delimiter_line() == Some((2, '-')),
-      Delimiter::Sidebar => self.lexer.at_delimiter_line() == Some((4, '*')),
-      Delimiter::Listing => self.lexer.at_delimiter_line() == Some((4, '-')),
-      Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, '.')),
+      Delimiter::BlockQuote => self.lexer.at_delimiter_line() == Some((4, b'_')),
+      Delimiter::Example => self.lexer.at_delimiter_line() == Some((4, b'=')),
+      Delimiter::Open => self.lexer.at_delimiter_line() == Some((2, b'-')),
+      Delimiter::Sidebar => self.lexer.at_delimiter_line() == Some((4, b'*')),
+      Delimiter::Listing => self.lexer.at_delimiter_line() == Some((4, b'-')),
+      Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
     }
   }
 

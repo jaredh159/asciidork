@@ -25,6 +25,6 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
 
-[profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
+# [profile.release]
+# # Tell `rustc` to optimize for small code size.
+# opt-level = "s"

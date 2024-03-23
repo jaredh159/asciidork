@@ -1,4 +1,4 @@
-use std::str::Chars;
+use std::str::Bytes;
 
 use crate::internal::*;
 use crate::variants::token::*;
@@ -6,8 +6,8 @@ use crate::variants::token::*;
 #[derive(Debug)]
 pub struct Lexer<'src> {
   src: &'src str,
-  chars: Chars<'src>,
-  peek: Option<char>,
+  bytes: Bytes<'src>,
+  peek: Option<u8>,
   at_line_start: bool,
   pattern_breaker: Option<TokenKind>,
 }
@@ -16,17 +16,17 @@ impl<'src> Lexer<'src> {
   pub fn new(src: &'src str) -> Lexer<'src> {
     let mut lexer = Lexer {
       src,
-      chars: src.chars(),
+      bytes: src.bytes(),
       peek: None,
       at_line_start: true,
       pattern_breaker: None,
     };
-    lexer.peek = lexer.chars.next();
+    lexer.peek = lexer.bytes.next();
     lexer
   }
 
   pub fn consume_empty_lines(&mut self) {
-    while self.peek == Some('\n') {
+    while self.peek == Some(b'\n') {
       self.advance();
     }
   }
@@ -39,7 +39,7 @@ impl<'src> Lexer<'src> {
     self.peek.is_none()
   }
 
-  pub fn peek_is(&self, c: char) -> bool {
+  pub fn peek_is(&self, c: u8) -> bool {
     self.peek == Some(c)
   }
 
@@ -57,16 +57,16 @@ impl<'src> Lexer<'src> {
     let mut start = location;
     let mut end = location;
 
-    for c in self.src.chars().rev().skip(self.src.len() - location) {
-      if start == 0 || c == '\n' {
+    for c in self.src.bytes().rev().skip(self.src.len() - location) {
+      if start == 0 || c == b'\n' {
         break;
       } else {
         start -= 1;
       }
     }
 
-    for c in self.src.chars().skip(location) {
-      if c == '\n' {
+    for c in self.src.bytes().skip(location) {
+      if c == b'\n' {
         break;
       } else {
         end += 1;
@@ -84,8 +84,8 @@ impl<'src> Lexer<'src> {
   pub fn line_number_with_offset(&self, location: usize) -> (usize, usize) {
     let mut line_number = 1;
     let mut offset: usize = 0;
-    for c in self.src.chars().take(location) {
-      if c == '\n' {
+    for c in self.src.bytes().take(location) {
+      if c == b'\n' {
         offset = 0;
         line_number += 1;
       } else {
@@ -102,40 +102,40 @@ impl<'src> Lexer<'src> {
     let start = self.offset();
     let mut end = start;
     let mut tokens = BumpVec::new_in(bump);
-    while !self.peek_is('\n') && !self.is_eof() {
+    while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token();
       end = token.loc.end;
       tokens.push(token);
     }
-    if self.peek_is('\n') {
+    if self.peek_is(b'\n') {
       self.advance();
     }
     Some(Line::new(tokens, &self.src[start..end]))
   }
 
   pub fn at_empty_line(&self) -> bool {
-    self.at_line_start && self.peek_is('\n')
+    self.at_line_start && self.peek_is(b'\n')
   }
 
-  pub fn at_delimiter_line(&self) -> Option<(usize, char)> {
+  pub fn at_delimiter_line(&self) -> Option<(usize, u8)> {
     if !self.at_line_start
       || self.is_eof()
       || !matches!(
         self.peek,
-        Some('_') | Some('-') | Some('*') | Some('=') | Some('.')
+        Some(b'_') | Some(b'-') | Some(b'*') | Some(b'=') | Some(b'.')
       )
     {
       return None;
     }
-    let mut c = self.chars.clone();
+    let mut c = self.bytes.clone();
     let sequence = [self.peek, c.next(), c.next(), c.next(), c.next()];
     match sequence {
-      [Some('-'), Some('-'), Some('\n') | None, _, _] => Some((2, '-')),
-      [Some('*'), Some('*'), Some('*'), Some('*'), Some('\n') | None]
-      | [Some('_'), Some('_'), Some('_'), Some('_'), Some('\n') | None]
-      | [Some('-'), Some('-'), Some('-'), Some('-'), Some('\n') | None]
-      | [Some('.'), Some('.'), Some('.'), Some('.'), Some('\n') | None]
-      | [Some('='), Some('='), Some('='), Some('='), Some('\n') | None] => {
+      [Some(b'-'), Some(b'-'), Some(b'\n') | None, _, _] => Some((2, b'-')),
+      [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n') | None]
+      | [Some(b'_'), Some(b'_'), Some(b'_'), Some(b'_'), Some(b'\n') | None]
+      | [Some(b'-'), Some(b'-'), Some(b'-'), Some(b'-'), Some(b'\n') | None]
+      | [Some(b'.'), Some(b'.'), Some(b'.'), Some(b'.'), Some(b'\n') | None]
+      | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n') | None] => {
         Some((4, sequence[0].unwrap()))
       }
       _ => None,
@@ -156,57 +156,57 @@ impl<'src> Lexer<'src> {
     }
     let at_line_start = self.at_line_start;
     match self.advance() {
-      Some('=') => self.repeating('=', EqualSigns),
-      Some('-') => self.repeating('-', Dashes),
-      Some(' ' | '\t') => self.whitespace(),
-      Some('&') => self.single(Ampersand),
-      Some('\n') => self.single(Newline),
-      Some('<') => self.single(LessThan),
-      Some('>') => self.single(GreaterThan),
-      Some(',') => self.single(Comma),
-      Some('^') => self.single(Caret),
-      Some('~') => self.single(Tilde),
-      Some('_') => self.single(Underscore),
-      Some('*') => self.single(Star),
-      Some('.') => self.repeating('.', Dots),
-      Some('!') => self.single(Bang),
-      Some('`') => self.single(Backtick),
-      Some('+') => self.single(Plus),
-      Some('[') => self.single(OpenBracket),
-      Some(']') => self.single(CloseBracket),
-      Some('{') => self.single(OpenBrace),
-      Some('}') => self.single(CloseBrace),
-      Some('#') => self.single(Hash),
-      Some('%') => self.single(Percent),
-      Some('"') => self.single(DoubleQuote),
-      Some('\'') => self.single(SingleQuote),
-      Some('\\') => self.single(Backslash),
+      Some(b'=') => self.repeating(b'=', EqualSigns),
+      Some(b'-') => self.repeating(b'-', Dashes),
+      Some(b' ' | b'\t') => self.whitespace(),
+      Some(b'&') => self.single(Ampersand),
+      Some(b'\n') => self.single(Newline),
+      Some(b'<') => self.single(LessThan),
+      Some(b'>') => self.single(GreaterThan),
+      Some(b',') => self.single(Comma),
+      Some(b'^') => self.single(Caret),
+      Some(b'~') => self.single(Tilde),
+      Some(b'_') => self.single(Underscore),
+      Some(b'*') => self.single(Star),
+      Some(b'.') => self.repeating(b'.', Dots),
+      Some(b'!') => self.single(Bang),
+      Some(b'`') => self.single(Backtick),
+      Some(b'+') => self.single(Plus),
+      Some(b'[') => self.single(OpenBracket),
+      Some(b']') => self.single(CloseBracket),
+      Some(b'{') => self.single(OpenBrace),
+      Some(b'}') => self.single(CloseBrace),
+      Some(b'#') => self.single(Hash),
+      Some(b'%') => self.single(Percent),
+      Some(b'"') => self.single(DoubleQuote),
+      Some(b'\'') => self.single(SingleQuote),
+      Some(b'\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
-      Some(ch) if ch == ';' || ch == ':' => self.maybe_term_delimiter(ch, at_line_start, breaker),
-      Some('/') if at_line_start && self.peek == Some('/') => self.comment(),
+      Some(ch) if ch == b';' || ch == b':' => self.maybe_term_delimiter(ch, at_line_start, breaker),
+      Some(b'/') if at_line_start && self.peek == Some(b'/') => self.comment(),
       Some(_) => self.word(),
       None => self.token(Eof, self.offset(), self.offset()),
     }
   }
 
   fn offset(&self) -> usize {
-    self.src.len() - self.chars.as_str().len() - self.peek.is_some() as usize // O(1) √
+    self.src.len() - self.bytes.len() - self.peek.is_some() as usize // O(1) √
   }
 
-  fn advance(&mut self) -> Option<char> {
-    let next = std::mem::replace(&mut self.peek, self.chars.next());
-    self.at_line_start = matches!(next, Some('\n'));
+  fn advance(&mut self) -> Option<u8> {
+    let next = std::mem::replace(&mut self.peek, self.bytes.next());
+    self.at_line_start = matches!(next, Some(b'\n'));
     next
   }
 
-  pub fn skip(&mut self, n: usize) -> Option<char> {
+  pub fn skip(&mut self, n: usize) -> Option<u8> {
     debug_assert!(n > 1);
-    let next = std::mem::replace(&mut self.peek, self.chars.nth(n - 1));
-    self.at_line_start = matches!(next, Some('\n'));
+    let next = std::mem::replace(&mut self.peek, self.bytes.nth(n - 1));
+    self.at_line_start = matches!(next, Some(b'\n'));
     next
   }
 
-  fn advance_if(&mut self, c: char) -> bool {
+  fn advance_if(&mut self, c: u8) -> bool {
     if self.peek == Some(c) {
       self.advance();
       true
@@ -215,7 +215,7 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  fn advance_while(&mut self, c: char) -> usize {
+  fn advance_while(&mut self, c: u8) -> usize {
     while self.advance_if(c) {}
     self.offset()
   }
@@ -226,7 +226,7 @@ impl<'src> Lexer<'src> {
     self.token(kind, start, end)
   }
 
-  fn repeating(&mut self, c: char, kind: TokenKind) -> Token<'src> {
+  fn repeating(&mut self, c: u8, kind: TokenKind) -> Token<'src> {
     let start = self.offset() - 1;
     let end = self.advance_while(c);
     self.token(kind, start, end)
@@ -238,7 +238,7 @@ impl<'src> Lexer<'src> {
     self.token(Digits, start, end)
   }
 
-  fn advance_while_with(&mut self, f: impl Fn(char) -> bool) -> usize {
+  fn advance_while_with(&mut self, f: impl Fn(u8) -> bool) -> usize {
     while self.peek.map_or(false, &f) {
       self.advance();
     }
@@ -247,34 +247,34 @@ impl<'src> Lexer<'src> {
 
   fn advance_to_word_boundary(&mut self, with_at: bool) -> usize {
     self.advance_until_one_of(&[
-      ' ',
-      '\t',
-      '\n',
-      ':',
-      ';',
-      '<',
-      '>',
-      ',',
-      '^',
-      '_',
-      '~',
-      '*',
-      '!',
-      '`',
-      '+',
-      '.',
-      '[',
-      ']',
-      '{',
-      '}',
-      '=',
-      '"',
-      '\'',
-      '\\',
-      '%',
-      '#',
-      '&',
-      if with_at { '@' } else { '&' },
+      b' ',
+      b'\t',
+      b'\n',
+      b':',
+      b';',
+      b'<',
+      b'>',
+      b',',
+      b'^',
+      b'_',
+      b'~',
+      b'*',
+      b'!',
+      b'`',
+      b'+',
+      b'.',
+      b'[',
+      b']',
+      b'{',
+      b'}',
+      b'=',
+      b'"',
+      b'\'',
+      b'\\',
+      b'%',
+      b'#',
+      b'&',
+      if with_at { b'@' } else { b'&' },
     ])
   }
 
@@ -286,7 +286,7 @@ impl<'src> Lexer<'src> {
     // special cases
     match self.peek {
       // macros
-      Some(':') if !self.peek_term_delimiter() => {
+      Some(b':') if !self.peek_term_delimiter() => {
         if self.is_macro_name(lexeme) {
           self.advance();
           return self.token(MacroName, start, end + 1);
@@ -297,12 +297,12 @@ impl<'src> Lexer<'src> {
         }
       }
       // maybe email
-      Some('@') => {
+      Some(b'@') => {
         self.advance();
         let domain_end = self
-          .advance_while_with(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
+          .advance_while_with(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-' || c == b'_');
         let domain = &self.src[end + 1..domain_end];
-        if domain.len() > 3 && domain.contains('.') && !self.peek_is('@') {
+        if domain.len() > 3 && domain.contains('.') && !self.peek_is(b'@') {
           return self.token(MaybeEmail, start, domain_end);
         }
         self.reverse_by(domain.len());
@@ -315,8 +315,8 @@ impl<'src> Lexer<'src> {
   }
 
   fn reverse_by(&mut self, n: usize) {
-    self.chars = self.src[self.offset() - n..].chars();
-    self.peek = self.chars.next();
+    self.bytes = self.src[self.offset() - n..].bytes();
+    self.peek = self.bytes.next();
   }
 
   fn is_macro_name(&self, lexeme: &str) -> bool {
@@ -338,7 +338,7 @@ impl<'src> Lexer<'src> {
     )
   }
 
-  fn advance_until(&mut self, stop: char) {
+  fn advance_until(&mut self, stop: u8) {
     loop {
       match self.peek {
         None => break,
@@ -350,7 +350,7 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  fn advance_until_one_of(&mut self, chars: &[char]) -> usize {
+  fn advance_until_one_of(&mut self, chars: &[u8]) -> usize {
     loop {
       match self.peek {
         Some(c) if chars.contains(&c) => break,
@@ -363,7 +363,7 @@ impl<'src> Lexer<'src> {
     self.offset()
   }
 
-  fn advance_while_one_of(&mut self, chars: &[char]) {
+  fn advance_while_one_of(&mut self, chars: &[u8]) {
     loop {
       match self.peek {
         Some(c) if chars.contains(&c) => {}
@@ -376,14 +376,14 @@ impl<'src> Lexer<'src> {
   fn comment(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
     // TODO: block comments, testing if we have 2 more slashes
-    self.advance_until('\n');
+    self.advance_until(b'\n');
     let end = self.offset();
     self.token(CommentLine, start, end)
   }
 
   fn whitespace(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
-    self.advance_while_one_of(&[' ', '\t']);
+    self.advance_while_one_of(&[b' ', b'\t']);
     let end = self.offset();
     self.token(Whitespace, start, end)
   }
@@ -398,11 +398,11 @@ impl<'src> Lexer<'src> {
 
   fn maybe_term_delimiter(
     &mut self,
-    ch: char,
+    ch: u8,
     at_line_start: bool,
     breaker: Option<TokenKind>,
   ) -> Token<'src> {
-    let kind = if ch == ':' { Colon } else { SemiColon };
+    let kind = if ch == b':' { Colon } else { SemiColon };
     if at_line_start || self.peek != Some(ch) {
       return self.single(kind);
     }
@@ -410,21 +410,21 @@ impl<'src> Lexer<'src> {
       self.pattern_breaker = Some(kind); // propagate the pattern breaker
       return self.single(kind);
     }
-    let mut c = self.chars.clone();
+    let mut c = self.bytes.clone();
     match c.next() {
-      None | Some(' ' | '\n' | '\t') => {
+      None | Some(b' ' | b'\n' | b'\t') => {
         self.advance();
         let end = self.offset();
         return self.token(TermDelimiter, end - 2, end);
       }
-      Some(n) if ch == ':' && n == ':' => {
+      Some(n) if ch == b':' && n == b':' => {
         let mut num_colons = 3;
         let mut next = c.next();
-        if next == Some(':') {
+        if next == Some(b':') {
           num_colons += 1;
           next = c.next();
         }
-        if matches!(next, None | Some(' ' | '\n' | '\t')) {
+        if matches!(next, None | Some(b' ' | b'\n' | b'\t')) {
           self.skip(num_colons - 1);
           let end = self.offset();
           return self.token(TermDelimiter, end - num_colons, end);
@@ -440,15 +440,15 @@ impl<'src> Lexer<'src> {
   }
 
   fn peek_term_delimiter(&self) -> bool {
-    let mut c = self.chars.clone();
-    if c.next() != Some(':') {
+    let mut c = self.bytes.clone();
+    if c.next() != Some(b':') {
       return false;
     }
     matches!(
       (c.next(), c.next(), c.next()),
-      (Some(' ' | '\t' | '\n') | None, _, _)
-        | (Some(':'), Some(' ' | '\t' | '\n') | None, _)
-        | (Some(':'), Some(':'), Some(' ' | '\t' | '\n') | None)
+      (Some(b' ' | b'\t' | b'\n') | None, _, _)
+        | (Some(b':'), Some(b' ' | b'\t' | b'\n') | None, _)
+        | (Some(b':'), Some(b':'), Some(b' ' | b'\t' | b'\n') | None)
     )
   }
 }
@@ -472,6 +472,11 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("él", vec![(Word, "él")]),
+      (
+        "foo él",
+        vec![(Word, "foo"), (Whitespace, " "), (Word, "él")],
+      ),
       ("{}", vec![(OpenBrace, "{"), (CloseBrace, "}")]),
       (
         "{foo}",
