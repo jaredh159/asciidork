@@ -281,6 +281,8 @@ impl<'src> Lexer<'src> {
   fn word(&mut self) -> Token<'src> {
     let start = self.offset() - 1;
     let end = self.advance_to_word_boundary(true);
+    // PERF: if i feel clear about the safety of how i move across
+    // bytes and word boundaries, i could change all of these to get_unchecked
     let lexeme = &self.src[start..end];
 
     // special cases

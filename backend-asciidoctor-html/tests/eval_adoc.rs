@@ -134,6 +134,19 @@ test_eval!(
 );
 
 test_eval!(
+  para_w_attrs,
+  adoc! {r#"
+    [#custom-id.custom-class]
+    foo bar
+  "#},
+  html! {r#"
+    <div id="custom-id" class="paragraph custom-class">
+      <p>foo bar</p>
+    </div>
+  "#}
+);
+
+test_eval!(
   sidebar,
   "[sidebar]\nfoo bar",
   html! {r#"

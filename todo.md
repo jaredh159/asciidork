@@ -1,5 +1,6 @@
 ## todo
 
+- [ ] "`foo`"\nbar -- losing newline in dr.
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
 - [ ] breaks
@@ -16,12 +17,12 @@
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 - [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
 - [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
-- [ ] basic multi-byte char test
 - [ ] all attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example, see also
       https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#note-docdatetime
 - [ ] h1 subtitle
+- [√] basic multi-byte char test
 - [√] sections
 - [√] poc, non-corner-painting wasm
 - [√] description lists

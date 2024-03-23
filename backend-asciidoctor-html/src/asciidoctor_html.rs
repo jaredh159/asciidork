@@ -303,7 +303,7 @@ impl Backend for AsciidoctorHtml {
 
   fn enter_paragraph_block(&mut self, block: &Block) {
     if !self.visiting_simple_term_description {
-      self.push_str(r#"<div class="paragraph">"#);
+      self.open_element("div", &["paragraph"], &block.meta.attrs);
       self.visit_block_title(block.meta.title.as_deref(), None);
     }
     self.push_str("<p>");
