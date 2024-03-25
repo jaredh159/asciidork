@@ -241,33 +241,37 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Plus)
               && contains_seq(&[Plus, Backtick], &line, lines) =>
           {
-            let mut wrap_loc = token.loc;
-            line.discard_assert(Plus);
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
             self.ctx.subs.inline_formatting = false;
             self.ctx.subs.attr_refs = false;
-            let mut inner = self.parse_inlines_until(lines, &[Plus, Backtick])?;
-            extend(&mut wrap_loc, &inner, 2);
+            self.parse_inner(
+              &token,
+              [Plus, Backtick],
+              |mut inner| {
+                assert!(inner.len() == 1, "invalid lit mono");
+                match inner.pop().unwrap() {
+                  InlineNode { content: Text(lit), loc } => LitMono(SourceString::new(lit, loc)),
+                  _ => panic!("invalid lit mono"),
+                }
+              },
+              &mut text,
+              &mut inlines,
+              line,
+              lines,
+            )?;
             self.ctx.subs = subs;
-            assert!(inner.len() == 1, "invalid lit mono");
-            match inner.pop().unwrap() {
-              InlineNode { content: Text(lit), loc } => {
-                inlines.push(node(LitMono(SourceString::new(lit, loc)), wrap_loc))
-              }
-              _ => panic!("invalid lit mono"),
-            }
             break;
           }
 
           Caret if subs.inline_formatting && line.is_continuous_thru(Caret) => {
-            let mut loc = token.loc;
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            let inner = self.parse_inlines_until(lines, &[Caret])?;
-            extend(&mut loc, &inner, 1);
-            inlines.push(node(Superscript(inner), loc));
-            text.loc = loc.clamp_end();
+            self.parse_inner(
+              &token,
+              [Caret],
+              Superscript,
+              &mut text,
+              &mut inlines,
+              line,
+              lines,
+            )?;
             break;
           }
 
@@ -290,14 +294,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Backtick)
               && starts_constrained(&[Backtick, DoubleQuote], &token, &line, lines) =>
           {
-            let mut loc = token.loc;
-            line.discard_assert(Backtick);
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            let quoted = self.parse_inlines_until(lines, &[Backtick, DoubleQuote])?;
-            extend(&mut loc, &quoted, 2);
-            inlines.push(node(Quote(Double, quoted), loc));
-            text.loc = loc.clamp_end();
+            self.parse_inner(
+              &token,
+              [Backtick, DoubleQuote],
+              |inner| Quote(Double, inner),
+              &mut text,
+              &mut inlines,
+              line,
+              lines,
+            )?;
             break;
           }
 
@@ -306,73 +311,80 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Backtick)
               && starts_constrained(&[Backtick, SingleQuote], &token, &line, lines) =>
           {
-            let mut loc = token.loc;
-            line.discard_assert(Backtick);
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            let quoted = self.parse_inlines_until(lines, &[Backtick, SingleQuote])?;
-            extend(&mut loc, &quoted, 2);
-            inlines.push(node(Quote(Single, quoted), loc));
-            text.loc = loc.clamp_end();
+            self.parse_inner(
+              &token,
+              [Backtick, SingleQuote],
+              |inner| Quote(Single, inner),
+              &mut text,
+              &mut inlines,
+              line,
+              lines,
+            )?;
             break;
           }
 
           Tilde if subs.inline_formatting && line.is_continuous_thru(Tilde) => {
-            let mut loc = token.loc;
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            let inner = self.parse_inlines_until(lines, &[Tilde])?;
-            extend(&mut loc, &inner, 1);
-            inlines.push(node(Subscript(inner), loc));
-            text.loc = loc.clamp_end();
+            self.parse_inner(
+              &token,
+              [Tilde],
+              Subscript,
+              &mut text,
+              &mut inlines,
+              line,
+              lines,
+            )?;
             break;
           }
 
           Backtick if subs.inline_formatting && line.current_is(DoubleQuote) => {
-            let mut loc = token.loc;
-            line.discard_assert(DoubleQuote);
-            loc.end += 1;
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            inlines.push(node(Curly(RightDouble), loc));
-            text.loc = loc.clamp_end();
+            push_simple(
+              Curly(RightDouble),
+              &token,
+              line,
+              &mut text,
+              &mut inlines,
+              lines,
+            );
             break;
           }
 
           DoubleQuote
             if subs.inline_formatting && line.current_is(Backtick) && stop_tokens != [Backtick] =>
           {
-            let mut loc = token.loc;
-            line.discard_assert(Backtick);
-            loc.end += 1;
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            inlines.push(node(Curly(LeftDouble), loc));
-            text.loc = loc.clamp_end();
+            push_simple(
+              Curly(LeftDouble),
+              &token,
+              line,
+              &mut text,
+              &mut inlines,
+              lines,
+            );
             break;
           }
 
           Backtick if subs.inline_formatting && line.current_is(SingleQuote) => {
-            let mut loc = token.loc;
-            line.discard_assert(SingleQuote);
-            loc.end += 1;
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            inlines.push(node(Curly(RightSingle), loc));
-            text.loc = loc.clamp_end();
+            push_simple(
+              Curly(RightSingle),
+              &token,
+              line,
+              &mut text,
+              &mut inlines,
+              lines,
+            );
             break;
           }
 
           SingleQuote
             if subs.inline_formatting && line.current_is(Backtick) && stop_tokens != [Backtick] =>
           {
-            let mut loc = token.loc;
-            line.discard_assert(Backtick);
-            loc.end += 1;
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
-            inlines.push(node(Curly(LeftSingle), loc));
-            text.loc = loc.clamp_end();
+            push_simple(
+              Curly(LeftSingle),
+              &token,
+              line,
+              &mut text,
+              &mut inlines,
+              lines,
+            );
             break;
           }
 
@@ -385,17 +397,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             if line.starts_with_seq(&[Plus, Plus])
               && contains_seq(&[Plus, Plus, Plus], &line, lines) =>
           {
-            let mut loc = token.loc;
-            line.discard_assert(Plus);
-            line.discard_assert(Plus);
-            text.commit_inlines(&mut inlines);
-            lines.restore_if_nonempty(line);
             self.ctx.subs = Substitutions::none();
-            let passthrough = self.parse_inlines_until(lines, &[Plus, Plus, Plus])?;
+            self.parse_inner(
+              &token,
+              [Plus, Plus, Plus],
+              InlinePassthrough,
+              &mut text,
+              &mut inlines,
+              line,
+              lines,
+            )?;
             self.ctx.subs = subs;
-            extend(&mut loc, &passthrough, 3);
-            inlines.push(node(InlinePassthrough(passthrough), loc));
-            text.loc = loc.clamp_end();
             break;
           }
 
@@ -507,31 +519,50 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Ok(inlines)
   }
 
-  fn parse_unconstrained(
+  #[allow(clippy::too_many_arguments)]
+  fn parse_inner<const N: usize>(
     &mut self,
-    token: &Token<'src>,
+    start: &Token<'src>,
+    stop_tokens: [TokenKind; N],
     wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
     text: &mut CollectText<'bmp>,
     inlines: &mut InlineNodes<'bmp>,
     mut line: Line<'bmp, 'src>,
     lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<()> {
-    let mut loc = token.loc;
-    let line_end = line.last_location().unwrap().end;
-    line.discard_assert(token.kind);
+    let mut loc = start.loc;
+    stop_tokens
+      .iter()
+      .take(N - 1)
+      .for_each(|&kind| line.discard_assert(kind));
     text.commit_inlines(inlines);
     lines.restore_if_nonempty(line);
-    let inner = self.parse_inlines_until(lines, &[token.kind, token.kind])?;
-    extend(&mut loc, &inner, 2);
+    let inner = self.parse_inlines_until(lines, &stop_tokens)?;
+    extend(&mut loc, &inner, N);
     inlines.push(node(wrap(inner), loc));
     text.loc = loc.clamp_end();
-    // if we've consumed the whole line, and there are lines to come, add a newline
-    if text.loc.end == line_end && lines.current().is_some() {
-      text.loc.end += 1;
-      inlines.push(node(JoiningNewline, text.loc));
-      text.loc = text.loc.clamp_end();
-    }
+    push_newline_if_needed(text, inlines, lines);
     Ok(())
+  }
+
+  fn parse_unconstrained(
+    &mut self,
+    token: &Token<'src>,
+    wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
+    text: &mut CollectText<'bmp>,
+    inlines: &mut InlineNodes<'bmp>,
+    line: Line<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp, 'src>,
+  ) -> Result<()> {
+    self.parse_inner(
+      token,
+      [token.kind, token.kind],
+      wrap,
+      text,
+      inlines,
+      line,
+      lines,
+    )
   }
 
   fn parse_constrained(
@@ -543,21 +574,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     line: Line<'bmp, 'src>,
     lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<()> {
-    let mut loc = token.loc;
-    let line_end = line.last_location().map_or(loc.end, |t| t.end);
-    text.commit_inlines(inlines);
-    lines.restore_if_nonempty(line);
-    let inner = self.parse_inlines_until(lines, &[token.kind])?;
-    extend(&mut loc, &inner, 1);
-    inlines.push(node(wrap(inner), loc));
-    text.loc = loc.clamp_end();
-    // if we've consumed the whole line, and there are lines to come, add a newline
-    if text.loc.end == line_end && lines.current().is_some() {
-      text.loc.end += 1;
-      inlines.push(node(JoiningNewline, text.loc));
-      text.loc = text.loc.clamp_end();
-    }
-    Ok(())
+    self.parse_inner(token, [token.kind], wrap, text, inlines, line, lines)
   }
 
   fn merge_inlines(
@@ -595,6 +612,58 @@ fn escapes_pattern(line: &Line, subs: &Substitutions) -> bool {
   || subs.attr_refs && line.current_is(OpenBrace) && line.is_continuous_thru(CloseBrace)
 }
 
+fn push_newline_if_needed<'bmp>(
+  text: &mut CollectText<'bmp>,
+  inlines: &mut InlineNodes<'bmp>,
+  lines: &ContiguousLines<'bmp, '_>,
+) {
+  // LOGIC: if we have a current line and it is entirely unconsumed
+  // it means we've finished parsing something at the end of the prev line
+  // so we need to join with a newline, examples:
+
+  // 1) here we have a line, but it's partially consumed
+  //                v -- ended here: don't add newline
+  // footnote:[_foo_]
+
+  // 2) here we're sitting at the beginning of line 3, so we need a newline
+  // "`foo
+  //      v -- ended here: add newline
+  // bar`"
+  // baz
+
+  // 3) here we have no next line, so we don't add a newline
+  // "`foo
+  //      v -- ended here: don't add newline
+  // bar`"
+
+  if lines
+    .current()
+    .map_or(false, |line| line.is_fully_unconsumed())
+  {
+    text.loc.end += 1;
+    inlines.push(node(JoiningNewline, text.loc));
+    text.loc = text.loc.clamp_end();
+  }
+}
+
+fn push_simple<'bmp, 'src>(
+  inline_node: Inline<'bmp>,
+  token: &Token<'src>,
+  mut line: Line<'bmp, 'src>,
+  text: &mut CollectText<'bmp>,
+  inlines: &mut InlineNodes<'bmp>,
+  lines: &mut ContiguousLines<'bmp, 'src>,
+) {
+  let mut loc = token.loc;
+  line.discard(1);
+  loc.end += 1;
+  text.commit_inlines(inlines);
+  lines.restore_if_nonempty(line);
+  inlines.push(node(inline_node, loc));
+  text.loc = loc.clamp_end();
+  push_newline_if_needed(text, inlines, lines);
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -627,6 +696,91 @@ mod tests {
           n(Italic(b.inodes([n_text("foo", 2, 5, b)])), l(0, 7)),
           n(JoiningNewline, l(7, 8)),
           n_text("bar", 8, 11, b),
+        ]),
+      ),
+      (
+        "foo \"`bar`\"\nbaz",
+        b.inodes([
+          n_text("foo ", 0, 4, b),
+          n(
+            Quote(QuoteKind::Double, b.inodes([n_text("bar", 6, 9, b)])),
+            l(4, 11),
+          ),
+          n(JoiningNewline, l(11, 12)),
+          n_text("baz", 12, 15, b),
+        ]),
+      ),
+      (
+        "\"`foo\nbar`\"\nbaz",
+        b.inodes([
+          n(
+            Quote(
+              QuoteKind::Double,
+              b.inodes([
+                n_text("foo", 2, 5, b),
+                n(JoiningNewline, l(5, 6)),
+                n_text("bar", 6, 9, b),
+              ]),
+            ),
+            l(0, 11),
+          ),
+          n(JoiningNewline, l(11, 12)),
+          n_text("baz", 12, 15, b),
+        ]),
+      ),
+      (
+        "bar`\"\nbaz",
+        b.inodes([
+          n_text("bar", 0, 3, b),
+          n(Curly(RightDouble), l(3, 5)),
+          n(JoiningNewline, l(5, 6)),
+          n_text("baz", 6, 9, b),
+        ]),
+      ),
+      (
+        "^foo^\nbar",
+        b.inodes([
+          n(Superscript(b.inodes([n_text("foo", 1, 4, b)])), l(0, 5)),
+          n(JoiningNewline, l(5, 6)),
+          n_text("bar", 6, 9, b),
+        ]),
+      ),
+      (
+        "~foo~\nbar",
+        b.inodes([
+          n(Subscript(b.inodes([n_text("foo", 1, 4, b)])), l(0, 5)),
+          n(JoiningNewline, l(5, 6)),
+          n_text("bar", 6, 9, b),
+        ]),
+      ),
+      (
+        "`+{name}+`\nbar",
+        b.inodes([
+          n(LitMono(b.src("{name}", l(2, 8))), l(0, 10)),
+          n(JoiningNewline, l(10, 11)),
+          n_text("bar", 11, 14, b),
+        ]),
+      ),
+      (
+        "+_foo_+\nbar",
+        b.inodes([
+          n(
+            InlinePassthrough(b.inodes([n_text("_foo_", 1, 6, b)])),
+            l(0, 7),
+          ),
+          n(JoiningNewline, l(7, 8)),
+          n_text("bar", 8, 11, b),
+        ]),
+      ),
+      (
+        "+++_<foo>&_+++\nbar",
+        b.inodes([
+          n(
+            InlinePassthrough(b.inodes([n_text("_<foo>&_", 3, 11, b)])),
+            l(0, 14),
+          ),
+          n(JoiningNewline, l(14, 15)),
+          n_text("bar", 15, 18, b),
         ]),
       ),
     ];

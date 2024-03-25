@@ -600,6 +600,20 @@ test_eval!(
 );
 
 test_eval!(
+  quote_newlines,
+  adoc! {r#"
+    "`foo
+    bar`"
+    baz
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>&#8220;foo bar&#8221; baz</p>
+    </div>
+  "#}
+);
+
+test_eval!(
   simple_listing_block,
   adoc! {r#"
     [listing]
