@@ -3,7 +3,6 @@
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
 - [ ] breaks
-- [ ] hard returns
 - [ ] indented listing/literal blocks
 - [ ] should `--embedded` be passed to Parser? so it doesn't try to parse a doc header?
       (pretty confident: yes)
@@ -21,6 +20,7 @@
       `{docdate}` example, see also
       https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#note-docdatetime
 - [ ] h1 subtitle
+- [√] hard breaks
 - [√] basic multi-byte char test
 - [√] sections
 - [√] poc, non-corner-painting wasm
@@ -74,3 +74,8 @@ bump-allocated version
 
 - footnote:[] macro takes an attr list, but it seems like it only supports a single
   positional attribute
+- "To insert an empty line somewhere in a paragraph, you can use the hard line break
+  syntax (i.e., {empty}{plus}) on a line by itself. This allows you to insert space
+  between lines in the output without introducing separate paragraphs." from
+  `/hard-line-breaks` in docs, but i can't seem to replicate this behavior in
+  asciidoctor...

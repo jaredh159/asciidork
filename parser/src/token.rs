@@ -1,6 +1,6 @@
 use crate::internal::*;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum TokenKind {
   Ampersand,
   Backtick,
@@ -20,6 +20,7 @@ pub enum TokenKind {
   DoubleQuote,
   Dots,
   EqualSigns,
+  #[default]
   Eof,
   GreaterThan,
   Hash,
@@ -46,12 +47,6 @@ pub struct Token<'src> {
   pub kind: TokenKind,
   pub loc: SourceLocation,
   pub lexeme: &'src str,
-}
-
-impl Default for TokenKind {
-  fn default() -> Self {
-    Self::Eof
-  }
 }
 
 impl<'src> Token<'src> {

@@ -87,6 +87,7 @@ pub trait Backend {
   fn exit_inline_quote(&mut self, kind: QuoteKind, children: &[InlineNode]);
   fn enter_footnote(&mut self, id: Option<&str>, content: &[InlineNode]);
   fn exit_footnote(&mut self, id: Option<&str>, content: &[InlineNode]);
+  fn visit_linebreak(&mut self);
 
   // result
   fn into_result(self) -> Result<Self::Output, Self::Error>;

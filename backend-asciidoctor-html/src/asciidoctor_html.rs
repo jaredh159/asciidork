@@ -11,11 +11,20 @@ pub struct AsciidoctorHtml {
   pub(crate) fig_caption_num: usize,
   pub(crate) opts: Opts,
   pub(crate) list_stack: Vec<bool>,
-  pub(crate) preserve_newlines: bool,
+  pub(crate) default_newlines: Newlines,
+  pub(crate) newlines: Newlines,
   pub(crate) visiting_simple_term_description: bool,
   pub(crate) section_ids: HashSet<String>,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Newlines {
+  JoinWithBreak,
+  #[default]
+  JoinWithSpace,
+  Preserve,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -26,6 +35,9 @@ impl Backend for AsciidoctorHtml {
     self.opts = opts;
     self.doc_attrs = attrs.clone();
     self.section_num_levels = attrs.isize("sectnumlevels").unwrap_or(3);
+    if attrs.is_set("hardbreaks-option") {
+      self.default_newlines = Newlines::JoinWithBreak
+    }
     if opts.doc_type == DocType::Inline {
       return;
     }
@@ -120,8 +132,21 @@ impl Backend for AsciidoctorHtml {
 
   fn enter_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
   fn exit_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
-  fn enter_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {}
-  fn exit_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {}
+
+  fn enter_simple_block_content(&mut self, _children: &[InlineNode], block: &Block) {
+    if block
+      .meta
+      .attrs
+      .as_ref()
+      .map_or(false, |a| a.has_option("hardbreaks"))
+    {
+      self.newlines = Newlines::JoinWithBreak;
+    }
+  }
+
+  fn exit_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {
+    self.newlines = self.default_newlines;
+  }
 
   fn enter_sidebar_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["sidebarblock"], &block.meta.attrs);
@@ -135,12 +160,12 @@ impl Backend for AsciidoctorHtml {
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["listingblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content"><pre>"#);
-    self.preserve_newlines = true
+    self.newlines = Newlines::Preserve;
   }
 
   fn exit_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
     self.push_str("</pre></div></div>");
-    self.preserve_newlines = false;
+    self.newlines = self.default_newlines;
   }
 
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
@@ -330,7 +355,11 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn visit_joining_newline(&mut self) {
-    self.push_ch(if self.preserve_newlines { '\n' } else { ' ' });
+    match self.newlines {
+      Newlines::JoinWithSpace => self.push_ch(' '),
+      Newlines::JoinWithBreak => self.push_str("<br> "),
+      Newlines::Preserve => self.push_str("\n"),
+    }
   }
 
   fn visit_attribute_reference(&mut self, name: &str) {
@@ -353,6 +382,10 @@ impl Backend for AsciidoctorHtml {
         // TODO: warning
       }
     }
+  }
+
+  fn visit_linebreak(&mut self) {
+    self.push_str("<br> ");
   }
 
   fn enter_inline_mono(&mut self, _children: &[InlineNode]) {
@@ -514,6 +547,15 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry) {
+    if name == "hardbreaks-option" {
+      if entry.is_set() {
+        self.default_newlines = Newlines::JoinWithBreak;
+        self.newlines = Newlines::JoinWithBreak;
+      } else {
+        self.default_newlines = Newlines::default();
+        self.newlines = Newlines::default();
+      }
+    }
     self.doc_attrs.insert(name.to_string(), entry.clone());
   }
 

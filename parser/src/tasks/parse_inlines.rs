@@ -476,6 +476,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             text.loc = token.loc.clamp_end();
           }
 
+          Whitespace if line.current_is(Plus) && line.num_tokens() == 1 => {
+            let mut loc = token.loc;
+            text.commit_inlines(&mut inlines);
+            line.discard_assert(Plus);
+            loc.end += 2; // plus and newline
+            inlines.push(node(LineBreak, loc));
+            text.loc = loc.clamp_end();
+            break;
+          }
+
           OpenBrace if subs.attr_refs && line.is_continuous_thru(CloseBrace) => {
             let mut loc = token.loc;
             let aref = line.consume_to_string_until(CloseBrace, self.bump).src;
@@ -781,6 +791,31 @@ mod tests {
           ),
           n(JoiningNewline, l(14, 15)),
           n_text("bar", 15, 18, b),
+        ]),
+      ),
+    ];
+
+    run(cases, b);
+  }
+
+  #[test]
+  fn test_line_breaks() {
+    let b = &Bump::new();
+    let cases = vec![
+      (
+        "foo +\nbar",
+        b.inodes([
+          n_text("foo", 0, 3, b),
+          n(LineBreak, l(3, 6)),
+          n_text("bar", 6, 9, b),
+        ]),
+      ),
+      (
+        "foo+\nbar", // not valid linebreak
+        b.inodes([
+          n_text("foo+", 0, 4, b),
+          n(JoiningNewline, l(4, 5)),
+          n_text("bar", 5, 8, b),
         ]),
       ),
     ];

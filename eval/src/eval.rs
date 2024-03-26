@@ -258,6 +258,7 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
     Macro(Menu(items)) => {
       backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
     }
+    LineBreak => backend.visit_linebreak(),
     AttributeReference(name) => backend.visit_attribute_reference(name),
     _ => {
       println!("\nUnhandled inline node type:");

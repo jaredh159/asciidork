@@ -6,6 +6,16 @@ pub enum AttrEntry {
   Bool(bool),
 }
 
+impl AttrEntry {
+  pub fn is_set(&self) -> bool {
+    matches!(self, AttrEntry::Bool(true))
+  }
+
+  pub fn is_unset(&self) -> bool {
+    matches!(self, AttrEntry::Bool(false))
+  }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct AttrEntries(HashMap<String, AttrEntry>);
 
@@ -23,11 +33,11 @@ impl AttrEntries {
   }
 
   pub fn is_set(&self, key: &str) -> bool {
-    matches!(self.get(key), Some(AttrEntry::Bool(true)))
+    self.get(key).map_or(false, |entry| entry.is_set())
   }
 
   pub fn is_unset(&self, key: &str) -> bool {
-    matches!(self.get(key), Some(AttrEntry::Bool(false)))
+    self.get(key).map_or(false, |entry| entry.is_unset())
   }
 
   pub fn str(&self, key: &str) -> Option<&str> {

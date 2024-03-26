@@ -22,6 +22,7 @@ impl<'bmp> InlineNodes<'bmp> {
       Inline::Italic(nodes) => text.extend(nodes.plain_text()),
       Inline::InlinePassthrough(nodes) => text.extend(nodes.plain_text()),
       Inline::JoiningNewline => text.push(" "),
+      Inline::LineBreak => {}
       Inline::LitMono(string) => text.push(string),
       Inline::Mono(nodes) => text.extend(nodes.plain_text()),
       Inline::MultiCharWhitespace(_) => text.push(" "),

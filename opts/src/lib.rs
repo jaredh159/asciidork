@@ -4,16 +4,18 @@ pub struct Opts {
   pub attribute_missing: AttributeMissing,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 pub enum AttributeMissing {
   Warn,
   Drop,
+  #[default]
   Skip,
   // dr. also has "drop-line", i'd rather not support it
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 pub enum DocType {
+  #[default]
   Article,
   Book,
   Manpage,
@@ -42,18 +44,6 @@ impl DocType {
           | "index",
       )
     )
-  }
-}
-
-impl Default for AttributeMissing {
-  fn default() -> Self {
-    Self::Skip
-  }
-}
-
-impl Default for DocType {
-  fn default() -> Self {
-    Self::Article
   }
 }
 

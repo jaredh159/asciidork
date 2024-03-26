@@ -614,6 +614,48 @@ test_eval!(
 );
 
 test_eval!(
+  line_breaks,
+  adoc! {r#"
+    foo +
+    bar
+
+    [%hardbreaks]
+    Ruby is red.
+    Java is beige.
+
+    normal
+    breaks
+
+    :hardbreaks-option:
+
+    foo
+    bar
+
+    :!hardbreaks-option:
+
+    bar
+    baz
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>foo<br> bar</p>
+    </div>
+    <div class="paragraph">
+      <p>Ruby is red.<br> Java is beige.</p>
+    </div>
+    <div class="paragraph">
+      <p>normal breaks</p>
+    </div>
+    <div class="paragraph">
+      <p>foo<br> bar</p>
+    </div>
+    <div class="paragraph">
+      <p>bar baz</p>
+    </div>
+  "#}
+);
+
+test_eval!(
   simple_listing_block,
   adoc! {r#"
     [listing]
