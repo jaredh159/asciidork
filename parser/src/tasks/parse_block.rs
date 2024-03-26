@@ -376,7 +376,6 @@ mod tests {
     assert_eq!(block, expected);
   }
 
-  // jared
   // #[test]
   // fn test_parse_indent_method_literal_block() {
   //   parse_block!(" foo `bar`", block, b);

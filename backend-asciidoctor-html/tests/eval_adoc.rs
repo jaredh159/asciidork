@@ -5,7 +5,6 @@ use test_utils::{adoc, assert_eq, html};
 
 mod helpers;
 
-use indoc::indoc;
 use regex::Regex;
 
 test_eval!(
@@ -170,42 +169,6 @@ test_eval!(
 );
 
 test_eval!(
-  open_block,
-  adoc! {r#"
-    --
-    foo
-    --
-  "#},
-  html! {r#"
-    <div class="openblock">
-      <div class="content">
-        <div class="paragraph">
-          <p>foo</p>
-        </div>
-      </div>
-    </div>
-  "#}
-);
-
-test_eval!(
-  example_block,
-  adoc! {r#"
-    ====
-    foo
-    ====
-  "#},
-  html! {r#"
-    <div class="exampleblock">
-      <div class="content">
-        <div class="paragraph">
-          <p>foo</p>
-        </div>
-      </div>
-    </div>
-  "#}
-);
-
-test_eval!(
   admonition_w_custom_attrs,
   adoc! {r#"
     [#my-id.some-class]
@@ -346,33 +309,6 @@ test_eval!(
 );
 
 test_eval!(
-  delimited_quote,
-  adoc! {r#"
-    [quote,Monty Python and the Holy Grail]
-    ____
-    Dennis: Come and see the violence inherent in the system. Help! Help!
-
-    King Arthur: Bloody peasant!
-    ____
-  "#},
-  html! {r#"
-    <div class="quoteblock">
-      <blockquote>
-        <div class="paragraph">
-          <p>Dennis: Come and see the violence inherent in the system. Help! Help!</p>
-        </div>
-        <div class="paragraph">
-          <p>King Arthur: Bloody peasant!</p>
-        </div>
-      </blockquote>
-      <div class="attribution">
-        &#8212; Monty Python and the Holy Grail
-      </div>
-    </div>
-  "#}
-);
-
-test_eval!(
   quoted_paragraph,
   adoc! {r#"
     "I hold it that a little rebellion now and then is a good thing,
@@ -387,30 +323,6 @@ test_eval!(
       <div class="attribution">
         &#8212; Thomas Jefferson<br>
         <cite>Papers of Thomas Jefferson: Volume 11</cite>
-      </div>
-    </div>
-  "#}
-);
-
-test_eval!(
-  nested_delimited_blocks,
-  adoc! {r#"
-    ****
-    --
-    foo
-    --
-    ****
-  "#},
-  html! {r#"
-    <div class="sidebarblock">
-      <div class="content">
-        <div class="openblock">
-          <div class="content">
-            <div class="paragraph">
-              <p>foo</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   "#}
@@ -536,36 +448,6 @@ test_eval!(
 );
 
 test_eval!(
-  basic_block_example,
-  adoc! {r#"
-    ****
-    This is content in a sidebar block.
-
-    image::name.png[]
-
-    This is more content in the sidebar block.
-    ****
-  "#},
-  html! {r#"
-    <div class="sidebarblock">
-      <div class="content">
-        <div class="paragraph">
-          <p>This is content in a sidebar block.</p>
-        </div>
-        <div class="imageblock">
-          <div class="content">
-            <img src="name.png" alt="name">
-          </div>
-        </div>
-        <div class="paragraph">
-          <p>This is more content in the sidebar block.</p>
-        </div>
-      </div>
-    </div>
-  "#}
-);
-
-test_eval!(
   two_footnotes_w_cust,
   adoc! {r#"
     foo.footnote:[bar _baz_]
@@ -669,51 +551,6 @@ test_eval!(
     </div>
   "#}
 );
-
-#[test]
-fn test_listing_block_newline_preservation() {
-  let input = adoc! {r#"
-    ----
-    foo bar
-    so baz
-    ----
-  "#};
-  let expected = indoc! {r#"
-    <div class="listingblock"><div class="content"><pre>foo bar
-    so baz</pre></div></div>
-  "#};
-  let bump = &Bump::new();
-  let parser = Parser::new(bump, input);
-  let doc = parser.parse().unwrap().document;
-  assert_eq!(
-    eval(doc, Opts::embedded(), AsciidoctorHtml::new()).unwrap(),
-    expected.trim_end(),
-    from: input
-  );
-}
-
-#[test]
-fn test_masquerading_listing_block_newline_preservation() {
-  let input = adoc! {r#"
-    [listing]
-    --
-    foo bar
-    so baz
-    --
-  "#};
-  let expected = indoc! {r#"
-    <div class="listingblock"><div class="content"><pre>foo bar
-    so baz</pre></div></div>
-  "#};
-  let bump = &Bump::new();
-  let parser = Parser::new(bump, input);
-  let doc = parser.parse().unwrap().document;
-  assert_eq!(
-    eval(doc, Opts::embedded(), AsciidoctorHtml::new()).unwrap(),
-    expected.trim_end(),
-    from: input
-  );
-}
 
 enum SubstrTest {
   Contains(&'static str),

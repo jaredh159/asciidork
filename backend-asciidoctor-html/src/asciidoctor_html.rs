@@ -168,6 +168,16 @@ impl Backend for AsciidoctorHtml {
     self.newlines = self.default_newlines;
   }
 
+  fn enter_literal_block(&mut self, block: &Block, _content: &BlockContent) {
+    self.open_element("div", &["literalblock"], &block.meta.attrs);
+    self.push_str(r#"<div class="content"><pre>"#);
+    self.newlines = Newlines::Preserve;
+  }
+
+  fn exit_literal_block(&mut self, block: &Block, content: &BlockContent) {
+    self.exit_listing_block(block, content);
+  }
+
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
     self.visit_block_title(block.meta.title.as_deref(), None);
