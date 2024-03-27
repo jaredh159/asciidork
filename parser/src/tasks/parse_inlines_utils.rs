@@ -11,14 +11,14 @@ impl Substitutions {
     };
     let mut subs = Self::none();
     target.split(',').for_each(|value| match value {
-      "c" => subs.special_chars = true,
-      "a" => subs.attr_refs = true,
-      "r" => subs.char_replacement = true,
-      "m" => subs.macros = true,
-      "p" => subs.post_replacement = true,
-      "q" => subs.inline_formatting = true,
-      "v" => subs.special_chars = true, // verbatim =  only special chars
-      "n" => subs = Substitutions::all(), // normal = all
+      "c" => subs.insert(Subs::SpecialChars),
+      "a" => subs.insert(Subs::AttrRefs),
+      "r" => subs.insert(Subs::CharReplacement),
+      "m" => subs.insert(Subs::Macros),
+      "p" => subs.insert(Subs::PostReplacement),
+      "q" => subs.insert(Subs::InlineFormatting),
+      "v" => subs.insert(Subs::SpecialChars),
+      "n" => subs = Substitutions::all(),
       _ => {}
     });
     subs

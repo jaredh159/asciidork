@@ -111,11 +111,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let delimiter_token = lines.consume_current_token().unwrap();
     self.restore_lines(lines);
     let context = meta.block_style_or(Context::from(delimiter));
-    let restore_subs = self.ctx.set_subs_for(context);
+    let restore_subs = self.ctx.set_subs_for(context, &meta);
 
-    // newlines have a different meaning in a listing/literal block, so we have to
+    // newlines have a different meaning in a these contexts, so we have to
     // manually gather all (including empty) lines until the end delimiter
-    let content = if matches!(context, Context::Listing | Context::Literal) {
+    let content = if matches!(
+      context,
+      Context::Listing | Context::Literal | Context::Passthrough
+    ) {
       let mut lines = self
         .read_lines_until(delimiter)
         .unwrap_or_else(|| ContiguousLines::new(bvec![in self.bump]));
@@ -182,7 +185,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let block_context = meta.block_paragraph_context(&mut lines);
 
     // TODO: probably a better stack-like context API is possible here...
-    let restore_subs = self.ctx.set_subs_for(block_context);
+    let restore_subs = self.ctx.set_subs_for(block_context, &meta);
     let inlines = self.parse_inlines(&mut lines)?;
     self.ctx.subs = restore_subs;
 
@@ -289,6 +292,83 @@ mod tests {
         n_text("baz", 15, 18, b),
       ])),
       ..b.empty_block(0, 23)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_passthrough() {
+    let input = adoc! {"
+      [pass]
+      foo <bar>
+    "};
+    parse_block!(input, block, b);
+    let expected = Block {
+      meta: ChunkMeta::new(Some(b.positional_attrs("pass", l(1, 5))), None, 0),
+      context: Context::Passthrough,
+      content: Content::Simple(b.inodes([n_text("foo <bar>", 7, 16, b)])),
+      ..b.empty_block(0, 16)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_passthrough_block() {
+    let input = adoc! {"
+      ++++
+      foo <bar>
+      baz
+      ++++
+    "};
+    parse_block!(input, block, b);
+    let expected = Block {
+      context: Context::Passthrough,
+      content: Content::Simple(b.inodes([
+        n_text("foo <bar>", 5, 14, b),
+        n(Inline::JoiningNewline, l(14, 15)),
+        n_text("baz", 15, 18, b),
+      ])),
+      ..b.empty_block(0, 23)
+    };
+    assert_eq!(block, expected);
+  }
+
+  #[test]
+  fn test_parse_delimited_passthrough_block_subs_normal() {
+    let input = adoc! {"
+      [subs=normal]
+      ++++
+      foo & _<bar>_
+      baz
+      ++++
+    "};
+    parse_block!(input, block, b);
+    let expected = Block {
+      meta: ChunkMeta::new(
+        Some(AttrList {
+          named: Named::from(b.vec([(b.src("subs", l(1, 5)), b.src("normal", l(6, 12)))])),
+          ..AttrList::new(l(0, 13), b)
+        }),
+        None,
+        0,
+      ),
+      context: Context::Passthrough,
+      content: Content::Simple(b.inodes([
+        n_text("foo ", 19, 23, b),
+        n(SpecialChar(SpecialCharKind::Ampersand), l(23, 24)),
+        n_text(" ", 24, 25, b),
+        n(
+          Italic(b.inodes([
+            n(SpecialChar(SpecialCharKind::LessThan), l(26, 27)),
+            n_text("bar", 27, 30, b),
+            n(SpecialChar(SpecialCharKind::GreaterThan), l(30, 31)),
+          ])),
+          l(25, 32),
+        ),
+        n(Inline::JoiningNewline, l(32, 33)),
+        n_text("baz", 33, 36, b),
+      ])),
+      ..b.empty_block(0, 41)
     };
     assert_eq!(block, expected);
   }

@@ -42,6 +42,32 @@ test_eval!(
 );
 
 test_eval!(
+  passthrough_block,
+  adoc! {r#"
+    ++++
+    foo & <bar>
+    ++++
+  "#},
+  html! {r#"
+    foo & <bar>
+  "#}
+);
+
+test_eval!(
+  passthrough_block_w_subs_normal,
+  adoc! {r#"
+    [subs=normal]
+    ++++
+    foo & _<bar>_
+    baz
+    ++++
+  "#},
+  html! {r#"
+    foo &amp; <em>&lt;bar&gt;</em> baz
+  "#}
+);
+
+test_eval!(
   example_block,
   adoc! {r#"
     ====

@@ -1,4 +1,5 @@
 pub(crate) mod collect_text;
+pub mod customize_subs;
 mod parse_attr_list;
 mod parse_author_line;
 mod parse_block;

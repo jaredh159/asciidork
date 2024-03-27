@@ -193,9 +193,16 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       backend.exit_simple_block_content(children, block);
       backend.exit_literal_block(block, &block.content);
     }
+    (Context::Passthrough, Content::Simple(children)) => {
+      backend.enter_passthrough_block(block, &block.content);
+      backend.enter_simple_block_content(children, block);
+      children.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_simple_block_content(children, block);
+      backend.exit_passthrough_block(block, &block.content);
+    }
     (Context::Comment, _) => {}
     _ => {
-      dbg!(block.context);
+      dbg!(block.context, &block.content);
       todo!();
     }
   }

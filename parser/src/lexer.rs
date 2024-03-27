@@ -122,7 +122,7 @@ impl<'src> Lexer<'src> {
       || self.is_eof()
       || !matches!(
         self.peek,
-        Some(b'_') | Some(b'-') | Some(b'*') | Some(b'=') | Some(b'.')
+        Some(b'_') | Some(b'-') | Some(b'*') | Some(b'=') | Some(b'.') | Some(b'+')
       )
     {
       return None;
@@ -134,6 +134,7 @@ impl<'src> Lexer<'src> {
       [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n') | None]
       | [Some(b'_'), Some(b'_'), Some(b'_'), Some(b'_'), Some(b'\n') | None]
       | [Some(b'-'), Some(b'-'), Some(b'-'), Some(b'-'), Some(b'\n') | None]
+      | [Some(b'+'), Some(b'+'), Some(b'+'), Some(b'+'), Some(b'\n') | None]
       | [Some(b'.'), Some(b'.'), Some(b'.'), Some(b'.'), Some(b'\n') | None]
       | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n') | None] => {
         Some((4, sequence[0].unwrap()))
@@ -503,6 +504,7 @@ mod tests {
       ("____", vec![(DelimiterLine, "____")]),
       ("----", vec![(DelimiterLine, "----")]),
       ("....", vec![(DelimiterLine, "....")]),
+      ("++++", vec![(DelimiterLine, "++++")]),
       (
         "****\nfoo",
         vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],

@@ -64,7 +64,7 @@ pub enum BlockContext {
   Paragraph,
   Passthrough,
   QuotedParagraph,
-  Section, // TODO: do i need this? we have a different node...
+  Section,
   Sidebar,
   Table,
   TableCell,
@@ -118,6 +118,7 @@ impl BlockContext {
       "quote" => Some(BlockContext::BlockQuote),
       "listing" => Some(BlockContext::Listing),
       "literal" => Some(BlockContext::Literal),
+      "pass" => Some(BlockContext::Passthrough),
       _ => Self::derive_admonition(string),
     }
   }

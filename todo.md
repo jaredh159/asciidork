@@ -1,5 +1,9 @@
 ## todo
 
+- [ ] finish fleshing out customizing substitutions, handling append/prepend, etc., see
+      `customize_subs.rs`
+- [ ] i don't run substitutions in an _order_. i need to search out some test cases of why
+      (if?) this is naive/problematic, and fix
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
 - [ ] breaks

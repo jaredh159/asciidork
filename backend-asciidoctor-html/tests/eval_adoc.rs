@@ -28,6 +28,8 @@ test_eval!(
   r#"<div class="paragraph"><p>_&lt;foo&gt;&amp;_</p></div>"#
 );
 
+test_eval!(passthrough_block, "[pass]\n_<foo>&_", "_<foo>&_");
+
 test_eval!(
   highlight,
   "foo #bar#",

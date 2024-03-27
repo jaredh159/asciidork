@@ -19,44 +19,10 @@ pub struct ParseResult<'bmp> {
   pub warnings: Vec<Diagnostic>,
 }
 
-#[derive(Debug)]
-pub(crate) struct ParseContext {
-  pub(crate) subs: Substitutions,
-  pub(crate) delimiter: Option<Delimiter>,
-  pub(crate) list: ListContext,
-  pub(crate) section_level: u8,
-}
-
-impl ParseContext {
-  pub(crate) fn set_subs_for(&mut self, block_context: BlockContext) -> Substitutions {
-    let restore = self.subs;
-    #[allow(clippy::single_match)]
-    match block_context {
-      BlockContext::Listing | BlockContext::Literal => {
-        self.subs = Substitutions::none();
-        self.subs.special_chars = true;
-      }
-      _ => {}
-    }
-    restore
-  }
-}
-
 #[derive(Debug, Default)]
 pub(crate) struct ListContext {
   pub(crate) stack: ListStack,
   pub(crate) parsing_continuations: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct Substitutions {
-  pub(crate) special_chars: bool,
-  /// aka: `quotes`
-  pub(crate) inline_formatting: bool,
-  pub(crate) attr_refs: bool,
-  pub(crate) char_replacement: bool,
-  pub(crate) macros: bool,
-  pub(crate) post_replacement: bool,
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -145,6 +111,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Delimiter::Sidebar => self.lexer.at_delimiter_line() == Some((4, b'*')),
       Delimiter::Listing => self.lexer.at_delimiter_line() == Some((4, b'-')),
       Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
+      Delimiter::Passthrough => self.lexer.at_delimiter_line() == Some((4, b'+')),
     }
   }
 
@@ -225,30 +192,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 pub enum Chunk<'bmp> {
   Block(Block<'bmp>),
   Section(Section<'bmp>),
-}
-
-impl Substitutions {
-  pub fn all() -> Self {
-    Self {
-      special_chars: true,
-      inline_formatting: true,
-      attr_refs: true,
-      char_replacement: true,
-      macros: true,
-      post_replacement: true,
-    }
-  }
-
-  pub fn none() -> Self {
-    Self {
-      special_chars: false,
-      inline_formatting: false,
-      attr_refs: false,
-      char_replacement: false,
-      macros: false,
-      post_replacement: false,
-    }
-  }
 }
 
 impl From<Diagnostic> for Vec<Diagnostic> {
