@@ -1,2 +1,4 @@
 public/wasm
+!public/wasm/dr_html_wasm.js
+!public/wasm/dr_html_wasm_bg.wasm
 node_modules
