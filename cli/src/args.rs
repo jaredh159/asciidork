@@ -10,7 +10,7 @@ pub struct Args {
   #[clap(short, long, help = "The file path to parse - omit to read from stdin")]
   pub input: Option<std::path::PathBuf>,
 
-  #[clap(short, long, default_value = "dr-html-pretty")]
+  #[clap(short, long, default_value = "dr-html")]
   #[clap(help = "Select output format")]
   pub format: Output,
 
