@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Opts {
   pub doc_type: DocType,
@@ -20,6 +22,19 @@ pub enum DocType {
   Book,
   Manpage,
   Inline,
+}
+
+impl FromStr for DocType {
+  type Err = &'static str;
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Ok(match s {
+      "article" => Self::Article,
+      "book" => Self::Book,
+      "manpage" => Self::Manpage,
+      "inline" => Self::Inline,
+      _ => return Err("Invalid doc type"),
+    })
+  }
 }
 
 impl DocType {

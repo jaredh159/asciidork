@@ -1,3 +1,5 @@
+use std::error::Error;
+
 extern crate asciidork_ast as ast;
 extern crate asciidork_backend as backend;
 extern crate asciidork_eval as eval;
@@ -6,6 +8,14 @@ mod asciidoctor_html;
 pub mod section;
 
 pub use asciidoctor_html::AsciidoctorHtml;
+
+pub fn convert(document: ast::Document, opts: eval::Opts) -> Result<String, Box<dyn Error>> {
+  Ok(eval::eval(document, opts, AsciidoctorHtml::new())?)
+}
+
+pub fn convert_embedded_article(document: ast::Document) -> Result<String, Box<dyn Error>> {
+  convert(document, eval::Opts::embedded())
+}
 
 mod internal {
   pub use std::borrow::Cow;

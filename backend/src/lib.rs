@@ -4,6 +4,7 @@ extern crate asciidork_opts as opts;
 mod admonition;
 mod backend;
 
+// TODO: maybe move this into ast?
 pub use admonition::AdmonitionKind;
 pub use backend::Backend;
 
