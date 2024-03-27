@@ -3,7 +3,7 @@ use std::process::{Command, Stdio};
 use std::result::Result;
 use std::{env, error::Error, fs};
 
-use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
+use asciidork_dr_html_backend::AsciidoctorHtml;
 use asciidork_eval::{eval, Opts};
 use asciidork_parser::parser::Parser;
 use asciidork_parser::Diagnostic;

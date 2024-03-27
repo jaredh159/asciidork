@@ -9,7 +9,7 @@ macro_rules! test_eval {
       let actual = ::asciidork_eval::eval(
         document,
         ::asciidork_eval::Opts::embedded(),
-        ::asciidork_backend_asciidoctor_html::AsciidoctorHtml::new()).unwrap();
+        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
       ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
     }
   };

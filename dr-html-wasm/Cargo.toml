@@ -1,7 +1,6 @@
 [package]
-name = "wasm-dr"
+name = "dr-html-wasm"
 version = "0.1.0"
-authors = ["Jared Henderson <jaredh159@users.noreply.github.com>"]
 edition = "2018"
 
 [lib]
@@ -14,7 +13,7 @@ default = ["console_error_panic_hook"]
 wasm-bindgen = "0.2.84"
 asciidork-parser = { path = "../parser" }
 asciidork-eval = { path = "../eval" }
-asciidork-backend-asciidoctor-html = { path = "../backend-asciidoctor-html" }
+asciidork-dr-html-backend = { path = "../dr-html-backend" }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

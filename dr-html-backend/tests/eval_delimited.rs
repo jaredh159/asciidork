@@ -1,4 +1,4 @@
-use asciidork_backend_asciidoctor_html::AsciidoctorHtml;
+use asciidork_dr_html_backend::AsciidoctorHtml;
 use asciidork_eval::{eval, Opts};
 use asciidork_parser::prelude::*;
 use test_utils::{adoc, assert_eq, html};

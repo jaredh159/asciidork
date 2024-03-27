@@ -1,47 +1,19 @@
 _default:
   @just --choose
 
-playground:
-  @cd wasm-dr && wasm-pack build --target web --out-dir ../dr-playground/public/wasm
-  @cd dr-playground && pnpm run dev
+build-playground:
+  @cd dr-html-wasm && wasm-pack build \
+    --target web \
+    --out-dir ../web-playground/public/wasm
+
+playground: build-playground
+  @cd web-playground && pnpm run dev
 
 check:
   @export RUSTFLAGS="-D warnings" && \
-  cargo check && \
-  cargo clippy && \
-  cargo fmt -- --check && \
-  cargo test --all --no-fail-fast && \
-  cargo build
-
-watch-print-ast file:
-  @watchexec --no-vcs-ignore --restart --clear \
-  --watch ast/src \
-  --watch backend/src \
-  --watch backend-asciidoctor-html/src \
-  --watch cli/src \
-  --watch eval/src \
-  --watch parser/src \
-  --watch {{file}} \
-  cargo run print-ast {{file}}
-
-watch-print-html file:
-  @watchexec --no-vcs-ignore --restart --clear \
-  --watch ast/src \
-  --watch backend/src \
-  --watch backend-asciidoctor-html/src \
-  --watch cli/src \
-  --watch eval/src \
-  --watch parser/src \
-  --watch {{file}} \
-  cargo run print-html {{file}}
-
-watch-test isolate="":
-  @watchexec --restart --clear \
-  --watch ast/src \
-  --watch backend/src \
-  --watch backend-asciidoctor-html/src \
-  --watch backend-asciidoctor-html/tests \
-  --watch cli/src \
-  --watch eval/src \
-  --watch parser/src \
-  cargo test {{isolate}}
+    cargo check && \
+    cargo clippy && \
+    cargo fmt -- --check && \
+    cargo test --all --no-fail-fast && \
+    cargo build
+  @just build-playground

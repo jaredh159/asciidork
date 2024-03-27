@@ -3,13 +3,13 @@
 members = [
   "ast",
   "backend",
-  "backend-asciidoctor-html",
+  "dr-html-backend",
+  "dr-html-wasm",
   "cli",
   "eval",
   "parser",
   "opts",
   "test-utils",
-  "wasm-dr",
 ]
 
 resolver = "2"

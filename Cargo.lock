@@ -27,7 +27,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "asciidork-backend-asciidoctor-html"
+name = "asciidork-cli"
+version = "0.1.0"
+dependencies = [
+ "asciidork-dr-html-backend",
+ "asciidork-eval",
+ "asciidork-parser",
+ "bumpalo",
+ "colored",
+]
+
+[[package]]
+name = "asciidork-dr-html-backend"
 version = "0.1.0"
 dependencies = [
  "asciidork-ast",
@@ -40,17 +51,6 @@ dependencies = [
  "regex",
  "smallvec",
  "test-utils",
-]
-
-[[package]]
-name = "asciidork-cli"
-version = "0.1.0"
-dependencies = [
- "asciidork-backend-asciidoctor-html",
- "asciidork-eval",
- "asciidork-parser",
- "bumpalo",
- "colored",
 ]
 
 [[package]]
@@ -130,6 +130,18 @@ name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
+
+[[package]]
+name = "dr-html-wasm"
+version = "0.1.0"
+dependencies = [
+ "asciidork-dr-html-backend",
+ "asciidork-eval",
+ "asciidork-parser",
+ "console_error_panic_hook",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+]
 
 [[package]]
 name = "errno"
@@ -420,18 +432,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "wasm-dr"
-version = "0.1.0"
-dependencies = [
- "asciidork-backend-asciidoctor-html",
- "asciidork-eval",
- "asciidork-parser",
- "console_error_panic_hook",
- "wasm-bindgen",
- "wasm-bindgen-test",
 ]
 
 [[package]]
