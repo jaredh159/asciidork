@@ -774,7 +774,7 @@ impl AsciidoctorHtml {
   }
 }
 
-fn list_type_from_depth(depth: u8) -> &'static str {
+const fn list_type_from_depth(depth: u8) -> &'static str {
   match depth {
     1 => "1",
     2 => "a",
@@ -795,7 +795,7 @@ fn list_type_from_class(class: &str) -> Option<&'static str> {
   }
 }
 
-fn list_class_from_depth(depth: u8) -> &'static str {
+const fn list_class_from_depth(depth: u8) -> &'static str {
   match depth {
     1 => "arabic",
     2 => "loweralpha",

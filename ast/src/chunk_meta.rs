@@ -8,11 +8,11 @@ pub struct ChunkMeta<'bmp> {
 }
 
 impl<'bmp> ChunkMeta<'bmp> {
-  pub fn empty(start: usize) -> Self {
+  pub const fn empty(start: usize) -> Self {
     Self { title: None, attrs: None, start }
   }
 
-  pub fn new(
+  pub const fn new(
     attrs: Option<AttrList<'bmp>>,
     title: Option<SourceString<'bmp>>,
     start: usize,

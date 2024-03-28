@@ -23,7 +23,7 @@ enum StepOrGroup {
 }
 
 impl StepOrGroup {
-  fn from(s: &[u8]) -> Option<Self> {
+  const fn from(s: &[u8]) -> Option<Self> {
     match s {
       b"none" => Some(Self::None),
       b"normal" => Some(Self::Normal),

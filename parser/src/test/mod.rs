@@ -60,11 +60,11 @@ pub fn l(start: usize, end: usize) -> SourceLocation {
   SourceLocation::new(start, end)
 }
 
-pub fn inode(content: Inline, loc: SourceLocation) -> InlineNode {
+pub const fn inode(content: Inline, loc: SourceLocation) -> InlineNode {
   InlineNode::new(content, loc)
 }
 
-pub fn n(content: Inline, loc: SourceLocation) -> InlineNode {
+pub const fn n(content: Inline, loc: SourceLocation) -> InlineNode {
   InlineNode::new(content, loc)
 }
 

@@ -53,7 +53,7 @@ pub fn contains_seq(seq: &[TokenKind], line: &Line, lines: &ContiguousLines) -> 
   line.contains_seq(seq) || lines.contains_seq(seq)
 }
 
-pub fn node(content: Inline, loc: SourceLocation) -> InlineNode {
+pub const fn node(content: Inline, loc: SourceLocation) -> InlineNode {
   InlineNode::new(content, loc)
 }
 

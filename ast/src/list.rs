@@ -10,7 +10,7 @@ pub struct ListItem<'bmp> {
 }
 
 impl<'bmp> ListItem<'bmp> {
-  pub fn loc_start(&self) -> usize {
+  pub const fn loc_start(&self) -> usize {
     self.marker_src.loc.start
   }
 
@@ -35,7 +35,7 @@ pub enum ListVariant {
 }
 
 impl ListVariant {
-  pub fn to_context(&self) -> BlockContext {
+  pub const fn to_context(&self) -> BlockContext {
     match self {
       ListVariant::Ordered => BlockContext::OrderedList,
       ListVariant::Unordered => BlockContext::UnorderedList,
@@ -58,7 +58,7 @@ pub enum ListMarker {
 }
 
 impl ListMarker {
-  pub fn is_description(&self) -> bool {
+  pub const fn is_description(&self) -> bool {
     matches!(self, ListMarker::Colons(_) | ListMarker::SemiColons)
   }
 }

@@ -10,7 +10,7 @@ pub enum AdmonitionKind {
 }
 
 impl AdmonitionKind {
-  pub fn lowercase_str(&self) -> &'static str {
+  pub const fn lowercase_str(&self) -> &'static str {
     match self {
       AdmonitionKind::Tip => "tip",
       AdmonitionKind::Caution => "caution",
@@ -20,7 +20,7 @@ impl AdmonitionKind {
     }
   }
 
-  pub fn str(&self) -> &'static str {
+  pub const fn str(&self) -> &'static str {
     match self {
       AdmonitionKind::Tip => "Tip",
       AdmonitionKind::Caution => "Caution",

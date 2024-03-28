@@ -7,11 +7,11 @@ pub enum AttrEntry {
 }
 
 impl AttrEntry {
-  pub fn is_set(&self) -> bool {
+  pub const fn is_set(&self) -> bool {
     matches!(self, AttrEntry::Bool(true))
   }
 
-  pub fn is_unset(&self) -> bool {
+  pub const fn is_unset(&self) -> bool {
     matches!(self, AttrEntry::Bool(false))
   }
 }

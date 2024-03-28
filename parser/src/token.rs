@@ -69,7 +69,7 @@ impl<'src> Token<'src> {
     }
   }
 
-  pub fn len(&self) -> usize {
+  pub const fn len(&self) -> usize {
     self.lexeme.len()
   }
 }

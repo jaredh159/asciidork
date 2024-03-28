@@ -448,11 +448,11 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Line::new(tokens, &orig_src[..src_len])
   }
 
-  pub fn is_partially_consumed(&self) -> bool {
+  pub const fn is_partially_consumed(&self) -> bool {
     self.pos > 0
   }
 
-  pub fn is_fully_unconsumed(&self) -> bool {
+  pub const fn is_fully_unconsumed(&self) -> bool {
     self.pos == 0
   }
 }

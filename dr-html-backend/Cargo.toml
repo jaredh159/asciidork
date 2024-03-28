@@ -23,3 +23,6 @@ pretty_assertions = "1.4.0"
 
 [lib]
 doctest = false
+
+[lints]
+workspace = true

@@ -17,3 +17,6 @@ asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.1.0" }
 colored = "2.0.4"
 bumpalo = { version = "3.15.4", features = ["collections"] }
 clap = { version = "4.5.4", features = ["derive"] }
+
+[lints]
+workspace = true

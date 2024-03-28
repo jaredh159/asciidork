@@ -27,7 +27,7 @@ impl<'bmp> DocContent<'bmp> {
     }
   }
 
-  pub fn is_sectioned(&self) -> bool {
+  pub const fn is_sectioned(&self) -> bool {
     matches!(self, DocContent::Sectioned { .. })
   }
 

@@ -19,3 +19,6 @@ doctest = false
 indoc = "2.0.4"
 pretty_assertions = "1.4.0"
 test-utils = { path = "../test-utils" }
+
+[lints]
+workspace = true

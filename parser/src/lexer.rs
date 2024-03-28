@@ -35,7 +35,7 @@ impl<'src> Lexer<'src> {
     SourceLocation::from(self.offset())
   }
 
-  pub fn is_eof(&self) -> bool {
+  pub const fn is_eof(&self) -> bool {
     self.peek.is_none()
   }
 

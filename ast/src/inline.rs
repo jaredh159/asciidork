@@ -7,7 +7,7 @@ pub struct InlineNode<'bmp> {
 }
 
 impl<'bmp> InlineNode<'bmp> {
-  pub fn new(content: Inline<'bmp>, loc: SourceLocation) -> Self {
+  pub const fn new(content: Inline<'bmp>, loc: SourceLocation) -> Self {
     Self { content, loc }
   }
 }

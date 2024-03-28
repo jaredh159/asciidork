@@ -15,7 +15,7 @@ pub struct Substitutions {
 }
 
 impl Substitutions {
-  pub fn contains(&self, sub: Subs) -> bool {
+  pub const fn contains(&self, sub: Subs) -> bool {
     self.test & sub.bitflag_pos() != 0
   }
 
@@ -50,11 +50,11 @@ impl Substitutions {
     self.order = next;
   }
 
-  pub fn normal() -> Self {
+  pub const fn normal() -> Self {
     Self::all()
   }
 
-  pub fn all() -> Self {
+  pub const fn all() -> Self {
     Self {
       // TODO: what's the definitive order to start?
       order: [
@@ -69,31 +69,31 @@ impl Substitutions {
     }
   }
 
-  pub fn none() -> Self {
+  pub const fn none() -> Self {
     Self { order: [None; 6], test: 0x00 }
   }
 
-  pub fn special_chars(&self) -> bool {
+  pub const fn special_chars(&self) -> bool {
     self.test & Subs::SPECIAL_CHARS != 0
   }
 
-  pub fn inline_formatting(&self) -> bool {
+  pub const fn inline_formatting(&self) -> bool {
     self.test & Subs::INLINE_FORMATTING != 0
   }
 
-  pub fn attr_refs(&self) -> bool {
+  pub const fn attr_refs(&self) -> bool {
     self.test & Subs::ATTR_REFS != 0
   }
 
-  pub fn char_replacement(&self) -> bool {
+  pub const fn char_replacement(&self) -> bool {
     self.test & Subs::CHAR_REPLACEMENT != 0
   }
 
-  pub fn macros(&self) -> bool {
+  pub const fn macros(&self) -> bool {
     self.test & Subs::MACROS != 0
   }
 
-  pub fn post_replacement(&self) -> bool {
+  pub const fn post_replacement(&self) -> bool {
     self.test & Subs::POST_REPLACEMENT != 0
   }
 

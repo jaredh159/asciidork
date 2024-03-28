@@ -9,7 +9,7 @@ pub struct SourceString<'bmp> {
 }
 
 impl<'bmp> SourceString<'bmp> {
-  pub fn new(src: BumpString<'bmp>, loc: SourceLocation) -> Self {
+  pub const fn new(src: BumpString<'bmp>, loc: SourceLocation) -> Self {
     Self { src, loc }
   }
 

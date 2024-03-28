@@ -9,3 +9,6 @@ license = "MIT"
 asciidork-ast = { path = "../ast", version = "0.1.0" }
 asciidork-backend = { path = "../backend", version = "0.1.0" }
 asciidork-opts = { path = "../opts", version = "0.1.0" }
+
+[lints]
+workspace = true

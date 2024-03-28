@@ -8,5 +8,8 @@ license = "MIT"
 [dependencies]
 bumpalo = { version = "3.15.4", features = ["collections"] }
 
+[lints]
+workspace = true
+
 [lib]
 doctest = false
