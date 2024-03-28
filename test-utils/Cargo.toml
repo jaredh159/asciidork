@@ -3,14 +3,14 @@ name = "test-utils"
 version = "0.1.0"
 edition = "2021"
 
-
 [dependencies]
-indoc = "2.0.4"
-asciidork-parser = { path = "../parser" }
-pretty_assertions = "1.4.0"
-asciidork-ast = { path = "../ast" }
+asciidork-parser = { path = "../parser", version = "0.1.0" }
+asciidork-ast = { path = "../ast", version = "0.1.0" }
 lazy_static = "1.4.0"
 regex = { version = "1.10.2", features = ["std", "use_std"] }
+
+[dev-dependencies]
+indoc = "2.0.4"
 
 [lib]
 doctest = false

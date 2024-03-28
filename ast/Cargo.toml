@@ -2,9 +2,11 @@
 name = "asciidork-ast"
 version = "0.1.0"
 edition = "2021"
+description = "Asciidork AST nodes"
+license = "MIT"
 
 [dependencies]
-bumpalo = { version = "3.14.0", features = ["collections"] }
+bumpalo = { version = "3.15.4", features = ["collections"] }
 
 [lib]
 doctest = false

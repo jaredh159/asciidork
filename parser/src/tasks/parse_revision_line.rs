@@ -85,7 +85,7 @@ mod tests {
 
   macro_rules! s {
     (in $bump:expr;$s:expr) => {
-      bumpalo::collections::BumpString::from_str_in($s, $bump)
+      bumpalo::collections::String::from_str_in($s, $bump)
     };
   }
 

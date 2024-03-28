@@ -2,11 +2,13 @@
 name = "asciidork-dr-html-backend"
 version = "0.1.0"
 edition = "2021"
+description = "Asciidork Asciidoctor HTML backend"
+license = "MIT"
 
 [dependencies]
-asciidork-ast = { path = "../ast" }
-asciidork-backend = { path = "../backend" }
-asciidork-eval = { path = "../eval" }
+asciidork-ast = { path = "../ast", version = "0.1.0" }
+asciidork-backend = { path = "../backend", version = "0.1.0" }
+asciidork-eval = { path = "../eval", version = "0.1.0" }
 lazy_static = "1.4.0"
 regex = "1.10.2"
 smallvec = "1.13.1"

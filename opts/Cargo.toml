@@ -2,5 +2,5 @@
 name = "asciidork-opts"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
+description = "Asciidork opts"
+license = "MIT"

@@ -2,8 +2,10 @@
 name = "asciidork-eval"
 version = "0.1.0"
 edition = "2021"
+description = "Asciidork eval"
+license = "MIT"
 
 [dependencies]
-asciidork-ast = { path = "../ast" }
-asciidork-backend = { path = "../backend" }
-asciidork-opts = { path = "../opts" }
+asciidork-ast = { path = "../ast", version = "0.1.0" }
+asciidork-backend = { path = "../backend", version = "0.1.0" }
+asciidork-opts = { path = "../opts", version = "0.1.0" }
