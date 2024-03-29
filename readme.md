@@ -4,7 +4,14 @@
 
 ## Installation
 
-_NB: Soon you'll be able to `cargo install asciidork-cli`, but for now, this works:_
+```sh
+# requires rust/cargo toolchain
+cargo install asciidork-cli
+```
+
+<details>
+
+<summary>or install from source</summary>
 
 ```sh
 git clone https://github.com/jaredh159/asciidork
@@ -13,14 +20,16 @@ cargo build --release --bins
 
 # vvvv -- OPTIONAL: or use rel path to `./target/release/asciidork` instead
 sudo cp ./target/release/asciidork /usr/local/bin
-
-# read the friendly manual
-asciidork --help
 ```
+
+</details>
 
 ## Usage
 
 ```sh
+# read the friendly manual
+asciidork --help
+
 # parse/convert/print from a file
 asciidork --input test.adoc
 
