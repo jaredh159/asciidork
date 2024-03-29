@@ -23,6 +23,13 @@ macro_rules! adoc {
 }
 
 #[macro_export]
+macro_rules! raw_html {
+  ($s:expr) => {
+    ::indoc::indoc!($s)
+  };
+}
+
+#[macro_export]
 macro_rules! assert_eq {
   ($left:expr, $right:expr$(,)?) => {{
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");
@@ -31,7 +38,7 @@ macro_rules! assert_eq {
     ::pretty_assertions::assert_eq!(
       $left,
       $right,
-      "input was:\n\n```\n{}{}```\n",
+      "input was:\n\n\x1b[2m```adoc\x1b[0m\n{}{}\x1b[2m```\x1b[0m\n",
       $adoc,
       if $adoc.ends_with('\n') { "" } else { "\n" }
     );

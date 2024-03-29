@@ -157,13 +157,40 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
-  fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["listingblock"], &block.meta.attrs);
-    self.push_str(r#"<div class="content"><pre>"#);
+  fn enter_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
     self.newlines = Newlines::Preserve;
+    self.start_buffering();
   }
 
-  fn exit_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
+  fn exit_listing_block(&mut self, block: &Block, _content: &BlockContent) {
+    let block_content = self.stop_buffering();
+    self.open_element("div", &["listingblock"], &block.meta.attrs);
+    self.push_str(r#"<div class="content"><pre"#);
+    let lang = match block
+      .meta
+      .attrs
+      .as_ref()
+      .map(|a| (a.str_positional_at(0), a.str_positional_at(1)))
+      .unwrap_or((None, None))
+    {
+      (None | Some("source"), Some(lang)) => Some(lang),
+      _ => None,
+    };
+    if let Some(lang) = lang {
+      self.push([
+        r#" class="highlight"><code class="language-"#,
+        lang,
+        r#"" data-lang=""#,
+        lang,
+        r#"">"#,
+      ]);
+    } else {
+      self.push_ch('>');
+    }
+    self.push_str(&block_content);
+    if lang.is_some() {
+      self.push_str("</code>");
+    }
     self.push_str("</pre></div></div>");
     self.newlines = self.default_newlines;
   }
@@ -174,8 +201,9 @@ impl Backend for AsciidoctorHtml {
     self.newlines = Newlines::Preserve;
   }
 
-  fn exit_literal_block(&mut self, block: &Block, content: &BlockContent) {
-    self.exit_listing_block(block, content);
+  fn exit_literal_block(&mut self, _block: &Block, _content: &BlockContent) {
+    self.push_str("</pre></div></div>");
+    self.newlines = self.default_newlines;
   }
 
   fn enter_passthrough_block(&mut self, _block: &Block, _content: &BlockContent) {}
