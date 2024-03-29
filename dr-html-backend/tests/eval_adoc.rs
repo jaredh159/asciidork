@@ -31,6 +31,12 @@ test_eval!(
 test_eval!(passthrough_block, "[pass]\n_<foo>&_", "_<foo>&_");
 
 test_eval!(
+  minus_subs,
+  "[subs=-specialchars]\nfoo & _bar_",
+  r#"<div class="paragraph"><p>foo & <em>bar</em></p></div>"#
+);
+
+test_eval!(
   highlight,
   "foo #bar#",
   r#"<div class="paragraph"><p>foo <mark>bar</mark></p></div>"#

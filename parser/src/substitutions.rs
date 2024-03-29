@@ -97,7 +97,7 @@ impl Substitutions {
     self.test & Subs::POST_REPLACEMENT != 0
   }
 
-  fn prepend(&mut self, sub: Subs) {
+  pub fn prepend(&mut self, sub: Subs) {
     let mut next = [None; 6];
     next[0] = Some(sub);
     let mut j = 1;
@@ -111,9 +111,10 @@ impl Substitutions {
       }
     }
     self.order = next;
+    self.test |= sub.bitflag_pos();
   }
 
-  fn append(&mut self, sub: Subs) {
+  pub fn append(&mut self, sub: Subs) {
     let mut next = [None; 6];
     let mut j = 0;
     for existing in self.order {
@@ -127,6 +128,7 @@ impl Substitutions {
       next[j] = Some(sub);
     }
     self.order = next;
+    self.test |= sub.bitflag_pos();
   }
 }
 
