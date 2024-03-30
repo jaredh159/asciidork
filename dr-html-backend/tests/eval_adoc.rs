@@ -463,30 +463,30 @@ test_eval!(
     lol.footnote:cust[baz]
   "#},
   html! {r##"
-  <div class="paragraph">
-    <p>foo.
-      <sup class="footnote">
-        [<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]
-      </sup>
-    </p>
-  </div>
-  <div class="paragraph">
-    <p>lol.
-      <sup class="footnote" id="_footnote_cust">
-        [<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]
-      </sup>
-    </p>
-  </div>
-  <div id="footnotes">
-    <hr>
-    <div class="footnote" id="_footnotedef_1">
-      <a href="#_footnoteref_1">1</a>. bar <em>baz</em>
+    <div class="paragraph">
+      <p>foo.
+        <sup class="footnote">
+          [<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]
+        </sup>
+      </p>
     </div>
-    <div class="footnote" id="_footnotedef_2">
-      <a href="#_footnoteref_2">2</a>. baz
+    <div class="paragraph">
+      <p>lol.
+        <sup class="footnote" id="_footnote_cust">
+          [<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]
+        </sup>
+      </p>
     </div>
-  </div>
-"##}
+    <div id="footnotes">
+      <hr>
+      <div class="footnote" id="_footnotedef_1">
+        <a href="#_footnoteref_1">1</a>. bar <em>baz</em>
+      </div>
+      <div class="footnote" id="_footnotedef_2">
+        <a href="#_footnoteref_2">2</a>. baz
+      </div>
+    </div>
+  "##}
 );
 
 test_eval!(

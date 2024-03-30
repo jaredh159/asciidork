@@ -1,11 +1,6 @@
-use asciidork_dr_html_backend::AsciidoctorHtml;
-use asciidork_eval::{eval, Opts};
-use asciidork_parser::prelude::*;
-use test_utils::{adoc, assert_eq, html};
+use test_utils::{adoc, html};
 
 mod helpers;
-
-use indoc::indoc;
 
 test_eval!(
   open_block,
@@ -165,48 +160,3 @@ test_eval!(
     </div>
   "#}
 );
-
-#[test]
-fn test_listing_block_newline_preservation() {
-  let input = adoc! {r#"
-    ----
-    foo bar
-    so baz
-    ----
-  "#};
-  let expected = indoc! {r#"
-    <div class="listingblock"><div class="content"><pre>foo bar
-    so baz</pre></div></div>
-  "#};
-  let bump = &Bump::new();
-  let parser = Parser::new(bump, input);
-  let doc = parser.parse().unwrap().document;
-  assert_eq!(
-    eval(doc, Opts::embedded(), AsciidoctorHtml::new()).unwrap(),
-    expected.trim_end(),
-    from: input
-  );
-}
-
-#[test]
-fn test_masquerading_listing_block_newline_preservation() {
-  let input = adoc! {r#"
-    [listing]
-    --
-    foo bar
-    so baz
-    --
-  "#};
-  let expected = indoc! {r#"
-    <div class="listingblock"><div class="content"><pre>foo bar
-    so baz</pre></div></div>
-  "#};
-  let bump = &Bump::new();
-  let parser = Parser::new(bump, input);
-  let doc = parser.parse().unwrap().document;
-  assert_eq!(
-    eval(doc, Opts::embedded(), AsciidoctorHtml::new()).unwrap(),
-    expected.trim_end(),
-    from: input
-  );
-}

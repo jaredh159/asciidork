@@ -14,7 +14,7 @@ test_eval!(
     end
     ----
   "#},
-  src_shell(
+  wrap_source(
     "ruby",
     raw_html! {r#"
       require 'sinatra'
@@ -26,9 +26,67 @@ test_eval!(
   )
 );
 
-fn src_shell(lang: &str, inner: &str) -> String {
+test_eval!(
+  source_block_implicit,
+  adoc! {r#"
+    [,rust]
+    ----
+    fn main() {
+        println!("Hello, world!");
+    }
+    ----
+  "#},
+  wrap_source(
+    "rust",
+    raw_html! {r#"
+      fn main() {
+          println!("Hello, world!");
+      }
+    "#}
+  )
+);
+
+test_eval!(
+  listing_block_newline_preservation,
+  adoc! {r#"
+    ----
+    foo bar
+    so baz
+    ----
+  "#},
+  wrap_listing(raw_html! {r#"
+    <pre>foo bar
+    so baz</pre>
+  "#})
+);
+
+test_eval!(
+  masquerading_listing_block_newline_preservation,
+  adoc! {r#"
+    [listing]
+    --
+    foo bar
+    so baz
+    --
+  "#},
+  wrap_listing(raw_html! {r#"
+    <pre>foo bar
+    so baz</pre>
+  "#})
+);
+
+// helpers
+
+fn wrap_listing(inner: &str) -> String {
   format!(
-    r#"<div class="listingblock"><div class="content"><pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre></div></div>"#,
+    r#"<div class="listingblock"><div class="content">{}</div></div>"#,
     inner.trim(),
   )
+}
+
+fn wrap_source(lang: &str, inner: &str) -> String {
+  wrap_listing(&format!(
+    r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
+    inner.trim(),
+  ))
 }
