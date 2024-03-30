@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::internal::*;
+use EphemeralState::*;
 
 #[derive(Debug, Default)]
 pub struct AsciidoctorHtml {
@@ -13,18 +14,10 @@ pub struct AsciidoctorHtml {
   pub(crate) list_stack: Vec<bool>,
   pub(crate) default_newlines: Newlines,
   pub(crate) newlines: Newlines,
-  pub(crate) visiting_simple_term_description: bool,
+  pub(crate) state: HashSet<EphemeralState>,
   pub(crate) section_ids: HashSet<String>,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Newlines {
-  JoinWithBreak,
-  #[default]
-  JoinWithSpace,
-  Preserve,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -157,13 +150,7 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div></div>");
   }
 
-  fn enter_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
-    self.newlines = Newlines::Preserve;
-    self.start_buffering();
-  }
-
-  fn exit_listing_block(&mut self, block: &Block, _content: &BlockContent) {
-    let block_content = self.stop_buffering();
+  fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["listingblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content"><pre"#);
     let lang = match block
@@ -177,6 +164,7 @@ impl Backend for AsciidoctorHtml {
       _ => None,
     };
     if let Some(lang) = lang {
+      self.state.insert(IsSourceBlock);
       self.push([
         r#" class="highlight"><code class="language-"#,
         lang,
@@ -187,8 +175,11 @@ impl Backend for AsciidoctorHtml {
     } else {
       self.push_ch('>');
     }
-    self.push_str(&block_content);
-    if lang.is_some() {
+    self.newlines = Newlines::Preserve;
+  }
+
+  fn exit_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
+    if self.state.remove(&IsSourceBlock) {
       self.push_str("</code>");
     }
     self.push_str("</pre></div></div>");
@@ -299,7 +290,7 @@ impl Backend for AsciidoctorHtml {
     if blocks.first().map_or(false, |block| {
       block.context == BlockContext::Paragraph && matches!(block.content, BlockContent::Simple(_))
     }) {
-      self.visiting_simple_term_description = true;
+      self.state.insert(VisitingSimpleTermDescription);
     }
     self.push_str("<dd>");
   }
@@ -368,7 +359,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_paragraph_block(&mut self, block: &Block) {
-    if !self.visiting_simple_term_description {
+    if !self.state.contains(&VisitingSimpleTermDescription) {
       self.open_element("div", &["paragraph"], &block.meta.attrs);
       self.visit_block_title(block.meta.title.as_deref(), None);
     }
@@ -377,10 +368,10 @@ impl Backend for AsciidoctorHtml {
 
   fn exit_paragraph_block(&mut self, _block: &Block) {
     self.push_str("</p>");
-    if !self.visiting_simple_term_description {
+    if !self.state.contains(&VisitingSimpleTermDescription) {
       self.push_str("</div>");
     }
-    self.visiting_simple_term_description = false;
+    self.state.remove(&VisitingSimpleTermDescription);
   }
 
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {
@@ -800,6 +791,20 @@ impl AsciidoctorHtml {
     mem::swap(&mut buffered, &mut self.alt_html);
     buffered
   }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Newlines {
+  JoinWithBreak,
+  #[default]
+  JoinWithSpace,
+  Preserve,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EphemeralState {
+  VisitingSimpleTermDescription,
+  IsSourceBlock,
 }
 
 const fn list_type_from_depth(depth: u8) -> &'static str {
