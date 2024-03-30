@@ -27,6 +27,26 @@ test_eval!(
 );
 
 test_eval!(
+  source_block_from_style_no_delims,
+  adoc! {r#"
+    [source,ruby]
+    require 'sinatra'
+    get '/hi' do
+      "Hello World!"
+    end
+  "#},
+  wrap_source(
+    "ruby",
+    raw_html! {r#"
+      require 'sinatra'
+      get '/hi' do
+        "Hello World!"
+      end
+    "#}
+  )
+);
+
+test_eval!(
   source_block_implicit,
   adoc! {r#"
     [,rust]

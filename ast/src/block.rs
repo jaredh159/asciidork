@@ -116,7 +116,7 @@ impl BlockContext {
     match string {
       "sidebar" => Some(BlockContext::Sidebar),
       "quote" => Some(BlockContext::BlockQuote),
-      "listing" => Some(BlockContext::Listing),
+      "listing" | "source" => Some(BlockContext::Listing),
       "literal" => Some(BlockContext::Literal),
       "pass" => Some(BlockContext::Passthrough),
       _ => Self::derive_admonition(string),
