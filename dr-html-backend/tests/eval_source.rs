@@ -47,6 +47,31 @@ test_eval!(
 );
 
 test_eval!(
+  source_block_lang_from_attr,
+  adoc! {r#"
+    :source-language: ruby
+
+    ----
+    require 'sinatra'
+    ----
+  "#},
+  wrap_source("ruby", "require 'sinatra'")
+);
+
+test_eval!(
+  source_block_lang_from_attr_override,
+  adoc! {r#"
+    :source-language: ruby
+
+    [source,java]
+    ----
+    System.out.println("Hello, world!");
+    ----
+  "#},
+  wrap_source("java", r#"System.out.println("Hello, world!");"#)
+);
+
+test_eval!(
   source_block_implicit,
   adoc! {r#"
     [,rust]

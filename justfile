@@ -17,4 +17,6 @@ check:
     cargo test --all --no-fail-fast && \
     cargo build
   @just build-playground
+
+reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm
