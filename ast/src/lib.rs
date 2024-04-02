@@ -45,6 +45,7 @@ pub mod prelude {
   pub use crate::attr_entries::{AttrEntries, AttrEntry};
   pub use crate::attr_list::{AttrList, Named};
   pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
+  pub use crate::chunk_meta::ChunkMeta;
   pub use crate::doc_content::DocContent;
   pub use crate::inline::{CurlyKind, InlineNode, QuoteKind, SpecialCharKind};
   pub use crate::list::{ListItem, ListMarker};

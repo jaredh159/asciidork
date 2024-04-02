@@ -54,7 +54,9 @@ pub fn from_meta(current: Substitutions, attrs: &Option<AttrList>) -> Substituti
           StepOrGroup::SpecialChars => {
             modify(&mut next, Subs::SpecialChars);
           }
-          StepOrGroup::Callouts => todo!(),
+          StepOrGroup::Callouts => {
+            modify(&mut next, Subs::Callouts);
+          }
           StepOrGroup::Quotes => {
             modify(&mut next, Subs::InlineFormatting);
           }
@@ -129,7 +131,7 @@ mod tests {
   }
 
   fn all_except(subs: &[Subs]) -> Substitutions {
-    let mut s = Substitutions::all();
+    let mut s = Substitutions::normal();
     subs.iter().for_each(|sub| s.remove(*sub));
     s
   }
@@ -137,16 +139,24 @@ mod tests {
   #[test]
   fn test_customize_subs_from_meta() {
     let cases = [
-      ("[subs=none]", Substitutions::all(), Substitutions::none()),
       (
-        "[subs=\"none\"]",
-        Substitutions::all(),
+        "[subs=none]",
+        Substitutions::normal(),
         Substitutions::none(),
       ),
-      ("[subs=normal]", Substitutions::none(), Substitutions::all()),
+      (
+        "[subs=\"none\"]",
+        Substitutions::normal(),
+        Substitutions::none(),
+      ),
+      (
+        "[subs=normal]",
+        Substitutions::none(),
+        Substitutions::normal(),
+      ),
       (
         "[subs=-specialchars]",
-        Substitutions::all(),
+        Substitutions::normal(),
         all_except(&[Subs::SpecialChars]),
       ),
       (

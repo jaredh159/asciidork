@@ -23,6 +23,7 @@ impl<'bmp> InlineNodes<'bmp> {
       Inline::InlinePassthrough(nodes) => text.extend(nodes.plain_text()),
       Inline::JoiningNewline => text.push(" "),
       Inline::LineBreak => {}
+      Inline::CalloutNum(_) => {}
       Inline::LitMono(string) => text.push(string),
       Inline::Mono(nodes) => text.extend(nodes.plain_text()),
       Inline::MultiCharWhitespace(_) => text.push(" "),

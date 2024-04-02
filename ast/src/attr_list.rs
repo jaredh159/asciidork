@@ -89,6 +89,18 @@ impl<'bmp> AttrList<'bmp> {
       .enumerate()
       .any(|(i, _)| self.str_positional_at(i) == Some(positional))
   }
+
+  pub fn is_source(&self) -> bool {
+    self.source_language().is_some()
+  }
+
+  // TODO: this is incorrect, see https://github.com/jaredh159/asciidork/issues/4
+  pub fn source_language(&self) -> Option<&str> {
+    match (self.str_positional_at(0), self.str_positional_at(1)) {
+      (None | Some("source"), Some(lang)) => Some(lang),
+      _ => None,
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

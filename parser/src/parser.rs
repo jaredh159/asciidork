@@ -34,7 +34,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       peeked_lines: None,
       peeked_meta: None,
       ctx: ParseContext {
-        subs: Substitutions::all(),
+        subs: Substitutions::normal(),
         delimiter: None,
         list: ListContext::default(),
         section_level: 0,

@@ -16,11 +16,15 @@ impl ParseContext {
         self.subs = Substitutions::none();
       }
       BlockContext::Listing | BlockContext::Literal => {
-        self.subs = Substitutions::none();
-        self.subs.insert(Subs::SpecialChars);
+        self.subs = Substitutions::verbatim();
+      }
+      BlockContext::Paragraph if meta.attrs.as_ref().map_or(false, |a| a.is_source()) => {
+        self.subs = Substitutions::verbatim();
       }
       _ => {}
     }
+    // TODO: btm of https://docs.asciidoctor.org/asciidoc/latest/subs/apply-subs-to-blocks
+    // says that subs element is only valid on leaf blocks
     self.subs = customize_subs::from_meta(self.subs, &meta.attrs);
     restore
   }

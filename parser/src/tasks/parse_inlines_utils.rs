@@ -18,7 +18,7 @@ impl Substitutions {
       "p" => subs.insert(Subs::PostReplacement),
       "q" => subs.insert(Subs::InlineFormatting),
       "v" => subs.insert(Subs::SpecialChars),
-      "n" => subs = Substitutions::all(),
+      "n" => subs = Substitutions::normal(),
       _ => {}
     });
     subs

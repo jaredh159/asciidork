@@ -239,9 +239,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::test::*;
   use ast::variants::inline::*;
-  use test_utils::{adoc, assert_eq, parse_block};
+  use test_utils::{assert_eq, *};
+
+  macro_rules! parse_block {
+    ($input:expr, $block:ident, $bump:ident) => {
+      let $bump = &Bump::new();
+      let mut parser = Parser::new($bump, $input);
+      let $block = parser.parse_block().unwrap().unwrap();
+    };
+  }
 
   #[test]
   fn test_parse_simple_block() {

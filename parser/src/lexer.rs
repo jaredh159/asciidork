@@ -162,7 +162,7 @@ impl<'src> Lexer<'src> {
       Some(b' ' | b'\t') => self.whitespace(),
       Some(b'&') => self.single(Ampersand),
       Some(b'\n') => self.single(Newline),
-      Some(b'<') => self.single(LessThan),
+      Some(b'<') => self.maybe_callout_number(),
       Some(b'>') => self.single(GreaterThan),
       Some(b',') => self.single(Comma),
       Some(b'^') => self.single(Caret),
@@ -454,6 +454,46 @@ impl<'src> Lexer<'src> {
         | (Some(b':'), Some(b':'), Some(b' ' | b'\t' | b'\n') | None)
     )
   }
+
+  fn maybe_callout_number(&mut self) -> Token<'src> {
+    let start = self.offset() - 1;
+    match self.peek {
+      Some(c) if c.is_ascii_digit() => {
+        self.advance();
+        while self.peek.map_or(false, |c| c.is_ascii_digit()) {
+          self.advance();
+        }
+        if self.peek == Some(b'>') {
+          self.advance();
+          return self.token(CalloutNumber, start, self.offset());
+        } else {
+          self.reverse_by(self.offset() - start - 1);
+        }
+      }
+      Some(b'!') => {
+        let mut peek = self.bytes.clone();
+        match (peek.next(), peek.next(), peek.next()) {
+          (Some(b'-'), Some(b'-'), Some(c)) if c.is_ascii_digit() => {
+            let mut num_digits = 1;
+            loop {
+              match peek.next() {
+                Some(c) if c.is_ascii_digit() => num_digits += 1,
+                Some(b'-') => break,
+                _ => return self.single(LessThan),
+              }
+            }
+            if let (Some(b'-'), Some(b'>')) = (peek.next(), peek.next()) {
+              self.skip(num_digits + 6);
+              return self.token(CalloutNumber, start, self.offset());
+            }
+          }
+          _ => {}
+        }
+      }
+      _ => {}
+    }
+    self.single(LessThan)
+  }
 }
 
 #[cfg(test)]
@@ -475,6 +515,35 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("<1>", vec![(CalloutNumber, "<1>")]),
+      ("<255>", vec![(CalloutNumber, "<255>")]),
+      ("<!--2-->", vec![(CalloutNumber, "<!--2-->")]),
+      ("<!--255-->", vec![(CalloutNumber, "<!--255-->")]),
+      (
+        "<1.1>",
+        vec![
+          (LessThan, "<"),
+          (Digits, "1"),
+          (Dots, "."),
+          (Digits, "1"),
+          (GreaterThan, ">"),
+        ],
+      ),
+      (
+        "<!--1x-->",
+        vec![
+          (LessThan, "<"),
+          (Bang, "!"),
+          (Dashes, "--"),
+          (Digits, "1"),
+          (Word, "x--"),
+          (GreaterThan, ">"),
+        ],
+      ),
+      (
+        "<x>",
+        vec![(LessThan, "<"), (Word, "x"), (GreaterThan, ">")],
+      ),
       ("él", vec![(Word, "él")]),
       (
         "foo él",

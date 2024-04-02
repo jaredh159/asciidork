@@ -1,6 +1,9 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
+pub mod ast_helpers;
+pub use ast_helpers::*;
+
 lazy_static! {
   pub static ref NEWLINES_RE: Regex = Regex::new(r"(?m)\n\s*").unwrap();
 }
@@ -48,9 +51,18 @@ macro_rules! assert_eq {
 #[macro_export]
 macro_rules! parse_block {
   ($input:expr, $block:ident, $bump:ident) => {
-    let $bump = &Bump::new();
+    let $bump = &bumpalo::Bump::new();
     let mut parser = Parser::new($bump, $input);
-    let $block = parser.parse_block().unwrap().unwrap();
+    let doc_content = parser.parse().unwrap().document.content;
+    let $block = match doc_content {
+      ::asciidork_ast::DocContent::Blocks(mut blocks) => {
+        if blocks.len() != 1 {
+          panic!("expected one block, found {}", blocks.len());
+        }
+        blocks.remove(0)
+      }
+      _ => panic!("expected block content"),
+    };
   };
 }
 
@@ -61,5 +73,12 @@ macro_rules! parse_list {
     let mut parser = Parser::new($bump, $input);
     let lines = parser.read_lines().unwrap();
     let $list = parser.parse_list(lines, None).unwrap();
+  };
+}
+
+#[macro_export]
+macro_rules! s {
+  (in $bump:expr; $s:expr) => {
+    bumpalo::collections::String::from_str_in($s, $bump)
   };
 }

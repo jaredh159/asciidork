@@ -200,6 +200,17 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     None
   }
 
+  pub fn continues_valid_callout_nums(&self) -> bool {
+    for token in self.tokens() {
+      if token.is(Whitespace) || token.is(CalloutNumber) {
+        continue;
+      } else {
+        return false;
+      }
+    }
+    true
+  }
+
   pub fn continues_inline_macro(&self) -> bool {
     !self.current_is(Colon)
       && self.is_continuous_thru(OpenBracket)

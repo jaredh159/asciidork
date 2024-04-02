@@ -1,4 +1,8 @@
-use crate::internal::*;
+use asciidork_ast::*;
+use bumpalo::collections::String as BumpString;
+use bumpalo::collections::Vec as BumpVec;
+use bumpalo::vec as bvec;
+use bumpalo::Bump;
 
 pub trait BumpTestHelpers<'bmp> {
   fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> BumpVec<'bmp, T>;
@@ -9,7 +13,7 @@ pub trait BumpTestHelpers<'bmp> {
   fn positional_attrs(&'bmp self, positional: &'static str, loc: SourceLocation) -> AttrList<'bmp>;
 }
 
-impl<'bmp> BumpTestHelpers<'bmp> for &bumpalo::Bump {
+impl<'bmp> BumpTestHelpers<'bmp> for &Bump {
   fn vec<const N: usize, T: Clone>(&'bmp self, nodes: [T; N]) -> BumpVec<'bmp, T> {
     let mut vec = BumpVec::new_in(self);
     for node in nodes.iter() {
@@ -79,11 +83,3 @@ pub fn n_text<'bmp>(
     SourceLocation::new(start, end),
   )
 }
-
-macro_rules! s {
-  (in $bump:expr; $s:expr) => {
-    bumpalo::collections::String::from_str_in($s, $bump)
-  };
-}
-
-pub(crate) use s;

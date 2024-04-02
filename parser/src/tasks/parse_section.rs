@@ -44,8 +44,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::test::*;
-  use test_utils::assert_eq;
+  use test_utils::{assert_eq, *};
 
   #[test]
   fn test_parse_section() {

@@ -20,6 +20,25 @@ impl<'bmp> CollectText<'bmp> {
     self.loc.extend(token.loc);
   }
 
+  pub fn push_str(&mut self, s: &str) {
+    self.string.as_mut().unwrap().push_str(s);
+    self.loc.end += s.len();
+  }
+
+  pub fn trim_end(&mut self) {
+    let string = self.string.as_mut().unwrap();
+    if !string.ends_with(' ') {
+      return;
+    }
+    let trimmed = string.trim_end();
+    let mut delta = string.len() - trimmed.len();
+    self.loc.end -= delta;
+    while delta > 0 {
+      string.pop();
+      delta -= 1;
+    }
+  }
+
   pub fn take(&mut self) -> BumpString<'bmp> {
     self.loc = self.loc.clamp_end();
     self.string.replace(BumpString::new_in(self.bump)).unwrap()

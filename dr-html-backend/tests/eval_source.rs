@@ -95,12 +95,12 @@ test_eval!(
   listing_block_newline_preservation,
   adoc! {r#"
     ----
-    foo bar
+    foo <bar>
     so baz
     ----
   "#},
   wrap_listing(raw_html! {r#"
-    <pre>foo bar
+    <pre>foo &lt;bar&gt;
     so baz</pre>
   "#})
 );

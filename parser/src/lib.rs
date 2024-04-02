@@ -48,6 +48,3 @@ pub mod variants {
     pub use crate::token::TokenKind::*;
   }
 }
-
-#[cfg(test)]
-pub mod test;

@@ -6,6 +6,7 @@ pub enum TokenKind {
   Backtick,
   Backslash,
   Bang,
+  CalloutNumber,
   Caret,
   CloseBrace,
   CloseBracket,

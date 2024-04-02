@@ -162,6 +162,33 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             }
           }
 
+          CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
+            text.trim_end();
+            text.commit_inlines(&mut inlines);
+            let mut loc = token.loc;
+            loc.start = text.loc.end;
+            let digits = token.lexeme.bytes().filter(u8::is_ascii_digit);
+            let digits = BumpVec::from_iter_in(digits, self.bump);
+            // SAFETY: we only have ascii digits, so this is fine
+            let digits = unsafe { std::str::from_utf8_unchecked(&digits) };
+            // maybe better warn than expect?
+            let num = digits.parse::<u8>().expect("exceeded max 255 callouts");
+            inlines.push(node(CalloutNum(num), loc));
+            text.loc = loc.clamp_end();
+          }
+
+          CalloutNumber if subs.special_chars() => {
+            text.commit_inlines(&mut inlines);
+            let start = token.loc.clamp_start().incr_end();
+            let end = token.loc.clamp_end().decr_start();
+            inlines.push(node(SpecialChar(SpecialCharKind::LessThan), start));
+            text.loc = text.loc.incr();
+            text.push_str(&token.lexeme[1..token.lexeme.len() - 1]);
+            text.commit_inlines(&mut inlines);
+            inlines.push(node(SpecialChar(SpecialCharKind::GreaterThan), end));
+            text.loc = text.loc.incr();
+          }
+
           LessThan
             if subs.macros()
               && line.current_token().is_url_scheme()
@@ -242,9 +269,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Plus)
               && contains_seq(&[Plus, Backtick], &line, lines) =>
           {
-            // self.ctx.subs.inline_formatting() = false;
             self.ctx.subs.remove(Subs::InlineFormatting);
-            // self.ctx.subs.attr_refs = false;
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_inner(
               &token,
@@ -685,8 +710,7 @@ fn push_simple<'bmp, 'src>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::test::*;
-  use test_utils::assert_eq;
+  use test_utils::{assert_eq, *};
 
   #[test]
   fn test_joining_newlines() {
