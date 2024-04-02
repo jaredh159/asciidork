@@ -94,7 +94,7 @@ impl Backend for AsciidoctorHtml {
 
   fn exit_section_heading(&mut self, section: &Section) {
     let heading_html = self.stop_buffering();
-    let level_str = &(section.level + 1).to_string();
+    let level_str = num_str!(section.level + 1);
     if !self.doc_attrs.is_unset("sectids") {
       let id = {
         match section.meta.attrs.as_ref().and_then(|a| a.id.as_ref()) {
@@ -107,17 +107,17 @@ impl Backend for AsciidoctorHtml {
           ),
         }
       };
-      self.push(["<h", level_str, r#" id=""#, &id, "\">"]);
+      self.push(["<h", &level_str, r#" id=""#, &id, "\">"]);
       self.section_ids.insert(id);
     } else {
-      self.push(["<h", level_str, ">"]);
+      self.push(["<h", &level_str, ">"]);
     }
     if self.should_number_section(section) {
       let prefix = section::number_prefix(section.level, &mut self.section_nums);
       self.push_str(&prefix);
     }
     self.push_str(&heading_html);
-    self.push(["</h", level_str, ">"]);
+    self.push(["</h", &level_str, ">"]);
     if section.level == 1 {
       self.push_str(r#"<div class="sectionbody">"#);
     }
@@ -314,8 +314,7 @@ impl Backend for AsciidoctorHtml {
         ListMarker::Digits(n) => {
           // TODO: asciidoctor documents that this is OK,
           // but it doesn't actually work, and emits a warning
-          let digits_start = n.to_string();
-          self.push([" start=\"", &digits_start, "\""]);
+          self.push([" start=\"", &num_str!(n), "\""]);
         }
         _ => {}
       }
@@ -382,6 +381,10 @@ impl Backend for AsciidoctorHtml {
       Newlines::JoinWithBreak => self.push_str("<br> "),
       Newlines::Preserve => self.push_str("\n"),
     }
+  }
+
+  fn visit_callout_number(&mut self, number: u8) {
+    self.push([r#" <b class="conum">("#, &num_str!(number), ")</b>"]);
   }
 
   fn visit_attribute_reference(&mut self, name: &str) {
@@ -843,6 +846,23 @@ const fn list_class_from_depth(depth: u8) -> &'static str {
     _ => "upperroman",
   }
 }
+
+macro_rules! num_str {
+  ($n:expr) => {
+    match $n {
+      0 => Cow::Borrowed("0"),
+      1 => Cow::Borrowed("1"),
+      2 => Cow::Borrowed("2"),
+      3 => Cow::Borrowed("3"),
+      4 => Cow::Borrowed("4"),
+      5 => Cow::Borrowed("5"),
+      6 => Cow::Borrowed("6"),
+      _ => Cow::Owned($n.to_string()),
+    }
+  };
+}
+
+pub(crate) use num_str;
 
 lazy_static! {
   pub static ref REMOVE_FILE_EXT: Regex = Regex::new(r"^(.*)\.[^.]+$").unwrap();
