@@ -242,44 +242,35 @@ mod tests {
   use ast::variants::inline::*;
   use test_utils::{assert_eq, *};
 
-  macro_rules! parse_block {
-    ($input:expr, $block:ident, $bump:ident) => {
-      let $bump = &Bump::new();
-      let mut parser = Parser::new($bump, $input);
-      let $block = parser.parse_block().unwrap().unwrap();
-    };
-  }
-
   #[test]
   fn test_parse_simple_block() {
     let input = "hello mamma,\nhello papa\n\n";
-    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Paragraph,
-      content: Content::Simple(b.inodes([
-        inode(Text(b.s("hello mamma,")), l(0, 12)),
-        inode(JoiningNewline, l(12, 13)),
-        inode(Text(b.s("hello papa")), l(13, 23)),
-      ])),
-      ..b.empty_block(0, 23)
+      content: Content::Simple(nodes![
+        node!("hello mamma,"; 0..12),
+        node!(JoiningNewline, 12..13),
+        node!("hello papa"; 13..23),
+      ]),
+      ..empty_block!(0..23)
     };
-    assert_eq!(block, expected);
+    assert_eq!(parse_single_block!(input), expected);
   }
 
   #[test]
   fn test_parse_literal_block() {
-    let input = adoc! {"
-      [literal]
-      foo `bar`
-    "};
-    parse_block!(input, block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("literal", l(1, 8))), None, 0),
-      context: Context::Literal,
-      content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
-      ..b.empty_block(0, 19)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [literal]
+        foo `bar`
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("literal", 1..8)), None, 0),
+        context: Context::Literal,
+        content: Content::Simple(nodes![node!("foo `bar`"; 10..19)]),
+        ..empty_block!(0..19)
+      }
+    );
   }
 
   #[test]
@@ -290,33 +281,34 @@ mod tests {
       baz
       ....
     "};
-    parse_block!(input, block, b);
-    let expected = Block {
-      context: Context::Literal,
-      content: Content::Simple(b.inodes([
-        n_text("foo `bar`", 5, 14, b),
-        n(Inline::JoiningNewline, l(14, 15)),
-        n_text("baz", 15, 18, b),
-      ])),
-      ..b.empty_block(0, 23)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      input,
+      Block {
+        context: Context::Literal,
+        content: Content::Simple(nodes![
+          node!("foo `bar`"; 5..14),
+          node!(Inline::JoiningNewline, 14..15),
+          node!("baz"; 15..18),
+        ]),
+        ..empty_block!(0..23)
+      }
+    )
   }
 
   #[test]
   fn test_parse_passthrough() {
-    let input = adoc! {"
-      [pass]
-      foo <bar>
-    "};
-    parse_block!(input, block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("pass", l(1, 5))), None, 0),
-      context: Context::Passthrough,
-      content: Content::Simple(b.inodes([n_text("foo <bar>", 7, 16, b)])),
-      ..b.empty_block(0, 16)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [pass]
+        foo <bar>
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("pass", 1..5)), None, 0),
+        context: Context::Passthrough,
+        content: Content::Simple(nodes![node!("foo <bar>"; 7..16)]),
+        ..empty_block!(0..16)
+      }
+    );
   }
 
   #[test]
@@ -327,17 +319,16 @@ mod tests {
       baz
       ++++
     "};
-    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Passthrough,
-      content: Content::Simple(b.inodes([
-        n_text("foo <bar>", 5, 14, b),
-        n(Inline::JoiningNewline, l(14, 15)),
-        n_text("baz", 15, 18, b),
-      ])),
-      ..b.empty_block(0, 23)
+      content: Content::Simple(nodes![
+        node!("foo <bar>"; 5..14),
+        node!(Inline::JoiningNewline, 14..15),
+        node!("baz"; 15..18),
+      ]),
+      ..empty_block!(0..23)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
@@ -349,35 +340,30 @@ mod tests {
       baz
       ++++
     "};
-    parse_block!(input, block, b);
     let expected = Block {
-      meta: ChunkMeta::new(
-        Some(AttrList {
-          named: Named::from(b.vec([(b.src("subs", l(1, 5)), b.src("normal", l(6, 12)))])),
-          ..AttrList::new(l(0, 13), b)
-        }),
-        None,
-        0,
-      ),
+      meta: ChunkMeta {
+        attrs: Some(attrs::named(&[("subs", 1..5, "normal", 6..12)])),
+        ..ChunkMeta::default()
+      },
       context: Context::Passthrough,
-      content: Content::Simple(b.inodes([
-        n_text("foo ", 19, 23, b),
-        n(SpecialChar(SpecialCharKind::Ampersand), l(23, 24)),
-        n_text(" ", 24, 25, b),
-        n(
-          Italic(b.inodes([
-            n(SpecialChar(SpecialCharKind::LessThan), l(26, 27)),
-            n_text("bar", 27, 30, b),
-            n(SpecialChar(SpecialCharKind::GreaterThan), l(30, 31)),
-          ])),
-          l(25, 32),
+      content: Content::Simple(nodes![
+        node!("foo "; 19..23),
+        node!(SpecialChar(SpecialCharKind::Ampersand), 23..24),
+        node!(" "; 24..25),
+        node!(
+          Italic(nodes![
+            node!(SpecialChar(SpecialCharKind::LessThan), 26..27),
+            node!("bar"; 27..30),
+            node!(SpecialChar(SpecialCharKind::GreaterThan), 30..31),
+          ]),
+          25..32,
         ),
-        n(Inline::JoiningNewline, l(32, 33)),
-        n_text("baz", 33, 36, b),
-      ])),
-      ..b.empty_block(0, 41)
+        node!(Inline::JoiningNewline, 32..33),
+        node!("baz"; 33..36),
+      ]),
+      ..empty_block!(0..41)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
@@ -389,34 +375,33 @@ mod tests {
       baz
       ....
     "};
-    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Literal,
-      content: Content::Simple(b.inodes([
-        n_text("foo `bar`", 5, 14, b),
-        n(Inline::JoiningNewline, l(14, 15)),
-        n(Inline::JoiningNewline, l(15, 16)),
-        n_text("baz", 16, 19, b),
-      ])),
-      ..b.empty_block(0, 24)
+      content: Content::Simple(nodes![
+        node!("foo `bar`"; 5..14),
+        node!(Inline::JoiningNewline, 14..15),
+        node!(Inline::JoiningNewline, 15..16),
+        node!("baz"; 16..19),
+      ]),
+      ..empty_block!(0..24)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
   fn test_parse_listing_block() {
-    let input = adoc! {"
-      [listing]
-      foo `bar`
-    "};
-    parse_block!(input, block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("listing", l(1, 8))), None, 0),
-      context: Context::Listing,
-      content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
-      ..b.empty_block(0, 19)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [listing]
+        foo `bar`
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("listing", 1..8)), None, 0),
+        context: Context::Listing,
+        content: Content::Simple(nodes![node!("foo `bar`"; 10..19)]),
+        ..empty_block!(0..19)
+      }
+    );
   }
 
   #[test]
@@ -427,17 +412,16 @@ mod tests {
       baz
       ----
     "};
-    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Listing,
-      content: Content::Simple(b.inodes([
-        n_text("foo `bar`", 5, 14, b),
-        n(Inline::JoiningNewline, l(14, 15)),
-        n_text("baz", 15, 18, b),
-      ])),
-      ..b.empty_block(0, 23)
+      content: Content::Simple(nodes![
+        node!("foo `bar`"; 5..14),
+        node!(Inline::JoiningNewline, 14..15),
+        node!("baz"; 15..18),
+      ]),
+      ..empty_block!(0..23)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
@@ -449,165 +433,189 @@ mod tests {
       baz
       ----
     "};
-    parse_block!(input, block, b);
     let expected = Block {
       context: Context::Listing,
-      content: Content::Simple(b.inodes([
-        n_text("foo `bar`", 5, 14, b),
-        n(Inline::JoiningNewline, l(14, 15)),
-        n(Inline::JoiningNewline, l(15, 16)),
-        n_text("baz", 16, 19, b),
-      ])),
-      ..b.empty_block(0, 24)
+      content: Content::Simple(nodes![
+        node!("foo `bar`"; 5..14),
+        node!(Inline::JoiningNewline, 14..15),
+        node!(Inline::JoiningNewline, 15..16),
+        node!("baz"; 16..19),
+      ]),
+      ..empty_block!(0..24)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
-
-  // #[test]
-  // fn test_parse_indent_method_literal_block() {
-  //   parse_block!(" foo `bar`", block, b);
-  //   let expected = Block {
-  //     context: Context::Literal,
-  //     content: Content::Simple(b.inodes([n_text("foo `bar`", 10, 19, b)])),
-  //     loc: l(0, 19),
-  //     ..b.empty_block()
-  //   };
-  //   assert_eq!(block, expected);
-  // }
 
   #[test]
   fn test_parse_doc_attr_entry() {
-    parse_block!(":!figure-caption:\n\n", block, b);
+    let bump = &Bump::new();
+    let mut parser = Parser::new(bump, ":!figure-caption:\n\n");
+    let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
-      ..b.empty_block(0, 17)
+      ..empty_block!(0..17)
     };
     assert_eq!(block, expected);
   }
 
   #[test]
   fn test_parse_block_titles() {
-    parse_block!(".My Title\nfoo\n\n", block, b);
+    let input = ".My Title\nfoo\n\n";
     let expected = Block {
-      meta: ChunkMeta::new(None, Some(b.src("My Title", l(1, 9))), 0),
+      meta: ChunkMeta::new(None, Some(src!("My Title", 1..9)), 0),
       context: Context::Paragraph,
-      content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(10, 13))])),
-      loc: l(0, 13),
+      content: Content::Simple(nodes![node!("foo"; 10..13)]),
+      ..empty_block!(0..13)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
   fn test_parse_admonitions() {
-    parse_block!("TIP: foo\n\n", block, b);
-    let expected = Block {
-      context: Context::AdmonitionTip,
-      content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(5, 8))])),
-      ..b.empty_block(0, 8)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        TIP: foo
+      "},
+      Block {
+        context: Context::AdmonitionTip,
+        content: Content::Simple(nodes![node!("foo"; 5..8)]),
+        ..empty_block!(0..8)
+      }
+    );
 
-    parse_block!("[pos]\nTIP: foo\n\n", block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("pos", l(1, 4))), None, 0),
-      context: Context::AdmonitionTip,
-      content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(11, 14))])),
-      loc: l(0, 14),
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [pos]
+        TIP: foo
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("pos", 1..4)), None, 0),
+        context: Context::AdmonitionTip,
+        content: Content::Simple(nodes![node!("foo"; 11..14)]),
+        ..empty_block!(0..14)
+      }
+    );
 
-    parse_block!("[WARNING]\nTIP: foo\n\n", block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("WARNING", l(1, 8))), None, 0),
-      context: Context::AdmonitionWarning,
-      content: Content::Simple(b.inodes([
-        inode(Text(b.s("TIP: foo")), l(10, 18)), // <-- attr list wins
-      ])),
-      ..b.empty_block(0, 18)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [WARNING]
+        TIP: foo
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("WARNING", 1..8)), None, 0),
+        context: Context::AdmonitionWarning,
+        content: Content::Simple(nodes![
+          node!("TIP: foo"; 10..18), // <-- attr list wins
+        ]),
+        ..empty_block!(0..18)
+      }
+    );
 
-    parse_block!("[WARNING]\n====\nfoo\n====\n\n", block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("WARNING", l(1, 8))), None, 0),
-      context: Context::AdmonitionWarning, // <-- turns example into warning
-      content: Content::Compound(b.vec([Block {
-        context: Context::Paragraph,
-        content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
-        ..b.empty_block(15, 18)
-      }])),
-      loc: l(0, 23),
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [WARNING]
+        ====
+        foo
+        ====
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("WARNING", 1..8)), None, 0),
+        context: Context::AdmonitionWarning, // <-- turns example into warning
+        content: Content::Compound(vecb![Block {
+          context: Context::Paragraph,
+          content: Content::Simple(nodes![node!("foo"; 15..18)]),
+          ..empty_block!(15..18)
+        }]),
+        ..empty_block!(0..23)
+      }
+    );
 
-    parse_block!("[CAUTION]\n====\nNOTE: foo\n====\n\n", block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("CAUTION", l(1, 8))), None, 0),
-      context: Context::AdmonitionCaution,
-      content: Content::Compound(b.vec([Block {
-        context: Context::AdmonitionNote,
-        content: Content::Simple(b.inodes([inode(Text(b.s("foo")), l(21, 24))])),
-        ..b.empty_block(15, 24)
-      }])),
-      loc: l(0, 29),
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [CAUTION]
+        ====
+        NOTE: foo
+        ====
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("CAUTION", 1..8)), None, 0),
+        context: Context::AdmonitionCaution,
+        content: Content::Compound(vecb![Block {
+          context: Context::AdmonitionNote,
+          content: Content::Simple(nodes![node!("foo"; 21..24)]),
+          ..empty_block!(15..24)
+        }]),
+        ..empty_block!(0..29)
+      }
+    );
   }
 
   #[test]
   fn test_parse_comment_block() {
-    parse_block!("//-", block, b);
-    let expected = Block {
-      context: Context::Comment,
-      content: Content::Empty(EmptyMetadata::None),
-      ..b.empty_block(0, 3)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      "//-",
+      Block {
+        context: Context::Comment,
+        content: Content::Empty(EmptyMetadata::None),
+        ..empty_block!(0..3)
+      }
+    );
   }
 
   #[test]
   fn test_parse_image_block() {
-    parse_block!("image::name.png[]\n\n", block, b);
-    let expected = Block {
-      context: Context::Image,
-      content: Content::Empty(EmptyMetadata::Image {
-        target: b.src("name.png", l(7, 15)),
-        attrs: AttrList::new(l(15, 17), b),
-      }),
-      ..b.empty_block(0, 17)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      "image::name.png[]\n\n",
+      Block {
+        context: Context::Image,
+        content: Content::Empty(EmptyMetadata::Image {
+          target: src!("name.png", 7..15),
+          attrs: attr_list!(15..17),
+        }),
+        ..empty_block!(0..17)
+      }
+    );
   }
 
   #[test]
   fn test_parse_delimited_open_block() {
-    parse_block!("--\nfoo\n--\n\n", block, b);
-    let expected = Block {
-      context: Context::Open,
-      content: Content::Compound(b.vec([Block {
-        context: Context::Paragraph,
-        content: Content::Simple(b.inodes([n_text("foo", 3, 6, b)])),
-        ..b.empty_block(3, 6)
-      }])),
-      ..b.empty_block(0, 9)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        --
+        foo
+        --
+      "},
+      Block {
+        context: Context::Open,
+        content: Content::Compound(vecb![Block {
+          context: Context::Paragraph,
+          content: Content::Simple(nodes![node!("foo"; 3..6)]),
+          ..empty_block!(3..6)
+        }]),
+        ..empty_block!(0..9)
+      }
+    );
   }
 
   #[test]
   fn test_parse_delimited_example_block() {
-    parse_block!("====\nfoo\n====\n\n", block, b);
-    let expected = Block {
-      context: Context::Example,
-      content: Content::Compound(b.vec([Block {
-        context: Context::Paragraph,
-        content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
-        ..b.empty_block(5, 8)
-      }])),
-      ..b.empty_block(0, 13)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        ====
+        foo
+        ====
+      "},
+      Block {
+        context: Context::Example,
+        content: Content::Compound(vecb![Block {
+          context: Context::Paragraph,
+          content: Content::Simple(nodes![node!("foo"; 5..8)]),
+          ..empty_block!(5..8)
+        }]),
+        ..empty_block!(0..13)
+      },
+    );
   }
 
   #[test]
@@ -617,21 +625,20 @@ mod tests {
       and as necessary in the blah."
       -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
     "#};
-    parse_block!(input, block, b);
     let expected = Block {
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
-        quote: b.inodes([
-          n_text("I hold it that a little blah,", 1, 30, b),
-          n(Inline::JoiningNewline, l(30, 31)),
-          n_text("and as necessary in the blah.", 31, 60, b),
-        ]),
-        attr: b.src("Thomas Jefferson", l(65, 81)),
-        cite: Some(b.src("Papers of Thomas Jefferson: Volume 11", l(83, 120))),
+        quote: nodes![
+          node!("I hold it that a little blah,"; 1..30),
+          node!(Inline::JoiningNewline, 30..31),
+          node!("and as necessary in the blah."; 31..60),
+        ],
+        attr: src!("Thomas Jefferson", 65..81),
+        cite: Some(src!("Papers of Thomas Jefferson: Volume 11", 83..120)),
       },
-      ..b.empty_block(0, 120)
+      ..empty_block!(0..120)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
@@ -643,52 +650,53 @@ mod tests {
       and as necessary in the blah."
       -- Thomas Jefferson
     "#};
-    parse_block!(input, block, b);
     let expected = Block {
       meta: ChunkMeta::new(
         Some(AttrList {
-          id: Some(b.src("foo", l(11, 14))),
-          ..AttrList::new(l(9, 15), b)
+          id: Some(src!("foo", 11..14)),
+          ..attr_list!(9..15)
         }),
-        Some(b.src("A Title", l(1, 8))),
+        Some(src!("A Title", 1..8)),
         0,
       ),
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
-        quote: b.inodes([
-          n_text("I hold it that a little blah,", 17, 46, b),
-          n(Inline::JoiningNewline, l(46, 47)),
-          n_text("and as necessary in the blah.", 47, 76, b),
-        ]),
-        attr: b.src("Thomas Jefferson", l(81, 97)),
+        quote: nodes![
+          node!("I hold it that a little blah,"; 17..46),
+          node!(Inline::JoiningNewline, 46..47),
+          node!("and as necessary in the blah."; 47..76),
+        ],
+        attr: src!("Thomas Jefferson", 81..97),
         cite: None,
       },
-      loc: l(0, 97),
+      ..empty_block!(0..97)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
   fn test_simple_blockquote() {
-    parse_block!("[quote,author,location]\nfoo\n\n", block, b);
+    let input = adoc! {"
+      [quote,author,location]
+      foo
+    "};
     let expected = Block {
-      meta: ChunkMeta::new(
-        Some(AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("quote", 1, 6, b)])),
-            Some(b.inodes([n_text("author", 7, 13, b)])),
-            Some(b.inodes([n_text("location", 14, 22, b)])),
-          ]),
-          ..AttrList::new(l(0, 23), b)
+      meta: ChunkMeta {
+        attrs: Some(AttrList {
+          positional: vecb![
+            Some(nodes![node!("quote"; 1..6)]),
+            Some(nodes![node!("author"; 7..13)]),
+            Some(nodes![node!("location"; 14..22)]),
+          ],
+          ..attr_list!(0..23)
         }),
-        None,
-        0,
-      ),
+        ..ChunkMeta::default()
+      },
       context: Context::BlockQuote,
-      content: Content::Simple(b.inodes([n_text("foo", 24, 27, b)])),
-      ..b.empty_block(0, 27)
+      content: Content::Simple(nodes![node!("foo"; 24.. 27)]),
+      ..empty_block!(0..27)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected,)
   }
 
   #[test]
@@ -699,29 +707,27 @@ mod tests {
       foo
       ____
     "};
-    parse_block!(input, block, b);
     let expected = Block {
-      meta: ChunkMeta::new(
-        Some(AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("quote", 1, 6, b)])),
-            Some(b.inodes([n_text("author", 7, 13, b)])),
-            Some(b.inodes([n_text("location", 14, 22, b)])),
-          ]),
-          ..AttrList::new(l(0, 23), b)
+      meta: ChunkMeta {
+        attrs: Some(AttrList {
+          positional: vecb![
+            Some(nodes![node!("quote"; 1..6)]),
+            Some(nodes![node!("author"; 7..13)]),
+            Some(nodes![node!("location"; 14..22)]),
+          ],
+          ..attr_list!(0..23)
         }),
-        None,
-        0,
-      ),
+        ..ChunkMeta::default()
+      },
       context: Context::BlockQuote,
-      content: Content::Compound(b.vec([Block {
+      content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
-        content: Content::Simple(b.inodes([n_text("foo", 29, 32, b)])),
-        ..b.empty_block(29, 32)
-      }])),
-      ..b.empty_block(0, 37)
+        content: Content::Simple(nodes![node!("foo"; 29.. 32)]),
+        ..empty_block!(29..32)
+      }]),
+      ..empty_block!(0..37)
     };
-    assert_eq!(block, expected);
+    assert_block!(input, expected);
   }
 
   #[test]
@@ -730,133 +736,142 @@ mod tests {
     let expected = Block {
       meta: ChunkMeta::new(Some(b.positional_attrs("sidebar", l(1, 8))), None, 0),
       context: Context::Sidebar,
-      content: Content::Simple(b.inodes([n_text("foo", 10, 13, b)])),
-      ..b.empty_block(0, 13)
+      content: Content::Simple(nodes![node!("foo"; 10.. 13)]),
+      ..empty_block!(0..13)
     };
     assert_eq!(block, expected);
   }
 
   #[test]
   fn test_parse_empty_delimited_block() {
-    parse_block!("--\n--\n\n", block, b);
-    let expected = Block {
-      context: Context::Open,
-      content: Content::Compound(b.vec([])),
-      ..b.empty_block(0, 5)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        --
+        --
+      "},
+      Block {
+        context: Context::Open,
+        content: Content::Compound(vecb![]),
+        ..empty_block!(0..5)
+      }
+    );
   }
 
   #[test]
   fn test_parse_delimited_sidebar_block() {
-    parse_block!("****\nfoo\n****\n\n", block, b);
-    let expected = Block {
-      context: Context::Sidebar,
-      content: Content::Compound(b.vec([Block {
-        context: Context::Paragraph,
-        content: Content::Simple(b.inodes([n_text("foo", 5, 8, b)])),
-        ..b.empty_block(5, 8)
-      }])),
-      ..b.empty_block(0, 13)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        ****
+        foo
+        ****
+      "},
+      Block {
+        context: Context::Sidebar,
+        content: Content::Compound(vecb![Block {
+          context: Context::Paragraph,
+          content: Content::Simple(nodes![node!("foo"; 5.. 8)]),
+          ..empty_block!(5..8)
+        }]),
+        ..empty_block!(0..13)
+      },
+    )
   }
 
   #[test]
   fn test_nested_delimiter_blocks() {
-    let input = adoc! {"
-      ****
-      --
-      foo
-      --
-      ****
-    "};
-    parse_block!(input, block, b);
-    let expected = Block {
-      context: Context::Sidebar,
-      content: Content::Compound(b.vec([Block {
-        context: Context::Open,
-        content: Content::Compound(b.vec([Block {
-          context: Context::Paragraph,
-          content: Content::Simple(b.inodes([n_text("foo", 8, 11, b)])),
-          ..b.empty_block(8, 11)
-        }])),
-        ..b.empty_block(5, 14)
-      }])),
-      ..b.empty_block(0, 19)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        ****
+        --
+        foo
+        --
+        ****
+      "},
+      Block {
+        context: Context::Sidebar,
+        content: Content::Compound(vecb![Block {
+          context: Context::Open,
+          content: Content::Compound(vecb![Block {
+            context: Context::Paragraph,
+            content: Content::Simple(nodes![node!("foo"; 8.. 11)]),
+            ..empty_block!(8..11)
+          }]),
+          ..empty_block!(5..14)
+        }]),
+        ..empty_block!(0..19)
+      }
+    );
 
-    let input = adoc! {"
-      ****
+    assert_block!(
+      adoc! {"
+        ****
 
-      .Bar
-      --
+        .Bar
+        --
 
-      foo
+        foo
 
 
-      --
+        --
 
-      ****
-    "};
-    parse_block!(input, block, b);
-    let expected = Block {
-      context: Context::Sidebar,
-      content: Content::Compound(b.vec([Block {
-        meta: ChunkMeta::new(None, Some(b.src("Bar", l(7, 10))), 6),
-        context: Context::Open,
-        content: Content::Compound(b.vec([Block {
-          context: Context::Paragraph,
-          content: Content::Simple(b.inodes([n_text("foo", 15, 18, b)])),
-          ..b.empty_block(15, 18)
-        }])),
-        loc: l(6, 23),
-      }])),
-      ..b.empty_block(0, 29)
-    };
-    assert_eq!(block, expected);
+        ****
+      "},
+      Block {
+        context: Context::Sidebar,
+        content: Content::Compound(vecb![Block {
+          meta: ChunkMeta::new(None, Some(src!("Bar", 7..10)), 6),
+          context: Context::Open,
+          content: Content::Compound(vecb![Block {
+            context: Context::Paragraph,
+            content: Content::Simple(nodes![node!("foo"; 15..18)]),
+            ..empty_block!(15..18)
+          }]),
+          ..empty_block!(6..23)
+        }]),
+        ..empty_block!(0..29)
+      }
+    );
   }
 
   #[test]
   fn test_parse_multi_para_delimited_sidebar_block() {
-    let input = adoc! {"
-      ****
-      This is content in a sidebar block.
+    assert_block!(
+      adoc! {"
+        ****
+        This is content in a sidebar block.
 
-      image::name.png[]
+        image::name.png[]
 
-      This is more content in the sidebar block.
-      ****
-    "};
-    parse_block!(input, block, b);
-    let para_1_txt = n_text("This is content in a sidebar block.", 5, 40, b);
-    let para_2_txt = n_text("This is more content in the sidebar block.", 61, 103, b);
-    let expected = Block {
-      context: Context::Sidebar,
-      content: Content::Compound(b.vec([
-        Block {
-          context: Context::Paragraph,
-          content: Content::Simple(b.inodes([para_1_txt])),
-          ..b.empty_block(5, 40)
-        },
-        Block {
-          context: Context::Image,
-          content: Content::Empty(EmptyMetadata::Image {
-            target: b.src("name.png", l(49, 57)),
-            attrs: AttrList::new(l(57, 59), b),
-          }),
-          ..b.empty_block(42, 59)
-        },
-        Block {
-          context: Context::Paragraph,
-          content: Content::Simple(b.inodes([para_2_txt])),
-          ..b.empty_block(61, 103)
-        },
-      ])),
-      ..b.empty_block(0, 108)
-    };
-    assert_eq!(block, expected);
+        This is more content in the sidebar block.
+        ****
+      "},
+      Block {
+        context: Context::Sidebar,
+        content: Content::Compound(vecb![
+          Block {
+            context: Context::Paragraph,
+            content: Content::Simple(nodes![node!("This is content in a sidebar block."; 5..40)]),
+            ..empty_block!(5..40)
+          },
+          Block {
+            context: Context::Image,
+            content: Content::Empty(EmptyMetadata::Image {
+              target: src!("name.png", 49..57),
+              attrs: attr_list!(57..59),
+            }),
+            ..empty_block!(42..59)
+          },
+          Block {
+            context: Context::Paragraph,
+            content: Content::Simple(nodes![
+              node!("This is more content in the sidebar block."; 61..103)
+            ]),
+            ..empty_block!(61..103)
+          },
+        ]),
+        ..empty_block!(0..108)
+      }
+    );
   }
 
   #[test]
