@@ -48,59 +48,69 @@ mod tests {
 
   #[test]
   fn test_parse_section() {
-    let input = "== foo\n\nbar";
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, input);
-    let section = parser.parse_section().unwrap().unwrap();
-    assert_eq!(
-      section,
+    assert_section!(
+      adoc! {"
+        == foo
+
+        bar
+      "},
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
-        heading: b.inodes([n_text("foo", 3, 6, b)]),
-        blocks: b.vec([Block {
+        heading: nodes![node!("foo"; 3..6)],
+        blocks: vecb![Block {
           context: BlockContext::Paragraph,
-          content: BlockContent::Simple(b.inodes([n_text("bar", 8, 11, b),])),
-          ..b.empty_block(8, 11)
-        }])
+          content: BlockContent::Simple(nodes![node!("bar"; 8..11)]),
+          ..empty_block!(8..11)
+        }]
       }
     );
   }
 
   #[test]
   fn test_parse_nested_section() {
-    let input = "== one\n\n=== two\n\nbar";
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, input);
-    let section = parser.parse_section().unwrap().unwrap();
-    assert_eq!(
-      section,
+    assert_section!(
+      adoc! {"
+        == one
+
+        === two
+
+        bar
+      "},
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
-        heading: b.inodes([n_text("one", 3, 6, b)]),
-        blocks: b.vec([Block {
+        heading: nodes![node!("one"; 3..6)],
+        blocks: vecb![Block {
           meta: ChunkMeta::empty(8),
           context: BlockContext::Section,
           content: BlockContent::Section(Section {
             meta: ChunkMeta::empty(8),
             level: 2,
-            heading: b.inodes([n_text("two", 12, 15, b)]),
-            blocks: b.vec([Block {
+            heading: nodes![node!("two"; 12..15)],
+            blocks: vecb![Block {
               context: BlockContext::Paragraph,
-              content: BlockContent::Simple(b.inodes([n_text("bar", 17, 20, b),])),
-              ..b.empty_block(17, 20)
-            }])
+              content: BlockContent::Simple(nodes![node!("bar"; 17..20)]),
+              ..empty_block!(17..20)
+            }]
           }),
-          ..b.empty_block(8, 20)
-        }])
+          ..empty_block!(8..21)
+        }]
       }
     );
   }
 
   #[test]
   fn test_parse_2_sections() {
-    let input = "== one\n\nfoo\n\n== two\n\nbar";
+    let input = adoc! {"
+      == one
+
+      foo
+
+      == two
+
+      bar
+    "};
     let b = &Bump::new();
     let mut parser = Parser::new(b, input);
     let section = parser.parse_section().unwrap().unwrap();
@@ -109,11 +119,11 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
-        heading: b.inodes([n_text("one", 3, 6, b)]),
+        heading: nodes![node!("one"; 3..6)],
         blocks: b.vec([Block {
           context: BlockContext::Paragraph,
-          content: BlockContent::Simple(b.inodes([n_text("foo", 8, 11, b),])),
-          ..b.empty_block(8, 11)
+          content: BlockContent::Simple(nodes![node!("foo"; 8..11)]),
+          ..empty_block!(8..11)
         }])
       }
     );
@@ -123,11 +133,11 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(13),
         level: 1,
-        heading: b.inodes([n_text("two", 16, 19, b)]),
+        heading: nodes![node!("two"; 16..19)],
         blocks: b.vec([Block {
           context: BlockContext::Paragraph,
-          content: BlockContent::Simple(b.inodes([n_text("bar", 21, 24, b),])),
-          ..b.empty_block(21, 24)
+          content: BlockContent::Simple(nodes![node!("bar"; 21..24)]),
+          ..empty_block!(21..24)
         }])
       }
     );

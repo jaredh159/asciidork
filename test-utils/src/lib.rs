@@ -36,6 +36,14 @@ macro_rules! assert_block {
 }
 
 #[macro_export]
+macro_rules! assert_section {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let block = parse_section!($input);
+    assert_eq!(block, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! nodes {
   () => (
     bumpalo::collections::Vec::new_in(leak_test_bump!()).into()
@@ -159,7 +167,7 @@ macro_rules! assert_eq {
 #[macro_export]
 macro_rules! parse_single_block {
   ($input:expr) => {{
-    let mut parser = Parser::new(leak_test_bump!(), $input);
+    let mut parser = Parser::new($crate::leak_test_bump!(), $input);
     let doc_content = parser.parse().unwrap().document.content;
     match doc_content {
       ::asciidork_ast::DocContent::Blocks(mut blocks) => {
@@ -174,21 +182,20 @@ macro_rules! parse_single_block {
 }
 
 #[macro_export]
-macro_rules! parse_block {
-  ($input:expr, $block:ident, $bump:ident) => {
-    let $bump = &bumpalo::Bump::new();
-    let mut parser = Parser::new($bump, $input);
+macro_rules! parse_section {
+  ($input:expr) => {{
+    let mut parser = Parser::new($crate::leak_test_bump!(), $input);
     let doc_content = parser.parse().unwrap().document.content;
-    let $block = match doc_content {
-      ::asciidork_ast::DocContent::Blocks(mut blocks) => {
-        if blocks.len() != 1 {
-          panic!("expected one block, found {}", blocks.len());
+    match doc_content {
+      ::asciidork_ast::DocContent::Sectioned { mut sections, .. } => {
+        if sections.len() != 1 {
+          panic!("expected one section, found {}", sections.len());
         }
-        blocks.remove(0)
+        sections.remove(0)
       }
       _ => panic!("expected block content"),
-    };
-  };
+    }
+  }};
 }
 
 #[macro_export]

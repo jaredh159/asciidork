@@ -732,14 +732,18 @@ mod tests {
 
   #[test]
   fn test_undelimited_sidebar() {
-    parse_block!("[sidebar]\nfoo\n\n", block, b);
-    let expected = Block {
-      meta: ChunkMeta::new(Some(b.positional_attrs("sidebar", l(1, 8))), None, 0),
-      context: Context::Sidebar,
-      content: Content::Simple(nodes![node!("foo"; 10.. 13)]),
-      ..empty_block!(0..13)
-    };
-    assert_eq!(block, expected);
+    assert_block!(
+      adoc! {"
+        [sidebar]
+        foo
+      "},
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("sidebar", 1..8)), None, 0),
+        context: Context::Sidebar,
+        content: Content::Simple(nodes![node!("foo"; 10.. 13)]),
+        ..empty_block!(0..13)
+      }
+    );
   }
 
   #[test]
