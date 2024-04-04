@@ -170,6 +170,7 @@ impl<'src> Lexer<'src> {
       Some(b'_') => self.single(Underscore),
       Some(b'*') => self.single(Star),
       Some(b'.') => self.repeating(b'.', Dots),
+      Some(b'/') => self.repeating(b'/', ForwardSlashes),
       Some(b'!') => self.single(Bang),
       Some(b'`') => self.single(Backtick),
       Some(b'+') => self.single(Plus),
@@ -184,7 +185,6 @@ impl<'src> Lexer<'src> {
       Some(b'\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
       Some(ch) if ch == b';' || ch == b':' => self.maybe_term_delimiter(ch, at_line_start, breaker),
-      Some(b'/') if at_line_start && self.peek == Some(b'/') => self.comment(),
       Some(_) => self.word(),
       None => self.token(Eof, self.offset(), self.offset()),
     }
@@ -374,14 +374,6 @@ impl<'src> Lexer<'src> {
       }
       self.advance();
     }
-  }
-
-  fn comment(&mut self) -> Token<'src> {
-    let start = self.offset() - 1;
-    // TODO: block comments, testing if we have 2 more slashes
-    self.advance_until(b'\n');
-    let end = self.offset();
-    self.token(CommentLine, start, end)
   }
 
   fn whitespace(&mut self) -> Token<'src> {
@@ -604,13 +596,17 @@ mod tests {
       ("footnote:", vec![(MacroName, "footnote:")]),
       ("==", vec![(EqualSigns, "==")]),
       ("===", vec![(EqualSigns, "===")]),
-      ("// foo", vec![(CommentLine, "// foo")]),
+      (
+        "// foo",
+        vec![(ForwardSlashes, "//"), (Whitespace, " "), (Word, "foo")],
+      ),
       (
         "foo\n//-\nbar",
         vec![
           (Word, "foo"),
           (Newline, "\n"),
-          (CommentLine, "//-"),
+          (ForwardSlashes, "//"),
+          (Dashes, "-"),
           (Newline, "\n"),
           (Word, "bar"),
         ],
@@ -664,7 +660,7 @@ mod tests {
       ),
       (
         adoc! { "
-          // this comment line is ignored
+          // ignored
           = Document Title
           Kismet R. Lee <kismet@asciidoctor.org>
           :description: The document's description.
@@ -674,7 +670,9 @@ mod tests {
           The document body starts here.
         "},
         vec![
-          (CommentLine, "// this comment line is ignored"),
+          (ForwardSlashes, "//"),
+          (Whitespace, " "),
+          (Word, "ignored"),
           (Newline, "\n"),
           (EqualSigns, "="),
           (Whitespace, " "),
@@ -715,7 +713,8 @@ mod tests {
           (Colon, ":"),
           (Whitespace, " "),
           (MacroName, "https:"),
-          (Word, "//my-git-repo"),
+          (ForwardSlashes, "//"),
+          (Word, "my-git-repo"),
           (Dots, "."),
           (Word, "com"),
           (Newline, "\n"),

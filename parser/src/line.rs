@@ -40,7 +40,11 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn current_is(&self, kind: TokenKind) -> bool {
-    self.current_token().map_or(false, |t| t.kind == kind)
+    self.current_token().is(kind)
+  }
+
+  pub fn current_is_len(&self, kind: TokenKind, len: usize) -> bool {
+    self.current_token().is_len(kind, len)
   }
 
   pub fn is_empty(&self) -> bool {
@@ -163,6 +167,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn starts(&self, kind: TokenKind) -> bool {
     self.current_is(kind)
+  }
+
+  pub fn is_comment(&self) -> bool {
+    self.is_fully_unconsumed() && self.current_is_len(ForwardSlashes, 2)
   }
 
   pub fn ends(&self, kind: TokenKind) -> bool {
@@ -398,10 +406,12 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn continues_list_item_principle(&self) -> bool {
+    if self.is_comment() {
+      return false;
+    }
     match self.current_token().map(|t| t.kind) {
       Some(OpenBracket) => !self.is_attr_list(),
-      Some(Plus) | Some(CommentLine) => false,
-      None => false,
+      Some(Plus) | None => false,
       _ => !self.starts_list_item(),
     }
   }

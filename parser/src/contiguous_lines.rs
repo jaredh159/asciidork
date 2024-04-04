@@ -80,10 +80,6 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     }
   }
 
-  pub fn retain(&mut self, f: impl FnMut(&Line<'bmp, 'src>) -> bool) {
-    self.reversed_lines.retain(f);
-  }
-
   pub fn any(&self, f: impl FnMut(&Line<'bmp, 'src>) -> bool) -> bool {
     self.reversed_lines.iter().any(f)
   }
@@ -104,16 +100,6 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
 
   pub fn is_block_macro(&self) -> bool {
     self.reversed_lines.len() == 1 && self.current().unwrap().is_block_macro()
-  }
-
-  pub fn current_starts_with(&self, kind: TokenKind) -> bool {
-    match self.current() {
-      Some(line) => line
-        .current_token()
-        .map(|token| token.is(kind))
-        .unwrap_or(false),
-      None => false,
-    }
   }
 
   pub fn loc(&self) -> Option<SourceLocation> {
@@ -178,12 +164,12 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.first().map(|line| line.starts(kind)).unwrap_or(false)
   }
 
+  pub fn starts_with_comment_line(&self) -> bool {
+    self.first().map(Line::is_comment).unwrap_or(false)
+  }
+
   pub fn discard_leading_comment_lines(&mut self) {
-    while self
-      .current()
-      .map(|line| line.starts(TokenKind::CommentLine))
-      .unwrap_or(false)
-    {
+    while self.starts_with_comment_line() {
       self.consume_current();
     }
   }

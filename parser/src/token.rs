@@ -12,8 +12,6 @@ pub enum TokenKind {
   CloseBracket,
   Colon,
   Comma,
-  CommentBlock,
-  CommentLine,
   Dashes,
   DelimiterLine,
   Digits,
@@ -23,6 +21,7 @@ pub enum TokenKind {
   EqualSigns,
   #[default]
   Eof,
+  ForwardSlashes,
   GreaterThan,
   Hash,
   LessThan,
@@ -78,14 +77,22 @@ impl<'src> Token<'src> {
 pub trait TokenIs {
   fn is_url_scheme(&self) -> bool;
   fn is(&self, kind: TokenKind) -> bool;
+  fn is_len(&self, kind: TokenKind, len: usize) -> bool;
   fn is_not(&self, kind: TokenKind) -> bool {
     !self.is(kind)
+  }
+  fn is_not_len(&self, kind: TokenKind, len: usize) -> bool {
+    !self.is_len(kind, len)
   }
 }
 
 impl<'src> TokenIs for Token<'src> {
   fn is(&self, kind: TokenKind) -> bool {
     self.kind == kind
+  }
+
+  fn is_len(&self, kind: TokenKind, len: usize) -> bool {
+    self.kind == kind && self.len() == len
   }
 
   fn is_url_scheme(&self) -> bool {
@@ -96,6 +103,10 @@ impl<'src> TokenIs for Token<'src> {
 impl<'src> TokenIs for Option<&Token<'src>> {
   fn is(&self, kind: TokenKind) -> bool {
     self.map_or(false, |t| t.is(kind))
+  }
+
+  fn is_len(&self, kind: TokenKind, len: usize) -> bool {
+    self.map_or(false, |t| t.is_len(kind, len))
   }
 
   fn is_url_scheme(&self) -> bool {

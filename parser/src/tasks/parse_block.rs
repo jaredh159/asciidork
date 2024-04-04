@@ -82,12 +82,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Option<Block<'bmp>> {
-    if lines.starts(CommentLine) {
+    if lines.starts_with_comment_line() {
       let start = lines.current_token().unwrap().loc.start;
       lines.consume_current();
-      while lines.starts(CommentLine) {
-        lines.consume_current();
-      }
+      lines.discard_leading_comment_lines();
       if lines.is_empty() {
         return Some(Block {
           meta: ChunkMeta::empty(start),

@@ -12,9 +12,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     }
 
-    // remove all comment lines
-    block.retain(|line| !line.starts(CommentLine));
-
+    block.discard_leading_comment_lines();
     let mut doc_header = DocHeader {
       title: None,
       authors: bvec![in self.bump],
@@ -47,7 +45,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       subtitle: None, // todo
     });
 
-    if lines.current_starts_with(Word) {
+    if lines.starts(Word) {
       self.parse_author_line(lines.consume_current().unwrap(), &mut doc_header.authors)?;
       // revision line can only follow an author line (and requires a doc header)
       if !doc_header.authors.is_empty() {
@@ -66,7 +64,7 @@ pub fn is_doc_header(lines: &ContiguousLines) -> bool {
       || line.starts_with_seq(&[Colon, Bang, Word, Colon])
     {
       return true;
-    } else if line.starts(TokenKind::CommentLine) {
+    } else if line.is_comment() {
       continue;
     } else {
       return false;
