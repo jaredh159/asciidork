@@ -31,5 +31,5 @@ pub struct Callout {
   /// callout index w/in list, e.g. `2` maps to `3` in dr id: `CO1-3`
   pub callout_idx: u8,
   /// the reader-facing callout number, i.e. `1` in `<1>`
-  pub num: u8,
+  pub number: u8,
 }

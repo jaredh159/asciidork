@@ -22,22 +22,24 @@ impl<'bmp> ParseContext<'bmp> {
     }
   }
 
-  pub fn push_callout(&mut self, num: u8) -> Callout {
+  pub fn push_callout(&mut self, num: Option<u8>) -> Callout {
     if self.callouts.is_empty() {
-      self
-        .callouts
-        .push(Callout { list_idx: 0, callout_idx: 0, num });
+      self.callouts.push(Callout {
+        list_idx: 0,
+        callout_idx: 0,
+        number: num.unwrap_or(1),
+      });
     } else {
       let last_callout_idx = self.callouts.len() - 1;
       let last = self.callouts[last_callout_idx];
       // sentinel for moving to next list
-      if last.num == 0 {
-        self.callouts[last_callout_idx].num = num;
+      if last.number == 0 {
+        self.callouts[last_callout_idx].number = num.unwrap_or(1);
       } else {
         self.callouts.push(Callout {
           list_idx: last.list_idx,
           callout_idx: last.callout_idx + 1,
-          num,
+          number: num.unwrap_or(last.number + 1),
         });
       }
     }
@@ -50,7 +52,7 @@ impl<'bmp> ParseContext<'bmp> {
     } else {
       0
     };
-    self.callouts = bvec![in bump; Callout { list_idx, callout_idx: 0, num: 0 }];
+    self.callouts = bvec![in bump; Callout { list_idx, callout_idx: 0, number: 0 }];
   }
 
   pub fn set_subs_for(&mut self, block_context: BlockContext, meta: &ChunkMeta) -> Substitutions {

@@ -462,9 +462,24 @@ impl<'src> Lexer<'src> {
           self.reverse_by(self.offset() - start - 1);
         }
       }
+      Some(b'.') => {
+        self.advance();
+        if self.peek == Some(b'>') {
+          self.advance();
+          return self.token(CalloutNumber, start, self.offset());
+        } else {
+          self.reverse_by(self.offset() - start - 1);
+        }
+      }
       Some(b'!') => {
         let mut peek = self.bytes.clone();
         match (peek.next(), peek.next(), peek.next()) {
+          (Some(b'-'), Some(b'-'), Some(b'.')) => {
+            if let (Some(b'-'), Some(b'-'), Some(b'>')) = (peek.next(), peek.next(), peek.next()) {
+              self.skip(7); // lexeme is exactly `<!--.-->`
+              return self.token(CalloutNumber, start, self.offset());
+            }
+          }
           (Some(b'-'), Some(b'-'), Some(c)) if c.is_ascii_digit() => {
             let mut num_digits = 1;
             loop {
@@ -507,10 +522,16 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("<.>", vec![(CalloutNumber, "<.>")]),
       ("<1>", vec![(CalloutNumber, "<1>")]),
       ("<255>", vec![(CalloutNumber, "<255>")]),
+      ("<!--.-->", vec![(CalloutNumber, "<!--.-->")]),
       ("<!--2-->", vec![(CalloutNumber, "<!--2-->")]),
       ("<!--255-->", vec![(CalloutNumber, "<!--255-->")]),
+      (
+        "<..>",
+        vec![(LessThan, "<"), (Dots, ".."), (GreaterThan, ">")],
+      ),
       (
         "<1.1>",
         vec![

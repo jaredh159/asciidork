@@ -387,7 +387,7 @@ impl Backend for AsciidoctorHtml {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
-    let num = num_str!(callout.num);
+    let num = num_str!(callout.number);
     if self.doc_attrs.str("icons") == Some("font") {
       self.push([
         r#"<i class="conum" data-value=""#,

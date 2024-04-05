@@ -5,7 +5,11 @@ use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
 
 fn callout<'bmp>(num: u8, list_idx: u8, idx: u8) -> asciidork_ast::Inline<'bmp> {
-  CalloutNum(Callout { list_idx, callout_idx: idx, num })
+  CalloutNum(Callout {
+    list_idx,
+    callout_idx: idx,
+    number: num,
+  })
 }
 
 #[test]
@@ -95,6 +99,28 @@ fn test_parse_multiple_callout_nums() {
     ....
     foo <1>
     bar baz <2> <3>
+    ....
+  "};
+  assert_block_core!(
+    input,
+    Context::Literal,
+    Content::Simple(nodes![
+      node!("foo"; 5..8),
+      node!(callout(1, 0, 0), 8..12),
+      node!(JoiningNewline, 12..13),
+      node!("bar baz"; 13..20),
+      node!(callout(2, 0, 1), 20..24),
+      node!(callout(3, 0, 2), 24..28),
+    ]),
+  );
+}
+
+#[test]
+fn test_parse_multiple_callout_nums_auto() {
+  let input = adoc! {"
+    ....
+    foo <.>
+    bar baz <.> <.>
     ....
   "};
   assert_block_core!(
