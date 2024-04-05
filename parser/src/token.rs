@@ -50,6 +50,10 @@ pub struct Token<'src> {
 }
 
 impl<'src> Token<'src> {
+  pub fn to_string<'bmp>(&self, bump: &'bmp Bump) -> BumpString<'bmp> {
+    BumpString::from_str_in(self.lexeme, bump)
+  }
+
   pub fn to_source_string<'bmp>(&self, bump: &'bmp Bump) -> SourceString<'bmp> {
     let bump_str = BumpString::from_str_in(self.lexeme, bump);
     SourceString::new(bump_str, self.loc)
