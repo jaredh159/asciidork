@@ -46,7 +46,50 @@ test_eval!(
   )
 );
 
-// behind comments: // <1> (//, #, ;;, --)
+test_eval!(
+  callouts_w_icons,
+  adoc! {r#"
+    :icons: font
+
+    [source,ruby]
+    ----
+    puts "1" <1>
+    puts "2" # <2>
+    ----
+  "#},
+  wrap_source(
+    "ruby",
+    raw_html! {r#"
+      puts "1" <i class="conum" data-value="1"></i><b>(1)</b>
+      puts "2" <i class="conum" data-value="2"></i><b>(2)</b>
+    "#}
+  )
+);
+
+test_eval!(
+  callout_behind_comment,
+  adoc! {r#"
+    [source,ruby,line-comment=--]
+    ----
+    require 'sinatra' # <1>
+    require 'sinatra' // <2>
+    require 'sinatra' #<3>
+    require 'sinatra' -- <4>
+    require 'sinatra' --<5>
+    ----
+  "#},
+  wrap_source(
+    "ruby",
+    raw_html! {r#"
+      require 'sinatra' # <b class="conum">(1)</b>
+      require 'sinatra' // <b class="conum">(2)</b>
+      require 'sinatra' # <b class="conum">(3)</b>
+      require 'sinatra' -- <b class="conum">(4)</b>
+      require 'sinatra' -- <b class="conum">(5)</b>
+    "#}
+  )
+);
+
 // dr renders plan <1> foo\n<2> bar as colist w/ warning
 // dr warns out of order <2> foo\n<1> bar
 

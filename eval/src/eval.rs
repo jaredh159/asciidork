@@ -268,6 +268,7 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
     LineBreak => backend.visit_linebreak(),
     AttributeReference(name) => backend.visit_attribute_reference(name),
     CalloutNum(num) => backend.visit_callout_number(*num),
+    CalloutTuck(comment) => backend.visit_callout_tuck(comment),
     _ => {
       println!("\nUnhandled inline node type:");
       println!("  -> {:?}\n", &inline.content);

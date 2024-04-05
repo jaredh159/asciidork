@@ -384,7 +384,27 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn visit_callout_number(&mut self, number: u8) {
-    self.push([r#" <b class="conum">("#, &num_str!(number), ")</b>"]);
+    if !self.html.ends_with(' ') {
+      self.push_ch(' ');
+    }
+    let num = num_str!(number);
+    if self.doc_attrs.str("icons") == Some("font") {
+      self.push([
+        r#"<i class="conum" data-value=""#,
+        &num,
+        r#""></i><b>("#,
+        &num,
+        ")</b>",
+      ]);
+    } else {
+      self.push([r#"<b class="conum">("#, &num, ")</b>"]);
+    }
+  }
+
+  fn visit_callout_tuck(&mut self, comment: &str) {
+    if self.doc_attrs.str("icons") != Some("font") {
+      self.push_str(comment);
+    }
   }
 
   fn visit_attribute_reference(&mut self, name: &str) {
