@@ -61,14 +61,14 @@ dependencies = [
 
 [[package]]
 name = "asciidork-ast"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bumpalo",
 ]
 
 [[package]]
 name = "asciidork-backend"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-opts",
@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidork-dr-html-backend",
  "asciidork-eval",
@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-dr-html-backend"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-eval"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -114,11 +114,11 @@ dependencies = [
 
 [[package]]
 name = "asciidork-opts"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "asciidork-parser"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidork-ast",
  "bumpalo",
@@ -216,7 +216,7 @@ checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
 
 [[package]]
 name = "dr-html-wasm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidork-dr-html-backend",
  "asciidork-eval",
@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "test-utils"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-parser",
