@@ -383,11 +383,11 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
-  fn visit_callout_number(&mut self, number: u8) {
+  fn visit_callout(&mut self, callout: Callout) {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
-    let num = num_str!(number);
+    let num = num_str!(callout.num);
     if self.doc_attrs.str("icons") == Some("font") {
       self.push([
         r#"<i class="conum" data-value=""#,

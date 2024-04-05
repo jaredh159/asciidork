@@ -218,7 +218,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let digits = unsafe { std::str::from_utf8_unchecked(&digits) };
             // maybe better warn than expect?
             let num = digits.parse::<u8>().expect("exceeded max 255 callouts");
-            acc.push_node(CalloutNum(num), loc);
+            acc.push_node(CalloutNum(self.ctx.push_callout(num)), loc);
           }
 
           CalloutNumber if subs.special_chars() => {

@@ -9,7 +9,7 @@ pub struct Parser<'bmp: 'src, 'src> {
   pub(super) document: Document<'bmp>,
   pub(super) peeked_lines: Option<ContiguousLines<'bmp, 'src>>,
   pub(super) peeked_meta: Option<ChunkMeta<'bmp>>,
-  pub(super) ctx: ParseContext,
+  pub(super) ctx: ParseContext<'bmp>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) bail: bool, // todo: naming...
 }
@@ -33,7 +33,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       document: Document::new(bump),
       peeked_lines: None,
       peeked_meta: None,
-      ctx: ParseContext::default(),
+      ctx: ParseContext::new(bump),
       errors: RefCell::new(Vec::new()),
       bail: true,
     }

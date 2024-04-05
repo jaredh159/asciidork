@@ -72,7 +72,7 @@ pub trait Backend {
   fn visit_button_macro(&mut self, text: &str);
   fn visit_menu_macro(&mut self, items: &[&str]);
   fn visit_attribute_reference(&mut self, name: &str);
-  fn visit_callout_number(&mut self, number: u8);
+  fn visit_callout(&mut self, callout: Callout);
   fn visit_callout_tuck(&mut self, comment: &str);
   fn enter_inline_italic(&mut self, children: &[InlineNode]);
   fn exit_inline_italic(&mut self, children: &[InlineNode]);
