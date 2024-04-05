@@ -39,6 +39,53 @@ fn test_parse_callout_nums() {
 }
 
 #[test]
+fn test_parse_callout_behind_comment() {
+  let input = adoc! {"
+    ----
+    foo // <1>
+    bar # <2>
+    baz ;; <3>
+    ----
+  "};
+  assert_block_core!(
+    input,
+    Context::Listing,
+    Content::Simple(nodes![
+      node!("foo "; 5..9),
+      node!(CalloutTuck(bstr!("// ")), 9..12),
+      node!(CalloutNum(1), 12..15),
+      node!(JoiningNewline, 15..16),
+      node!("bar "; 16..20),
+      node!(CalloutTuck(bstr!("# ")), 20..22),
+      node!(CalloutNum(2), 22..25),
+      node!(JoiningNewline, 25..26),
+      node!("baz "; 26..30),
+      node!(CalloutTuck(bstr!(";; ")), 30..33),
+      node!(CalloutNum(3), 33..36),
+    ]),
+  );
+}
+
+#[test]
+fn test_parse_callout_behind_custom_comment() {
+  let input = adoc! {"
+    [line-comment=%]
+    ----
+    foo % <1>
+    ----
+  "};
+  assert_block_core!(
+    input,
+    Context::Listing,
+    Content::Simple(nodes![
+      node!("foo "; 22..26),
+      node!(CalloutTuck(bstr!("% ")), 26..28),
+      node!(CalloutNum(1), 28..31),
+    ]),
+  );
+}
+
+#[test]
 fn test_parse_multiple_callout_nums() {
   let input = adoc! {"
     ....

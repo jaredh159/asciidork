@@ -15,6 +15,12 @@ pub struct Substitutions {
   flags: u8,
 }
 
+impl Default for Substitutions {
+  fn default() -> Self {
+    Self::normal()
+  }
+}
+
 impl Substitutions {
   pub const fn contains(&self, sub: Subs) -> bool {
     self.flags & sub.bitflag_pos() != 0

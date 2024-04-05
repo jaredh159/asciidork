@@ -117,7 +117,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           }
           state.kind = Id;
         }
-        Percent if state.quotes == Default => {
+        Percent if state.quotes == Default && state.kind != Named => {
           state.commit_prev(self)?;
           state.kind = Option;
         }
@@ -287,42 +287,38 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::attrs::pos as single_positional;
   use test_utils::{assert_eq, *};
 
   #[test]
   fn test_parse_attr_list() {
     let b = &Bump::new();
     let cases = vec![
-      ("[]", AttrList::new(l(0, 2), b)),
-      (
-        "[foo]",
-        AttrList {
-          positional: b.vec([Some(b.inodes([n_text("foo", 1, 4, b)]))]),
-          ..AttrList::new(l(0, 5), b)
-        },
-      ),
-      (
-        "[foo bar]",
-        AttrList {
-          positional: b.vec([Some(b.inodes([n_text("foo bar", 1, 8, b)]))]),
-          ..AttrList::new(l(0, 9), b)
-        },
-      ),
+      ("[]", attr_list!(0..2)),
+      ("[foo]", single_positional("foo", 1..4)),
+      ("[foo bar]", single_positional("foo bar", 1..8)),
       (
         "[ foo bar ]",
         AttrList {
-          positional: b.vec([Some(b.inodes([n_text("foo bar", 2, 9, b)]))]),
-          ..AttrList::new(l(0, 11), b)
+          positional: vecb![Some(nodes![node!("foo bar"; 2..9)])],
+          ..attr_list!(0..11)
         },
       ),
       (
         "[ foo , bar ]",
         AttrList {
           positional: b.vec([
-            Some(b.inodes([n_text("foo", 2, 5, b)])),
+            Some(nodes![node!("foo"; 2..5)]),
             Some(b.inodes([n_text("bar", 8, 11, b)])),
           ]),
           ..AttrList::new(l(0, 13), b)
+        },
+      ),
+      (
+        "[line-comment=%%]",
+        AttrList {
+          named: Named::from(b.vec([(b.src("line-comment", l(1, 13)), b.src("%%", l(14, 16)))])),
+          ..AttrList::new(l(0, 17), b)
         },
       ),
       (

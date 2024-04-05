@@ -33,6 +33,7 @@ impl<'bmp> InlineNodes<'bmp> {
       Inline::Subscript(nodes) => text.extend(nodes.plain_text()),
       Inline::Text(s) => text.push(s.as_str()),
       Inline::TextSpan(_, nodes) => text.extend(nodes.plain_text()),
+      Inline::CalloutTuck(_) => {}
     });
     text
   }

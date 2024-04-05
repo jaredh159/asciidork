@@ -806,7 +806,7 @@ mod tests {
 
   #[test]
   fn test_tokens_full() {
-    let input = "&^foobar[";
+    let input = "&^foobar[//";
     let mut lexer = Lexer::new(input);
     assert_eq!(lexer.src, input);
     assert_eq!(
@@ -844,8 +844,16 @@ mod tests {
     assert_eq!(
       lexer.next_token(),
       Token {
+        kind: TokenKind::ForwardSlashes,
+        loc: SourceLocation::new(9, 11),
+        lexeme: "//",
+      }
+    );
+    assert_eq!(
+      lexer.next_token(),
+      Token {
         kind: TokenKind::Eof,
-        loc: SourceLocation::new(9, 9),
+        loc: SourceLocation::new(11, 11),
         lexeme: "",
       }
     );

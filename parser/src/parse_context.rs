@@ -1,11 +1,12 @@
 use crate::internal::*;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ParseContext {
   pub subs: Substitutions,
   pub delimiter: Option<Delimiter>,
   pub list: ListContext,
   pub section_level: u8,
+  pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
 }
 
 impl ParseContext {

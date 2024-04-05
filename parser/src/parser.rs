@@ -33,12 +33,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       document: Document::new(bump),
       peeked_lines: None,
       peeked_meta: None,
-      ctx: ParseContext {
-        subs: Substitutions::normal(),
-        delimiter: None,
-        list: ListContext::default(),
-        section_level: 0,
-      },
+      ctx: ParseContext::default(),
       errors: RefCell::new(Vec::new()),
       bail: true,
     }

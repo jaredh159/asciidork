@@ -120,7 +120,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       let mut lines = self
         .read_lines_until(delimiter)
         .unwrap_or_else(|| ContiguousLines::new(bvec![in self.bump]));
+
+      if context == Context::Listing || context == Context::Literal {
+        if let Some(comment) = meta.attrs.as_ref().and_then(|a| a.named("line-comment")) {
+          self.ctx.custom_line_comment = Some(SmallVec::from_slice(comment.as_bytes()));
+        }
+      }
+
       let content = Content::Simple(self.parse_inlines(&mut lines)?);
+      self.ctx.custom_line_comment = None;
       self.restore_lines(lines);
       content
     } else {

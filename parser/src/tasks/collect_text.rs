@@ -25,6 +25,10 @@ impl<'bmp> CollectText<'bmp> {
     self.loc.end += s.len();
   }
 
+  pub fn str(&self) -> &str {
+    self.string.as_ref().unwrap()
+  }
+
   pub fn trim_end(&mut self) {
     let string = self.string.as_mut().unwrap();
     if !string.ends_with(' ') {
@@ -37,6 +41,15 @@ impl<'bmp> CollectText<'bmp> {
       string.pop();
       delta -= 1;
     }
+  }
+
+  pub fn drop_last(&mut self, n: usize) {
+    debug_assert!(n <= self.string.as_ref().unwrap().len());
+    let string = self.string.as_mut().unwrap();
+    for _ in 0..n {
+      string.pop();
+    }
+    self.loc.end -= n;
   }
 
   pub fn take(&mut self) -> BumpString<'bmp> {

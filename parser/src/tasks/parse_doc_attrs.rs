@@ -2,7 +2,6 @@ use std::borrow::Cow;
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use smallvec::SmallVec;
 
 use crate::internal::*;
 

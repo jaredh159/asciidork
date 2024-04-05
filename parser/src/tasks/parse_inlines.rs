@@ -162,13 +162,44 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             }
           }
 
+          TermDelimiter
+            if subs.callouts()
+              && token.len() == 2
+              && line.current_is(Whitespace)
+              && token.lexeme == ";;" // this is a happy accident
+              && line.continues_valid_callout_nums() =>
+          {
+            self.push_callout_tuck(&token, &mut line, &mut text, &mut inlines);
+          }
+
+          Hash
+            if subs.callouts()
+              && line.current_is(Whitespace)
+              && line.continues_valid_callout_nums() =>
+          {
+            self.push_callout_tuck(&token, &mut line, &mut text, &mut inlines);
+          }
+
+          ForwardSlashes
+            if subs.callouts()
+              && token.len() == 2
+              && line.current_is(Whitespace)
+              && line.continues_valid_callout_nums() =>
+          {
+            self.push_callout_tuck(&token, &mut line, &mut text, &mut inlines);
+          }
+
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
+            self.recover_custom_line_comment(&mut text, &mut inlines);
             text.trim_end();
             text.commit_inlines(&mut inlines);
             let mut loc = token.loc;
             loc.start = text.loc.end;
-            let digits = token.lexeme.bytes().filter(u8::is_ascii_digit);
-            let digits = BumpVec::from_iter_in(digits, self.bump);
+            let digits = token
+              .lexeme
+              .bytes()
+              .filter(u8::is_ascii_digit)
+              .collect::<SmallVec<[u8; 3]>>();
             // SAFETY: we only have ascii digits, so this is fine
             let digits = unsafe { std::str::from_utf8_unchecked(&digits) };
             // maybe better warn than expect?
@@ -645,6 +676,48 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       || (self.ctx.list.parsing_continuations && line.is_list_continuation())
       // ending delimited block
       || (self.ctx.delimiter.is_some() && line.current_is(DelimiterLine))
+  }
+
+  fn push_callout_tuck(
+    &mut self,
+    token: &Token<'src>,
+    line: &mut Line<'bmp, 'src>,
+    text: &mut CollectText<'bmp>,
+    inlines: &mut InlineNodes<'bmp>,
+  ) {
+    text.commit_inlines(inlines);
+    let mut tuck = token.to_source_string(self.bump);
+    line.discard_assert(Whitespace);
+    tuck.src.push(' ');
+    tuck.loc.end += 1;
+    inlines.push(node(CalloutTuck(tuck.src), tuck.loc));
+    text.loc = tuck.loc.clamp_end();
+  }
+
+  fn recover_custom_line_comment(
+    &mut self,
+    text: &mut CollectText<'bmp>,
+    inlines: &mut InlineNodes<'bmp>,
+  ) {
+    let Some(ref comment_bytes) = self.ctx.custom_line_comment else {
+      return;
+    };
+    let mut line_txt = text.str().as_bytes();
+    let line_len = line_txt.len();
+    let mut back = comment_bytes.len();
+    if line_txt.ends_with(&[b' ']) {
+      back += 1;
+      line_txt = &line_txt[..line_len - 1];
+    }
+    if line_txt.ends_with(comment_bytes) {
+      let tuck = text.str().split_at(line_len - back).1;
+      let tuck = BumpString::from_str_in(tuck, self.bump);
+      text.drop_last(back);
+      text.commit_inlines(inlines);
+      let tuck_loc = SourceLocation::new(text.loc.end, text.loc.end + back);
+      inlines.push(node(CalloutTuck(tuck), tuck_loc));
+      text.loc = tuck_loc.clamp_end();
+    }
   }
 }
 
