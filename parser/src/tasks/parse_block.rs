@@ -258,7 +258,7 @@ mod tests {
         node!(JoiningNewline, 12..13),
         node!("hello papa"; 13..23),
       ]),
-      ..empty_block!(0..23)
+      ..empty_block(0..23)
     };
     assert_eq!(parse_single_block!(input), expected);
   }
@@ -273,8 +273,8 @@ mod tests {
       Block {
         meta: ChunkMeta::new(Some(attrs::pos("literal", 1..8)), None, 0),
         context: Context::Literal,
-        content: Content::Simple(nodes![node!("foo `bar`"; 10..19)]),
-        ..empty_block!(0..19)
+        content: Content::Simple(just("foo `bar`", 10..19)),
+        ..empty_block(0..19)
       }
     );
   }
@@ -296,7 +296,7 @@ mod tests {
           node!(Inline::JoiningNewline, 14..15),
           node!("baz"; 15..18),
         ]),
-        ..empty_block!(0..23)
+        ..empty_block(0..23)
       }
     )
   }
@@ -311,8 +311,8 @@ mod tests {
       Block {
         meta: ChunkMeta::new(Some(attrs::pos("pass", 1..5)), None, 0),
         context: Context::Passthrough,
-        content: Content::Simple(nodes![node!("foo <bar>"; 7..16)]),
-        ..empty_block!(0..16)
+        content: Content::Simple(just("foo <bar>", 7..16)),
+        ..empty_block(0..16)
       }
     );
   }
@@ -332,7 +332,7 @@ mod tests {
         node!(Inline::JoiningNewline, 14..15),
         node!("baz"; 15..18),
       ]),
-      ..empty_block!(0..23)
+      ..empty_block(0..23)
     };
     assert_block!(input, expected);
   }
@@ -367,7 +367,7 @@ mod tests {
         node!(Inline::JoiningNewline, 32..33),
         node!("baz"; 33..36),
       ]),
-      ..empty_block!(0..41)
+      ..empty_block(0..41)
     };
     assert_block!(input, expected);
   }
@@ -389,7 +389,7 @@ mod tests {
         node!(Inline::JoiningNewline, 15..16),
         node!("baz"; 16..19),
       ]),
-      ..empty_block!(0..24)
+      ..empty_block(0..24)
     };
     assert_block!(input, expected);
   }
@@ -405,7 +405,7 @@ mod tests {
         meta: ChunkMeta::new(Some(attrs::pos("listing", 1..8)), None, 0),
         context: Context::Listing,
         content: Content::Simple(nodes![node!("foo `bar`"; 10..19)]),
-        ..empty_block!(0..19)
+        ..empty_block(0..19)
       }
     );
   }
@@ -425,7 +425,7 @@ mod tests {
         node!(Inline::JoiningNewline, 14..15),
         node!("baz"; 15..18),
       ]),
-      ..empty_block!(0..23)
+      ..empty_block(0..23)
     };
     assert_block!(input, expected);
   }
@@ -447,7 +447,7 @@ mod tests {
         node!(Inline::JoiningNewline, 15..16),
         node!("baz"; 16..19),
       ]),
-      ..empty_block!(0..24)
+      ..empty_block(0..24)
     };
     assert_block!(input, expected);
   }
@@ -460,7 +460,7 @@ mod tests {
     let expected = Block {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
-      ..empty_block!(0..17)
+      ..empty_block(0..17)
     };
     assert_eq!(block, expected);
   }
@@ -469,10 +469,10 @@ mod tests {
   fn test_parse_block_titles() {
     let input = ".My Title\nfoo\n\n";
     let expected = Block {
-      meta: ChunkMeta::new(None, Some(src!("My Title", 1..9)), 0),
+      meta: ChunkMeta::new(None, Some(src("My Title", 1..9)), 0),
       context: Context::Paragraph,
       content: Content::Simple(nodes![node!("foo"; 10..13)]),
-      ..empty_block!(0..13)
+      ..empty_block(0..13)
     };
     assert_block!(input, expected);
   }
@@ -486,7 +486,7 @@ mod tests {
       Block {
         context: Context::AdmonitionTip,
         content: Content::Simple(nodes![node!("foo"; 5..8)]),
-        ..empty_block!(0..8)
+        ..empty_block(0..8)
       }
     );
 
@@ -498,8 +498,8 @@ mod tests {
       Block {
         meta: ChunkMeta::new(Some(attrs::pos("pos", 1..4)), None, 0),
         context: Context::AdmonitionTip,
-        content: Content::Simple(nodes![node!("foo"; 11..14)]),
-        ..empty_block!(0..14)
+        content: Content::Simple(just("foo", 11..14)),
+        ..empty_block(0..14)
       }
     );
 
@@ -511,10 +511,8 @@ mod tests {
       Block {
         meta: ChunkMeta::new(Some(attrs::pos("WARNING", 1..8)), None, 0),
         context: Context::AdmonitionWarning,
-        content: Content::Simple(nodes![
-          node!("TIP: foo"; 10..18), // <-- attr list wins
-        ]),
-        ..empty_block!(0..18)
+        content: Content::Simple(just("TIP: foo", 10..18)), // <-- attr list wins
+        ..empty_block(0..18)
       }
     );
 
@@ -530,10 +528,10 @@ mod tests {
         context: Context::AdmonitionWarning, // <-- turns example into warning
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,
-          content: Content::Simple(nodes![node!("foo"; 15..18)]),
-          ..empty_block!(15..18)
+          content: Content::Simple(just("foo", 15..18)),
+          ..empty_block(15..18)
         }]),
-        ..empty_block!(0..23)
+        ..empty_block(0..23)
       }
     );
 
@@ -549,10 +547,10 @@ mod tests {
         context: Context::AdmonitionCaution,
         content: Content::Compound(vecb![Block {
           context: Context::AdmonitionNote,
-          content: Content::Simple(nodes![node!("foo"; 21..24)]),
-          ..empty_block!(15..24)
+          content: Content::Simple(just("foo", 21..24)),
+          ..empty_block(15..24)
         }]),
-        ..empty_block!(0..29)
+        ..empty_block(0..29)
       }
     );
   }
@@ -564,7 +562,7 @@ mod tests {
       Block {
         context: Context::Comment,
         content: Content::Empty(EmptyMetadata::None),
-        ..empty_block!(0..3)
+        ..empty_block(0..3)
       }
     );
   }
@@ -576,10 +574,10 @@ mod tests {
       Block {
         context: Context::Image,
         content: Content::Empty(EmptyMetadata::Image {
-          target: src!("name.png", 7..15),
+          target: src("name.png", 7..15),
           attrs: attr_list!(15..17),
         }),
-        ..empty_block!(0..17)
+        ..empty_block(0..17)
       }
     );
   }
@@ -596,10 +594,10 @@ mod tests {
         context: Context::Open,
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,
-          content: Content::Simple(nodes![node!("foo"; 3..6)]),
-          ..empty_block!(3..6)
+          content: Content::Simple(just("foo", 3..6)),
+          ..empty_block(3..6)
         }]),
-        ..empty_block!(0..9)
+        ..empty_block(0..9)
       }
     );
   }
@@ -616,10 +614,10 @@ mod tests {
         context: Context::Example,
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,
-          content: Content::Simple(nodes![node!("foo"; 5..8)]),
-          ..empty_block!(5..8)
+          content: Content::Simple(just("foo", 5..8)),
+          ..empty_block(5..8)
         }]),
-        ..empty_block!(0..13)
+        ..empty_block(0..13)
       },
     );
   }
@@ -639,10 +637,10 @@ mod tests {
           node!(Inline::JoiningNewline, 30..31),
           node!("and as necessary in the blah."; 31..60),
         ],
-        attr: src!("Thomas Jefferson", 65..81),
-        cite: Some(src!("Papers of Thomas Jefferson: Volume 11", 83..120)),
+        attr: src("Thomas Jefferson", 65..81),
+        cite: Some(src("Papers of Thomas Jefferson: Volume 11", 83..120)),
       },
-      ..empty_block!(0..120)
+      ..empty_block(0..120)
     };
     assert_block!(input, expected);
   }
@@ -659,10 +657,10 @@ mod tests {
     let expected = Block {
       meta: ChunkMeta::new(
         Some(AttrList {
-          id: Some(src!("foo", 11..14)),
+          id: Some(src("foo", 11..14)),
           ..attr_list!(9..15)
         }),
-        Some(src!("A Title", 1..8)),
+        Some(src("A Title", 1..8)),
         0,
       ),
       context: Context::QuotedParagraph,
@@ -672,10 +670,10 @@ mod tests {
           node!(Inline::JoiningNewline, 46..47),
           node!("and as necessary in the blah."; 47..76),
         ],
-        attr: src!("Thomas Jefferson", 81..97),
+        attr: src("Thomas Jefferson", 81..97),
         cite: None,
       },
-      ..empty_block!(0..97)
+      ..empty_block(0..97)
     };
     assert_block!(input, expected);
   }
@@ -700,7 +698,7 @@ mod tests {
       },
       context: Context::BlockQuote,
       content: Content::Simple(nodes![node!("foo"; 24.. 27)]),
-      ..empty_block!(0..27)
+      ..empty_block(0..27)
     };
     assert_block!(input, expected,)
   }
@@ -728,10 +726,10 @@ mod tests {
       context: Context::BlockQuote,
       content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
-        content: Content::Simple(nodes![node!("foo"; 29.. 32)]),
-        ..empty_block!(29..32)
+        content: Content::Simple(just("foo", 29..32)),
+        ..empty_block(29..32)
       }]),
-      ..empty_block!(0..37)
+      ..empty_block(0..37)
     };
     assert_block!(input, expected);
   }
@@ -746,8 +744,8 @@ mod tests {
       Block {
         meta: ChunkMeta::new(Some(attrs::pos("sidebar", 1..8)), None, 0),
         context: Context::Sidebar,
-        content: Content::Simple(nodes![node!("foo"; 10.. 13)]),
-        ..empty_block!(0..13)
+        content: Content::Simple(just("foo", 10..13)),
+        ..empty_block(0..13)
       }
     );
   }
@@ -762,7 +760,7 @@ mod tests {
       Block {
         context: Context::Open,
         content: Content::Compound(vecb![]),
-        ..empty_block!(0..5)
+        ..empty_block(0..5)
       }
     );
   }
@@ -779,10 +777,10 @@ mod tests {
         context: Context::Sidebar,
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,
-          content: Content::Simple(nodes![node!("foo"; 5.. 8)]),
-          ..empty_block!(5..8)
+          content: Content::Simple(just("foo", 5..8)),
+          ..empty_block(5..8)
         }]),
-        ..empty_block!(0..13)
+        ..empty_block(0..13)
       },
     )
   }
@@ -803,12 +801,12 @@ mod tests {
           context: Context::Open,
           content: Content::Compound(vecb![Block {
             context: Context::Paragraph,
-            content: Content::Simple(nodes![node!("foo"; 8.. 11)]),
-            ..empty_block!(8..11)
+            content: Content::Simple(just("foo", 8..11)),
+            ..empty_block(8..11)
           }]),
-          ..empty_block!(5..14)
+          ..empty_block(5..14)
         }]),
-        ..empty_block!(0..19)
+        ..empty_block(0..19)
       }
     );
 
@@ -829,16 +827,16 @@ mod tests {
       Block {
         context: Context::Sidebar,
         content: Content::Compound(vecb![Block {
-          meta: ChunkMeta::new(None, Some(src!("Bar", 7..10)), 6),
+          meta: ChunkMeta::new(None, Some(src("Bar", 7..10)), 6),
           context: Context::Open,
           content: Content::Compound(vecb![Block {
             context: Context::Paragraph,
-            content: Content::Simple(nodes![node!("foo"; 15..18)]),
-            ..empty_block!(15..18)
+            content: Content::Simple(just("foo", 15..18)),
+            ..empty_block(15..18)
           }]),
-          ..empty_block!(6..23)
+          ..empty_block(6..23)
         }]),
-        ..empty_block!(0..29)
+        ..empty_block(0..29)
       }
     );
   }
@@ -860,26 +858,24 @@ mod tests {
         content: Content::Compound(vecb![
           Block {
             context: Context::Paragraph,
-            content: Content::Simple(nodes![node!("This is content in a sidebar block."; 5..40)]),
-            ..empty_block!(5..40)
+            content: Content::Simple(just("This is content in a sidebar block.", 5..40)),
+            ..empty_block(5..40)
           },
           Block {
             context: Context::Image,
             content: Content::Empty(EmptyMetadata::Image {
-              target: src!("name.png", 49..57),
+              target: src("name.png", 49..57),
               attrs: attr_list!(57..59),
             }),
-            ..empty_block!(42..59)
+            ..empty_block(42..59)
           },
           Block {
             context: Context::Paragraph,
-            content: Content::Simple(nodes![
-              node!("This is more content in the sidebar block."; 61..103)
-            ]),
-            ..empty_block!(61..103)
+            content: Content::Simple(just("This is more content in the sidebar block.", 61..103)),
+            ..empty_block(61..103)
           },
         ]),
-        ..empty_block!(0..108)
+        ..empty_block(0..108)
       }
     );
   }

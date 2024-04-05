@@ -1,6 +1,8 @@
 use std::ops::Range;
 
-use asciidork_ast::prelude::*;
+use asciidork_ast::{prelude::*, *};
+use bumpalo::collections::String as BumpString;
+use bumpalo::Bump;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -11,11 +13,8 @@ lazy_static! {
   pub static ref NEWLINES_RE: Regex = Regex::new(r"(?m)\n\s*").unwrap();
 }
 
-#[macro_export]
-macro_rules! leak_test_bump {
-  () => {
-    Box::leak(Box::new(bumpalo::Bump::new()))
-  };
+pub fn leaked_bump() -> &'static Bump {
+  Box::leak(Box::new(Bump::new()))
 }
 
 #[macro_export]
@@ -46,10 +45,10 @@ macro_rules! assert_section {
 #[macro_export]
 macro_rules! nodes {
   () => (
-    bumpalo::collections::Vec::new_in(leak_test_bump!()).into()
+    bumpalo::collections::Vec::new_in(leaked_bump()).into()
   );
   ($($x:expr),+ $(,)?) => ({
-    let mut vs = bumpalo::collections::Vec::new_in(leak_test_bump!());
+    let mut vs = bumpalo::collections::Vec::new_in(leaked_bump());
     $(vs.push($x);)+
     vs.into()
   });
@@ -58,10 +57,10 @@ macro_rules! nodes {
 #[macro_export]
 macro_rules! vecb {
   () => (
-    bumpalo::collections::Vec::new_in(leak_test_bump!()).into()
+    bumpalo::collections::Vec::new_in(leaked_bump()).into()
   );
   ($($x:expr),+ $(,)?) => ({
-    let mut vs = bumpalo::collections::Vec::new_in(leak_test_bump!());
+    let mut vs = bumpalo::collections::Vec::new_in(leaked_bump());
     $(vs.push($x);)+
     vs
   });
@@ -76,19 +75,41 @@ macro_rules! node {
     )
   };
   ($text:expr; $range:expr) => {
-    n_text($text, $range.start, $range.end, leak_test_bump!())
+    n_text($text, $range.start, $range.end, leaked_bump())
   };
 }
 
+pub fn just(text: &'static str, range: Range<usize>) -> InlineNodes<'static> {
+  let mut vs = bumpalo::collections::Vec::new_in(leaked_bump());
+  vs.push(node!(text; range));
+  vs.into()
+}
+
+pub fn empty_block(range: Range<usize>) -> Block<'static> {
+  Block {
+    meta: asciidork_ast::ChunkMeta::empty(range.start),
+    context: asciidork_ast::BlockContext::Paragraph,
+    content: asciidork_ast::BlockContent::Simple(nodes![]),
+    loc: asciidork_ast::SourceLocation::new(range.start, range.end),
+  }
+}
+
+pub fn empty_list_item() -> ListItem<'static> {
+  ListItem {
+    marker: ListMarker::Star(1),
+    marker_src: src("", 0..0),
+    principle: just("", 0..0),
+    checklist: None,
+    blocks: vecb![],
+  }
+}
+
 #[macro_export]
-macro_rules! empty_block {
-  ($range:expr) => {
-    Block {
-      meta: asciidork_ast::ChunkMeta::empty($range.start),
-      context: asciidork_ast::BlockContext::Paragraph,
-      content: asciidork_ast::BlockContent::Simple(nodes![]),
-      loc: asciidork_ast::SourceLocation::new($range.start, $range.end),
-    }
+macro_rules! assert_list {
+  ($input:expr, $expected_ctx:expr, $expected_items:expr) => {
+    let (context, items, ..) = parse_list!($input);
+    assert_eq!(context, $expected_ctx, from: $input);
+    assert_eq!(items, $expected_items, from: $input);
   };
 }
 
@@ -97,31 +118,25 @@ macro_rules! attr_list {
   ($range:expr) => {
     asciidork_ast::AttrList::new(
       asciidork_ast::SourceLocation::new($range.start, $range.end),
-      leak_test_bump!(),
+      leaked_bump(),
     )
   };
   ($range:expr, named: $($pairs:expr),+ $(,)?) => {{
-    let mut named = asciidork_ast::Named::new_in(leak_test_bump!());
+    let mut named = asciidork_ast::Named::new_in(leaked_bump());
     $(named.insert($pairs.0, $pairs.1);)+
     AttrList { named, ..attr_list!($range.start..$range.end) }
   }};
 }
 
-#[macro_export]
-macro_rules! bstr {
-  ($text:expr) => {
-    bumpalo::collections::String::from_str_in($text, leak_test_bump!())
-  };
+pub fn bstr(text: &'static str) -> BumpString<'static> {
+  BumpString::from_str_in(text, leaked_bump())
 }
 
-#[macro_export]
-macro_rules! src {
-  ($text:expr, $range:expr) => {
-    asciidork_ast::SourceString::new(
-      bstr!($text),
-      asciidork_ast::SourceLocation::new($range.start, $range.end),
-    )
-  };
+pub fn src(text: &'static str, range: Range<usize>) -> SourceString<'static> {
+  SourceString::new(
+    BumpString::from_str_in(text, leaked_bump()),
+    SourceLocation::new(range.start, range.end),
+  )
 }
 
 #[macro_export]
@@ -167,7 +182,7 @@ macro_rules! assert_eq {
 #[macro_export]
 macro_rules! parse_single_block {
   ($input:expr) => {{
-    let mut parser = Parser::new($crate::leak_test_bump!(), $input);
+    let mut parser = Parser::new($crate::leaked_bump(), $input);
     let doc_content = parser.parse().unwrap().document.content;
     match doc_content {
       ::asciidork_ast::DocContent::Blocks(mut blocks) => {
@@ -182,9 +197,22 @@ macro_rules! parse_single_block {
 }
 
 #[macro_export]
+macro_rules! parse_list {
+  ($input:expr) => {{
+    let block = parse_single_block!($input);
+    match block.content {
+      ::asciidork_ast::BlockContent::List { variant, depth, items } => {
+        (block.context, items, variant, depth)
+      }
+      _ => panic!("expected list content"),
+    }
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_section {
   ($input:expr) => {{
-    let mut parser = Parser::new($crate::leak_test_bump!(), $input);
+    let mut parser = Parser::new($crate::leaked_bump(), $input);
     let doc_content = parser.parse().unwrap().document.content;
     match doc_content {
       ::asciidork_ast::DocContent::Sectioned { mut sections, .. } => {
@@ -199,7 +227,7 @@ macro_rules! parse_section {
 }
 
 #[macro_export]
-macro_rules! parse_list {
+macro_rules! parse_list_old {
   ($input:expr, $list:ident, $bump:ident) => {
     let $bump = &Bump::new();
     let mut parser = Parser::new($bump, $input);
@@ -221,19 +249,20 @@ pub mod attrs {
   pub fn named(
     pairs: &[(&'static str, Range<usize>, &'static str, Range<usize>)],
   ) -> asciidork_ast::AttrList<'static> {
-    let mut attrs = AttrList::new(SourceLocation::new(0, 0), leak_test_bump!());
+    let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
     attrs.loc.start = pairs[0].1.start - 1;
     attrs.loc.end = pairs[pairs.len() - 1].3.end + 1;
     for (name, name_range, value, value_range) in pairs {
-      attrs
-        .named
-        .insert(src!(*name, *name_range), src!(*value, *value_range));
+      attrs.named.insert(
+        src(name, name_range.clone()),
+        src(value, value_range.clone()),
+      );
     }
     attrs
   }
 
   pub fn pos(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<'static> {
-    let mut attrs = AttrList::new(SourceLocation::new(0, 0), leak_test_bump!());
+    let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
     attrs.loc.start = range.start - 1;
     attrs.loc.end = range.end + 1;
     attrs.positional.push(Some(nodes![node!(text; range)]));
