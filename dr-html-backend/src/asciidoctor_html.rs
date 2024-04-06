@@ -15,6 +15,7 @@ pub struct AsciidoctorHtml {
   pub(crate) default_newlines: Newlines,
   pub(crate) newlines: Newlines,
   pub(crate) state: HashSet<EphemeralState>,
+  pub(crate) autogen_conum: u8,
   pub(crate) section_ids: HashSet<String>,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
@@ -260,6 +261,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_callout_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
+    self.autogen_conum = 1;
     self.open_element("div", &["colist arabic"], &block.meta.attrs);
     self.push_str(if self.doc_attrs.get("icons").is_some() {
       "<table>"
@@ -355,7 +357,8 @@ impl Backend for AsciidoctorHtml {
       self.render_checklist_item(item);
     } else {
       self.push_str("<tr><td>");
-      let n = item.marker.callout_num().expect("todo: autogen");
+      let n = item.marker.callout_num().unwrap_or(self.autogen_conum);
+      self.autogen_conum = n + 1;
       if self.doc_attrs.str("icons") == Some("font") {
         self.push_callout_number_font(n);
       } else {

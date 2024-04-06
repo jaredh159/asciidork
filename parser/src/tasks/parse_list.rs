@@ -16,10 +16,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.ctx.list.stack.push(marker);
     let depth = self.ctx.list.stack.depth();
     let mut items = BumpVec::new_in(self.bump);
-    while let Some(item) = self.parse_list_item(variant)? {
+    let mut auto_conum = 1;
+    while let Some(item) = self.parse_list_item(variant, &mut auto_conum)? {
       items.push(item);
     }
     self.ctx.list.stack.pop();
+    if variant == ListVariant::Callout {
+      self.ctx.advance_callout_list(self.bump);
+    }
 
     let meta = meta.unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc_start()));
     Ok(Block {
@@ -30,7 +34,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     })
   }
 
-  fn parse_list_item(&mut self, list_variant: ListVariant) -> Result<Option<ListItem<'bmp>>> {
+  fn parse_list_item(
+    &mut self,
+    list_variant: ListVariant,
+    autogen_conum: &mut u8,
+  ) -> Result<Option<ListItem<'bmp>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
@@ -59,8 +67,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         type_meta = ListItemTypeMeta::Checklist(checklist.0, checklist.1);
       }
     } else if list_variant == ListVariant::Callout {
-      let number = marker.callout_num().expect("TODO: handle auto-generated");
-      type_meta = ListItemTypeMeta::Callout(self.ctx.get_callouts(number));
+      let conum = marker.callout_num().unwrap_or(*autogen_conum);
+      type_meta = ListItemTypeMeta::Callout(self.ctx.get_callouts(conum));
+      *autogen_conum = conum + 1;
     }
 
     let mut item_lines = bvec![in self.bump; line];
