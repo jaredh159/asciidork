@@ -148,11 +148,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     } else {
       let end = content.last_loc().unwrap_or(delimiter_token.loc).end;
       let message = format!(
-        "unclosed delimiter block, expected `{}`, opened on line {}",
+        "^ Unclosed delimiter block, expected `{}` after this line, opened on line {}",
         delimiter_token.lexeme,
         self.lexer.line_number(delimiter_token.loc.start)
       );
-      self.err_at(message, end, end + 1)?;
+      self.err_at(message, end, end)?;
       end
     };
     self.ctx.delimiter = prev;
@@ -882,18 +882,14 @@ mod tests {
 
   #[test]
   fn test_unclosed_delimited_block_err() {
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, "--\nfoo\n\n");
+    let mut parser = Parser::new(leaked_bump(), "--\nfoo\n\n");
     let err = parser.parse_block().err().unwrap();
     assert_eq!(
-      err,
-      Diagnostic {
-        line_num: 2,
-        line: "foo".to_string(),
-        message: "unclosed delimiter block, expected `--`, opened on line 1".to_string(),
-        underline_start: 3,
-        underline_width: 1,
-      }
+      err.plain_text(),
+      error! {"
+        2: foo
+              ^ Unclosed delimiter block, expected `--` after this line, opened on line 1
+      "}
     )
   }
 }

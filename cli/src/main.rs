@@ -9,8 +9,7 @@ use clap::Parser as ClapParser;
 use colored::*;
 
 use asciidork_dr_html_backend::*;
-use asciidork_parser::parser::Parser;
-use asciidork_parser::Diagnostic;
+use asciidork_parser::prelude::*;
 
 mod args;
 
@@ -130,30 +129,26 @@ fn format_html(html: String) -> String {
 
 fn print_diagnostics(diagnostics: Vec<Diagnostic>) {
   for diagnostic in diagnostics {
-    let line_num_pad = match diagnostic.line_num {
-      n if n < 10 => 3,
-      n if n < 100 => 4,
-      n if n < 1000 => 5,
-      n if n < 10000 => 6,
-      _ => 7,
-    };
-    println!(
-      "\n{}{} {}",
-      diagnostic.line_num.to_string().dimmed(),
-      ":".dimmed(),
-      diagnostic.line
-    );
-    println!(
-      "{}{} {}\n",
-      " ".repeat(diagnostic.underline_start + line_num_pad),
-      "^".repeat(diagnostic.underline_width).red().bold(),
-      diagnostic.message.red().bold()
-    );
+    println!("\n{}", diagnostic.plain_text_with(Colorizer));
   }
 }
 
 fn eprintln_if(condition: bool) {
   if condition {
     eprintln!();
+  }
+}
+
+struct Colorizer;
+
+impl DiagnosticColor for Colorizer {
+  fn line_num(&self, s: impl Into<String>) -> String {
+    format!("{}", Into::<String>::into(s).dimmed())
+  }
+  fn location(&self, s: impl Into<String>) -> String {
+    format!("{}", Into::<String>::into(s).red().bold())
+  }
+  fn message(&self, s: impl Into<String>) -> String {
+    format!("{}", Into::<String>::into(s).red().bold())
   }
 }

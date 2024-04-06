@@ -113,7 +113,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         Hash if state.quotes == Default => {
           state.commit_prev(self)?;
           if state.attr_list.id.is_some() {
-            self.err("more than one id attribute", Some(&token))?
+            self.err("More than one id attribute", Some(&token))?
           }
           state.kind = Id;
         }
@@ -207,9 +207,9 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
   fn err_if_formatted(&self, parser: &Parser) -> Result<()> {
     if self.formatted_text {
       parser.err_at(
-        "formatted text only supports attribute shorthand: id, roles, & options",
-        self.parse_range.0,
-        self.parse_range.1,
+        "Formatted text only supports attribute shorthand: id, roles, & options",
+        self.parse_range.0 + 1,
+        self.parse_range.1 + 1,
       )?;
     }
     Ok(())
@@ -578,31 +578,46 @@ mod tests {
   #[test]
   fn test_parse_attr_list_errs() {
     let cases = vec![
-      ("[#foo#bar]", false, "more than one id", 5, 1),
-      ("[#foo#bar]", true, "more than one id", 5, 1),
-      ("[foobar]", true, "only supports attribute shorthand", 1, 6),
       (
-        "[#lol,rofl=copter]",
+        "[#foo#bar]",
         true,
-        "only supports attribute shorthand",
-        1,
-        16,
+        error! {"
+          1: [#foo#bar]
+                  ^ More than one id attribute
+        "},
+      ),
+      (
+        "[#foo#bar]",
+        false,
+        error! {"
+          1: [#foo#bar]
+                  ^ More than one id attribute
+        "},
+      ),
+      (
+        "[foobar]",
+        true,
+        error! {"
+          1: [foobar]
+              ^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
+        "},
+      ),
+      (
+        "[#a,b=c]",
+        true,
+        error! {"
+          1: [#a,b=c]
+              ^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
+        "},
       ),
     ];
 
-    let b = &Bump::new();
-    for (input, formatted, expected, start, width) in cases {
-      let mut parser = Parser::new(b, input);
+    for (input, formatted, expected) in cases {
+      let mut parser = Parser::new(leaked_bump(), input);
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
-      let result = parser.parse_attrs(&mut line, formatted);
-      if let Err(diag) = result {
-        assert!(diag.message.contains(expected));
-        assert_eq!(diag.underline_start, start);
-        assert_eq!(diag.underline_width, width);
-      } else {
-        panic!("expected error, got {:?}", result.unwrap());
-      }
+      let diag = parser.parse_attrs(&mut line, formatted).err().unwrap();
+      assert_eq!(diag.plain_text(), expected, from: input);
     }
   }
 }

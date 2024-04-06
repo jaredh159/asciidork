@@ -68,7 +68,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     } else if list_variant == ListVariant::Callout {
       let conum = marker.callout_num().unwrap_or(*autogen_conum);
-      type_meta = ListItemTypeMeta::Callout(self.ctx.get_callouts(conum));
+      if conum != *autogen_conum {
+        self.err_at_loc(
+          format!("Unexpected callout number, expected `<{autogen_conum}>`"),
+          marker_src.loc,
+        )?;
+      }
+      let callouts = self.ctx.get_callouts(conum);
+      if callouts.is_empty() {
+        self.err_at_loc(
+          format!("No callout found for number `{}`", conum),
+          marker_src.loc,
+        )?;
+      }
+      type_meta = ListItemTypeMeta::Callout(callouts);
       *autogen_conum = conum + 1;
     }
 

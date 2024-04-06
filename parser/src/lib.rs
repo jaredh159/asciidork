@@ -17,11 +17,12 @@ mod utils;
 extern crate asciidork_ast as ast;
 
 pub mod prelude {
+  pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
   pub use crate::parser::Parser;
   pub use bumpalo::Bump;
 }
 
-pub use diagnostic::Diagnostic;
+pub use diagnostic::{Diagnostic, DiagnosticColor};
 pub use parser::Parser;
 
 mod internal {

@@ -165,6 +165,21 @@ macro_rules! raw_html {
 }
 
 #[macro_export]
+macro_rules! error {
+  ($s:expr) => {
+    ::indoc::indoc!($s)
+  };
+}
+
+#[macro_export]
+macro_rules! assert_error {
+  ($input:expr, $expected:expr) => {
+    let err = parse_error!($input);
+    assert_eq!(err.plain_text(), $expected, from: $input);
+  };
+}
+
+#[macro_export]
 macro_rules! assert_eq {
   ($left:expr, $right:expr$(,)?) => {{
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");
@@ -206,6 +221,35 @@ macro_rules! parse_doc_content {
   ($input:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);
     parser.parse().unwrap().document.content
+  }};
+}
+
+#[macro_export]
+macro_rules! parse_errors {
+  ($input:expr) => {{
+    let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().err().expect("expected parse failure")
+  }};
+}
+
+#[macro_export]
+macro_rules! parse_error {
+  ($input:expr) => {{
+    let parser = Parser::new(leaked_bump(), $input);
+    let mut diagnostics = parser.parse().err().expect(&format!(
+      indoc::indoc! {"
+        expected PARSE ERROR, but got none. input was:
+
+        \x1b[2m```adoc\x1b[0m
+        {}{}\x1b[2m```\x1b[0m
+      "},
+      $input,
+      if $input.ends_with('\n') { "" } else { "\n" }
+    ));
+    if diagnostics.len() != 1 {
+      panic!("expected 1 diagnostic, found {}", diagnostics.len());
+    }
+    diagnostics.pop().unwrap()
   }};
 }
 

@@ -1,6 +1,4 @@
 use crate::internal::*;
-// use crate::token::Token;
-// use crate::{Parser, Result};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Diagnostic {
@@ -11,6 +9,49 @@ pub struct Diagnostic {
   pub underline_width: usize,
 }
 
+pub trait DiagnosticColor {
+  fn line_num(&self, s: impl Into<String>) -> String {
+    s.into()
+  }
+  fn line(&self, s: impl Into<String>) -> String {
+    s.into()
+  }
+  fn location(&self, s: impl Into<String>) -> String {
+    s.into()
+  }
+  fn message(&self, s: impl Into<String>) -> String {
+    s.into()
+  }
+}
+
+impl Diagnostic {
+  pub fn plain_text(&self) -> String {
+    struct NoColor;
+    impl DiagnosticColor for NoColor {}
+    self.plain_text_with(NoColor)
+  }
+
+  pub fn plain_text_with<C: DiagnosticColor>(&self, colorizer: C) -> String {
+    let line_num_pad = match self.line_num {
+      n if n < 10 => 3,
+      n if n < 100 => 4,
+      n if n < 1000 => 5,
+      n if n < 10000 => 6,
+      n if n < 100000 => 7,
+      _ => 8,
+    };
+    format!(
+      "{}{} {}\n{}{} {}\n",
+      colorizer.line_num(self.line_num.to_string()),
+      colorizer.line_num(":"),
+      colorizer.line(&self.line),
+      " ".repeat(self.underline_start + line_num_pad),
+      colorizer.location("^".repeat(self.underline_width)),
+      colorizer.message(&self.message),
+    )
+  }
+}
+
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn err_at(&self, message: impl Into<String>, start: usize, end: usize) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
@@ -18,9 +59,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       line_num,
       line: self.lexer.line_of(start).to_string(),
       message: message.into(),
-      underline_start: offset + 1,
+      underline_start: offset,
       underline_width: end - start,
     })
+  }
+
+  pub(crate) fn err_at_loc(&self, message: impl Into<String>, loc: SourceLocation) -> Result<()> {
+    self.err_at(message, loc.start, loc.end)
   }
 
   pub(crate) fn err_token_start(&self, message: &'static str, token: &Token) -> Result<()> {
@@ -71,10 +116,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       underline_start: offset + 1,
       underline_width: 1,
     })
-  }
-
-  pub(crate) fn err_expected_token(&self, token: Option<&Token>, detail: &str) -> Result<()> {
-    self.err(format!("Expected {}", detail), token)
   }
 
   fn handle_err(&self, err: Diagnostic) -> Result<()> {
