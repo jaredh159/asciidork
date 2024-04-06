@@ -129,39 +129,39 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
     (Context::DocumentAttributeDecl, Content::DocumentAttribute(name, entry)) => {
       backend.visit_document_attribute_decl(name, entry);
     }
-    (Context::OrderedList, Content::List { items, depth, .. }) => {
+    (Context::OrderedList, Content::List { items, depth, variant }) => {
       backend.enter_ordered_list(block, items, *depth);
       items.iter().for_each(|item| {
-        backend.enter_list_item_principal(item);
+        backend.enter_list_item_principal(item, *variant);
         item
           .principle
           .iter()
           .for_each(|node| eval_inline(node, backend));
-        backend.exit_list_item_principal(item);
-        backend.enter_list_item_blocks(&item.blocks, item);
+        backend.exit_list_item_principal(item, *variant);
+        backend.enter_list_item_blocks(&item.blocks, item, *variant);
         item
           .blocks
           .iter()
           .for_each(|block| eval_block(block, backend));
-        backend.exit_list_item_blocks(&item.blocks, item);
+        backend.exit_list_item_blocks(&item.blocks, item, *variant);
       });
       backend.exit_ordered_list(block, items, *depth);
     }
-    (Context::UnorderedList, Content::List { items, depth, .. }) => {
+    (Context::UnorderedList, Content::List { items, depth, variant }) => {
       backend.enter_unordered_list(block, items, *depth);
       items.iter().for_each(|item| {
-        backend.enter_list_item_principal(item);
+        backend.enter_list_item_principal(item, *variant);
         item
           .principle
           .iter()
           .for_each(|node| eval_inline(node, backend));
-        backend.exit_list_item_principal(item);
-        backend.enter_list_item_blocks(&item.blocks, item);
+        backend.exit_list_item_principal(item, *variant);
+        backend.enter_list_item_blocks(&item.blocks, item, *variant);
         item
           .blocks
           .iter()
           .for_each(|block| eval_block(block, backend));
-        backend.exit_list_item_blocks(&item.blocks, item);
+        backend.exit_list_item_blocks(&item.blocks, item, *variant);
       });
       backend.exit_unordered_list(block, items, *depth);
     }
@@ -182,6 +182,24 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
         backend.exit_description_list_description(&item.blocks, item);
       });
       backend.exit_description_list(block, items, *depth);
+    }
+    (Context::CalloutList, Content::List { items, depth, variant }) => {
+      backend.enter_callout_list(block, items, *depth);
+      items.iter().for_each(|item| {
+        backend.enter_list_item_principal(item, *variant);
+        item
+          .principle
+          .iter()
+          .for_each(|node| eval_inline(node, backend));
+        backend.exit_list_item_principal(item, *variant);
+        backend.enter_list_item_blocks(&item.blocks, item, *variant);
+        item
+          .blocks
+          .iter()
+          .for_each(|block| eval_block(block, backend));
+        backend.exit_list_item_blocks(&item.blocks, item, *variant);
+      });
+      backend.exit_callout_list(block, items, *depth);
     }
     (Context::Section, Content::Section(section)) => {
       eval_section(section, backend);

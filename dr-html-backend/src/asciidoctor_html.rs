@@ -259,6 +259,23 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</ul></div>");
   }
 
+  fn enter_callout_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
+    self.open_element("div", &["colist arabic"], &block.meta.attrs);
+    self.push_str(if self.doc_attrs.get("icons").is_some() {
+      "<table>"
+    } else {
+      "<ol>"
+    });
+  }
+
+  fn exit_callout_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
+    self.push_str(if self.doc_attrs.get("icons").is_some() {
+      "</table></div>"
+    } else {
+      "</ol></div>"
+    });
+  }
+
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.open_element("div", &["dlist"], &block.meta.attrs);
     self.push_str("<dl>");
@@ -332,19 +349,44 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</ol></div>");
   }
 
-  fn enter_list_item_principal(&mut self, item: &ListItem) {
-    self.push_str("<li><p>");
-    self.render_checklist_item(item);
+  fn enter_list_item_principal(&mut self, item: &ListItem, list_variant: ListVariant) {
+    if list_variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
+      self.push_str("<li><p>");
+      self.render_checklist_item(item);
+    } else {
+      self.push_str("<tr><td>");
+      let n = item.marker.callout_num().expect("todo: autogen");
+      if self.doc_attrs.str("icons") == Some("font") {
+        self.push_callout_number_font(n);
+      } else {
+        self.push_callout_number_img(n);
+      }
+      self.push_str("</td><td>");
+    }
   }
 
-  fn exit_list_item_principal(&mut self, _item: &ListItem) {
-    self.push_str("</p>");
+  fn exit_list_item_principal(&mut self, _item: &ListItem, list_variant: ListVariant) {
+    if list_variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
+      self.push_str("</p>");
+    } else {
+      self.push_str("</td>");
+    }
   }
 
-  fn enter_list_item_blocks(&mut self, _blocks: &[Block], _item: &ListItem) {}
+  fn enter_list_item_blocks(
+    &mut self,
+    _blocks: &[Block],
+    _items: &ListItem,
+    _variant: ListVariant,
+  ) {
+  }
 
-  fn exit_list_item_blocks(&mut self, _blocks: &[Block], _item: &ListItem) {
-    self.push_str("</li>");
+  fn exit_list_item_blocks(&mut self, _blocks: &[Block], _items: &ListItem, variant: ListVariant) {
+    if variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
+      self.push_str("</li>");
+    } else {
+      self.push_str("</td>");
+    }
   }
 
   fn enter_paragraph_block(&mut self, block: &Block) {
@@ -387,17 +429,19 @@ impl Backend for AsciidoctorHtml {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
-    let num = num_str!(callout.number);
-    if self.doc_attrs.str("icons") == Some("font") {
-      self.push([
-        r#"<i class="conum" data-value=""#,
-        &num,
-        r#""></i><b>("#,
-        &num,
-        ")</b>",
-      ]);
-    } else {
-      self.push([r#"<b class="conum">("#, &num, ")</b>"]);
+    let icons = self.doc_attrs.get("icons");
+    match icons {
+      Some(AttrEntry::Bool(true)) => self.push_callout_number_img(callout.number),
+      Some(AttrEntry::String(icons)) if icons == "font" => {
+        self.push_callout_number_font(callout.number);
+      }
+      // TODO: asciidoctor also handles special `guard` case
+      //   elsif ::Array === (guard = node.attributes['guard'])
+      //     %(&lt;!--<b class="conum">(#{node.text})</b>--&gt;)
+      // @see https://github.com/asciidoctor/asciidoctor/issues/3319
+      _ => {
+        self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]);
+      }
     }
   }
 
@@ -819,6 +863,32 @@ impl AsciidoctorHtml {
     let mut buffered = String::new();
     mem::swap(&mut buffered, &mut self.alt_html);
     buffered
+  }
+
+  // TODO: handle embedding images, data-uri, etc., this is a naive impl
+  // @see https://github.com/jaredh159/asciidork/issues/7
+  fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
+    // PERF: we could work to prevent all these allocations w/ some caching
+    // these might get rendered many times in a given document
+    let icondir = self
+      .doc_attrs
+      .str_or("iconsdir", "./images/icons")
+      .to_string();
+    let ext = self.doc_attrs.str_or("icontype", "png").to_string();
+    self.push([&icondir, "/", prefix.unwrap_or(""), name, ".", &ext]);
+  }
+
+  fn push_callout_number_font(&mut self, num: u8) {
+    let n_str = &num_str!(num);
+    self.push([r#"<i class="conum" data-value=""#, n_str, r#""></i>"#]);
+    self.push([r#"<b>("#, n_str, ")</b>"]);
+  }
+
+  fn push_callout_number_img(&mut self, num: u8) {
+    let n_str = &num_str!(num);
+    self.push_str(r#"<img src=""#);
+    self.push_icon_uri(n_str, Some("callouts/"));
+    self.push([r#"" alt=""#, n_str, r#"">"#]);
   }
 }
 

@@ -49,7 +49,7 @@ pub mod prelude {
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::doc_content::DocContent;
   pub use crate::inline::{CurlyKind, InlineNode, QuoteKind, SpecialCharKind};
-  pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker};
+  pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
   pub use crate::node::{Callout, Document, Section};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;

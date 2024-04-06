@@ -90,9 +90,6 @@ test_eval!(
   )
 );
 
-// dr renders plan <1> foo\n<2> bar as colist w/ warning
-// dr warns out of order <2> foo\n<1> bar
-
 // helpers
 
 fn wrap_listing(inner: &str) -> String {
