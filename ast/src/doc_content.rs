@@ -38,4 +38,11 @@ impl<'bmp> DocContent<'bmp> {
       *self = DocContent::Sectioned { preamble: Some(preamble), sections };
     }
   }
+
+  pub const fn blocks(&self) -> Option<&BumpVec<'bmp, Block<'bmp>>> {
+    match self {
+      DocContent::Blocks(blocks) => Some(blocks),
+      _ => None,
+    }
+  }
 }

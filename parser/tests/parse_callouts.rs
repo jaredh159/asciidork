@@ -22,6 +22,22 @@ fn test_parse_callout() {
 }
 
 #[test]
+fn test_parse_callout_sans_delimiter() {
+  let input = adoc! {r#"
+    [source,java]
+    System.out.println("Hello, world!"); <1>
+  "#};
+  assert_block_core!(
+    input,
+    Context::Listing,
+    Content::Simple(nodes![
+      node!("System.out.println(\"Hello, world!\");"; 14..50),
+      node!(callout(1, 0, 0), 50..54),
+    ])
+  );
+}
+
+#[test]
 fn test_parse_callout_nums() {
   let input = adoc! {r#"
     ....

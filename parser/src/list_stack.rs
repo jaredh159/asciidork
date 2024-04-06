@@ -14,6 +14,9 @@ impl ListStack {
       ListMarker::Digits(_) => self
         .iter()
         .all(|marker| !matches!(marker, ListMarker::Digits(_))),
+      ListMarker::Callout(_) => self
+        .iter()
+        .all(|marker| !matches!(marker, ListMarker::Callout(_))),
       marker => !self.contains(&marker),
     }
   }
@@ -21,6 +24,7 @@ impl ListStack {
   pub fn continues_current_list(&self, next: ListMarker) -> bool {
     self.last().map_or(false, |last| match (last, next) {
       (ListMarker::Digits(_), ListMarker::Digits(_)) => true,
+      (ListMarker::Callout(_), ListMarker::Callout(_)) => true,
       (last, next) => *last == next,
     })
   }
@@ -64,6 +68,7 @@ fn test_continues_current_list() {
     (Star(1), &[Star(2)], false),
     (Dot(1), &[Star(1), Star(2)], false),
     (Digits(2), &[Digits(1)], true),
+    (Callout(Some(2)), &[Callout(Some(1))], true),
   ];
   for (next, markers, expected) in cases {
     let mut stack = ListStack::default();

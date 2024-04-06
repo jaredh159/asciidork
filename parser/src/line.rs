@@ -374,6 +374,9 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
         };
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
       }
+      CalloutNumber if token.lexeme.as_bytes()[1] != b'!' => {
+        Some(ListMarker::Callout(token.parse_callout_num()))
+      }
       Digits if next.is(Dots) && self.nth_token(offset + 2).is(Whitespace) => {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
@@ -521,6 +524,7 @@ mod tests {
       ("* foo", &[Star(2)], true),
       (". foo", &[Star(2), Star(1)], true),
       ("2. foo", &[Digits(1)], false),
+      ("<2> bar", &[Callout(Some(1))], false),
     ];
     let bump = &Bump::new();
     for (input, markers, expected) in cases {
@@ -559,6 +563,10 @@ mod tests {
       ("foo;; bar", Some(SemiColons)),
       ("_foo_::", Some(Colons(2))),
       ("foo bar:: baz", Some(Colons(2))),
+      ("<1> foo", Some(Callout(Some(1)))),
+      ("<.> foo", Some(Callout(None))),
+      ("<!--3--> foo", None), // CalloutNumber token, but not a list marker
+      ("<255> foo", Some(Callout(Some(255)))),
     ];
     let bump = &Bump::new();
     for (input, marker) in cases {

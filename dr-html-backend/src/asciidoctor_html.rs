@@ -243,7 +243,7 @@ impl Backend for AsciidoctorHtml {
       wrap_classes.push(custom);
       list_classes.push(custom);
     }
-    if items.iter().any(|item| item.checklist.is_some()) {
+    if items.iter().any(ListItem::is_checklist) {
       wrap_classes.push("checklist");
       list_classes.push("checklist");
     }
@@ -800,7 +800,7 @@ impl AsciidoctorHtml {
   }
 
   fn render_checklist_item(&mut self, item: &ListItem) {
-    if let Some((checked, _)) = &item.checklist {
+    if let ListItemTypeMeta::Checklist(checked, _) = &item.type_meta {
       match (self.list_stack.last() == Some(&true), checked) {
         (false, true) => self.push_str("&#10003;"),
         (false, false) => self.push_str("&#10063;"),

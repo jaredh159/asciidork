@@ -25,11 +25,12 @@ mod internal {
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
     pub use crate::inline::{CurlyKind::*, QuoteKind::*};
     pub use crate::inline_nodes::InlineNodes;
-    pub use crate::list::{ListItem, ListMarker, ListVariant};
+    pub use crate::list::*;
     pub use crate::node::{Callout, Document, Section};
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
+    pub use smallvec::SmallVec;
   }
 
   pub use types::*;
@@ -48,7 +49,7 @@ pub mod prelude {
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::doc_content::DocContent;
   pub use crate::inline::{CurlyKind, InlineNode, QuoteKind, SpecialCharKind};
-  pub use crate::list::{ListItem, ListMarker};
+  pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker};
   pub use crate::node::{Callout, Document, Section};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;

@@ -53,11 +53,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let marker_src = line.consume_to_string_until(Whitespace, self.bump);
     line.discard_assert(Whitespace);
-    let checklist = if list_variant == ListVariant::Unordered {
-      line.consume_checklist_item(self.bump)
-    } else {
-      None
-    };
+    let mut type_meta = ListItemTypeMeta::None;
+    if list_variant == ListVariant::Unordered {
+      if let Some(checklist) = line.consume_checklist_item(self.bump) {
+        type_meta = ListItemTypeMeta::Checklist(checklist.0, checklist.1);
+      }
+    } else if list_variant == ListVariant::Callout {
+      let number = marker.callout_num().expect("TODO: handle auto-generated");
+      type_meta = ListItemTypeMeta::Callout(self.ctx.get_callouts(number));
+    }
 
     let mut item_lines = bvec![in self.bump; line];
     while lines
@@ -78,7 +82,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       blocks,
       marker,
       marker_src,
-      checklist,
+      type_meta,
       principle,
     }))
   }
@@ -159,7 +163,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       blocks,
       marker,
       marker_src,
-      checklist: None,
+      type_meta: ListItemTypeMeta::None,
       principle,
     }))
   }

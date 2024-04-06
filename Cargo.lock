@@ -64,6 +64,7 @@ name = "asciidork-ast"
 version = "0.2.0"
 dependencies = [
  "bumpalo",
+ "smallvec",
 ]
 
 [[package]]

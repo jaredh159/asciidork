@@ -122,7 +122,7 @@ impl StepOrGroup {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, parse_single_block};
+  use test_utils::{assert_eq, *};
 
   fn exactly(subs: &[Subs]) -> Substitutions {
     let mut s = Substitutions::none();
@@ -177,7 +177,7 @@ mod tests {
     ];
 
     for (attrs, current, expected) in cases {
-      let input = format!("{attrs}\nfoo");
+      let input: &'static str = format!("{attrs}\nfoo").leak();
       let block = parse_single_block!(&input);
       let attrs = block.meta.attrs;
       let next = from_meta(current, &attrs);

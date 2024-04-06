@@ -46,13 +46,19 @@ impl<'bmp> ParseContext<'bmp> {
     *self.callouts.last().unwrap()
   }
 
-  pub fn flush_callouts(&mut self, bump: &'bmp Bump) {
-    let list_idx = if let Some(last) = self.callouts.last() {
-      last.list_idx + 1
-    } else {
-      0
-    };
-    self.callouts = bvec![in bump; Callout { list_idx, callout_idx: 0, number: 0 }];
+  pub fn advance_callout_list(&mut self, bump: &'bmp Bump) {
+    if let Some(last) = self.callouts.last() {
+      self.callouts = bvec![in bump; Callout::new(last.list_idx + 1, 0, 0 )];
+    }
+  }
+
+  pub fn get_callouts(&self, number: u8) -> SmallVec<[Callout; 4]> {
+    self
+      .callouts
+      .iter()
+      .filter(|c| c.number == number)
+      .copied()
+      .collect()
   }
 
   pub fn set_subs_for(&mut self, block_context: BlockContext, meta: &ChunkMeta) -> Substitutions {

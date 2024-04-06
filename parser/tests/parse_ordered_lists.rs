@@ -44,7 +44,7 @@ fn test_ordered_w_nested_unordered() {
       marker: ListMarker::Dot(1),
       marker_src: src(".", 0..1),
       principle: just("Linux", 2..7),
-      checklist: None,
+      type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
         meta: ChunkMeta::empty(11),
         context: Context::UnorderedList,

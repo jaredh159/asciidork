@@ -43,7 +43,7 @@ fn test_simple_nested_list() {
         marker: ListMarker::Star(1),
         marker_src: src("*", 0..1),
         principle: just("one", 2..5),
-        checklist: None,
+        type_meta: ListItemTypeMeta::None,
         blocks: vecb![Block {
           content: Content::List {
             variant: ListVariant::Unordered,
@@ -83,7 +83,7 @@ fn test_nested_list_separated_by_newlines() {
       marker: ListMarker::Star(1),
       marker_src: src("*", 0..1),
       principle: just("one", 2..5),
-      checklist: None,
+      type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
         content: Content::List {
           variant: ListVariant::Unordered,
@@ -136,7 +136,7 @@ fn test_list_custom_marker() {
       marker: ListMarker::Star(1),
       marker_src: src("*", 0..1),
       principle: just("foo", 2..5),
-      checklist: None,
+      type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
         meta: ChunkMeta::new(Some(attrs::pos("circles", 7..14)), None, 6),
         content: Content::List {
@@ -169,21 +169,21 @@ fn test_checkbox_list() {
       ListItem {
         marker: ListMarker::Star(1),
         marker_src: src("*", 0..1),
-        checklist: Some((true, src("[*]", 2..5))),
+        type_meta: ListItemTypeMeta::Checklist(true, src("[*]", 2..5)),
         principle: just(" checked", 5..13),
         ..empty_list_item()
       },
       ListItem {
         marker: ListMarker::Star(1),
         marker_src: src("*", 14..15),
-        checklist: Some((true, src("[x]", 16..19))),
+        type_meta: ListItemTypeMeta::Checklist(true, src("[x]", 16..19)),
         principle: just(" also checked", 19..32),
         ..empty_list_item()
       },
       ListItem {
         marker: ListMarker::Star(1),
         marker_src: src("*", 33..34),
-        checklist: Some((false, src("[ ]", 35..38))),
+        type_meta: ListItemTypeMeta::Checklist(false, src("[ ]", 35..38)),
         principle: just(" not checked", 38..50),
         ..empty_list_item()
       },
@@ -203,7 +203,7 @@ fn test_single_continuation() {
     &[ListItem {
       marker: ListMarker::Star(1),
       marker_src: src("*", 0..1),
-      checklist: None,
+      type_meta: ListItemTypeMeta::None,
       principle: just("principle", 2..11),
       blocks: vecb![Block {
         content: BlockContent::Simple(just("with continuation", 14..31)),
@@ -228,7 +228,7 @@ fn test_double_continuation() {
     &[ListItem {
       marker: ListMarker::Star(1),
       marker_src: src("*", 0..1),
-      checklist: None,
+      type_meta: ListItemTypeMeta::None,
       principle: just("principle", 2..11),
       blocks: vecb![
         Block {
@@ -269,7 +269,7 @@ fn test_two_items_w_listing_continuations() {
       ListItem {
         marker: ListMarker::Star(1),
         marker_src: src("*", 0..1),
-        checklist: None,
+        type_meta: ListItemTypeMeta::None,
         principle: just("principle", 2..11),
         blocks: vecb![
           Block {
@@ -287,7 +287,7 @@ fn test_two_items_w_listing_continuations() {
       ListItem {
         marker: ListMarker::Star(1),
         marker_src: src("*", 57..58),
-        checklist: None,
+        type_meta: ListItemTypeMeta::None,
         principle: just("second principle", 59..75),
         blocks: vecb![Block {
           content: BlockContent::Simple(just("listing 2", 83..92)),

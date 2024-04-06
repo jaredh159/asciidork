@@ -2,6 +2,7 @@ use std::ops::Range;
 
 use asciidork_ast::{prelude::*, *};
 use bumpalo::collections::String as BumpString;
+use bumpalo::collections::Vec as BumpVec;
 use bumpalo::Bump;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -99,7 +100,7 @@ pub fn empty_list_item() -> ListItem<'static> {
     marker: ListMarker::Star(1),
     marker_src: src("", 0..0),
     principle: just("", 0..0),
-    checklist: None,
+    type_meta: ListItemTypeMeta::None,
     blocks: vecb![],
   }
 }
@@ -180,41 +181,62 @@ macro_rules! assert_eq {
 }
 
 #[macro_export]
+macro_rules! parse_blocks {
+  ($input:expr) => {
+    parse_doc_content!($input)
+      .blocks()
+      .expect("expected blocks")
+      .clone()
+  };
+}
+
+#[macro_export]
 macro_rules! parse_single_block {
   ($input:expr) => {{
-    let mut parser = Parser::new($crate::leaked_bump(), $input);
-    let doc_content = parser.parse().unwrap().document.content;
-    match doc_content {
-      ::asciidork_ast::DocContent::Blocks(mut blocks) => {
-        if blocks.len() != 1 {
-          panic!("expected one block, found {}", blocks.len());
-        }
-        blocks.remove(0)
-      }
-      _ => panic!("expected block content"),
+    let blocks = parse_blocks!($input);
+    if blocks.len() != 1 {
+      panic!("expected one block, found {}", blocks.len());
     }
+    blocks[0].clone()
   }};
+}
+
+#[macro_export]
+macro_rules! parse_doc_content {
+  ($input:expr) => {{
+    let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().unwrap().document.content
+  }};
+}
+
+pub fn list_block_data(
+  block: Block<'static>,
+) -> Option<(
+  BlockContext,
+  BumpVec<'static, ListItem<'static>>,
+  ListVariant,
+  u8,
+)> {
+  match block.content {
+    BlockContent::List { items, variant, depth } => {
+      Some((block.context, items.clone(), variant, depth))
+    }
+    _ => None,
+  }
 }
 
 #[macro_export]
 macro_rules! parse_list {
   ($input:expr) => {{
     let block = parse_single_block!($input);
-    match block.content {
-      ::asciidork_ast::BlockContent::List { variant, depth, items } => {
-        (block.context, items, variant, depth)
-      }
-      _ => panic!("expected list content"),
-    }
+    list_block_data(block).expect("expected list content")
   }};
 }
 
 #[macro_export]
 macro_rules! parse_section {
   ($input:expr) => {{
-    let mut parser = Parser::new($crate::leaked_bump(), $input);
-    let doc_content = parser.parse().unwrap().document.content;
-    match doc_content {
+    match parse_doc_content!($input) {
       ::asciidork_ast::DocContent::Sectioned { mut sections, .. } => {
         if sections.len() != 1 {
           panic!("expected one section, found {}", sections.len());
@@ -224,16 +246,6 @@ macro_rules! parse_section {
       _ => panic!("expected block content"),
     }
   }};
-}
-
-#[macro_export]
-macro_rules! parse_list_old {
-  ($input:expr, $list:ident, $bump:ident) => {
-    let $bump = &Bump::new();
-    let mut parser = Parser::new($bump, $input);
-    let lines = parser.read_lines().unwrap();
-    let $list = parser.parse_list(lines, None).unwrap();
-  };
 }
 
 #[macro_export]
