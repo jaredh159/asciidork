@@ -62,15 +62,15 @@ test_eval!(
           <tr>
             <td><i class="conum" data-value="1"></i><b>(1)</b></td>
             <td>Describe the first line</td>
-          </td>
+          </tr>
           <tr>
             <td><i class="conum" data-value="2"></i><b>(2)</b></td>
             <td>Describe the second line</td>
-          </td>
+          </tr>
           <tr>
             <td><i class="conum" data-value="3"></i><b>(3)</b></td>
             <td>Describe the third line</td>
-          </td>
+          </tr>
         </table>
       </div>
     "#}
@@ -105,15 +105,15 @@ test_eval!(
           <tr>
             <td><img src="./images/icons/callouts/1.png" alt="1"></td>
             <td>Describe the first line</td>
-          </td>
+          </tr>
           <tr>
             <td><img src="./images/icons/callouts/2.png" alt="2"></td>
             <td>Describe the second line</td>
-          </td>
+          </tr>
           <tr>
             <td><img src="./images/icons/callouts/3.png" alt="3"></td>
             <td>Describe the third line</td>
-          </td>
+          </tr>
         </table>
       </div>
     "#}
@@ -148,15 +148,15 @@ test_eval!(
           <tr>
             <td><img src="./images/icons/callouts/1.png" alt="1"></td>
             <td>Describe the first line</td>
-          </td>
+          </tr>
           <tr>
             <td><img src="./images/icons/callouts/2.png" alt="2"></td>
             <td>Describe the second line</td>
-          </td>
+          </tr>
           <tr>
             <td><img src="./images/icons/callouts/3.png" alt="3"></td>
             <td>Describe the third line</td>
-          </td>
+          </tr>
         </table>
       </div>
     "#}

@@ -48,8 +48,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         let start = line.loc().unwrap().start + re_match.start();
         self.err_at(
           "Cannot unset attr with `!` AND provide value",
-          start,
-          start + re_match.len(),
+          start + 1,
+          start + 1 + re_match.len(),
         )?;
       }
 

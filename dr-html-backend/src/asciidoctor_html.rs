@@ -388,7 +388,7 @@ impl Backend for AsciidoctorHtml {
     if variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
       self.push_str("</li>");
     } else {
-      self.push_str("</td>");
+      self.push_str("</tr>");
     }
   }
 
