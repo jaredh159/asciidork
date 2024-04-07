@@ -61,7 +61,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-ast"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bumpalo",
  "smallvec",
@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-backend"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-opts",
@@ -77,7 +77,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "asciidork-dr-html-backend",
  "asciidork-eval",
@@ -90,7 +90,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-dr-html-backend"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -106,7 +106,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-eval"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -119,7 +119,7 @@ version = "0.2.0"
 
 [[package]]
 name = "asciidork-parser"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "asciidork-ast",
  "bumpalo",
