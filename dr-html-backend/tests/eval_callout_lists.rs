@@ -35,6 +35,46 @@ test_eval!(
 );
 
 test_eval!(
+  callout_list_w_continuations,
+  adoc! {r#"
+    [source,ruby]
+    ----
+    require 'asciidoctor' # <2>
+    doc = Asciidoctor::Document.new('Hello, World!') # <3>
+    puts doc.convert # <1>
+    ----
+    <1> Describe the
+        first line
+    <2> Describe the second line
+    <3> Describe the third line
+    +
+    With a continuation
+  "#},
+  wrap_source_appending(
+    "ruby",
+    raw_html! {r#"
+      require 'asciidoctor' # <b class="conum">(2)</b>
+      doc = Asciidoctor::Document.new('Hello, World!') # <b class="conum">(3)</b>
+      puts doc.convert # <b class="conum">(1)</b>
+    "#},
+    html! {r#"
+      <div class="colist arabic">
+        <ol>
+          <li><p>Describe the first line</p></li>
+          <li><p>Describe the second line</p></li>
+          <li>
+            <p>Describe the third line</p>
+            <div class="paragraph">
+              <p>With a continuation</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    "#}
+  )
+);
+
+test_eval!(
   basic_callout_list_w_icons_font,
   adoc! {r#"
     :icons: font
