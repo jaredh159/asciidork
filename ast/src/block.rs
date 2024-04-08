@@ -36,7 +36,7 @@ pub enum EmptyMetadata<'bmp> {
     target: SourceString<'bmp>,
     attrs: AttrList<'bmp>,
   },
-  None, // weird..., or good?
+  None,
 }
 
 #[derive(Copy, Debug, PartialEq, Eq, Clone)]
@@ -89,7 +89,7 @@ impl<'bmp> BlockContent<'bmp> {
       }
       BlockContent::Verbatim => todo!(),
       BlockContent::Raw => todo!(),
-      BlockContent::Empty(_) => todo!(),
+      BlockContent::Empty(_) => None,
       BlockContent::Table => todo!(),
       BlockContent::DocumentAttribute(_, _) => None,
       BlockContent::QuotedParagraph { attr, cite, .. } => {

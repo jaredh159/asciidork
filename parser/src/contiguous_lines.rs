@@ -174,6 +174,15 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     }
   }
 
+  pub fn discard_until(&mut self, predicate: impl Fn(&Line<'bmp, 'src>) -> bool) {
+    while let Some(line) = self.first() {
+      if predicate(line) {
+        return;
+      }
+      self.consume_current();
+    }
+  }
+
   pub fn starts_section(&self, meta: &ChunkMeta<'bmp>) -> bool {
     self.section_start_level(meta).is_some()
   }

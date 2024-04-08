@@ -115,7 +115,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     // manually gather all (including empty) lines until the end delimiter
     let content = if matches!(
       context,
-      Context::Listing | Context::Literal | Context::Passthrough
+      Context::Listing | Context::Literal | Context::Passthrough | Context::Comment
     ) {
       let mut lines = self
         .read_lines_until(delimiter)
@@ -127,10 +127,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         }
       }
 
-      let content = Content::Simple(self.parse_inlines(&mut lines)?);
-      self.ctx.custom_line_comment = None;
-      self.restore_lines(lines);
-      content
+      if context == Context::Comment {
+        lines.discard_until(|l| l.starts_with(|token| token.lexeme == "////"));
+        self.restore_lines(lines);
+        Content::Empty(EmptyMetadata::None)
+      } else {
+        let simple = Content::Simple(self.parse_inlines(&mut lines)?);
+        self.restore_lines(lines);
+        self.ctx.custom_line_comment = None;
+        simple
+      }
     } else {
       let mut blocks = BumpVec::new_in(self.bump);
       while let Some(inner) = self.parse_block()? {

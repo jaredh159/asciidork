@@ -24,6 +24,22 @@ fn test_parse_simple_block() {
 }
 
 #[test]
+fn test_parse_comment_block() {
+  assert_block!(
+    adoc! {"
+      ////
+      A comment block
+      ////
+    "},
+    Block {
+      context: Context::Comment,
+      content: Content::Empty(EmptyMetadata::None),
+      ..empty_block(0..25)
+    }
+  );
+}
+
+#[test]
 fn test_parse_passthrough() {
   assert_block!(
     adoc! {"

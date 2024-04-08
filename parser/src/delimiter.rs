@@ -9,6 +9,7 @@ pub enum Delimiter {
   Literal,
   Listing,
   Passthrough,
+  Comment,
 }
 
 impl From<Delimiter> for BlockContext {
@@ -21,6 +22,7 @@ impl From<Delimiter> for BlockContext {
       Delimiter::Listing => BlockContext::Listing,
       Delimiter::Literal => BlockContext::Literal,
       Delimiter::Passthrough => BlockContext::Passthrough,
+      Delimiter::Comment => BlockContext::Comment,
     }
   }
 }
@@ -37,8 +39,9 @@ impl<'src> Token<'src> {
       "----" => Some(Delimiter::Listing),
       "...." => Some(Delimiter::Literal),
       "++++" => Some(Delimiter::Passthrough),
+      "////" => Some(Delimiter::Comment),
       "--" => Some(Delimiter::Open),
-      _ => unreachable!(),
+      _ => unreachable!("Token::to_delimiter"),
     }
   }
 }

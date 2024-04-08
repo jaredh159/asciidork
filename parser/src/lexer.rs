@@ -122,7 +122,7 @@ impl<'src> Lexer<'src> {
       || self.is_eof()
       || !matches!(
         self.peek,
-        Some(b'_') | Some(b'-') | Some(b'*') | Some(b'=') | Some(b'.') | Some(b'+')
+        Some(b'_') | Some(b'-') | Some(b'*') | Some(b'=') | Some(b'.') | Some(b'+') | Some(b'/')
       )
     {
       return None;
@@ -136,6 +136,7 @@ impl<'src> Lexer<'src> {
       | [Some(b'-'), Some(b'-'), Some(b'-'), Some(b'-'), Some(b'\n') | None]
       | [Some(b'+'), Some(b'+'), Some(b'+'), Some(b'+'), Some(b'\n') | None]
       | [Some(b'.'), Some(b'.'), Some(b'.'), Some(b'.'), Some(b'\n') | None]
+      | [Some(b'/'), Some(b'/'), Some(b'/'), Some(b'/'), Some(b'\n') | None]
       | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n') | None] => {
         Some((4, sequence[0].unwrap()))
       }
@@ -522,6 +523,7 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("////", vec![(DelimiterLine, "////")]),
       ("<.>", vec![(CalloutNumber, "<.>")]),
       ("<1>", vec![(CalloutNumber, "<1>")]),
       ("<255>", vec![(CalloutNumber, "<255>")]),

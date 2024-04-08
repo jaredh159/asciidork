@@ -169,6 +169,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.current_is(kind)
   }
 
+  pub fn starts_with(&self, predicate: impl Fn(&Token<'src>) -> bool) -> bool {
+    self.current_token().map(predicate).unwrap_or(false)
+  }
+
   pub fn is_comment(&self) -> bool {
     self.is_fully_unconsumed() && self.current_is_len(ForwardSlashes, 2)
   }
