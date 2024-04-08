@@ -115,6 +115,49 @@ test_eval!(
 );
 
 test_eval!(
+  comment_lines,
+  adoc! {r#"
+    // leading
+    foo
+    bar
+
+    foo
+    // middle
+    bar
+
+    foo
+    bar
+    // trailing
+
+    foo // not a comment
+    bar
+
+    ----
+    // retained in verbatim
+    ----
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>foo bar</p>
+    </div>
+    <div class="paragraph">
+      <p>foo bar</p>
+    </div>
+    <div class="paragraph">
+      <p>foo bar</p>
+    </div>
+    <div class="paragraph">
+      <p>foo // not a comment bar</p>
+    </div>
+    <div class="listingblock">
+      <div class="content">
+        <pre>// retained in verbatim</pre>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
   menu_macro,
   "select menu:File[Save].",
   html! {r#"

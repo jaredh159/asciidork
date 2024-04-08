@@ -51,6 +51,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         return Ok(acc.inlines);
       }
 
+      if line.is_comment() && !subs.callouts() {
+        if lines.is_empty() {
+          acc.inlines.discard_trailing_newline();
+        }
+        let token = line.consume_current().unwrap();
+        let comment = line.consume_to_string(self.bump);
+        let loc = SourceLocation::new(token.loc.start, comment.loc.end + 1);
+        acc.push_node(LineComment(comment.src), loc);
+        continue;
+      }
+
       loop {
         if line.starts_with_seq(stop_tokens) {
           line.discard(stop_tokens.len());
@@ -669,6 +680,20 @@ mod tests {
   use test_utils::{assert_eq, *};
 
   #[test]
+  fn test_line_comments() {
+    let cases = vec![(
+      "foo\n// baz\nbar",
+      nodes![
+        node!("foo"; 0..3),
+        node!(JoiningNewline, 3..4),
+        node!(LineComment(bstr(" baz")), 4..11),
+        node!("bar"; 11..14),
+      ],
+    )];
+    run_l(cases);
+  }
+
+  #[test]
   fn test_joining_newlines() {
     let b = &Bump::new();
     let cases = vec![
@@ -1156,6 +1181,15 @@ mod tests {
       ),
     ];
     run(cases, b);
+  }
+
+  fn run_l(cases: Vec<(&str, InlineNodes)>) {
+    for (input, expected) in cases {
+      let mut parser = Parser::new(leaked_bump(), input);
+      let mut block = parser.read_lines().unwrap();
+      let inlines = parser.parse_inlines(&mut block).unwrap();
+      assert_eq!(inlines, expected, from: input);
+    }
   }
 
   fn run(cases: Vec<(&str, InlineNodes)>, bump: &Bump) {

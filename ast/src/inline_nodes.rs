@@ -23,6 +23,7 @@ impl<'bmp> InlineNodes<'bmp> {
       Inline::InlinePassthrough(nodes) => text.extend(nodes.plain_text()),
       Inline::JoiningNewline => text.push(" "),
       Inline::LineBreak => {}
+      Inline::LineComment(_) => {}
       Inline::CalloutNum(_) => {}
       Inline::LitMono(string) => text.push(string),
       Inline::Mono(nodes) => text.extend(nodes.plain_text()),
@@ -52,6 +53,16 @@ impl<'bmp> InlineNodes<'bmp> {
       Some(Inline::JoiningNewline)
     ) {
       self.pop();
+    }
+  }
+
+  pub fn discard_trailing_newline(&mut self) {
+    if matches!(
+      self.last().map(|n| &n.content),
+      Some(Inline::JoiningNewline)
+    ) {
+      let idx = self.len() - 1;
+      self.0[idx].content = Inline::Discarded;
     }
   }
 }

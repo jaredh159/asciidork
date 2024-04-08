@@ -27,6 +27,7 @@ pub enum Inline<'bmp> {
   CalloutNum(Callout),
   CalloutTuck(BumpString<'bmp>),
   LineBreak,
+  LineComment(BumpString<'bmp>),
   LitMono(SourceString<'bmp>),
   Mono(InlineNodes<'bmp>),
   MultiCharWhitespace(BumpString<'bmp>),
