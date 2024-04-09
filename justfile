@@ -21,5 +21,5 @@ check:
 reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm
 
-minor:
-  @cargo workspaces publish minor --message "release v%v" --no-individual-tags
+publish type:
+  @cargo workspaces publish {{type}} --message "release v%v" --no-individual-tags
