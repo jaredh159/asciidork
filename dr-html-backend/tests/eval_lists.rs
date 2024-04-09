@@ -714,3 +714,26 @@ test_eval!(
 Doc Writer &lt;doc.writer@asciidoc.org&gt;
 v1.0, 2022-01-01</pre></div></div></li></ul></div>"#
 );
+
+test_eval!(
+  list_items_separated_by_comment_block,
+  adoc! {r#"
+    * first item
+    +
+    ////
+    A comment block in a list.
+
+    Notice it's attached to the preceding list item.
+    ////
+
+    * second item
+  "#},
+  html! {r#"
+    <div class="ulist">
+      <ul>
+        <li><p>first item</p></li>
+        <li><p>second item</p></li>
+      </ul>
+    </div>
+  "#}
+);

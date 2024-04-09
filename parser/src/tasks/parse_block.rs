@@ -194,10 +194,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     mut lines: ContiguousLines<'bmp, 'src>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
-    let block_context = meta.block_paragraph_context(&mut lines);
-
+    let context = meta.block_paragraph_context(&mut lines);
     // TODO: probably a better stack-like context API is possible here...
-    let restore_subs = self.ctx.set_subs_for(block_context, &meta);
+    let restore_subs = self.ctx.set_subs_for(context, &meta);
     let inlines = self.parse_inlines(&mut lines)?;
     self.ctx.subs = restore_subs;
 
@@ -205,11 +204,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let Some(end) = inlines.last_loc_end() else {
       return Ok(None);
     };
+
+    let content = if context == Context::Comment {
+      // PERF: could squeeze out some speed by not parsing inlines
+      Content::Empty(EmptyMetadata::None)
+    } else {
+      Content::Simple(inlines)
+    };
+
     Ok(Some(Block {
       loc: SourceLocation::new(meta.start, end),
       meta,
-      context: block_context,
-      content: Content::Simple(inlines),
+      context,
+      content,
     }))
   }
 

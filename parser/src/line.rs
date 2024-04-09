@@ -31,6 +31,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.all_tokens.last()
   }
 
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self.last_token().map(|t| t.loc)
+  }
+
   pub fn nth_token(&self, n: usize) -> Option<&Token<'src>> {
     self.all_tokens.get(self.pos + n)
   }

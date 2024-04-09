@@ -40,6 +40,43 @@ fn test_parse_comment_block() {
 }
 
 #[test]
+fn test_parse_comment_style_block() {
+  assert_block!(
+    adoc! {"
+      [comment]
+      --
+      A comment block.
+
+      Notice it's a delimited block.
+      --
+    "},
+    Block {
+      meta: ChunkMeta::new(Some(attrs::pos("comment", 1..8)), None, 0),
+      context: Context::Comment,
+      content: Content::Empty(EmptyMetadata::None),
+      ..empty_block(0..64)
+    }
+  );
+}
+
+#[test]
+fn test_parse_paragraph_comment_block() {
+  assert_block!(
+    adoc! {"
+      [comment]
+      A paragraph comment
+      Like all paragraphs, the lines must be contiguous.
+    "},
+    Block {
+      meta: ChunkMeta::new(Some(attrs::pos("comment", 1..8)), None, 0),
+      context: Context::Comment,
+      content: Content::Empty(EmptyMetadata::None),
+      ..empty_block(0..80)
+    }
+  );
+}
+
+#[test]
 fn test_parse_passthrough() {
   assert_block!(
     adoc! {"

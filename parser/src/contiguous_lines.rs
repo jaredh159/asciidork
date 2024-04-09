@@ -110,6 +110,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     }
   }
 
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self.reversed_lines.first().and_then(|line| line.last_loc())
+  }
+
   pub fn is_quoted_paragraph(&self) -> bool {
     use TokenKind::*;
     if self.reversed_lines.len() < 2 {

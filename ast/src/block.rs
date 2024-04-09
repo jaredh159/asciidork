@@ -119,6 +119,7 @@ impl BlockContext {
       "listing" | "source" => Some(BlockContext::Listing),
       "literal" => Some(BlockContext::Literal),
       "pass" => Some(BlockContext::Passthrough),
+      "comment" => Some(BlockContext::Comment),
       _ => Self::derive_admonition(string),
     }
   }
