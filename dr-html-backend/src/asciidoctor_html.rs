@@ -130,12 +130,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_simple_block_content(&mut self, _children: &[InlineNode], block: &Block) {
     if block.context == BlockContext::Verse {
       self.newlines = Newlines::Preserve;
-    } else if block
-      .meta
-      .attrs
-      .as_ref()
-      .map_or(false, |a| a.has_option("hardbreaks"))
-    {
+    } else if block.has_attr_option("hardbreaks") {
       self.newlines = Newlines::JoinWithBreak;
     }
   }
@@ -232,12 +227,27 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["exampleblock"], &block.meta.attrs);
+    if block.has_attr_option("collapsible") {
+      self.open_element("details", &[], &block.meta.attrs);
+      if block.has_attr_option("open") {
+        self.html.pop();
+        self.push_str(" open>");
+      }
+      self.push_str(r#"<summary class="title">"#);
+      self.push_str(block.meta.title.as_ref().map_or("Details", |s| &s.src));
+      self.push_str("</summary>");
+    } else {
+      self.open_element("div", &["exampleblock"], &block.meta.attrs);
+    }
     self.push_str(r#"<div class="content">"#);
   }
 
-  fn exit_example_block(&mut self, _block: &Block, _content: &BlockContent) {
-    self.push_str("</div></div>");
+  fn exit_example_block(&mut self, block: &Block, _content: &BlockContent) {
+    if block.has_attr_option("collapsible") {
+      self.push_str("</div></details>");
+    } else {
+      self.push_str("</div></div>");
+    }
   }
 
   fn enter_open_block(&mut self, block: &Block, _content: &BlockContent) {
@@ -355,7 +365,7 @@ impl Backend for AsciidoctorHtml {
       }
     }
 
-    if attrs.map_or(false, |attrs| attrs.has_option("reversed")) {
+    if block.has_attr_option("reversed") {
       self.push_str(" reversed>");
     } else {
       self.push_str(">");
@@ -625,7 +635,7 @@ impl Backend for AsciidoctorHtml {
     self.open_element("div", &["imageblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
     let mut has_link = false;
-    if let Some(href) = &block.meta.attrs.as_ref().and_then(|a| a.named("link")) {
+    if let Some(href) = &block.named_attr("link") {
       self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
       has_link = true;
     }

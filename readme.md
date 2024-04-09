@@ -63,7 +63,7 @@ Be sure to pop the dev tools to see timing info.
 
 > [!WARNING]
 > Asciidork is _far_ from complete. It implements a non-trivial (perhaps
-> majority?) of the documented behavior of Asciidoc, but there are many unfinished areas,
+> majority?) of the documented behavior of Asciidoc, but there are several unfinished areas,
 > missing error handling, edge cases galore! Consider it a technology preview only for
 > now.
 
@@ -72,8 +72,8 @@ Known **unfinished or unimplemented** areas include:
 - [ ] Tables
 - [ ] Cross References
 - [ ] STEM
-- [ ] Verses
-- [ ] Collapsible blocks
+- [ ] Source highlighting
+- [ ] Include directives
 - [ ] Automatic Table of Contents
 - [ ] All entity refs
 - [ ] ...probably a good bit more...

@@ -116,6 +116,13 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       backend.exit_compound_block_content(blocks, block);
       backend.exit_example_block(block, &block.content);
     }
+    (Context::Example, Content::Simple(children)) => {
+      backend.enter_example_block(block, &block.content);
+      backend.enter_simple_block_content(children, block);
+      children.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_simple_block_content(children, block);
+      backend.exit_example_block(block, &block.content);
+    }
     (
       Context::AdmonitionTip
       | Context::AdmonitionNote

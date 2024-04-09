@@ -72,7 +72,9 @@ bump-allocated version
 - inside listing blocks, newlines are preserved, but DR. seems to trim leading/trailing
   newlines, and only honor those between, test "----\n\n\nfoo\n\nbar\n\n\n----", is this
   "spec", or just an accident/bug? (dork does not work this way currently)
-- thematic break doesn't seem to support an attr list for adding classes to it?
+- thematic break doesn't seem to support an attr list for adding classes to it? oddly,
+  there's a test in asciidoctor showing its supported, but i can't seem to get it to work
+  with the latest ruby cli
 - is there a difference between DocType::Inline and `--embedded` flag in asciidoctor cli?
 
 ## weirdnesses...

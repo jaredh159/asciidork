@@ -19,4 +19,11 @@ impl<'bmp> ChunkMeta<'bmp> {
   ) -> Self {
     Self { title, attrs, start }
   }
+
+  pub fn has_attr_option(&self, name: &str) -> bool {
+    self
+      .attrs
+      .as_ref()
+      .map_or(false, |attrs| attrs.has_option(name))
+  }
 }
