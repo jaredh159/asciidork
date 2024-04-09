@@ -581,12 +581,25 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   fn should_stop_at(&self, line: &Line<'bmp, 'src>) -> bool {
+    if line.current_is(DelimiterLine) && !self.ctx.subs.callouts() {
+      return true;
+    }
+
     // description list
-    (self.ctx.list.stack.parsing_description_list() && (line.starts_description_list_item()) || line.is_list_continuation())
-      // list continuation
-      || (self.ctx.list.parsing_continuations && line.is_list_continuation())
-      // ending delimited block
-      || (self.ctx.delimiter.is_some() && line.current_is(DelimiterLine))
+    (
+      self.ctx.list.stack.parsing_description_list()
+      && line.starts_description_list_item() || line.is_list_continuation()
+    )
+
+    // list continuation
+    || (self.ctx.list.parsing_continuations && line.is_list_continuation())
+
+    // special case: ending verbatim delimited block, non-matching delimiters
+    // within the verbatim block are rendered as is
+    || (
+      self.ctx.delimiter.is_some()
+      && self.ctx.delimiter == line.current_token().and_then(|t| t.to_delimeter())
+    )
   }
 
   fn push_callout_tuck(

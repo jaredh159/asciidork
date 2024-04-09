@@ -231,58 +231,52 @@ fn test_finish_parsing_colist_advances() {
   );
 }
 
-#[test]
-fn test_skipped_first_conum_in_list() {
-  assert_error!(
-    adoc! {r#"
-      ----
-      int x; <1>
-      int y; <2>
-      ----
-      <2> foo
-    "#},
-    error! {"
-      5: <2> foo
-         ^^^ Unexpected callout number, expected `<1>`
-    "}
-  );
-}
+test_error!(
+  skipped_first_conum_in_list,
+  adoc! {r#"
+    ----
+    int x; <1>
+    int y; <2>
+    ----
+    <2> foo
+  "#},
+  error! {"
+    5: <2> foo
+       ^^^ Unexpected callout number, expected `<1>`
+  "}
+);
 
-#[test]
-fn test_skipped_conum_in_list() {
-  assert_error!(
-    adoc! {r#"
-      ----
-      int x; <1>
-      int y; <2>
-      int z; <3>
-      ----
-      <1> foo
-      <3> foo
-    "#},
-    error! {"
-      7: <3> foo
-         ^^^ Unexpected callout number, expected `<2>`
-    "}
-  );
-}
+test_error!(
+  skipped_conum_in_list,
+  adoc! {r#"
+    ----
+    int x; <1>
+    int y; <2>
+    int z; <3>
+    ----
+    <1> foo
+    <3> foo
+  "#},
+  error! {"
+    7: <3> foo
+       ^^^ Unexpected callout number, expected `<2>`
+  "}
+);
 
-#[test]
-fn test_unexpected_conum() {
-  assert_error!(
-    adoc! {r#"
-      ----
-      int x; <1>
-      ----
-      <1> foo
-      <2> foo
-    "#},
-    error! {"
-      5: <2> foo
-         ^^^ No callout found for number `2`
-    "}
-  );
-}
+test_error!(
+  unexpected_conum,
+  adoc! {r#"
+    ----
+    int x; <1>
+    ----
+    <1> foo
+    <2> foo
+  "#},
+  error! {"
+    5: <2> foo
+       ^^^ No callout found for number `2`
+  "}
+);
 
 // helpers
 

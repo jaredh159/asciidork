@@ -68,7 +68,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.err_at(message, loc.start, loc.end)
   }
 
-  pub(crate) fn err_token_start(&self, message: &'static str, token: &Token) -> Result<()> {
+  pub(crate) fn err_token_full(&self, message: impl Into<String>, token: &Token) -> Result<()> {
+    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc.start);
+    self.handle_err(Diagnostic {
+      line_num,
+      line: self.lexer.line_of(token.loc.start).to_string(),
+      message: message.into(),
+      underline_start: offset,
+      underline_width: token.lexeme.len(),
+    })
+  }
+
+  pub(crate) fn err_token_start(&self, message: impl Into<String>, token: &Token) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(token.loc.start);
     self.handle_err(Diagnostic {
       line_num,

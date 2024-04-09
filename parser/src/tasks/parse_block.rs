@@ -152,14 +152,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       self.restore_lines(block);
       token.loc.end
     } else {
-      let end = content.last_loc().unwrap_or(delimiter_token.loc).end;
-      let message = format!(
-        "^ Unclosed delimiter block, expected `{}` after this line, opened on line {}",
-        delimiter_token.lexeme,
-        self.lexer.line_number(delimiter_token.loc.start)
-      );
-      self.err_at(message, end, end)?;
-      end
+      self.err_token_full("This delimiter was never closed", &delimiter_token)?;
+      content.last_loc().unwrap_or(delimiter_token.loc).end
     };
     self.ctx.delimiter = prev;
     Ok(Some(Block {

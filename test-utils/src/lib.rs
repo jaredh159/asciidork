@@ -180,6 +180,16 @@ macro_rules! assert_error {
 }
 
 #[macro_export]
+macro_rules! test_error {
+  ($name:ident, $input:expr, $expected:expr) => {
+    #[test]
+    fn $name() {
+      assert_error!($input, $expected);
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! assert_eq {
   ($left:expr, $right:expr$(,)?) => {{
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");

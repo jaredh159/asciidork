@@ -603,6 +603,28 @@ test_eval!(
   "#}
 );
 
+test_eval!(
+  delimited_unspaced_from_paragraph,
+  adoc! {r#"
+    foobar
+    ====
+    baz
+    ====
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>foobar</p>
+    </div>
+    <div class="exampleblock">
+      <div class="content">
+        <div class="paragraph">
+          <p>baz</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
 enum SubstrTest {
   Contains(&'static str),
   DoesNotContain(&'static str),

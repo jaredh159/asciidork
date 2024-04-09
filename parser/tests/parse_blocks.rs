@@ -453,16 +453,14 @@ fn test_parse_multi_para_delimited_sidebar_block() {
   );
 }
 
-#[test]
-fn test_unclosed_delimited_block_err() {
-  assert_error!(
-    adoc! {"
-        --
-        foo
-      "},
-    error! {"
-        2: foo
-              ^ Unclosed delimiter block, expected `--` after this line, opened on line 1
-      "}
-  );
-}
+test_error!(
+  unclosed_delimited_block_err,
+  adoc! {"
+    --
+    foo
+  "},
+  error! {"
+    1: --
+       ^^ This delimiter was never closed
+  "}
+);
