@@ -6,6 +6,7 @@ pub struct ParseContext<'bmp> {
   pub delimiter: Option<Delimiter>,
   pub list: ListContext,
   pub section_level: u8,
+  pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
   callouts: BumpVec<'bmp, Callout>,
 }
@@ -17,6 +18,7 @@ impl<'bmp> ParseContext<'bmp> {
       delimiter: None,
       list: ListContext::default(),
       section_level: 0,
+      can_nest_blocks: true,
       callouts: bvec![in bump],
       custom_line_comment: None,
     }

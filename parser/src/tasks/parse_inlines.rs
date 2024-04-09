@@ -581,7 +581,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   fn should_stop_at(&self, line: &Line<'bmp, 'src>) -> bool {
-    if line.current_is(DelimiterLine) && !self.ctx.subs.callouts() {
+    if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
       return true;
     }
 

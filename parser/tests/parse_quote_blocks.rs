@@ -115,3 +115,36 @@ fn test_parse_delimited_blockquote() {
   };
   assert_block!(input, expected);
 }
+
+#[test]
+fn test_delimited_verse_block() {
+  assert_block!(
+    adoc! {"
+      [verse,author,location]
+      ____
+      foo
+      bar
+      ____
+    "},
+    Block {
+      meta: ChunkMeta {
+        attrs: Some(AttrList {
+          positional: vecb![
+            Some(nodes![node!("verse"; 1..6)]),
+            Some(nodes![node!("author"; 7..13)]),
+            Some(nodes![node!("location"; 14..22)]),
+          ],
+          ..attr_list!(0..23)
+        }),
+        ..ChunkMeta::default()
+      },
+      context: Context::Verse,
+      content: Content::Simple(nodes![
+        node!("foo"; 29..32),
+        node!(JoiningNewline, 32..33),
+        node!("bar"; 33..36),
+      ]),
+      ..empty_block(0..41)
+    }
+  );
+}

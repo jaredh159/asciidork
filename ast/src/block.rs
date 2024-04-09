@@ -120,6 +120,7 @@ impl BlockContext {
       "literal" => Some(BlockContext::Literal),
       "pass" => Some(BlockContext::Passthrough),
       "comment" => Some(BlockContext::Comment),
+      "verse" => Some(BlockContext::Verse),
       _ => Self::derive_admonition(string),
     }
   }

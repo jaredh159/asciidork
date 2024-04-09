@@ -66,7 +66,7 @@ test_eval!(
 );
 
 test_eval!(
-  xskipping_paragraph_comment,
+  skipping_inner_paragraph_comment,
   adoc! {r#"
     ====
     para1

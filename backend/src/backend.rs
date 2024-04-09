@@ -28,6 +28,8 @@ pub trait Backend {
   fn exit_example_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_quote_block(&mut self, block: &Block, content: &BlockContent);
   fn exit_quote_block(&mut self, block: &Block, content: &BlockContent);
+  fn enter_verse_block(&mut self, block: &Block, content: &BlockContent);
+  fn exit_verse_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_listing_block(&mut self, block: &Block, content: &BlockContent);
   fn exit_listing_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_literal_block(&mut self, block: &Block, content: &BlockContent);

@@ -115,7 +115,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     // manually gather all (including empty) lines until the end delimiter
     let content = if matches!(
       context,
-      Context::Listing | Context::Literal | Context::Passthrough | Context::Comment
+      Context::Listing
+        | Context::Literal
+        | Context::Passthrough
+        | Context::Comment
+        | Context::Verse
     ) {
       let mut lines = self
         .read_lines_until(delimiter)
@@ -132,9 +136,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         self.restore_lines(lines);
         Content::Empty(EmptyMetadata::None)
       } else {
+        self.ctx.can_nest_blocks = false;
         let simple = Content::Simple(self.parse_inlines(&mut lines)?);
-        self.restore_lines(lines);
+        self.ctx.can_nest_blocks = true;
         self.ctx.custom_line_comment = None;
+        self.restore_lines(lines);
         simple
       }
     } else {

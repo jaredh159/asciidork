@@ -148,6 +148,12 @@ macro_rules! html {
       .replace_all(expected, "")
       .to_string()
   }};
+  ($outer:expr, $pre:expr) => {{
+    let outer = ::indoc::indoc!($outer);
+    let pre = ::indoc::indoc!($pre).trim();
+    let sans_newlines = test_utils::NEWLINES_RE.replace_all(outer, "").to_string();
+    sans_newlines.replace("{}", &pre).to_string()
+  }};
 }
 
 #[macro_export]

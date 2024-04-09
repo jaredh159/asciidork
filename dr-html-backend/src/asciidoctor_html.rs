@@ -128,7 +128,9 @@ impl Backend for AsciidoctorHtml {
   fn exit_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
 
   fn enter_simple_block_content(&mut self, _children: &[InlineNode], block: &Block) {
-    if block
+    if block.context == BlockContext::Verse {
+      self.newlines = Newlines::Preserve;
+    } else if block
       .meta
       .attrs
       .as_ref()
@@ -197,22 +199,36 @@ impl Backend for AsciidoctorHtml {
     self.push_str("<blockquote>");
   }
 
+  fn exit_quoted_paragraph(&mut self, _block: &Block, attr: &str, cite: Option<&str>) {
+    self.exit_attributed(BlockContext::BlockQuote, Some(attr), cite);
+  }
+
   fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
     self.visit_block_title(block.meta.title.as_deref(), None);
     self.push_str("<blockquote>");
   }
 
-  fn exit_quoted_paragraph(&mut self, _block: &Block, attr: &str, cite: Option<&str>) {
-    self.exit_blockquote(Some(attr), cite);
-  }
-
   fn exit_quote_block(&mut self, block: &Block, _content: &BlockContent) {
     if let Some(attrs) = &block.meta.attrs {
-      self.exit_blockquote(attrs.str_positional_at(1), attrs.str_positional_at(2));
+      self.exit_attributed(
+        block.context,
+        attrs.str_positional_at(1),
+        attrs.str_positional_at(2),
+      );
     } else {
-      self.exit_blockquote(None, None);
+      self.exit_attributed(block.context, None, None);
     }
+  }
+
+  fn enter_verse_block(&mut self, block: &Block, _content: &BlockContent) {
+    self.open_element("div", &["verseblock"], &block.meta.attrs);
+    self.visit_block_title(block.meta.title.as_deref(), None);
+    self.push_str(r#"<pre class="content">"#);
+  }
+
+  fn exit_verse_block(&mut self, block: &Block, content: &BlockContent) {
+    self.exit_quote_block(block, content)
   }
 
   fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
@@ -817,8 +833,17 @@ impl AsciidoctorHtml {
     self.push_str(r#"</title>"#);
   }
 
-  fn exit_blockquote(&mut self, attribution: Option<&str>, cite: Option<&str>) {
-    self.push_str("</blockquote>");
+  fn exit_attributed(
+    &mut self,
+    context: BlockContext,
+    attribution: Option<&str>,
+    cite: Option<&str>,
+  ) {
+    if context == BlockContext::BlockQuote {
+      self.push_str("</blockquote>");
+    } else {
+      self.push_str("</pre>");
+    }
     if let Some(attribution) = attribution {
       self.push_str(r#"<div class="attribution">&#8212; "#);
       self.push_str(attribution);
