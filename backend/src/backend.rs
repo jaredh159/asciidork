@@ -66,6 +66,7 @@ pub trait Backend {
   fn exit_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
   fn enter_compound_block_content(&mut self, children: &[Block], block: &Block);
   fn exit_compound_block_content(&mut self, children: &[Block], block: &Block);
+  fn visit_thematic_break(&mut self, block: &Block);
 
   /// inlines
   fn visit_inline_text(&mut self, text: &str);

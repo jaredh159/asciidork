@@ -442,6 +442,10 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</em>");
   }
 
+  fn visit_thematic_break(&mut self, block: &Block) {
+    self.open_element("hr", &[], &block.meta.attrs);
+  }
+
   fn visit_inline_text(&mut self, text: &str) {
     self.push_str(text);
   }

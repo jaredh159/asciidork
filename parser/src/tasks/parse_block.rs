@@ -66,6 +66,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           }));
         }
       }
+      SingleQuote if lines.current().map_or(false, |l| l.src == "'''") => {
+        let end = lines.consume_current().unwrap().last_loc().unwrap().end;
+        self.restore_lines(lines);
+        return Ok(Some(Block {
+          loc: SourceLocation::new(meta.start, end),
+          meta,
+          context: Context::ThematicBreak,
+          content: Content::Empty(EmptyMetadata::None),
+        }));
+      }
       _ => {}
     }
 

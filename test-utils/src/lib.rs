@@ -36,6 +36,14 @@ macro_rules! assert_block {
 }
 
 #[macro_export]
+macro_rules! assert_blocks {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let blocks = parse_blocks!($input);
+    assert_eq!(blocks, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_section {
   ($input:expr, $expected:expr$(,)?) => {{
     let block = parse_section!($input);
@@ -138,6 +146,14 @@ pub fn src(text: &'static str, range: Range<usize>) -> SourceString<'static> {
     BumpString::from_str_in(text, leaked_bump()),
     SourceLocation::new(range.start, range.end),
   )
+}
+
+pub fn simple_text_block(text: &'static str, range: Range<usize>) -> Block<'static> {
+  Block {
+    context: BlockContext::Paragraph,
+    content: BlockContent::Simple(nodes![node!(text; range)]),
+    ..empty_block(range)
+  }
 }
 
 #[macro_export]
@@ -338,6 +354,14 @@ pub mod attrs {
     attrs.loc.start = range.start - 1;
     attrs.loc.end = range.end + 1;
     attrs.positional.push(Some(nodes![node!(text; range)]));
+    attrs
+  }
+
+  pub fn role(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<'static> {
+    let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
+    attrs.loc.start = range.start - 2;
+    attrs.loc.end = range.end + 1;
+    attrs.roles.push(src(text, range));
     attrs
   }
 }

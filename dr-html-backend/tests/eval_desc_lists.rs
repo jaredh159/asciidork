@@ -17,6 +17,32 @@ test_eval!(
 );
 
 test_eval!(
+  thematic_break_separates_desc_lists,
+  adoc! {r#"
+    foo:: bar
+
+    '''
+
+    baz:: qux
+  "#},
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">foo</dt>
+        <dd><p>bar</p></dd>
+      </dl>
+    </div>
+    <hr>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">baz</dt>
+        <dd><p>qux</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+test_eval!(
   simple_description_list_2,
   adoc! {r#"
     foo:: bar

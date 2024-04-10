@@ -232,6 +232,9 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       backend.exit_simple_block_content(children, block);
       backend.exit_passthrough_block(block, &block.content);
     }
+    (Context::ThematicBreak, _) => {
+      backend.visit_thematic_break(block);
+    }
     (Context::Comment, _) => {}
     _ => {
       dbg!(block.context, &block.content);
