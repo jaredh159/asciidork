@@ -446,6 +446,10 @@ impl Backend for AsciidoctorHtml {
     self.open_element("hr", &[], &block.meta.attrs);
   }
 
+  fn visit_page_break(&mut self, _block: &Block) {
+    self.push_str(r#"<div style="page-break-after: always;"></div>"#);
+  }
+
   fn visit_inline_text(&mut self, text: &str) {
     self.push_str(text);
   }

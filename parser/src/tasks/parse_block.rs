@@ -66,15 +66,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           }));
         }
       }
-      SingleQuote if lines.current().map_or(false, |l| l.src == "'''") => {
-        let end = lines.consume_current().unwrap().last_loc().unwrap().end;
-        self.restore_lines(lines);
-        return Ok(Some(Block {
-          loc: SourceLocation::new(meta.start, end),
-          meta,
-          context: Context::ThematicBreak,
-          content: Content::Empty(EmptyMetadata::None),
-        }));
+      SingleQuote if lines.current_satisfies(|line| line.src == "'''") => {
+        return self.parse_break(Context::ThematicBreak, lines, meta);
+      }
+      LessThan if lines.current_satisfies(|line| line.src == "<<<") => {
+        return self.parse_break(Context::PageBreak, lines, meta);
       }
       _ => {}
     }
@@ -259,6 +255,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         attr,
         cite,
       },
+    }))
+  }
+
+  fn parse_break(
+    &mut self,
+    context: BlockContext,
+    mut lines: ContiguousLines<'bmp, 'src>,
+    meta: ChunkMeta<'bmp>,
+  ) -> Result<Option<Block<'bmp>>> {
+    let end = lines.consume_current().unwrap().last_loc().unwrap().end;
+    self.restore_lines(lines);
+    Ok(Some(Block {
+      loc: SourceLocation::new(meta.start, end),
+      meta,
+      context,
+      content: Content::Empty(EmptyMetadata::None),
     }))
   }
 }

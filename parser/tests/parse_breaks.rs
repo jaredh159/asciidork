@@ -98,3 +98,34 @@ fn test_invalid_break_not_preceded_by_empty_line() {
     }],
   );
 }
+
+#[test]
+fn test_page_break() {
+  assert_block!(
+    "<<<",
+    Block {
+      context: Context::PageBreak,
+      content: Content::Empty(EmptyMetadata::None),
+      ..empty_block(0..3)
+    }
+  );
+}
+
+#[test]
+fn test_page_break_w_attrs() {
+  assert_block!(
+    adoc! {"
+      [%always]
+      <<<
+    "},
+    Block {
+      meta: ChunkMeta {
+        attrs: Some(attrs::opt("always", 2..8)),
+        ..ChunkMeta::empty(0)
+      },
+      context: Context::PageBreak,
+      content: Content::Empty(EmptyMetadata::None),
+      ..empty_block(0..13)
+    }
+  );
+}

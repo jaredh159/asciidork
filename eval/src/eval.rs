@@ -235,6 +235,9 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
     (Context::ThematicBreak, _) => {
       backend.visit_thematic_break(block);
     }
+    (Context::PageBreak, _) => {
+      backend.visit_page_break(block);
+    }
     (Context::Comment, _) => {}
     _ => {
       dbg!(block.context, &block.content);

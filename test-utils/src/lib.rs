@@ -364,4 +364,12 @@ pub mod attrs {
     attrs.roles.push(src(text, range));
     attrs
   }
+
+  pub fn opt(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<'static> {
+    let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
+    attrs.loc.start = range.start - 2;
+    attrs.loc.end = range.end + 1;
+    attrs.options.push(src(text, range));
+    attrs
+  }
 }

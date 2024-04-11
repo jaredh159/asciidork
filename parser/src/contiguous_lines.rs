@@ -25,6 +25,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.reversed_lines.last_mut()
   }
 
+  pub fn current_satisfies(&self, f: impl Fn(&Line<'bmp, 'src>) -> bool) -> bool {
+    self.current().map(f).unwrap_or(false)
+  }
+
   pub fn first(&self) -> Option<&Line<'bmp, 'src>> {
     self.reversed_lines.last()
   }

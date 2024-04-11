@@ -263,15 +263,18 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
         }
         Role => {
           self.attr.loc = self.attr.loc.incr_start(); // skip `.`
-          self.attr_list.roles.push(self.attr.take_src())
+          self.attr_list.roles.push(self.attr.take_src());
         }
         Id => {
           if self.attr_list.id.is_none() {
             self.attr.loc = self.attr.loc.incr_start(); // skip `#`
-            self.attr_list.id = Some(self.attr.take_src())
+            self.attr_list.id = Some(self.attr.take_src());
           }
         }
-        Option => self.attr_list.options.push(self.attr.take_src()),
+        Option => {
+          self.attr.loc = self.attr.loc.incr_start(); // skip `%`
+          self.attr_list.options.push(self.attr.take_src());
+        }
       }
       self.tokens.clear();
     }

@@ -41,3 +41,23 @@ test_eval!(
     </div>
   "#}
 );
+
+test_eval!(
+  basic_page_break,
+  adoc! {r#"
+    foo
+
+    <<<
+
+    bar
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>foo</p>
+    </div>
+    <div style="page-break-after: always;"></div>
+    <div class="paragraph">
+      <p>bar</p>
+    </div>
+  "#}
+);
