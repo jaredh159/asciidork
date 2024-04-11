@@ -154,7 +154,7 @@ fn test_parse_block_titles() {
     foo
   "};
   let expected = Block {
-    meta: ChunkMeta::new(None, Some(src("My Title", 1..9)), 0),
+    meta: ChunkMeta::new(None, Some(just("My Title", 1..9)), 0),
     context: Context::Paragraph,
     content: Content::Simple(nodes![node!("foo"; 10..13)]),
     ..empty_block(0..13)
@@ -400,7 +400,7 @@ fn test_nested_delimiter_blocks() {
     Block {
       context: Context::Sidebar,
       content: Content::Compound(vecb![Block {
-        meta: ChunkMeta::new(None, Some(src("Bar", 7..10)), 6),
+        meta: ChunkMeta::new(None, Some(just("Bar", 7..10)), 6),
         context: Context::Open,
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,

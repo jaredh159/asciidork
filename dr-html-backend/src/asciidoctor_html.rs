@@ -102,7 +102,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_section_heading(&mut self, section: &Section) {
-    let heading_html = self.stop_buffering();
+    let heading_html = self.take_buffer();
     let level_str = num_str!(section.level + 1);
     if !self.doc_attrs.is_unset("sectids") {
       let id = {
@@ -130,6 +130,14 @@ impl Backend for AsciidoctorHtml {
     if section.level == 1 {
       self.push_str(r#"<div class="sectionbody">"#);
     }
+  }
+
+  fn enter_block_title(&mut self, _title: &[InlineNode], _block: &Block) {
+    self.start_buffering();
+  }
+
+  fn exit_block_title(&mut self, _title: &[InlineNode], _block: &Block) {
+    self.stop_buffering();
   }
 
   fn enter_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
@@ -198,7 +206,7 @@ impl Backend for AsciidoctorHtml {
 
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
-    self.visit_block_title(block.meta.title.as_deref(), None);
+    self.render_block_title(&block.meta);
     self.push_str("<blockquote>");
   }
 
@@ -208,7 +216,7 @@ impl Backend for AsciidoctorHtml {
 
   fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
-    self.visit_block_title(block.meta.title.as_deref(), None);
+    self.render_block_title(&block.meta);
     self.push_str("<blockquote>");
   }
 
@@ -226,7 +234,7 @@ impl Backend for AsciidoctorHtml {
 
   fn enter_verse_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["verseblock"], &block.meta.attrs);
-    self.visit_block_title(block.meta.title.as_deref(), None);
+    self.render_block_title(&block.meta);
     self.push_str(r#"<pre class="content">"#);
   }
 
@@ -242,7 +250,11 @@ impl Backend for AsciidoctorHtml {
         self.push_str(" open>");
       }
       self.push_str(r#"<summary class="title">"#);
-      self.push_str(block.meta.title.as_ref().map_or("Details", |s| &s.src));
+      if block.meta.title.is_some() {
+        self.push_buffered();
+      } else {
+        self.push_str("Details");
+      }
       self.push_str("</summary>");
     } else {
       self.open_element("div", &["exampleblock"], &block.meta.attrs);
@@ -283,7 +295,7 @@ impl Backend for AsciidoctorHtml {
       list_classes.push("checklist");
     }
     self.open_element("div", &wrap_classes, &block.meta.attrs);
-    self.visit_block_title(block.meta.title.as_deref(), None);
+    self.render_block_title(&block.meta);
     self.push_str("<ul");
     self.add_classes(&list_classes);
     self.push_ch('>');
@@ -352,7 +364,7 @@ impl Backend for AsciidoctorHtml {
     let class = custom.unwrap_or_else(|| list_class_from_depth(depth));
     let classes = &["olist", class];
     self.open_element("div", classes, &block.meta.attrs);
-    self.visit_block_title(block.meta.title.as_deref(), None);
+    self.render_block_title(&block.meta);
     self.push([r#"<ol class=""#, class, "\""]);
 
     if list_type != "1" {
@@ -429,7 +441,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_paragraph_block(&mut self, block: &Block) {
     if !self.state.contains(&VisitingSimpleTermDescription) {
       self.open_element("div", &["paragraph"], &block.meta.attrs);
-      self.visit_block_title(block.meta.title.as_deref(), None);
+      self.render_block_title(&block.meta);
     }
     self.push_str("<p>");
   }
@@ -633,7 +645,7 @@ impl Backend for AsciidoctorHtml {
     self.push_str(r#"<table><tr><td class="icon"><div class="title">"#);
     self.push_str(kind.str());
     self.push_str(r#"</div></td><td class="content">"#);
-    self.visit_block_title(block.meta.title.as_deref(), None);
+    self.render_block_title(&block.meta);
   }
 
   fn exit_admonition_block(&mut self, _kind: AdmonitionKind, _block: &Block) {
@@ -676,7 +688,7 @@ impl Backend for AsciidoctorHtml {
       self.fig_caption_num += 1;
       Some(Cow::Owned(format!("Figure {}. ", self.fig_caption_num)))
     };
-    self.visit_block_title(block.meta.title.as_deref(), prefix);
+    self.render_prefixed_block_title(&block.meta, prefix);
     self.push_str(r#"</div>"#);
   }
 
@@ -698,7 +710,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_footnote(&mut self, id: Option<&str>, _content: &[InlineNode]) {
-    let footnote = self.stop_buffering();
+    let footnote = self.take_buffer();
     let num = (self.footnotes.len() + 1).to_string();
     self.push_str(r#"<sup class="footnote""#);
     if let Some(id) = id {
@@ -733,6 +745,12 @@ impl AsciidoctorHtml {
     self.html.push_str(s);
   }
 
+  fn push_buffered(&mut self) {
+    let mut buffer = String::new();
+    mem::swap(&mut buffer, &mut self.alt_html);
+    self.push_str(&buffer);
+  }
+
   fn push_ch(&mut self, c: char) {
     self.html.push(c);
   }
@@ -759,13 +777,21 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn visit_block_title(&mut self, title: Option<&str>, prefix: Option<Cow<str>>) {
-    if let Some(title) = title {
+  fn render_block_title(&mut self, meta: &ChunkMeta) {
+    if meta.title.is_some() {
+      self.push_str(r#"<div class="title">"#);
+      self.push_buffered();
+      self.push_str("</div>");
+    }
+  }
+
+  fn render_prefixed_block_title(&mut self, meta: &ChunkMeta, prefix: Option<Cow<str>>) {
+    if meta.title.is_some() {
       self.push_str(r#"<div class="title">"#);
       if let Some(prefix) = prefix {
-        self.push_str(prefix.as_ref());
+        self.push_str(&prefix);
       }
-      self.push_str(title);
+      self.push_buffered();
       self.push_str("</div>");
     }
   }
@@ -912,7 +938,11 @@ impl AsciidoctorHtml {
     mem::swap(&mut self.html, &mut self.alt_html);
   }
 
-  fn stop_buffering(&mut self) -> String {
+  fn stop_buffering(&mut self) {
+    mem::swap(&mut self.html, &mut self.alt_html);
+  }
+
+  fn take_buffer(&mut self) -> String {
     mem::swap(&mut self.alt_html, &mut self.html);
     let mut buffered = String::new();
     mem::swap(&mut buffered, &mut self.alt_html);

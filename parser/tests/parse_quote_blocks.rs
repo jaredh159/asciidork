@@ -42,7 +42,7 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
         id: Some(src("foo", 11..14)),
         ..attr_list!(9..15)
       }),
-      Some(src("A Title", 1..8)),
+      Some(just("A Title", 1..8)),
       0,
     ),
     context: Context::QuotedParagraph,

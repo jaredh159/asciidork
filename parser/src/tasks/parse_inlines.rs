@@ -23,7 +23,7 @@ impl<'bmp> Accum<'bmp> {
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(super) fn parse_inlines(
+  pub(crate) fn parse_inlines(
     &mut self,
     lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<InlineNodes<'bmp>> {

@@ -176,7 +176,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         line if line.is_chunk_title() => {
           let mut line = lines.consume_current().unwrap();
           line.discard_assert(TokenKind::Dots);
-          title = Some(line.consume_to_string(self.bump));
+          title = Some(self.parse_inlines(&mut line.into_lines_in(self.bump))?);
         }
         line if line.is_attr_list() => {
           let mut line = lines.consume_current().unwrap();

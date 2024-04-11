@@ -36,19 +36,18 @@ pub fn visit<B: Backend>(document: Document, opts: Opts, backend: &mut B) {
 fn eval_section(section: &Section, backend: &mut impl Backend) {
   backend.enter_section(section);
   backend.enter_section_heading(section);
-  section
-    .heading
-    .iter()
-    .for_each(|node| eval_inline(node, backend));
+  section.heading.iter().for_each(|n| eval_inline(n, backend));
   backend.exit_section_heading(section);
-  section
-    .blocks
-    .iter()
-    .for_each(|block| eval_block(block, backend));
+  section.blocks.iter().for_each(|b| eval_block(b, backend));
   backend.exit_section(section);
 }
 
 fn eval_block(block: &Block, backend: &mut impl Backend) {
+  if let Some(title) = &block.meta.title {
+    backend.enter_block_title(title, block);
+    title.iter().for_each(|node| eval_inline(node, backend));
+    backend.exit_block_title(title, block);
+  }
   match (block.context, &block.content) {
     (Context::Paragraph, Content::Simple(children)) => {
       backend.enter_paragraph_block(block);
