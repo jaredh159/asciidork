@@ -59,3 +59,16 @@ fn test_sectioned_no_preamble() {
     }
   )
 }
+
+test_error!(
+  section_title_out_of_sequence,
+  adoc! {"
+    == ch 1
+
+    ==== ch 2
+  "},
+  error! {"
+    3: ==== ch 2
+       ^^^^ Section title out of sequence: expected level 2 `===`
+  "}
+);

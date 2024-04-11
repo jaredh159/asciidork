@@ -14,3 +14,22 @@ macro_rules! test_eval {
     }
   };
 }
+
+#[macro_export]
+macro_rules! test_eval_loose {
+  ($name:ident, $input:expr, $expected:expr) => {
+    #[test]
+    fn $name() {
+      let mut opts = ::asciidork_eval::Opts::embedded();
+      opts.strict = false;
+      let bump = &::asciidork_parser::prelude::Bump::new();
+      let parser = ::asciidork_parser::Parser::new_opts(bump, $input, opts);
+      let document = parser.parse().unwrap().document;
+      let actual = ::asciidork_eval::eval(
+        document,
+        opts,
+        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+      ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
+    }
+  };
+}

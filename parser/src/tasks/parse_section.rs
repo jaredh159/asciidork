@@ -25,11 +25,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let last_level = self.ctx.section_level;
     self.ctx.section_level = level;
     let mut heading_line = lines.consume_current().unwrap();
-    heading_line.discard_assert(TokenKind::EqualSigns);
+    let equals = heading_line.consume_current().unwrap();
     heading_line.discard_assert(TokenKind::Whitespace);
+
+    if level > last_level && level - last_level > 1 {
+      self.err_token_full(
+        format!(
+          "Section title out of sequence: expected level {} `{}`",
+          last_level + 1,
+          "=".repeat((last_level + 2) as usize)
+        ),
+        &equals,
+      )?;
+    }
+
     let heading = self.parse_inlines(&mut heading_line.into_lines_in(self.bump))?;
 
-    // blocks
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
     while let Some(inner) = self.parse_block()? {

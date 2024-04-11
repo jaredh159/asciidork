@@ -4,6 +4,7 @@ use std::str::FromStr;
 pub struct Opts {
   pub doc_type: DocType,
   pub attribute_missing: AttributeMissing,
+  pub strict: bool,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]

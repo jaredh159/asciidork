@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 asciidork-eval = { path = "../eval", version = "0.3.0" }
-asciidork-opts = { path = "../opts", version = "0.2.0" }
+asciidork-opts = { path = "../opts", version = "0.3.0" }
 asciidork-parser = { path = "../parser", version = "0.3.0" }
 asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.3.0" }
 colored = "2.0.4"

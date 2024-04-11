@@ -11,7 +11,7 @@ pub struct Parser<'bmp: 'src, 'src> {
   pub(super) peeked_meta: Option<ChunkMeta<'bmp>>,
   pub(super) ctx: ParseContext<'bmp>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
-  pub(super) bail: bool, // todo: naming...
+  pub(super) strict: bool, // todo: naming...
 }
 
 pub struct ParseResult<'bmp> {
@@ -35,8 +35,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       peeked_meta: None,
       ctx: ParseContext::new(bump),
       errors: RefCell::new(Vec::new()),
-      bail: true,
+      strict: true,
     }
+  }
+
+  pub fn new_opts(bump: &'bmp Bump, src: &'src str, opts: opts::Opts) -> Parser<'bmp, 'src> {
+    let mut p = Parser::new(bump, src);
+    p.strict = opts.strict;
+    p
   }
 
   pub(crate) fn debug_loc(&self, loc: SourceLocation) {

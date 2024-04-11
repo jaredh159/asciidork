@@ -115,13 +115,14 @@ dependencies = [
 
 [[package]]
 name = "asciidork-opts"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "asciidork-parser"
 version = "0.3.2"
 dependencies = [
  "asciidork-ast",
+ "asciidork-opts",
  "bumpalo",
  "indoc",
  "lazy_static",

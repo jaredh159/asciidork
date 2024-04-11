@@ -130,7 +130,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   fn handle_err(&self, err: Diagnostic) -> Result<()> {
-    if self.bail {
+    if self.strict {
       Err(err)
     } else {
       self.errors.borrow_mut().push(err);
