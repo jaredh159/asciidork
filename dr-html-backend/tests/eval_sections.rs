@@ -21,6 +21,34 @@ test_eval!(
 );
 
 test_eval!(
+  preamble_then_section,
+  adoc! {r#"
+    Preamble
+
+    == Section 1
+
+    Section Content.
+  "#},
+  html! {r#"
+    <div id="preamble">
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Preamble</p>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_section_1">Section 1</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Section Content.</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
   customized_id_and_prefix,
   adoc! {r#"
     :idprefix: foo_
@@ -32,30 +60,6 @@ test_eval!(
     <div class="sect1">
       <h2 id="foo_section-1">Section 1</h2>
       <div class="sectionbody"></div>
-    </div>
-  "#}
-);
-
-test_eval!(
-  section_w_preamble,
-  adoc! {r#"
-    Preamble
-
-    == Section 1
-
-    Section Content.
-  "#},
-  html! {r#"
-    <div class="paragraph">
-      <p>Preamble</p>
-    </div>
-    <div class="sect1">
-      <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Section Content.</p>
-        </div>
-      </div>
     </div>
   "#}
 );
@@ -94,6 +98,7 @@ test_eval!(
 test_eval!(
   sect_ids_disabled,
   adoc! {r#"
+    = Doc Title
     :sectids!:
 
     == Section 1

@@ -33,9 +33,13 @@ impl<'bmp> DocContent<'bmp> {
 
   pub fn ensure_sectioned(&mut self, bump: &'bmp Bump) {
     if let DocContent::Blocks(blocks) = self {
-      let preamble = std::mem::replace(blocks, BumpVec::new_in(bump));
+      let preamble = if blocks.is_empty() {
+        None
+      } else {
+        Some(std::mem::replace(blocks, BumpVec::new_in(bump)))
+      };
       let sections = BumpVec::with_capacity_in(1, bump);
-      *self = DocContent::Sectioned { preamble: Some(preamble), sections };
+      *self = DocContent::Sectioned { preamble, sections };
     }
   }
 

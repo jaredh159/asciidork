@@ -74,6 +74,14 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
+  fn enter_preamble(&mut self, _blocks: &[Block]) {
+    self.push_str(r#"<div id="preamble"><div class="sectionbody">"#);
+  }
+
+  fn exit_preamble(&mut self, _blocks: &[Block]) {
+    self.push_str("</div></div>");
+  }
+
   fn enter_section(&mut self, section: &Section) {
     let mut classes = SmallVec::<[&str; 5]>::from_slice(&[section::class(section)]);
     if let Some(roles) = section.meta.attrs.as_ref().map(|a| &a.roles) {

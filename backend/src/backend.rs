@@ -10,6 +10,8 @@ pub trait Backend {
   fn enter_document(&mut self, document: &Document, header_attrs: &AttrEntries, opts: Opts);
   fn exit_document(&mut self, document: &Document, header_attrs: &AttrEntries);
   fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry);
+  fn enter_preamble(&mut self, blocks: &[Block]);
+  fn exit_preamble(&mut self, blocks: &[Block]);
 
   // sections
   fn enter_section(&mut self, section: &Section);

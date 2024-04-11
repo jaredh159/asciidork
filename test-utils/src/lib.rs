@@ -28,6 +28,14 @@ macro_rules! assert_block_core {
 }
 
 #[macro_export]
+macro_rules! assert_doc_content {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let content = parse_doc_content!($input);
+    assert_eq!(content, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_block {
   ($input:expr, $expected:expr$(,)?) => {{
     let block = parse_single_block!($input);

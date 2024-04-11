@@ -23,7 +23,9 @@ pub fn visit<B: Backend>(document: Document, opts: Opts, backend: &mut B) {
     }
     DocContent::Sectioned { sections, preamble } => {
       if let Some(blocks) = preamble {
+        backend.enter_preamble(blocks);
         blocks.iter().for_each(|block| eval_block(block, backend));
+        backend.exit_preamble(blocks);
       }
       sections.iter().for_each(|sect| eval_section(sect, backend));
     }
