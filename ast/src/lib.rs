@@ -48,6 +48,7 @@ pub mod prelude {
   pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::doc_content::DocContent;
+  pub use crate::doc_header::{Author, DocHeader, DocTitle};
   pub use crate::inline::{CurlyKind, InlineNode, QuoteKind, SpecialCharKind};
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
   pub use crate::node::{Callout, Document, Section};

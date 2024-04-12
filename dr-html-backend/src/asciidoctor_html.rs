@@ -16,6 +16,7 @@ pub struct AsciidoctorHtml {
   pub(crate) newlines: Newlines,
   pub(crate) state: HashSet<EphemeralState>,
   pub(crate) autogen_conum: u8,
+  pub(crate) render_doc_header: bool,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
 }
@@ -32,8 +33,10 @@ impl Backend for AsciidoctorHtml {
       self.default_newlines = Newlines::JoinWithBreak
     }
     if opts.doc_type == DocType::Inline {
+      self.render_doc_header = attrs.is_set("showtitle");
       return;
     }
+    self.render_doc_header = !attrs.is_unset("showtitle");
     self.push_str(r#"<!DOCTYPE html><html"#);
     if !attrs.is_set("nolang") {
       self.push([r#" lang=""#, attrs.str_or("lang", "en"), "\""]);
@@ -61,7 +64,7 @@ impl Backend for AsciidoctorHtml {
     self.render_authors(&document.header);
     self.render_title(document, attrs);
     // TODO: stylesheets
-    self.push_str(r#"</head><body>"#);
+    self.push([r#"</head><body class=""#, opts.doc_type.to_str(), r#"">"#]);
   }
 
   fn exit_document(&mut self, _document: &Document, _header_attrs: &AttrEntries) {
@@ -70,6 +73,60 @@ impl Backend for AsciidoctorHtml {
     }
     if self.opts.doc_type != DocType::Inline {
       self.push_str("</body></html>");
+    }
+  }
+
+  fn enter_document_header(&mut self, _doc_header: &DocHeader) {
+    if self.render_doc_header {
+      self.push_str(r#"<div id="header">"#)
+    }
+  }
+
+  fn exit_document_header(&mut self, _doc_header: &DocHeader) {
+    if self.render_doc_header {
+      self.push_str("</div>");
+    }
+  }
+
+  fn enter_document_title(&mut self, _doc_title: &DocTitle) {
+    if self.render_doc_header {
+      self.push_str("<h1>")
+    } else {
+      self.start_buffering();
+    }
+  }
+
+  fn exit_document_title(&mut self, _doc_title: &DocTitle) {
+    if self.render_doc_header {
+      self.push_str("</h1>");
+    } else {
+      self.take_buffer(); // discard
+    }
+  }
+
+  fn visit_document_authors(&mut self, authors: &[Author]) {
+    if self.render_doc_header && !authors.is_empty() {
+      self.push_str(r#"<div class="details">"#);
+      for (idx, author) in authors.iter().enumerate() {
+        self.push_str(r#"<span id="author"#);
+        if idx > 0 {
+          self.push_str(&num_str!(idx + 1));
+        }
+        self.push([r#"" class="author">"#, &author.first_name]);
+        if let Some(middle_name) = &author.middle_name {
+          self.push([" ", middle_name]);
+        }
+        self.push([" ", &author.last_name, r#"</span><br>"#]);
+        if let Some(email) = &author.email {
+          self.push_str(r#"<span id="email"#);
+          if idx > 0 {
+            self.push_str(&num_str!(idx + 1));
+          }
+          self.push([r#"" class="email"><a href="mailto:"#, &email]);
+          self.push([r#"">"#, &email, "</a></span><br>"]);
+        }
+      }
+      self.push_str("</div>");
     }
   }
 

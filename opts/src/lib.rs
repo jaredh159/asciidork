@@ -1,3 +1,4 @@
+use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -23,6 +24,23 @@ pub enum DocType {
   Book,
   Manpage,
   Inline,
+}
+
+impl DocType {
+  pub const fn to_str(&self) -> &'static str {
+    match self {
+      Self::Article => "article",
+      Self::Book => "book",
+      Self::Manpage => "manpage",
+      Self::Inline => "inline",
+    }
+  }
+}
+
+impl Display for DocType {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.to_str())
+  }
 }
 
 impl FromStr for DocType {

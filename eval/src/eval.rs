@@ -17,6 +17,16 @@ pub fn visit<B: Backend>(document: Document, opts: Opts, backend: &mut B) {
     .map(|h| &h.attrs)
     .unwrap_or(&empty_attrs);
   backend.enter_document(&document, doc_attrs, opts);
+  if let Some(header) = &document.header {
+    backend.enter_document_header(header);
+    if let Some(title) = &header.title {
+      backend.enter_document_title(title);
+      title.heading.iter().for_each(|n| eval_inline(n, backend));
+      backend.exit_document_title(title);
+    }
+    backend.visit_document_authors(&header.authors);
+    backend.exit_document_header(header);
+  }
   match &document.content {
     DocContent::Blocks(blocks) => {
       blocks.iter().for_each(|block| eval_block(block, backend));

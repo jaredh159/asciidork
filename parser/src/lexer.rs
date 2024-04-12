@@ -339,6 +339,7 @@ impl<'src> Lexer<'src> {
         | "pass"
         | "btn"
         | "menu"
+        | "toc"
     )
   }
 

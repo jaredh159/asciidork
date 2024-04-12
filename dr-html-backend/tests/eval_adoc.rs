@@ -715,6 +715,7 @@ fn test_head_opts() {
 fn test_non_embedded() {
   let input = adoc! {r#"
     = *Document* _title_
+    Beyonce Smith; J Z <jz@you.com>
 
     foo
   "#};
@@ -726,9 +727,20 @@ fn test_non_embedded() {
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="generator" content="Asciidork">
+        <meta name="author" content="Beyonce Smith, J Z">
         <title>Document title</title>
       </head>
-      <body>
+      <body class="article">
+        <div id="header">
+          <h1><strong>Document</strong> <em>title</em></h1>
+          <div class="details">
+            <span id="author" class="author">Beyonce Smith</span><br>
+            <span id="author2" class="author">J Z</span><br>
+            <span id="email2" class="email">
+              <a href="mailto:jz@you.com">jz@you.com</a>
+            </span><br>
+          </div>
+        </div>
         <div class="paragraph">
           <p>foo</p>
         </div>
