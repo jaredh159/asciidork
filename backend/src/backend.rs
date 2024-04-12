@@ -44,6 +44,8 @@ pub trait Backend {
   fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn enter_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
   fn exit_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
+  fn enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block);
+  fn exit_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block);
 
   // lists
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8);

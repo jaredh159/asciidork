@@ -22,6 +22,7 @@ impl<'bmp> Document<'bmp> {
 pub struct Section<'bmp> {
   pub meta: ChunkMeta<'bmp>,
   pub level: u8,
+  pub id: Option<BumpString<'bmp>>,
   pub heading: InlineNodes<'bmp>,
   pub blocks: BumpVec<'bmp, Block<'bmp>>,
 }

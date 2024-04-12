@@ -16,7 +16,6 @@ pub struct AsciidoctorHtml {
   pub(crate) newlines: Newlines,
   pub(crate) state: HashSet<EphemeralState>,
   pub(crate) autogen_conum: u8,
-  pub(crate) section_ids: HashSet<String>,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
 }
@@ -97,27 +96,10 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div>");
   }
 
-  fn enter_section_heading(&mut self, _section: &Section) {
-    self.start_buffering();
-  }
-
-  fn exit_section_heading(&mut self, section: &Section) {
-    let heading_html = self.take_buffer();
+  fn enter_section_heading(&mut self, section: &Section) {
     let level_str = num_str!(section.level + 1);
-    if !self.doc_attrs.is_unset("sectids") {
-      let id = {
-        match section.meta.attrs.as_ref().and_then(|a| a.id.as_ref()) {
-          Some(id) => id.to_string(),
-          None => section::autogenerate_id(
-            &heading_html,
-            section::id_prefix(&self.doc_attrs),
-            section::id_separator(&self.doc_attrs),
-            &self.section_ids,
-          ),
-        }
-      };
-      self.push(["<h", &level_str, r#" id=""#, &id, "\">"]);
-      self.section_ids.insert(id);
+    if let Some(id) = &section.id {
+      self.push(["<h", &level_str, r#" id=""#, id, "\">"]);
     } else {
       self.push(["<h", &level_str, ">"]);
     }
@@ -125,7 +107,10 @@ impl Backend for AsciidoctorHtml {
       let prefix = section::number_prefix(section.level, &mut self.section_nums);
       self.push_str(&prefix);
     }
-    self.push_str(&heading_html);
+  }
+
+  fn exit_section_heading(&mut self, section: &Section) {
+    let level_str = num_str!(section.level + 1);
     self.push(["</h", &level_str, ">"]);
     if section.level == 1 {
       self.push_str(r#"<div class="sectionbody">"#);
@@ -277,6 +262,27 @@ impl Backend for AsciidoctorHtml {
 
   fn exit_open_block(&mut self, _block: &Block, _content: &BlockContent) {
     self.push_str("</div></div>");
+  }
+
+  fn enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block) {
+    let level_str = num_str!(level + 1);
+    if let Some(id) = id {
+      self.push(["<h", &level_str, r#" id=""#, id, "\""]);
+    } else {
+      self.push(["<h", &level_str]);
+    }
+    self.push_str(r#" class="discrete"#);
+    if let Some(roles) = block.meta.attrs.as_ref().map(|a| &a.roles) {
+      for role in roles {
+        self.push_ch(' ');
+        self.push_str(role);
+      }
+    }
+    self.push_str("\">");
+  }
+
+  fn exit_discrete_heading(&mut self, level: u8, _id: Option<&str>, _block: &Block) {
+    self.push(["</h", &num_str!(level + 1), ">"]);
   }
 
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], _depth: u8) {

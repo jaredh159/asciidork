@@ -50,6 +50,11 @@ pub enum EmptyMetadata<'bmp> {
     target: SourceString<'bmp>,
     attrs: AttrList<'bmp>,
   },
+  DiscreteHeading {
+    level: u8,
+    content: InlineNodes<'bmp>,
+    id: Option<BumpString<'bmp>>,
+  },
   None,
 }
 

@@ -233,6 +233,14 @@ fn eval_block(block: &Block, backend: &mut impl Backend) {
       backend.exit_simple_block_content(children, block);
       backend.exit_passthrough_block(block, &block.content);
     }
+    (
+      Context::DiscreteHeading,
+      Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),
+    ) => {
+      backend.enter_discrete_heading(*level, id.as_deref(), block);
+      content.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_discrete_heading(*level, id.as_deref(), block);
+    }
     (Context::ThematicBreak, _) => {
       backend.visit_thematic_break(block);
     }

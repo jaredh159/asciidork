@@ -17,7 +17,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     };
 
-    if meta.attrs_has_str_positional("discrete") {
+    if meta.attrs_has_str_positional("discrete") || meta.attrs_has_str_positional("float") {
       self.restore_peeked(lines, meta);
       return Ok(None);
     }
@@ -27,6 +27,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut heading_line = lines.consume_current().unwrap();
     let equals = heading_line.consume_current().unwrap();
     heading_line.discard_assert(TokenKind::Whitespace);
+    let id = self.section_id(heading_line.src, meta.attrs.as_ref());
 
     if level > last_level && level - last_level > 1 {
       self.err_token_full(
@@ -48,7 +49,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     self.ctx.section_level = last_level;
-    Ok(Some(Section { meta, level, heading, blocks }))
+    Ok(Some(Section { meta, level, id, heading, blocks }))
   }
 }
 
@@ -68,6 +69,7 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
+        id: Some(bstr("_foo")),
         heading: nodes![node!("foo"; 3..6)],
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
@@ -91,6 +93,7 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
+        id: Some(bstr("_one")),
         heading: nodes![node!("one"; 3..6)],
         blocks: vecb![Block {
           meta: ChunkMeta::empty(8),
@@ -98,6 +101,7 @@ mod tests {
           content: BlockContent::Section(Section {
             meta: ChunkMeta::empty(8),
             level: 2,
+            id: Some(bstr("_two")),
             heading: nodes![node!("two"; 12..15)],
             blocks: vecb![Block {
               context: BlockContext::Paragraph,
@@ -130,6 +134,7 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
+        id: Some(bstr("_one")),
         heading: nodes![node!("one"; 3..6)],
         blocks: b.vec([Block {
           context: BlockContext::Paragraph,
@@ -144,6 +149,7 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(13),
         level: 1,
+        id: Some(bstr("_two")),
         heading: nodes![node!("two"; 16..19)],
         blocks: b.vec([Block {
           context: BlockContext::Paragraph,

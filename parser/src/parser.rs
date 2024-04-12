@@ -140,6 +140,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
+    if let Some(DocHeader { ref attrs, .. }) = self.document.header {
+      self.ctx.attrs = attrs.clone();
+    }
 
     while let Some(chunk) = self.parse_chunk()? {
       match chunk {

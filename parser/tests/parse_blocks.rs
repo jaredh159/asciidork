@@ -77,6 +77,31 @@ fn test_parse_paragraph_comment_block() {
 }
 
 #[test]
+fn test_parse_discrete_heading() {
+  assert_block!(
+    adoc! {"
+      [discrete]
+      ==== A discrete heading
+    "},
+    Block {
+      meta: ChunkMeta::new(Some(attrs::pos("discrete", 1..9)), None, 0),
+      context: Context::DiscreteHeading,
+      content: Content::Empty(EmptyMetadata::DiscreteHeading {
+        level: 3,
+        content: just("A discrete heading", 16..34),
+        id: Some(bstr("_a_discrete_heading")),
+      }),
+      ..empty_block(0..34)
+    }
+  );
+}
+
+#[test]
+fn test_incomplete_heading_doesnt_panic() {
+  assert_block!("== ", simple_text_block("== ", 0..3));
+}
+
+#[test]
 fn test_parse_passthrough() {
   assert_block!(
     adoc! {"

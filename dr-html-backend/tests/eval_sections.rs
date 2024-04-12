@@ -125,6 +125,62 @@ test_eval_loose!(
 );
 
 test_eval!(
+  discrete_heading,
+  adoc! {r#"
+    == Section 1
+
+    Content.
+
+    [discrete]
+    ==== Section 2
+
+    Content.
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_section_1">Section 1</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Content.</p>
+        </div>
+        <h4 id="_section_2" class="discrete">Section 2</h4>
+        <div class="paragraph">
+          <p>Content.</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  discrete_heading_w_attrs,
+  adoc! {r#"
+    == Section 1
+
+    Content.
+
+    [discrete#cust_id.cust-class]
+    ==== Section 2
+
+    Content.
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_section_1">Section 1</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Content.</p>
+        </div>
+        <h4 id="cust_id" class="discrete cust-class">Section 2</h4>
+        <div class="paragraph">
+          <p>Content.</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
   sect_ids_disabled,
   adoc! {r#"
     = Doc Title

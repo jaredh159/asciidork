@@ -1,19 +1,24 @@
+use std::collections::HashSet;
+
 use crate::internal::*;
 
 #[derive(Debug)]
 pub struct ParseContext<'bmp> {
+  pub attrs: AttrEntries,
   pub subs: Substitutions,
   pub delimiter: Option<Delimiter>,
   pub list: ListContext,
   pub section_level: u8,
   pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
+  pub sect_ids: HashSet<BumpString<'bmp>>,
   callouts: BumpVec<'bmp, Callout>,
 }
 
 impl<'bmp> ParseContext<'bmp> {
   pub fn new(bump: &'bmp Bump) -> Self {
     ParseContext {
+      attrs: AttrEntries::new(),
       subs: Substitutions::default(),
       delimiter: None,
       list: ListContext::default(),
@@ -21,6 +26,7 @@ impl<'bmp> ParseContext<'bmp> {
       can_nest_blocks: true,
       callouts: bvec![in bump],
       custom_line_comment: None,
+      sect_ids: HashSet::new(),
     }
   }
 

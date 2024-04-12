@@ -64,7 +64,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn heading_level(&self) -> Option<u8> {
-    if self.starts_with_seq(&[EqualSigns, Whitespace]) {
+    if self.starts_with_seq(&[EqualSigns, Whitespace]) && self.num_tokens() > 2 {
       Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
     } else {
       None

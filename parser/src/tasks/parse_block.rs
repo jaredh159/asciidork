@@ -41,6 +41,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     } else if lines.starts_list() {
       return self.parse_list(lines, Some(meta)).map(Some);
+    } else if lines.current_satisfies(|line| line.is_heading()) {
+      return self.parse_discrete_heading(lines, meta);
     }
 
     match first_token.kind {
@@ -58,6 +60,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         let mut attr_entries = AttrEntries::new(); // TODO: this is a little weird...
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines, &mut attr_entries)? {
           self.restore_lines(lines);
+          self.ctx.attrs.insert(key.clone(), value.clone());
           return Ok(Some(Block {
             loc: SourceLocation::new(meta.start, end),
             meta,
@@ -80,6 +83,27 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     } else {
       self.parse_paragraph(lines, meta)
     }
+  }
+
+  fn parse_discrete_heading(
+    &mut self,
+    mut lines: ContiguousLines<'bmp, 'src>,
+    meta: ChunkMeta<'bmp>,
+  ) -> Result<Option<Block<'bmp>>> {
+    let mut line = lines.consume_current().unwrap();
+    let level = line.heading_level().unwrap();
+    line.discard_assert(TokenKind::EqualSigns);
+    line.discard_assert(TokenKind::Whitespace);
+    let id = self.section_id(line.src, meta.attrs.as_ref());
+    let content = self.parse_inlines(&mut line.into_lines_in(self.bump))?;
+    let end = content.last_loc().unwrap().end;
+    self.restore_lines(lines);
+    Ok(Some(Block {
+      loc: SourceLocation::new(meta.start, end),
+      meta,
+      context: Context::DiscreteHeading,
+      content: Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),
+    }))
   }
 
   // important to represent these as an ast node because
