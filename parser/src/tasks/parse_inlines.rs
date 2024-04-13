@@ -703,511 +703,469 @@ mod tests {
         node!("bar"; 11..14),
       ],
     )];
-    run_l(cases);
+    run(cases);
   }
 
   #[test]
   fn test_joining_newlines() {
-    let b = &Bump::new();
     let cases = vec![
       (
         "{foo}",
-        b.inodes([n(AttributeReference(b.s("foo")), l(0, 5))]),
+        nodes![node!(AttributeReference(bstr("foo")), 0..5)],
       ),
       (
         "\\{foo}",
-        b.inodes([n(Discarded, l(0, 1)), n_text("{foo}", 1, 6, b)]),
+        nodes![node!(Discarded, 0..1), node!("{foo}"; 1..6)],
       ),
       (
         "_foo_\nbar",
-        b.inodes([
-          n(Italic(b.inodes([n_text("foo", 1, 4, b)])), l(0, 5)),
-          n(JoiningNewline, l(5, 6)),
-          n_text("bar", 6, 9, b),
-        ]),
+        nodes![
+          node!(Italic(nodes![node!("foo"; 1..4)]), 0..5),
+          node!(JoiningNewline, 5..6),
+          node!("bar"; 6..9),
+        ],
       ),
       (
         "__foo__\nbar",
-        b.inodes([
-          n(Italic(b.inodes([n_text("foo", 2, 5, b)])), l(0, 7)),
-          n(JoiningNewline, l(7, 8)),
-          n_text("bar", 8, 11, b),
-        ]),
+        nodes![
+          node!(Italic(nodes![node!("foo"; 2..5)]), 0..7),
+          node!(JoiningNewline, 7..8),
+          node!("bar"; 8..11),
+        ],
       ),
       (
         "foo \"`bar`\"\nbaz",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(
-            Quote(QuoteKind::Double, b.inodes([n_text("bar", 6, 9, b)])),
-            l(4, 11),
-          ),
-          n(JoiningNewline, l(11, 12)),
-          n_text("baz", 12, 15, b),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Quote(QuoteKind::Double, nodes![node!("bar"; 6..9)]), 4..11),
+          node!(JoiningNewline, 11..12),
+          node!("baz"; 12..15),
+        ],
       ),
       (
         "\"`foo\nbar`\"\nbaz",
-        b.inodes([
-          n(
+        nodes![
+          node!(
             Quote(
               QuoteKind::Double,
-              b.inodes([
-                n_text("foo", 2, 5, b),
-                n(JoiningNewline, l(5, 6)),
-                n_text("bar", 6, 9, b),
-              ]),
+              nodes![
+                node!("foo"; 2..5),
+                node!(JoiningNewline, 5..6),
+                node!("bar"; 6..9),
+              ],
             ),
-            l(0, 11),
+            0..11,
           ),
-          n(JoiningNewline, l(11, 12)),
-          n_text("baz", 12, 15, b),
-        ]),
+          node!(JoiningNewline, 11..12),
+          node!("baz"; 12..15),
+        ],
       ),
       (
         "bar`\"\nbaz",
-        b.inodes([
-          n_text("bar", 0, 3, b),
-          n(Curly(RightDouble), l(3, 5)),
-          n(JoiningNewline, l(5, 6)),
-          n_text("baz", 6, 9, b),
-        ]),
+        nodes![
+          node!("bar"; 0..3),
+          node!(Curly(RightDouble), 3..5),
+          node!(JoiningNewline, 5..6),
+          node!("baz"; 6..9),
+        ],
       ),
       (
         "^foo^\nbar",
-        b.inodes([
-          n(Superscript(b.inodes([n_text("foo", 1, 4, b)])), l(0, 5)),
-          n(JoiningNewline, l(5, 6)),
-          n_text("bar", 6, 9, b),
-        ]),
+        nodes![
+          node!(Superscript(nodes![node!("foo"; 1..4)]), 0..5),
+          node!(JoiningNewline, 5..6),
+          node!("bar"; 6..9),
+        ],
       ),
       (
         "~foo~\nbar",
-        b.inodes([
-          n(Subscript(b.inodes([n_text("foo", 1, 4, b)])), l(0, 5)),
-          n(JoiningNewline, l(5, 6)),
-          n_text("bar", 6, 9, b),
-        ]),
+        nodes![
+          node!(Subscript(nodes![node!("foo"; 1..4)]), 0..5),
+          node!(JoiningNewline, 5..6),
+          node!("bar"; 6..9),
+        ],
       ),
       (
         "`+{name}+`\nbar",
-        b.inodes([
-          n(LitMono(b.src("{name}", l(2, 8))), l(0, 10)),
-          n(JoiningNewline, l(10, 11)),
-          n_text("bar", 11, 14, b),
-        ]),
+        nodes![
+          n(LitMono(src("{name}", 2..8)), l(0, 10)),
+          node!(JoiningNewline, 10..11),
+          node!("bar"; 11..14),
+        ],
       ),
       (
         "+_foo_+\nbar",
-        b.inodes([
-          n(
-            InlinePassthrough(b.inodes([n_text("_foo_", 1, 6, b)])),
-            l(0, 7),
-          ),
-          n(JoiningNewline, l(7, 8)),
-          n_text("bar", 8, 11, b),
-        ]),
+        nodes![
+          node!(InlinePassthrough(nodes![node!("_foo_"; 1..6)]), 0..7,),
+          node!(JoiningNewline, 7..8),
+          node!("bar"; 8..11),
+        ],
       ),
       (
         "+++_<foo>&_+++\nbar",
-        b.inodes([
-          n(
-            InlinePassthrough(b.inodes([n_text("_<foo>&_", 3, 11, b)])),
-            l(0, 14),
-          ),
-          n(JoiningNewline, l(14, 15)),
-          n_text("bar", 15, 18, b),
-        ]),
+        nodes![
+          node!(InlinePassthrough(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
+          node!(JoiningNewline, 14..15),
+          node!("bar"; 15..18),
+        ],
       ),
     ];
 
-    run(cases, b);
+    run(cases);
   }
 
   #[test]
   fn test_line_breaks() {
-    let b = &Bump::new();
     let cases = vec![
       (
         "foo +\nbar",
-        b.inodes([
-          n_text("foo", 0, 3, b),
-          n(LineBreak, l(3, 6)),
-          n_text("bar", 6, 9, b),
-        ]),
+        nodes![
+          node!("foo"; 0..3),
+          node!(LineBreak, 3..6),
+          node!("bar"; 6..9),
+        ],
       ),
       (
         "foo+\nbar", // not valid linebreak
-        b.inodes([
-          n_text("foo+", 0, 4, b),
-          n(JoiningNewline, l(4, 5)),
-          n_text("bar", 5, 8, b),
-        ]),
+        nodes![
+          node!("foo+"; 0..4),
+          node!(JoiningNewline, 4..5),
+          node!("bar"; 5..8),
+        ],
       ),
     ];
 
-    run(cases, b);
+    run(cases);
   }
 
   #[test]
   fn test_parse_inlines() {
-    let b = &Bump::new();
     let cases = vec![
       (
         "+_foo_+",
-        b.inodes([n(
-          InlinePassthrough(b.inodes([n_text("_foo_", 1, 6, b)])),
-          l(0, 7),
-        )]),
+        nodes![node!(InlinePassthrough(nodes![node!("_foo_"; 1..6)]), 0..7,)],
       ),
       (
         "`*_foo_*`",
-        b.inodes([n(
-          Mono(b.inodes([n(
-            Bold(b.inodes([n(Italic(b.inodes([n_text("foo", 3, 6, b)])), l(2, 7))])),
-            l(1, 8),
-          )])),
-          l(0, 9),
-        )]),
+        nodes![node!(
+          Mono(nodes![node!(
+            Bold(nodes![node!(Italic(nodes![node!("foo"; 3..6)]), 2..7)]),
+            1..8,
+          )]),
+          0..9,
+        )],
       ),
       (
         "+_foo\nbar_+",
         // not sure if this is "spec", but it's what asciidoctor currently does
-        b.inodes([n(
-          InlinePassthrough(b.inodes([
-            n_text("_foo", 1, 5, b),
-            n(JoiningNewline, l(5, 6)),
-            n_text("bar_", 6, 10, b),
-          ])),
-          l(0, 11),
-        )]),
+        nodes![node!(
+          InlinePassthrough(nodes![
+            node!("_foo"; 1..5),
+            node!(JoiningNewline, 5..6),
+            node!("bar_"; 6..10),
+          ]),
+          0..11,
+        )],
       ),
       (
         "+_<foo>&_+",
-        b.inodes([n(
-          InlinePassthrough(b.inodes([
-            n_text("_", 1, 2, b),
-            n(SpecialChar(SpecialCharKind::LessThan), l(2, 3)),
-            n_text("foo", 3, 6, b),
-            n(SpecialChar(SpecialCharKind::GreaterThan), l(6, 7)),
-            n(SpecialChar(SpecialCharKind::Ampersand), l(7, 8)),
-            n_text("_", 8, 9, b),
-          ])),
+        nodes![n(
+          InlinePassthrough(nodes![
+            node!("_"; 1..2),
+            node!(SpecialChar(SpecialCharKind::LessThan), 2..3),
+            node!("foo"; 3..6),
+            node!(SpecialChar(SpecialCharKind::GreaterThan), 6..7),
+            node!(SpecialChar(SpecialCharKind::Ampersand), 7..8),
+            node!("_"; 8..9),
+          ]),
           l(0, 10),
-        )]),
+        )],
       ),
       (
         "rofl +_foo_+ lol",
-        b.inodes([
-          n_text("rofl ", 0, 5, b),
-          n(
-            InlinePassthrough(b.inodes([n_text("_foo_", 6, 11, b)])),
-            l(5, 12),
-          ),
-          n_text(" lol", 12, 16, b),
-        ]),
+        nodes![
+          node!("rofl "; 0..5),
+          node!(InlinePassthrough(nodes![node!("_foo_"; 6..11)]), 5..12,),
+          node!(" lol"; 12..16),
+        ],
       ),
       (
         "++_foo_++bar",
-        b.inodes([
-          n(
-            InlinePassthrough(b.inodes([n_text("_foo_", 2, 7, b)])),
-            l(0, 9),
-          ),
-          n_text("bar", 9, 12, b),
-        ]),
+        nodes![
+          node!(InlinePassthrough(nodes![node!("_foo_"; 2..7)]), 0..9,),
+          node!("bar"; 9..12),
+        ],
       ),
       (
         "+++_<foo>&_+++ bar",
-        b.inodes([
-          n(
-            InlinePassthrough(b.inodes([n_text("_<foo>&_", 3, 11, b)])),
-            l(0, 14),
-          ),
-          n_text(" bar", 14, 18, b),
-        ]),
+        nodes![
+          node!(InlinePassthrough(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
+          node!(" bar"; 14..18),
+        ],
       ),
       (
         "foo #bar#",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Highlight(b.inodes([n_text("bar", 5, 8, b)])), l(4, 9)),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Highlight(nodes![node!("bar"; 5..8)]), 4..9),
+        ],
       ),
       (
         "image::foo.png[]", // unexpected block macro, parse as text
-        b.inodes([n_text("image::foo.png[]", 0, 16, b)]),
+        nodes![node!("image::foo.png[]"; 0..16)],
       ),
       (
         "foo `bar`",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Mono(b.inodes([n_text("bar", 5, 8, b)])), l(4, 9)),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Mono(nodes![node!("bar"; 5..8)]), 4..9),
+        ],
       ),
       (
         "foo b``ar``",
-        b.inodes([
-          n_text("foo b", 0, 5, b),
-          n(Mono(b.inodes([n_text("ar", 7, 9, b)])), l(5, 11)),
-        ]),
+        nodes![
+          node!("foo b"; 0..5),
+          node!(Mono(nodes![node!("ar"; 7..9)]), 5..11),
+        ],
       ),
       (
         "foo *bar*",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Bold(b.inodes([n_text("bar", 5, 8, b)])), l(4, 9)),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Bold(nodes![node!("bar"; 5..8)]), 4..9),
+        ],
       ),
       (
         "foo b**ar**",
-        b.inodes([
-          n_text("foo b", 0, 5, b),
-          n(Bold(b.inodes([n_text("ar", 7, 9, b)])), l(5, 11)),
-        ]),
+        nodes![
+          node!("foo b"; 0..5),
+          node!(Bold(nodes![node!("ar"; 7..9)]), 5..11),
+        ],
       ),
       (
         "foo ~bar~ baz",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Subscript(b.inodes([n_text("bar", 5, 8, b)])), l(4, 9)),
-          n_text(" baz", 9, 13, b),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Subscript(nodes![node!("bar"; 5..8)]), 4..9),
+          node!(" baz"; 9..13),
+        ],
       ),
       (
         "foo _bar\nbaz_",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(
-            Italic(b.inodes([
-              n_text("bar", 5, 8, b),
-              n(JoiningNewline, l(8, 9)),
-              n_text("baz", 9, 12, b),
-            ])),
-            l(4, 13),
+        nodes![
+          node!("foo "; 0..4),
+          node!(
+            Italic(nodes![
+              node!("bar"; 5..8),
+              node!(JoiningNewline, 8..9),
+              node!("baz"; 9..12),
+            ]),
+            4..13,
           ),
-        ]),
+        ],
       ),
-      ("foo __bar", b.inodes([n_text("foo __bar", 0, 9, b)])),
+      ("foo __bar", nodes![node!("foo __bar"; 0..9)]),
       (
         "foo _bar baz_",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Italic(b.inodes([n_text("bar baz", 5, 12, b)])), l(4, 13)),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Italic(nodes![node!("bar baz"; 5..12)]), 4..13),
+        ],
       ),
       (
         "foo _bar_",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Italic(b.inodes([n_text("bar", 5, 8, b)])), l(4, 9)),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Italic(nodes![node!("bar"; 5..8)]), 4..9),
+        ],
       ),
       (
         "foo b__ar__",
-        b.inodes([
-          n_text("foo b", 0, 5, b),
-          n(Italic(b.inodes([n_text("ar", 7, 9, b)])), l(5, 11)),
-        ]),
+        nodes![
+          node!("foo b"; 0..5),
+          node!(Italic(nodes![node!("ar"; 7..9)]), 5..11),
+        ],
       ),
-      ("foo 'bar'", b.inodes([n_text("foo 'bar'", 0, 9, b)])),
-      ("foo \"bar\"", b.inodes([n_text("foo \"bar\"", 0, 9, b)])),
+      ("foo 'bar'", nodes![node!("foo 'bar'"; 0..9)]),
+      ("foo \"bar\"", nodes![node!("foo \"bar\""; 0..9)]),
       (
         "foo `\"bar\"`",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Mono(b.inodes([n_text("\"bar\"", 5, 10, b)])), l(4, 11)),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Mono(nodes![node!("\"bar\""; 5..10)]), 4..11),
+        ],
       ),
       (
         "foo `'bar'`",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Mono(b.inodes([n_text("'bar'", 5, 10, b)])), l(4, 11)),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Mono(nodes![node!("'bar'"; 5..10)]), 4..11),
+        ],
       ),
       (
         "foo \"`bar`\"",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(
-            Quote(QuoteKind::Double, b.inodes([n_text("bar", 6, 9, b)])),
-            l(4, 11),
-          ),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Quote(QuoteKind::Double, nodes![node!("bar"; 6..9)]), 4..11,),
+        ],
       ),
       (
         "foo \"`bar baz`\"",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(
-            Quote(QuoteKind::Double, b.inodes([n_text("bar baz", 6, 13, b)])),
-            l(4, 15),
+        nodes![
+          node!("foo "; 0..4),
+          node!(
+            Quote(QuoteKind::Double, nodes![node!("bar baz"; 6..13)]),
+            4..15,
           ),
-        ]),
+        ],
       ),
       (
         "foo \"`bar\nbaz`\"",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(
+        nodes![
+          node!("foo "; 0..4),
+          node!(
             Quote(
               QuoteKind::Double,
-              b.inodes([
-                n_text("bar", 6, 9, b),
-                n(JoiningNewline, l(9, 10)),
-                n_text("baz", 10, 13, b),
-              ]),
+              nodes![
+                node!("bar"; 6..9),
+                node!(JoiningNewline, 9..10),
+                node!("baz"; 10..13),
+              ],
             ),
-            l(4, 15),
+            4..15,
           ),
-        ]),
+        ],
       ),
       (
         "foo '`bar`'",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(
-            Quote(QuoteKind::Single, b.inodes([n_text("bar", 6, 9, b)])),
-            l(4, 11),
-          ),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Quote(QuoteKind::Single, nodes![node!("bar"; 6..9)]), 4..11,),
+        ],
       ),
       (
         "Olaf's wrench",
-        b.inodes([
-          n_text("Olaf", 0, 4, b),
-          n(Curly(LegacyImplicitApostrophe), l(4, 5)),
-          n_text("s wrench", 5, 13, b),
-        ]),
+        nodes![
+          node!("Olaf"; 0..4),
+          node!(Curly(LegacyImplicitApostrophe), 4..5),
+          node!("s wrench"; 5..13),
+        ],
       ),
       (
         "foo   bar",
-        b.inodes([
-          n_text("foo", 0, 3, b),
-          n(MultiCharWhitespace(b.s("   ")), l(3, 6)),
-          n_text("bar", 6, 9, b),
-        ]),
+        nodes![
+          node!("foo"; 0..3),
+          node!(MultiCharWhitespace(bstr("   ")), 3..6),
+          node!("bar"; 6..9),
+        ],
       ),
       (
         "`+{name}+`",
-        b.inodes([n(LitMono(b.src("{name}", l(2, 8))), l(0, 10))]),
+        nodes![node!(LitMono(src("{name}", 2..8)), 0..10)],
       ),
       (
         "`+_foo_+`",
-        b.inodes([n(LitMono(b.src("_foo_", l(2, 7))), l(0, 9))]),
+        nodes![node!(LitMono(src("_foo_", 2..7)), 0..9)],
       ),
       (
         "foo <bar> & lol",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(SpecialChar(SpecialCharKind::LessThan), l(4, 5)),
-          n_text("bar", 5, 8, b),
-          n(SpecialChar(SpecialCharKind::GreaterThan), l(8, 9)),
-          n_text(" ", 9, 10, b),
-          n(SpecialChar(SpecialCharKind::Ampersand), l(10, 11)),
-          n_text(" lol", 11, 15, b),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(SpecialChar(SpecialCharKind::LessThan), 4..5),
+          node!("bar"; 5..8),
+          node!(SpecialChar(SpecialCharKind::GreaterThan), 8..9),
+          node!(" "; 9..10),
+          node!(SpecialChar(SpecialCharKind::Ampersand), 10..11),
+          node!(" lol"; 11..15),
+        ],
       ),
       (
         "^bar^",
-        b.inodes([n(Superscript(b.inodes([n_text("bar", 1, 4, b)])), l(0, 5))]),
+        nodes![node!(Superscript(nodes![node!("bar"; 1..4)]), 0..5)],
       ),
       (
         "^bar^",
-        b.inodes([n(Superscript(b.inodes([n_text("bar", 1, 4, b)])), l(0, 5))]),
+        nodes![node!(Superscript(nodes![node!("bar"; 1..4)]), 0..5)],
       ),
-      ("foo ^bar", b.inodes([n_text("foo ^bar", 0, 8, b)])),
-      ("foo bar^", b.inodes([n_text("foo bar^", 0, 8, b)])),
+      ("foo ^bar", nodes![node!("foo ^bar"; 0..8)]),
+      ("foo bar^", nodes![node!("foo bar^"; 0..8)]),
       (
         "foo ^bar^ foo",
-        b.inodes([
-          n_text("foo ", 0, 4, b),
-          n(Superscript(b.inodes([n_text("bar", 5, 8, b)])), l(4, 9)),
-          n_text(" foo", 9, 13, b),
-        ]),
+        nodes![
+          node!("foo "; 0..4),
+          node!(Superscript(nodes![node!("bar"; 5..8)]), 4..9),
+          node!(" foo"; 9..13),
+        ],
       ),
       (
         "doublefootnote:[ymmv _i_]bar",
-        b.inodes([
-          n_text("double", 0, 6, b),
-          n(
+        nodes![
+          node!("double"; 0..6),
+          node!(
             Macro(Footnote {
               id: None,
-              text: b.inodes([
-                n_text("ymmv ", 16, 21, b),
-                n(Italic(b.inodes([n_text("i", 22, 23, b)])), l(21, 24)),
-              ]),
+              text: nodes![
+                node!("ymmv "; 16..21),
+                node!(Italic(nodes![node!("i"; 22..23)]), 21..24),
+              ],
             }),
-            l(6, 25),
+            6..25,
           ),
-          n_text("bar", 25, 28, b),
-        ]),
+          node!("bar"; 25..28),
+        ],
       ),
     ];
 
     // repeated passes necessary?
     // yikes: `link:pass:[My Documents/report.pdf][Get Report]`
 
-    run(cases, b);
+    run(cases);
   }
 
   #[test]
   fn test_button_menu_macro() {
-    let b = &Bump::new();
     let cases = vec![
       (
         "press the btn:[OK] button",
-        b.inodes([
-          n_text("press the ", 0, 10, b),
-          n(Macro(Button(b.src("OK", l(15, 17)))), l(10, 18)),
-          n_text(" button", 18, 25, b),
-        ]),
+        nodes![
+          node!("press the "; 0..10),
+          node!(Macro(Button(src("OK", 15..17))), 10..18),
+          node!(" button"; 18..25),
+        ],
       ),
       (
         "btn:[Open]",
-        b.inodes([n(Macro(Button(b.src("Open", l(5, 9)))), l(0, 10))]),
+        nodes![node!(Macro(Button(src("Open", 5..9))), 0..10)],
       ),
       (
         "select menu:File[Save].",
-        b.inodes([
-          n_text("select ", 0, 7, b),
-          n(
-            Macro(Menu(
-              b.vec([b.src("File", l(12, 16)), b.src("Save", l(17, 21))]),
-            )),
-            l(7, 22),
+        nodes![
+          node!("select "; 0..7),
+          node!(
+            Macro(Menu(vecb![src("File", 12..16), src("Save", 17..21)])),
+            7..22,
           ),
-          n_text(".", 22, 23, b),
-        ]),
+          node!("."; 22..23),
+        ],
       ),
       (
         "menu:View[Zoom > Reset]",
-        b.inodes([n(
-          Macro(Menu(b.vec([
-            b.src("View", l(5, 9)),
-            b.src("Zoom", l(10, 14)),
-            b.src("Reset", l(17, 22)),
-          ]))),
-          l(0, 23),
-        )]),
+        nodes![node!(
+          Macro(Menu(vecb![
+            src("View", 5..9),
+            src("Zoom", 10..14),
+            src("Reset", 17..22),
+          ])),
+          0..23,
+        )],
       ),
     ];
-    run(cases, b);
+    run(cases);
   }
 
-  fn run_l(cases: Vec<(&str, InlineNodes)>) {
+  fn run(cases: Vec<(&str, InlineNodes)>) {
     for (input, expected) in cases {
       let mut parser = Parser::new(leaked_bump(), input);
-      let mut block = parser.read_lines().unwrap();
-      let inlines = parser.parse_inlines(&mut block).unwrap();
-      assert_eq!(inlines, expected, from: input);
-    }
-  }
-
-  fn run(cases: Vec<(&str, InlineNodes)>, bump: &Bump) {
-    for (input, expected) in cases {
-      let mut parser = Parser::new(bump, input);
       let mut block = parser.read_lines().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
       assert_eq!(inlines, expected, from: input);
