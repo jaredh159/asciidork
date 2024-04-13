@@ -74,7 +74,6 @@ Known **unfinished or unimplemented** areas include:
 - [ ] STEM
 - [ ] Source highlighting
 - [ ] Include directives
-- [ ] Automatic Table of Contents
 - [ ] All entity refs
 - [ ] ...probably a good bit more...
 

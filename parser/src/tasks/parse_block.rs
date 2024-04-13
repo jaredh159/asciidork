@@ -35,14 +35,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let first_token = lines.current_token().unwrap();
 
     if lines.is_block_macro() {
-      match first_token.lexeme {
-        "image:" => return Ok(Some(self.parse_image_block(lines, meta)?)),
-        _ => todo!("block macro type: `{:?}`", first_token.lexeme),
+      return match first_token.lexeme {
+        "image:" => self.parse_image_block(lines, meta),
+        "toc:" => self.parse_toc_macro(first_token.loc, lines, meta),
+        _ => todo!("unhandled block macro type: `{:?}`", first_token.lexeme),
       }
+      .map(Some);
     } else if lines.starts_list() {
       return self.parse_list(lines, Some(meta)).map(Some);
     } else if lines.current_satisfies(|line| line.is_heading()) {
-      return self.parse_discrete_heading(lines, meta);
+      return self.parse_discrete_heading(lines, meta).map(Some);
     }
 
     match first_token.kind {
@@ -89,7 +91,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     mut lines: ContiguousLines<'bmp, 'src>,
     meta: ChunkMeta<'bmp>,
-  ) -> Result<Option<Block<'bmp>>> {
+  ) -> Result<Block<'bmp>> {
     let mut line = lines.consume_current().unwrap();
     let level = line.heading_level().unwrap();
     line.discard_assert(TokenKind::EqualSigns);
@@ -98,12 +100,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let content = self.parse_inlines(&mut line.into_lines_in(self.bump))?;
     let end = content.last_loc().unwrap().end;
     self.restore_lines(lines);
-    Ok(Some(Block {
+    Ok(Block {
       loc: SourceLocation::new(meta.start, end),
       meta,
       context: Context::DiscreteHeading,
       content: Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),
-    }))
+    })
   }
 
   // important to represent these as an ast node because
@@ -296,6 +298,28 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       context,
       content: Content::Empty(EmptyMetadata::None),
     }))
+  }
+
+  fn parse_toc_macro(
+    &mut self,
+    token_loc: SourceLocation,
+    lines: ContiguousLines<'bmp, 'src>,
+    meta: ChunkMeta<'bmp>,
+  ) -> Result<Block<'bmp>> {
+    self.ctx.saw_toc_macro = true;
+    if self.document.toc.is_none() {
+      self.err_at(
+        "Found macro placing Table of Contents, but TOC not enabled",
+        token_loc.start,
+        lines.current().unwrap().last_loc().unwrap().end,
+      )?;
+    }
+    return Ok(Block {
+      loc: SourceLocation::new(meta.start, self.loc().end),
+      meta,
+      context: Context::TableOfContents,
+      content: Content::Empty(EmptyMetadata::None),
+    });
   }
 }
 

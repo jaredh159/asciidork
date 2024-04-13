@@ -64,6 +64,30 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     })
   }
 
+  pub(crate) fn err_doc_attr(&self, key: &'static str, message: impl Into<String>) -> Result<()> {
+    for (idx, line) in self
+      .lexer
+      .raw_lines()
+      .enumerate()
+      .skip_while(|(_, l)| l.is_empty())
+    {
+      if line.is_empty() {
+        break; // must have left doc header
+      }
+      if line.starts_with(key) {
+        return self.handle_err(Diagnostic {
+          line_num: idx + 1,
+          line: line.to_string(),
+          message: message.into(),
+          underline_start: 0,
+          underline_width: line.len(),
+        });
+      }
+    }
+    debug_assert!(false, "doc attr not found");
+    Ok(())
+  }
+
   pub(crate) fn err_at_loc(&self, message: impl Into<String>, loc: SourceLocation) -> Result<()> {
     self.err_at(message, loc.start, loc.end)
   }

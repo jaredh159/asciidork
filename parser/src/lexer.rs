@@ -1,4 +1,4 @@
-use std::str::Bytes;
+use std::str::{Bytes, Lines};
 
 use crate::internal::*;
 use crate::variants::token::*;
@@ -29,6 +29,10 @@ impl<'src> Lexer<'src> {
     while self.peek == Some(b'\n') {
       self.advance();
     }
+  }
+
+  pub fn raw_lines(&self) -> Lines<'src> {
+    self.src.lines()
   }
 
   pub fn loc(&self) -> SourceLocation {

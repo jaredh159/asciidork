@@ -34,6 +34,27 @@ fn test_basic_toc() {
 }
 
 #[test]
+fn test_toc_macro_block() {
+  assert_blocks!(
+    adoc! {"
+      :toc: macro
+
+      foo
+
+      toc::[]
+    "},
+    &[
+      simple_text_block("foo", 13..16),
+      Block {
+        context: BlockContext::TableOfContents,
+        content: BlockContent::Empty(EmptyMetadata::None),
+        ..empty_block(18..26)
+      }
+    ]
+  );
+}
+
+#[test]
 fn test_nested_toc() {
   assert_toc!(
     adoc! {"
@@ -166,8 +187,44 @@ fn test_toc_depth() {
     }
   );
 }
-// TODO: err if preamble but none
-// TODO: err if macro but none
-// TODO: test section level control
-// TODO: err if found macro but no toc
-// TODO: think about if no sections encountered? error?
+
+test_error!(
+  err_no_preamble,
+  adoc! {"
+    :toc: preamble
+
+    == sect 1
+  "},
+  error! {"
+    1: :toc: preamble
+       ^^^^^^^^^^^^^^ Table of Contents set to `preamble` but no preamble found
+  "}
+);
+
+test_error!(
+  err_no_macro,
+  adoc! {"
+    :toc: macro
+
+    == sect 1
+  "},
+  error! {"
+    1: :toc: macro
+       ^^^^^^^^^^^ Table of Contents set to `macro` but macro (`toc::[]`) not found
+  "}
+);
+
+test_error!(
+  err_macro_no_toc,
+  adoc! {"
+    :!toc:
+
+    == sect 1
+
+    toc::[]
+  "},
+  error! {"
+    5: toc::[]
+       ^^^^^^^ Found macro placing Table of Contents, but TOC not enabled
+  "}
+);

@@ -151,13 +151,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
 
+    self.diagnose_document()?;
+
     Ok(ParseResult {
       document: self.document,
       warnings: vec![],
     })
   }
 
-  pub fn parse_chunk(&mut self) -> Result<Option<Chunk<'bmp>>> {
+  fn parse_chunk(&mut self) -> Result<Option<Chunk<'bmp>>> {
     match self.parse_section()? {
       Some(section) => Ok(Some(Chunk::Section(section))),
       None => Ok(self.parse_block()?.map(Chunk::Block)),
@@ -190,6 +192,29 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
     Ok(ChunkMeta { attrs, title, start })
+  }
+
+  fn diagnose_document(&self) -> Result<()> {
+    let toc_pos = self.document.toc.as_ref().map(|toc| toc.position);
+    match toc_pos {
+      Some(TocPosition::Macro) if !self.ctx.saw_toc_macro => {
+        self.err_doc_attr(
+          ":toc:",
+          "Table of Contents set to `macro` but macro (`toc::[]`) not found",
+        )?;
+      }
+      Some(TocPosition::Preamble) => match &self.document.content {
+        DocContent::Blocks(_) | DocContent::Sectioned { preamble: None, .. } => {
+          self.err_doc_attr(
+            ":toc:",
+            "Table of Contents set to `preamble` but no preamble found",
+          )?;
+        }
+        _ => {}
+      },
+      _ => {}
+    }
+    Ok(())
   }
 }
 
