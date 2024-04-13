@@ -7,6 +7,7 @@ use crate::internal::*;
 pub struct Document<'bmp> {
   pub header: Option<DocHeader<'bmp>>,
   pub content: DocContent<'bmp>,
+  pub toc: Option<TableOfContents<'bmp>>,
 }
 
 impl<'bmp> Document<'bmp> {
@@ -14,6 +15,7 @@ impl<'bmp> Document<'bmp> {
     Self {
       header: None,
       content: DocContent::Blocks(bvec![in bump]),
+      toc: None,
     }
   }
 }

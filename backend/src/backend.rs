@@ -18,6 +18,16 @@ pub trait Backend {
   fn exit_document_title(&mut self, doc_title: &DocTitle);
   fn visit_document_authors(&mut self, authors: &[Author]);
 
+  // table of contents
+  fn enter_toc(&mut self, _toc: &TableOfContents) {}
+  fn exit_toc(&mut self, _toc: &TableOfContents) {}
+  fn enter_toc_level(&mut self, _level: u8, _nodes: &[TocNode]) {}
+  fn exit_toc_level(&mut self, _level: u8, _nodes: &[TocNode]) {}
+  fn enter_toc_node(&mut self, _node: &TocNode) {}
+  fn exit_toc_node(&mut self, _node: &TocNode) {}
+  fn enter_toc_content(&mut self, _content: &[InlineNode]) {}
+  fn exit_toc_content(&mut self, _content: &[InlineNode]) {}
+
   // sections
   fn enter_section(&mut self, section: &Section);
   fn exit_section(&mut self, section: &Section);

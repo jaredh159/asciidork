@@ -36,6 +36,14 @@ macro_rules! assert_doc_content {
 }
 
 #[macro_export]
+macro_rules! assert_toc {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let toc = parse_toc!($input);
+    assert_eq!(toc, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_block {
   ($input:expr, $expected:expr$(,)?) => {{
     let block = parse_single_block!($input);
@@ -261,6 +269,14 @@ macro_rules! parse_doc_content {
   ($input:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);
     parser.parse().unwrap().document.content
+  }};
+}
+
+#[macro_export]
+macro_rules! parse_toc {
+  ($input:expr) => {{
+    let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().unwrap().document.toc.expect("expected toc")
   }};
 }
 

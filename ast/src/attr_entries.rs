@@ -67,4 +67,11 @@ impl AttrEntries {
       _ => default,
     }
   }
+
+  pub fn u8_or(&self, key: &str, default: u8) -> u8 {
+    match self.get(key) {
+      Some(AttrEntry::String(s)) => s.parse().unwrap_or(default),
+      _ => default,
+    }
+  }
 }

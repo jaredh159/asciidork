@@ -27,6 +27,12 @@ pub fn visit<B: Backend>(document: Document, opts: Opts, backend: &mut B) {
     backend.visit_document_authors(&header.authors);
     backend.exit_document_header(header);
   }
+  if matches!(
+    document.toc.as_ref().map(|toc| toc.position),
+    Some(TocPosition::Auto | TocPosition::Left | TocPosition::Right)
+  ) {
+    eval_toc(document.toc.as_ref().unwrap(), backend);
+  }
   match &document.content {
     DocContent::Blocks(blocks) => {
       blocks.iter().for_each(|block| eval_block(block, backend));
@@ -332,5 +338,26 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
       println!("  -> {:?}\n", &inline.content);
       todo!();
     }
+  }
+}
+
+fn eval_toc(toc: &TableOfContents, backend: &mut impl Backend) {
+  backend.enter_toc(toc);
+  eval_toc_level(&toc.nodes, backend);
+  backend.exit_toc(toc);
+}
+
+fn eval_toc_level(nodes: &[TocNode], backend: &mut impl Backend) {
+  if let Some(first) = nodes.first() {
+    backend.enter_toc_level(first.level, nodes);
+    nodes.iter().for_each(|node| {
+      backend.enter_toc_node(node);
+      backend.enter_toc_content(&node.title);
+      node.title.iter().for_each(|n| eval_inline(n, backend));
+      backend.exit_toc_content(&node.title);
+      eval_toc_level(&node.children, backend);
+      backend.exit_toc_node(node);
+    });
+    backend.exit_toc_level(first.level, nodes);
   }
 }

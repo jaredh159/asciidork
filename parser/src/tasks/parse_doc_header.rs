@@ -22,7 +22,31 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;
     self.parse_doc_attrs(&mut block, &mut doc_header.attrs)?;
+    self.setup_toc(&doc_header);
     Ok(Some(doc_header))
+  }
+
+  fn setup_toc(&mut self, doc_header: &DocHeader<'bmp>) {
+    let Some(toc_attr) = doc_header.attrs.get("toc") else {
+      return;
+    };
+
+    let position = match toc_attr {
+      AttrEntry::Bool(false) => return,
+      AttrEntry::Bool(true) => TocPosition::Auto,
+      AttrEntry::String(s) => match s.as_str() {
+        "left" => TocPosition::Left,
+        "right" => TocPosition::Right,
+        "preamble" => TocPosition::Preamble,
+        "macro" => TocPosition::Macro,
+        "auto" => TocPosition::Auto,
+        _ => return, // err?
+      },
+    };
+    let title = doc_header.attrs.str_or("toc-title", "Table of Contents");
+    let title = BumpString::from_str_in(title, self.bump);
+    let nodes = BumpVec::new_in(self.bump);
+    self.document.toc = Some(TableOfContents { title, nodes, position })
   }
 
   fn parse_doc_title_author_revision(
@@ -59,15 +83,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 pub fn is_doc_header(lines: &ContiguousLines) -> bool {
   for line in lines.iter() {
-    if line.is_heading_level(0)
-      || line.starts_with_seq(&[Colon, Word, Colon])
-      || line.starts_with_seq(&[Colon, Bang, Word, Colon])
-    {
+    if line.is_heading_level(0) {
       return true;
     } else if line.is_comment() {
       continue;
-    } else {
+    } else if !line.starts(Colon) {
       return false;
+    } else {
+      return line.starts_with_seq(&[Colon, Word, Colon])
+        || line.starts_with_seq(&[Colon, MacroName])
+        || line.starts_with_seq(&[Colon, Bang, Word, Colon]);
     }
   }
   false

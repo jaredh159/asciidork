@@ -130,6 +130,40 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
+  fn enter_toc(&mut self, toc: &TableOfContents) {
+    self.push_str(r#"<div id="toc" class="toc"><div id="toctitle">"#);
+    self.push_str(&toc.title);
+    self.push_str("</div>");
+  }
+
+  fn exit_toc(&mut self, _toc: &TableOfContents) {
+    self.push_str("</div>");
+  }
+
+  fn enter_toc_level(&mut self, level: u8, _nodes: &[TocNode]) {
+    self.push(["<ul class=\"sectlevel", &num_str!(level), "\">"]);
+  }
+
+  fn exit_toc_level(&mut self, _level: u8, _nodes: &[TocNode]) {
+    self.push_str("</ul>");
+  }
+
+  fn enter_toc_node(&mut self, node: &TocNode) {
+    self.push_str("<li><a href=\"#");
+    if let Some(id) = &node.id {
+      self.push_str(id);
+    }
+    self.push_str("\">")
+  }
+
+  fn exit_toc_node(&mut self, _node: &TocNode) {
+    self.push_str("</li>");
+  }
+
+  fn exit_toc_content(&mut self, _content: &[InlineNode]) {
+    self.push_str("</a>");
+  }
+
   fn enter_preamble(&mut self, _blocks: &[Block]) {
     self.push_str(r#"<div id="preamble"><div class="sectionbody">"#);
   }

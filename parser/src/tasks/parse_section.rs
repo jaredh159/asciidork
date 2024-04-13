@@ -29,7 +29,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     heading_line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(heading_line.src, meta.attrs.as_ref());
 
-    if level > last_level && level - last_level > 1 {
+    let out_of_sequence = level > last_level && level - last_level > 1;
+    if out_of_sequence {
       self.err_token_full(
         format!(
           "Section title out of sequence: expected level {} `{}`",
@@ -41,6 +42,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     let heading = self.parse_inlines(&mut heading_line.into_lines_in(self.bump))?;
+    if !out_of_sequence {
+      self.push_toc_node(level, &heading, id.as_ref());
+    }
 
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
@@ -50,6 +54,33 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     self.ctx.section_level = last_level;
     Ok(Some(Section { meta, level, id, heading, blocks }))
+  }
+
+  pub fn push_toc_node(
+    &mut self,
+    level: u8,
+    heading: &InlineNodes<'bmp>,
+    as_ref: Option<&BumpString<'bmp>>,
+  ) {
+    let Some(toc) = self.document.toc.as_mut() else {
+      return;
+    };
+    if level > self.ctx.attrs.u8_or("toclevels", 2) {
+      return;
+    }
+    let mut depth = level;
+    let mut nodes: &mut BumpVec<'_, TocNode<'_>> = toc.nodes.as_mut();
+    while depth > 1 {
+      // we don't push out of sequence sections, shouldn't panic
+      nodes = nodes.last_mut().unwrap().children.as_mut();
+      depth -= 1;
+    }
+    nodes.push(TocNode {
+      level,
+      title: heading.clone(),
+      id: as_ref.cloned(),
+      children: BumpVec::new_in(self.bump),
+    });
   }
 }
 

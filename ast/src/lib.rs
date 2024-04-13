@@ -11,6 +11,7 @@ mod r#macro;
 mod node;
 mod source_location;
 mod source_string;
+mod toc;
 
 pub use internal::types::*;
 
@@ -30,6 +31,7 @@ mod internal {
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
+    pub use crate::toc::*;
     pub use smallvec::SmallVec;
   }
 
@@ -54,6 +56,7 @@ pub mod prelude {
   pub use crate::node::{Callout, Document, Section};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
+  pub use crate::toc::*;
 }
 
 pub mod short {
