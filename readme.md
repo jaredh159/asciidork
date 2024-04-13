@@ -35,6 +35,7 @@ asciidork --input test.adoc
 
 # without a --input arg, it reads from stdin
 echo "foo _bar_ *baz*" | asciidork
+asciidork < test.adoc
 
 # don't include enclosing document structure by passing `--embedded`
 asciidork --input test.adoc --embedded
