@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import prettier from 'prettier/standalone';
 import htmlParser from 'prettier/plugins/html';
-import cx from 'classnames';
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml';
+import theme from 'react-syntax-highlighter/dist/esm/styles/hljs/tomorrow-night-blue';
+
+SyntaxHighlighter.registerLanguage('html', xml);
 
 declare global {
   interface Window {
@@ -19,6 +23,7 @@ const App: React.FC = () => {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    console.log(theme);
     async function inner() {
       if (!window.convert) return;
       console.time(`converted in`);
@@ -30,7 +35,7 @@ const App: React.FC = () => {
           const pretty = await prettier.format(parsed.html, {
             parser: 'html',
             plugins: [htmlParser],
-            printWidth: 60,
+            printWidth: 80,
           });
           setError(false);
           setHtml(pretty);
@@ -49,21 +54,22 @@ const App: React.FC = () => {
   }, [adoc]);
 
   return (
-    <div className="flex min-h-screen font-mono">
+    <div className="flex min-h-screen font-mono antialiased">
       <textarea
         spellCheck={false}
-        className="w-2/5 bg-gray-50 p-2 focus:outline-none"
+        className="w-2/5 bg-gray-100 p-2 font-mono font-semibold text-blue-900 focus:outline-none"
         value={adoc}
         onChange={(e) => setAdoc(e.target.value)}
       />
-      <pre
-        className={cx(
-          `w-3/5 p-2 overflow-scroll whitespace-wrap`,
-          error && `text-red-700 text-xs`,
-        )}
-      >
-        {html}
-      </pre>
+      {!error ? (
+        <SyntaxHighlighter wrapLines class="w-3/5" language="html" style={theme}>
+          {html}
+        </SyntaxHighlighter>
+      ) : (
+        <pre className="w-3/5 p-2 overflow-auto whitespace-wrap bg-black text-red-500 font-bold text-sm">
+          {html}
+        </pre>
+      )}
     </div>
   );
 };
