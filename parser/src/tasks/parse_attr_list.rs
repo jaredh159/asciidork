@@ -295,7 +295,6 @@ mod tests {
 
   #[test]
   fn test_parse_attr_list() {
-    let b = &Bump::new();
     let cases = vec![
       ("[]", attr_list!(0..2)),
       ("[foo]", single_positional("foo", 1..4)),
@@ -310,230 +309,229 @@ mod tests {
       (
         "[ foo , bar ]",
         AttrList {
-          positional: b.vec([
+          positional: vecb![
             Some(nodes![node!("foo"; 2..5)]),
-            Some(b.inodes([n_text("bar", 8, 11, b)])),
-          ]),
-          ..AttrList::new(l(0, 13), b)
+            Some(nodes![node!("bar"; 8..11)]),
+          ],
+          ..attr_list!(0..13)
         },
       ),
       (
         "[line-comment=%%]",
         AttrList {
-          named: Named::from(b.vec([(b.src("line-comment", l(1, 13)), b.src("%%", l(14, 16)))])),
-          ..AttrList::new(l(0, 17), b)
+          named: Named::from(vecb![(src("line-comment", 1..13), src("%%", 14..16))]),
+          ..attr_list!(0..17)
         },
       ),
       (
         "[link=https://example.com]", // named, without quotes
         AttrList {
-          named: Named::from(b.vec([(
-            b.src("link", l(1, 5)),
-            b.src("https://example.com", l(6, 25)),
-          )])),
-          ..AttrList::new(l(0, 26), b)
+          named: Named::from(vecb![(
+            src("link", 1..5),
+            src("https://example.com", 6..25),
+          )]),
+          ..attr_list!(0..26)
         },
       ),
       (
         "[link=\"https://example.com\"]",
         AttrList {
-          named: Named::from(b.vec([(
-            b.src("link", l(1, 5)),
-            b.src("https://example.com", l(7, 26)),
-          )])),
-          ..AttrList::new(l(0, 28), b)
+          named: Named::from(vecb![(
+            src("link", 1..5),
+            src("https://example.com", 7..26),
+          )]),
+          ..attr_list!(0..28)
         },
       ),
       (
         "[\\ ]", // keyboard macro
         AttrList {
-          positional: b.vec([Some(b.inodes([n_text("\\", 1, 2, b)]))]),
-          ..AttrList::new(l(0, 4), b)
+          positional: vecb![Some(nodes![node!("\\"; 1..2)])],
+          ..attr_list!(0..4)
         },
       ),
       (
         "[Ctrl+\\]]",
         AttrList {
-          positional: b.vec([Some(b.inodes([n_text("Ctrl+]", 1, 8, b)]))]),
-          ..AttrList::new(l(0, 9), b)
+          positional: vecb![Some(nodes![node!("Ctrl+]"; 1..8)])],
+          ..attr_list!(0..9)
         },
       ),
       (
         "[#someid]",
         AttrList {
-          id: Some(b.src("someid", l(2, 8))),
-          ..AttrList::new(l(0, 9), b)
+          id: Some(src("someid", 2..8)),
+          ..attr_list!(0..9)
         },
       ),
       (
         "[id=someid]",
         AttrList {
-          id: Some(b.src("someid", l(4, 10))),
-          ..AttrList::new(l(0, 11), b)
+          id: Some(src("someid", 4..10)),
+          ..attr_list!(0..11)
         },
       ),
       (
         "[#someid.nowrap]",
         AttrList {
-          id: Some(b.src("someid", l(2, 8))),
-          roles: b.vec([b.src("nowrap", l(9, 15))]),
-          ..AttrList::new(l(0, 16), b)
+          id: Some(src("someid", 2..8)),
+          roles: vecb![src("nowrap", 9..15)],
+          ..attr_list!(0..16)
         },
       ),
       (
         "[.nowrap]",
         AttrList {
-          roles: b.vec([b.src("nowrap", l(2, 8))]),
-          ..AttrList::new(l(0, 9), b)
+          roles: vecb![src("nowrap", 2..8)],
+          ..attr_list!(0..9)
         },
       ),
       (
         "[.nowrap.underline]",
         AttrList {
-          roles: b.vec([b.src("nowrap", l(2, 8)), b.src("underline", l(9, 18))]),
-          ..AttrList::new(l(0, 19), b)
+          roles: vecb![src("nowrap", 2..8), src("underline", 9..18)],
+          ..attr_list!(0..19)
         },
       ),
       (
         "[foo,bar]",
         AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("foo", 1, 4, b)])),
-            Some(b.inodes([n_text("bar", 5, 8, b)])),
-          ]),
-          ..AttrList::new(l(0, 9), b)
+          positional: vecb![
+            Some(nodes![node!("foo"; 1..4)]),
+            Some(nodes![node!("bar"; 5..8)]),
+          ],
+          ..attr_list!(0..9)
         },
       ),
       (
         "[foo,bar,a=b]",
         AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("foo", 1, 4, b)])),
-            Some(b.inodes([n_text("bar", 5, 8, b)])),
-          ]),
-          named: Named::from(b.vec([(b.src("a", l(9, 10)), b.src("b", l(11, 12)))])),
-          ..AttrList::new(l(0, 13), b)
+          positional: vecb![
+            Some(nodes![node!("foo"; 1..4)]),
+            Some(nodes![node!("bar"; 5..8)]),
+          ],
+          named: Named::from(vecb![(src("a", 9..10), src("b", 11..12))]),
+          ..attr_list!(0..13)
         },
       ),
       (
         "[a=b,foo,b=c,bar]",
         AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("foo", 5, 8, b)])),
-            Some(b.inodes([n_text("bar", 13, 16, b)])),
+          positional: vecb![
+            Some(nodes![node!("foo"; 5..8)]),
+            Some(nodes![node!("bar"; 13..16)]),
+          ],
+          named: Named::from(vecb![
+            (src("a", 1..2), src("b", 3..4)),
+            (src("b", 9..10), src("c", 11..12)),
           ]),
-          named: Named::from(b.vec([
-            (b.src("a", l(1, 2)), b.src("b", l(3, 4))),
-            (b.src("b", l(9, 10)), b.src("c", l(11, 12))),
-          ])),
-          ..AttrList::new(l(0, 17), b)
+          ..attr_list!(0..17)
         },
       ),
       (
         "[\"foo,bar\",baz]",
         AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("foo,bar", 2, 9, b)])),
-            Some(b.inodes([n_text("baz", 11, 14, b)])),
-          ]),
-          ..AttrList::new(l(0, 15), b)
+          positional: vecb![
+            Some(nodes![node!("foo,bar"; 2..9)]),
+            Some(nodes![node!("baz"; 11..14)]),
+          ],
+          ..attr_list!(0..15)
         },
       ),
       (
         "[Sunset,300,400]",
         AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("Sunset", 1, 7, b)])),
-            Some(b.inodes([n_text("300", 8, 11, b)])),
-            Some(b.inodes([n_text("400", 12, 15, b)])),
-          ]),
-          ..AttrList::new(l(0, 16), b)
+          positional: vecb![
+            Some(nodes![node!("Sunset"; 1..7)]),
+            Some(nodes![node!("300"; 8..11)]),
+            Some(nodes![node!("400"; 12..15)]),
+          ],
+          ..attr_list!(0..16)
         },
       ),
       (
         "[alt=Sunset,width=300,height=400]",
         AttrList {
-          named: Named::from(b.vec([
-            (b.src("alt", l(1, 4)), b.src("Sunset", l(5, 11))),
-            (b.src("width", l(12, 17)), b.src("300", l(18, 21))),
-            (b.src("height", l(22, 28)), b.src("400", l(29, 32))),
-          ])),
-          ..AttrList::new(l(0, 33), b)
+          named: Named::from(vecb![
+            (src("alt", 1..4), src("Sunset", 5..11)),
+            (src("width", 12..17), src("300", 18..21)),
+            (src("height", 22..28), src("400", 29..32)),
+          ]),
+          ..attr_list!(0..33)
         },
       ),
       (
         "[#custom-id,named=\"value of named\"]",
         AttrList {
-          id: Some(b.src("custom-id", l(2, 11))),
-          named: Named::from(b.vec([(
-            b.src("named", l(12, 17)),
-            b.src("value of named", l(19, 33)),
-          )])),
-          ..AttrList::new(l(0, 35), b)
+          id: Some(src("custom-id", 2..11)),
+          named: Named::from(vecb![
+            (src("named", 12..17), src("value of named", 19..33),)
+          ]),
+          ..attr_list!(0..35)
         },
       ),
       (
         "[foo, bar]",
         AttrList {
-          positional: b.vec([
-            Some(b.inodes([n_text("foo", 1, 4, b)])),
-            Some(b.inodes([n_text("bar", 6, 9, b)])),
-          ]),
-          ..AttrList::new(l(0, 10), b)
+          positional: vecb![
+            Some(nodes![node!("foo"; 1..4)]),
+            Some(nodes![node!("bar"; 6..9)]),
+          ],
+          ..attr_list!(0..10)
         },
       ),
       (
         "[,bar]",
         AttrList {
-          positional: b.vec([None, Some(b.inodes([n_text("bar", 2, 5, b)]))]),
-          ..AttrList::new(l(0, 6), b)
+          positional: vecb![None, Some(nodes![node!("bar"; 2..5)])],
+          ..attr_list!(0..6)
         },
       ),
       (
         "[ , bar]",
         AttrList {
-          positional: b.vec([None, Some(b.inodes([n_text("bar", 4, 7, b)]))]),
-          ..AttrList::new(l(0, 8), b)
+          positional: vecb![None, Some(nodes![node!("bar"; 4..7)])],
+          ..attr_list!(0..8)
         },
       ),
       (
         "[, , bar]",
         AttrList {
-          positional: b.vec([None, None, Some(b.inodes([n_text("bar", 5, 8, b)]))]),
-          ..AttrList::new(l(0, 9), b)
+          positional: vecb![None, None, Some(nodes![node!("bar"; 5..8)])],
+          ..attr_list!(0..9)
         },
       ),
       (
         "[\"foo]\"]",
         AttrList {
-          positional: b.vec([Some(b.inodes([n_text("foo]", 2, 6, b)]))]),
-          ..AttrList::new(l(0, 8), b)
+          positional: vecb![Some(nodes![node!("foo]"; 2..6)])],
+          ..attr_list!(0..8)
         },
       ),
       (
         "[foo\\]]",
         AttrList {
-          positional: b.vec([Some(b.inodes([n_text("foo]", 1, 6, b)]))]),
-          ..AttrList::new(l(0, 7), b)
+          positional: vecb![Some(nodes![node!("foo]"; 1..6)])],
+          ..attr_list!(0..7)
         },
       ),
       (
         "[foo='bar']",
         AttrList {
-          named: Named::from(b.vec([(b.src("foo", l(1, 4)), b.src("bar", l(6, 9)))])),
-          ..AttrList::new(l(0, 11), b)
+          named: Named::from(vecb![(src("foo", 1..4), src("bar", 6..9))]),
+          ..attr_list!(0..11)
         },
       ),
       (
         "[foo='.foo#id%opt']",
         AttrList {
-          named: Named::from(b.vec([(b.src("foo", l(1, 4)), b.src(".foo#id%opt", l(6, 17)))])),
-          ..AttrList::new(l(0, 19), b)
+          named: Named::from(vecb![(src("foo", 1..4), src(".foo#id%opt", 6..17))]),
+          ..attr_list!(0..19)
         },
       ),
     ];
     for (input, expected) in cases {
-      let mut parser = Parser::new(b, input);
+      let mut parser = Parser::new(leaked_bump(), input);
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
@@ -543,34 +541,34 @@ mod tests {
 
   #[test]
   fn test_parse_legacy_attr_list() {
-    let b = &Bump::new();
     let cases = vec![
       (
         "[[foo]]",
         AttrList {
-          id: Some(b.src("foo", l(2, 5))),
-          ..AttrList::new(l(0, 7), b)
+          id: Some(src("foo", 2..5)),
+          ..attr_list!(0..7)
         },
       ),
       (
         "[[f.o]]",
         AttrList {
-          id: Some(b.src("f.o", l(2, 5))),
-          ..AttrList::new(l(0, 7), b)
+          id: Some(src("f.o", 2..5)),
+          ..attr_list!(0..7)
         },
       ),
       (
         "[[foo,bar]]",
         AttrList {
-          id: Some(b.src("foo", l(2, 5))),
-          positional: b.vec([Some(b.inodes([n_text("bar", 6, 9, b)]))]),
-          ..AttrList::new(l(0, 11), b)
+          id: Some(src("foo", 2..5)),
+          positional: vecb![Some(nodes![node!("bar"; 6..9)])],
+          ..attr_list!(0..11)
         },
       ),
-      ("[[]]", AttrList { ..AttrList::new(l(0, 4), b) }),
+      ("[[]]", AttrList { ..attr_list!(0..4) }),
     ];
+
     for (input, expected) in cases {
-      let mut parser = Parser::new(b, input);
+      let mut parser = Parser::new(leaked_bump(), input);
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();

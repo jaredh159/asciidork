@@ -788,7 +788,7 @@ mod tests {
       (
         "`+{name}+`\nbar",
         nodes![
-          n(LitMono(src("{name}", 2..8)), l(0, 10)),
+          node!(LitMono(src("{name}", 2..8)), 0..10),
           node!(JoiningNewline, 10..11),
           node!("bar"; 11..14),
         ],
@@ -869,7 +869,7 @@ mod tests {
       ),
       (
         "+_<foo>&_+",
-        nodes![n(
+        nodes![node!(
           InlinePassthrough(nodes![
             node!("_"; 1..2),
             node!(SpecialChar(SpecialCharKind::LessThan), 2..3),
@@ -878,7 +878,7 @@ mod tests {
             node!(SpecialChar(SpecialCharKind::Ampersand), 7..8),
             node!("_"; 8..9),
           ]),
-          l(0, 10),
+          0..10,
         )],
       ),
       (

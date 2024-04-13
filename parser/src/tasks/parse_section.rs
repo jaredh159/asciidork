@@ -157,8 +157,7 @@ mod tests {
 
       bar
     "};
-    let b = &Bump::new();
-    let mut parser = Parser::new(b, input);
+    let mut parser = Parser::new(leaked_bump(), input);
     let section = parser.parse_section().unwrap().unwrap();
     assert_eq!(
       section,
@@ -167,11 +166,11 @@ mod tests {
         level: 1,
         id: Some(bstr("_one")),
         heading: nodes![node!("one"; 3..6)],
-        blocks: b.vec([Block {
+        blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("foo"; 8..11)]),
           ..empty_block(8..11)
-        }])
+        }]
       }
     );
     let section = parser.parse_section().unwrap().unwrap();
@@ -182,11 +181,11 @@ mod tests {
         level: 1,
         id: Some(bstr("_two")),
         heading: nodes![node!("two"; 16..19)],
-        blocks: b.vec([Block {
+        blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("bar"; 21..24)]),
           ..empty_block(21..24)
-        }])
+        }]
       }
     );
   }

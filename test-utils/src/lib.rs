@@ -7,9 +7,6 @@ use bumpalo::Bump;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-pub mod ast_helpers;
-pub use ast_helpers::*;
-
 lazy_static! {
   pub static ref NEWLINES_RE: Regex = Regex::new(r"(?m)\n\s*").unwrap();
 }
@@ -100,7 +97,10 @@ macro_rules! node {
     )
   };
   ($text:expr; $range:expr) => {
-    n_text($text, $range.start, $range.end, leaked_bump())
+    InlineNode::new(
+      asciidork_ast::Inline::Text(bstr($text)),
+      SourceLocation::new($range.start, $range.end),
+    )
   };
 }
 
