@@ -244,6 +244,21 @@ macro_rules! assert_eq {
 }
 
 #[macro_export]
+macro_rules! assert_html_contains {
+  ($html:expr, $needle:expr, from: $adoc:expr$(,)?) => {{
+    let newline = if $adoc.ends_with('\n') { "" } else { "\n" };
+    assert!(
+      $html.contains(&$needle),
+      "\nhtml from adoc did not contain \x1b[32m{}\x1b[0m\n\n\x1b[2m```adoc\x1b[0m\n{}{}\x1b[2m```\x1b[0m\n\n\x1b[2m```html\x1b[0m\n{}\x1b[2m```\x1b",
+      $needle,
+      $adoc,
+      newline,
+      $html,
+    );
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_blocks {
   ($input:expr) => {
     parse_doc_content!($input)

@@ -33,3 +33,22 @@ macro_rules! test_eval_loose {
     }
   };
 }
+
+#[macro_export]
+macro_rules! test_non_embedded_contains {
+  ($name:ident, $input:expr, $needles:expr$(,)?) => {
+    #[test]
+    fn $name() {
+      let bump = &::asciidork_parser::prelude::Bump::new();
+      let parser = ::asciidork_parser::Parser::new(bump, $input);
+      let document = parser.parse().unwrap().document;
+      let actual = ::asciidork_eval::eval(
+        document,
+        ::asciidork_eval::Opts::default(),
+        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+      for needle in &$needles {
+        ::test_utils::assert_html_contains!(actual, needle.to_string(), from: $input);
+      }
+    }
+  };
+}

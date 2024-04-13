@@ -181,3 +181,17 @@ test_eval!(
     </div>
   "#}
 );
+
+test_non_embedded_contains!(
+  toc_special_classes,
+  adoc! {"
+    = Doc Title
+    :toc: left
+
+    == Section 1
+  "},
+  [
+    r#"<body class="article toc2 toc-left">"#,
+    r#"<div id="toc" class="toc2">"#
+  ],
+);

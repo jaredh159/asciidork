@@ -64,7 +64,13 @@ impl Backend for AsciidoctorHtml {
     self.render_authors(&document.header);
     self.render_title(document, attrs);
     // TODO: stylesheets
-    self.push([r#"</head><body class=""#, opts.doc_type.to_str(), r#"">"#]);
+    self.push([r#"</head><body class=""#, opts.doc_type.to_str()]);
+    match document.toc.as_ref().map(|toc| &toc.position) {
+      Some(TocPosition::Left) => self.push_str(" toc2 toc-left"),
+      Some(TocPosition::Right) => self.push_str(" toc2 toc-right"),
+      _ => {}
+    }
+    self.push_str("\">");
   }
 
   fn exit_document(&mut self, _document: &Document, _header_attrs: &AttrEntries) {
@@ -131,7 +137,11 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_toc(&mut self, toc: &TableOfContents) {
-    self.push_str(r#"<div id="toc" class="toc"><div id="toctitle">"#);
+    self.push_str(r#"<div id="toc" class="toc"#);
+    if matches!(toc.position, TocPosition::Left | TocPosition::Right) {
+      self.push_ch('2'); // `toc2` roughly means "toc-aside", per dr src
+    }
+    self.push_str(r#""><div id="toctitle">"#);
     self.push_str(&toc.title);
     self.push_str("</div>");
   }
