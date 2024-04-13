@@ -4,6 +4,7 @@ import htmlParser from 'prettier/plugins/html';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml';
 import theme from 'react-syntax-highlighter/dist/esm/styles/hljs/tomorrow-night-blue';
+import Header from './Header';
 
 SyntaxHighlighter.registerLanguage('html', xml);
 
@@ -54,22 +55,25 @@ const App: React.FC = () => {
   }, [adoc]);
 
   return (
-    <div className="flex min-h-screen font-mono antialiased">
-      <textarea
-        spellCheck={false}
-        className="w-2/5 bg-gray-100 p-2 font-mono font-semibold text-blue-900 focus:outline-none"
-        value={adoc}
-        onChange={(e) => setAdoc(e.target.value)}
-      />
-      {!error ? (
-        <SyntaxHighlighter wrapLines class="w-3/5" language="html" style={theme}>
-          {html}
-        </SyntaxHighlighter>
-      ) : (
-        <pre className="w-3/5 p-2 overflow-auto whitespace-wrap bg-black text-red-500 font-bold text-sm">
-          {html}
-        </pre>
-      )}
+    <div className="flex flex-col min-h-screen antialiased">
+      <Header />
+      <div className="flex grow font-mono">
+        <textarea
+          spellCheck={false}
+          className="w-2/5 bg-gray-100 p-2 font-mono font-semibold text-blue-900 focus:outline-none"
+          value={adoc}
+          onChange={(e) => setAdoc(e.target.value)}
+        />
+        {!error ? (
+          <SyntaxHighlighter wrapLines class="w-3/5" language="html" style={theme}>
+            {html}
+          </SyntaxHighlighter>
+        ) : (
+          <pre className="w-3/5 p-2 overflow-auto whitespace-wrap bg-black text-red-500 font-bold text-sm">
+            {html}
+          </pre>
+        )}
+      </div>
     </div>
   );
 };
