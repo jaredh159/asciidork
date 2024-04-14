@@ -4,6 +4,9 @@ use asciidork_ast::variants::inline::*;
 use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
 
+mod attrs;
+// use crate::helpers::*;
+
 #[test]
 fn test_parse_simple_block() {
   assert_block!(
@@ -18,7 +21,7 @@ fn test_parse_simple_block() {
         node!(JoiningNewline, 12..13),
         node!("hello papa"; 13..23),
       ]),
-      ..empty_block(0..23)
+      ..empty_block!(0..23)
     }
   );
 }
@@ -34,7 +37,7 @@ fn test_parse_comment_block() {
     Block {
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..25)
+      ..empty_block!(0..25)
     }
   );
 }
@@ -54,7 +57,7 @@ fn test_parse_comment_style_block() {
       meta: ChunkMeta::new(Some(attrs::pos("comment", 1..8)), None, 0),
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..64)
+      ..empty_block!(0..64)
     }
   );
 }
@@ -71,7 +74,7 @@ fn test_parse_paragraph_comment_block() {
       meta: ChunkMeta::new(Some(attrs::pos("comment", 1..8)), None, 0),
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..80)
+      ..empty_block!(0..80)
     }
   );
 }
@@ -88,17 +91,17 @@ fn test_parse_discrete_heading() {
       context: Context::DiscreteHeading,
       content: Content::Empty(EmptyMetadata::DiscreteHeading {
         level: 3,
-        content: just("A discrete heading", 16..34),
-        id: Some(bstr("_a_discrete_heading")),
+        content: just!("A discrete heading", 16..34),
+        id: Some(bstr!("_a_discrete_heading")),
       }),
-      ..empty_block(0..34)
+      ..empty_block!(0..34)
     }
   );
 }
 
 #[test]
 fn test_incomplete_heading_doesnt_panic() {
-  assert_block!("== ", simple_text_block("== ", 0..3));
+  assert_block!("== ", simple_text_block!("== ", 0..3));
 }
 
 #[test]
@@ -111,8 +114,8 @@ fn test_parse_passthrough() {
     Block {
       meta: ChunkMeta::new(Some(attrs::pos("pass", 1..5)), None, 0),
       context: Context::Passthrough,
-      content: Content::Simple(just("foo <bar>", 7..16)),
-      ..empty_block(0..16)
+      content: Content::Simple(just!("foo <bar>", 7..16)),
+      ..empty_block!(0..16)
     }
   );
 }
@@ -132,7 +135,7 @@ fn test_parse_delimited_passthrough_block() {
       node!(JoiningNewline, 14..15),
       node!("baz"; 15..18),
     ]),
-    ..empty_block(0..23)
+    ..empty_block!(0..23)
   };
   assert_block!(input, expected);
 }
@@ -167,7 +170,7 @@ fn test_parse_delimited_passthrough_block_subs_normal() {
       node!(JoiningNewline, 32..33),
       node!("baz"; 33..36),
     ]),
-    ..empty_block(0..41)
+    ..empty_block!(0..41)
   };
   assert_block!(input, expected);
 }
@@ -179,10 +182,10 @@ fn test_parse_block_titles() {
     foo
   "};
   let expected = Block {
-    meta: ChunkMeta::new(None, Some(just("My Title", 1..9)), 0),
+    meta: ChunkMeta::new(None, Some(just!("My Title", 1..9)), 0),
     context: Context::Paragraph,
     content: Content::Simple(nodes![node!("foo"; 10..13)]),
-    ..empty_block(0..13)
+    ..empty_block!(0..13)
   };
   assert_block!(input, expected);
 }
@@ -196,7 +199,7 @@ fn test_parse_admonitions() {
     Block {
       context: Context::AdmonitionTip,
       content: Content::Simple(nodes![node!("foo"; 5..8)]),
-      ..empty_block(0..8)
+      ..empty_block!(0..8)
     }
   );
 
@@ -208,8 +211,8 @@ fn test_parse_admonitions() {
     Block {
       meta: ChunkMeta::new(Some(attrs::pos("pos", 1..4)), None, 0),
       context: Context::AdmonitionTip,
-      content: Content::Simple(just("foo", 11..14)),
-      ..empty_block(0..14)
+      content: Content::Simple(just!("foo", 11..14)),
+      ..empty_block!(0..14)
     }
   );
 
@@ -221,8 +224,8 @@ fn test_parse_admonitions() {
     Block {
       meta: ChunkMeta::new(Some(attrs::pos("WARNING", 1..8)), None, 0),
       context: Context::AdmonitionWarning,
-      content: Content::Simple(just("TIP: foo", 10..18)), // <-- attr list wins
-      ..empty_block(0..18)
+      content: Content::Simple(just!("TIP: foo", 10..18)), // <-- attr list wins
+      ..empty_block!(0..18)
     }
   );
 
@@ -238,10 +241,10 @@ fn test_parse_admonitions() {
       context: Context::AdmonitionWarning, // <-- turns example into warning
       content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
-        content: Content::Simple(just("foo", 15..18)),
-        ..empty_block(15..18)
+        content: Content::Simple(just!("foo", 15..18)),
+        ..empty_block!(15..18)
       }]),
-      ..empty_block(0..23)
+      ..empty_block!(0..23)
     }
   );
 
@@ -257,10 +260,10 @@ fn test_parse_admonitions() {
       context: Context::AdmonitionCaution,
       content: Content::Compound(vecb![Block {
         context: Context::AdmonitionNote,
-        content: Content::Simple(just("foo", 21..24)),
-        ..empty_block(15..24)
+        content: Content::Simple(just!("foo", 21..24)),
+        ..empty_block!(15..24)
       }]),
-      ..empty_block(0..29)
+      ..empty_block!(0..29)
     }
   );
 }
@@ -272,7 +275,7 @@ fn test_parse_comment_line_block() {
     Block {
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..3)
+      ..empty_block!(0..3)
     }
   );
 }
@@ -284,10 +287,10 @@ fn test_parse_image_block() {
     Block {
       context: Context::Image,
       content: Content::Empty(EmptyMetadata::Image {
-        target: src("name.png", 7..15),
+        target: src!("name.png", 7..15),
         attrs: attr_list!(15..17),
       }),
-      ..empty_block(0..17)
+      ..empty_block!(0..17)
     }
   );
 }
@@ -304,10 +307,10 @@ fn test_parse_delimited_open_block() {
       context: Context::Open,
       content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
-        content: Content::Simple(just("foo", 3..6)),
-        ..empty_block(3..6)
+        content: Content::Simple(just!("foo", 3..6)),
+        ..empty_block!(3..6)
       }]),
-      ..empty_block(0..9)
+      ..empty_block!(0..9)
     }
   );
 }
@@ -324,10 +327,10 @@ fn test_parse_delimited_example_block() {
       context: Context::Example,
       content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
-        content: Content::Simple(just("foo", 5..8)),
-        ..empty_block(5..8)
+        content: Content::Simple(just!("foo", 5..8)),
+        ..empty_block!(5..8)
       }]),
-      ..empty_block(0..13)
+      ..empty_block!(0..13)
     },
   );
 }
@@ -342,8 +345,8 @@ fn test_undelimited_sidebar() {
     Block {
       meta: ChunkMeta::new(Some(attrs::pos("sidebar", 1..8)), None, 0),
       context: Context::Sidebar,
-      content: Content::Simple(just("foo", 10..13)),
-      ..empty_block(0..13)
+      content: Content::Simple(just!("foo", 10..13)),
+      ..empty_block!(0..13)
     }
   );
 }
@@ -358,7 +361,7 @@ fn test_parse_empty_delimited_block() {
     Block {
       context: Context::Open,
       content: Content::Compound(vecb![]),
-      ..empty_block(0..5)
+      ..empty_block!(0..5)
     }
   );
 }
@@ -375,10 +378,10 @@ fn test_parse_delimited_sidebar_block() {
       context: Context::Sidebar,
       content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
-        content: Content::Simple(just("foo", 5..8)),
-        ..empty_block(5..8)
+        content: Content::Simple(just!("foo", 5..8)),
+        ..empty_block!(5..8)
       }]),
-      ..empty_block(0..13)
+      ..empty_block!(0..13)
     },
   )
 }
@@ -399,12 +402,12 @@ fn test_nested_delimiter_blocks() {
         context: Context::Open,
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,
-          content: Content::Simple(just("foo", 8..11)),
-          ..empty_block(8..11)
+          content: Content::Simple(just!("foo", 8..11)),
+          ..empty_block!(8..11)
         }]),
-        ..empty_block(5..14)
+        ..empty_block!(5..14)
       }]),
-      ..empty_block(0..19)
+      ..empty_block!(0..19)
     }
   );
 
@@ -425,16 +428,16 @@ fn test_nested_delimiter_blocks() {
     Block {
       context: Context::Sidebar,
       content: Content::Compound(vecb![Block {
-        meta: ChunkMeta::new(None, Some(just("Bar", 7..10)), 6),
+        meta: ChunkMeta::new(None, Some(just!("Bar", 7..10)), 6),
         context: Context::Open,
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,
-          content: Content::Simple(just("foo", 15..18)),
-          ..empty_block(15..18)
+          content: Content::Simple(just!("foo", 15..18)),
+          ..empty_block!(15..18)
         }]),
-        ..empty_block(6..23)
+        ..empty_block!(6..23)
       }]),
-      ..empty_block(0..29)
+      ..empty_block!(0..29)
     }
   );
 }
@@ -456,24 +459,24 @@ fn test_parse_multi_para_delimited_sidebar_block() {
       content: Content::Compound(vecb![
         Block {
           context: Context::Paragraph,
-          content: Content::Simple(just("This is content in a sidebar block.", 5..40)),
-          ..empty_block(5..40)
+          content: Content::Simple(just!("This is content in a sidebar block.", 5..40)),
+          ..empty_block!(5..40)
         },
         Block {
           context: Context::Image,
           content: Content::Empty(EmptyMetadata::Image {
-            target: src("name.png", 49..57),
+            target: src!("name.png", 49..57),
             attrs: attr_list!(57..59),
           }),
-          ..empty_block(42..59)
+          ..empty_block!(42..59)
         },
         Block {
           context: Context::Paragraph,
-          content: Content::Simple(just("This is more content in the sidebar block.", 61..103)),
-          ..empty_block(61..103)
+          content: Content::Simple(just!("This is more content in the sidebar block.", 61..103)),
+          ..empty_block!(61..103)
         },
       ]),
-      ..empty_block(0..108)
+      ..empty_block!(0..108)
     }
   );
 }

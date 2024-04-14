@@ -6,6 +6,7 @@ mod doc_content;
 mod doc_header;
 mod inline;
 mod inline_nodes;
+mod json;
 mod list;
 mod r#macro;
 mod node;
@@ -51,7 +52,8 @@ pub mod prelude {
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::doc_content::DocContent;
   pub use crate::doc_header::{Author, DocHeader, DocTitle};
-  pub use crate::inline::{CurlyKind, InlineNode, QuoteKind, SpecialCharKind};
+  pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
+  pub use crate::json::*;
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
   pub use crate::node::{Callout, Document, Section};
   pub use crate::source_location::SourceLocation;

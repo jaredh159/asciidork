@@ -699,7 +699,7 @@ mod tests {
       nodes![
         node!("foo"; 0..3),
         node!(JoiningNewline, 3..4),
-        node!(LineComment(bstr(" baz")), 4..11),
+        node!(LineComment(bstr!(" baz")), 4..11),
         node!("bar"; 11..14),
       ],
     )];
@@ -711,7 +711,7 @@ mod tests {
     let cases = vec![
       (
         "{foo}",
-        nodes![node!(AttributeReference(bstr("foo")), 0..5)],
+        nodes![node!(AttributeReference(bstr!("foo")), 0..5)],
       ),
       (
         "\\{foo}",
@@ -788,7 +788,7 @@ mod tests {
       (
         "`+{name}+`\nbar",
         nodes![
-          node!(LitMono(src("{name}", 2..8)), 0..10),
+          node!(LitMono(src!("{name}", 2..8)), 0..10),
           node!(JoiningNewline, 10..11),
           node!("bar"; 11..14),
         ],
@@ -1055,17 +1055,17 @@ mod tests {
         "foo   bar",
         nodes![
           node!("foo"; 0..3),
-          node!(MultiCharWhitespace(bstr("   ")), 3..6),
+          node!(MultiCharWhitespace(bstr!("   ")), 3..6),
           node!("bar"; 6..9),
         ],
       ),
       (
         "`+{name}+`",
-        nodes![node!(LitMono(src("{name}", 2..8)), 0..10)],
+        nodes![node!(LitMono(src!("{name}", 2..8)), 0..10)],
       ),
       (
         "`+_foo_+`",
-        nodes![node!(LitMono(src("_foo_", 2..7)), 0..9)],
+        nodes![node!(LitMono(src!("_foo_", 2..7)), 0..9)],
       ),
       (
         "foo <bar> & lol",
@@ -1129,20 +1129,20 @@ mod tests {
         "press the btn:[OK] button",
         nodes![
           node!("press the "; 0..10),
-          node!(Macro(Button(src("OK", 15..17))), 10..18),
+          node!(Macro(Button(src!("OK", 15..17))), 10..18),
           node!(" button"; 18..25),
         ],
       ),
       (
         "btn:[Open]",
-        nodes![node!(Macro(Button(src("Open", 5..9))), 0..10)],
+        nodes![node!(Macro(Button(src!("Open", 5..9))), 0..10)],
       ),
       (
         "select menu:File[Save].",
         nodes![
           node!("select "; 0..7),
           node!(
-            Macro(Menu(vecb![src("File", 12..16), src("Save", 17..21)])),
+            Macro(Menu(vecb![src!("File", 12..16), src!("Save", 17..21)])),
             7..22,
           ),
           node!("."; 22..23),
@@ -1152,9 +1152,9 @@ mod tests {
         "menu:View[Zoom > Reset]",
         nodes![node!(
           Macro(Menu(vecb![
-            src("View", 5..9),
-            src("Zoom", 10..14),
-            src("Reset", 17..22),
+            src!("View", 5..9),
+            src!("Zoom", 10..14),
+            src!("Reset", 17..22),
           ])),
           0..23,
         )],

@@ -19,10 +19,10 @@ fn test_quoted_paragraph() {
         node!(JoiningNewline, 30..31),
         node!("and as necessary in the blah."; 31..60),
       ],
-      attr: src("Thomas Jefferson", 65..81),
-      cite: Some(src("Papers of Thomas Jefferson: Volume 11", 83..120)),
+      attr: src!("Thomas Jefferson", 65..81),
+      cite: Some(src!("Papers of Thomas Jefferson: Volume 11", 83..120)),
     },
-    ..empty_block(0..120)
+    ..empty_block!(0..120)
   };
   assert_block!(input, expected);
 }
@@ -39,10 +39,10 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
   let expected = Block {
     meta: ChunkMeta::new(
       Some(AttrList {
-        id: Some(src("foo", 11..14)),
+        id: Some(src!("foo", 11..14)),
         ..attr_list!(9..15)
       }),
-      Some(just("A Title", 1..8)),
+      Some(just!("A Title", 1..8)),
       0,
     ),
     context: Context::QuotedParagraph,
@@ -52,10 +52,10 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
         node!(JoiningNewline, 46..47),
         node!("and as necessary in the blah."; 47..76),
       ],
-      attr: src("Thomas Jefferson", 81..97),
+      attr: src!("Thomas Jefferson", 81..97),
       cite: None,
     },
-    ..empty_block(0..97)
+    ..empty_block!(0..97)
   };
   assert_block!(input, expected);
 }
@@ -80,7 +80,7 @@ fn test_simple_blockquote() {
     },
     context: Context::BlockQuote,
     content: Content::Simple(nodes![node!("foo"; 24.. 27)]),
-    ..empty_block(0..27)
+    ..empty_block!(0..27)
   };
   assert_block!(input, expected,)
 }
@@ -108,10 +108,10 @@ fn test_parse_delimited_blockquote() {
     context: Context::BlockQuote,
     content: Content::Compound(vecb![Block {
       context: Context::Paragraph,
-      content: Content::Simple(just("foo", 29..32)),
-      ..empty_block(29..32)
+      content: Content::Simple(just!("foo", 29..32)),
+      ..empty_block!(29..32)
     }]),
-    ..empty_block(0..37)
+    ..empty_block!(0..37)
   };
   assert_block!(input, expected);
 }
@@ -144,7 +144,7 @@ fn test_delimited_verse_block() {
         node!(JoiningNewline, 32..33),
         node!("bar"; 33..36),
       ]),
-      ..empty_block(0..41)
+      ..empty_block!(0..41)
     }
   );
 }

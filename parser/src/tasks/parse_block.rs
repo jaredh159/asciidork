@@ -337,7 +337,7 @@ mod tests {
     let expected = Block {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
-      ..empty_block(0..17)
+      ..empty_block!(0..17)
     };
     assert_eq!(block, expected);
   }

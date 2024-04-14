@@ -16,15 +16,15 @@ fn test_basic_ordered_list() {
     &[
       ListItem {
         marker: ListMarker::Dot(1),
-        marker_src: src(".", 0..1),
-        principle: just("foo", 2..5),
-        ..empty_list_item()
+        marker_src: src!(".", 0..1),
+        principle: just!("foo", 2..5),
+        ..empty_list_item!()
       },
       ListItem {
         marker: ListMarker::Dot(1),
-        marker_src: src(".", 7..8),
-        principle: just("bar", 9..12),
-        ..empty_list_item()
+        marker_src: src!(".", 7..8),
+        principle: just!("bar", 9..12),
+        ..empty_list_item!()
       },
     ]
   );
@@ -42,8 +42,8 @@ fn test_ordered_w_nested_unordered() {
     Context::OrderedList,
     &[ListItem {
       marker: ListMarker::Dot(1),
-      marker_src: src(".", 0..1),
-      principle: just("Linux", 2..7),
+      marker_src: src!(".", 0..1),
+      principle: just!("Linux", 2..7),
       type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
         meta: ChunkMeta::empty(11),
@@ -54,19 +54,19 @@ fn test_ordered_w_nested_unordered() {
           items: vecb![
             ListItem {
               marker: ListMarker::Star(1),
-              marker_src: src("*", 11..12),
-              principle: just("Fedora", 13..19),
-              ..empty_list_item()
+              marker_src: src!("*", 11..12),
+              principle: just!("Fedora", 13..19),
+              ..empty_list_item!()
             },
             ListItem {
               marker: ListMarker::Star(1),
-              marker_src: src("*", 22..23),
-              principle: just("Ubuntu", 24..30),
-              ..empty_list_item()
+              marker_src: src!("*", 22..23),
+              principle: just!("Ubuntu", 24..30),
+              ..empty_list_item!()
             },
           ],
         },
-        ..empty_block(11..30)
+        ..empty_block!(11..30)
       }],
     }]
   );

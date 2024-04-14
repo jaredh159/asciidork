@@ -4,6 +4,8 @@ use asciidork_ast::{Inline, ListVariant};
 use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
 
+mod attrs;
+
 #[test]
 fn test_simple_unordered_list() {
   assert_list!(
@@ -15,15 +17,15 @@ fn test_simple_unordered_list() {
     &[
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 0..1),
-        principle: just("one", 2..5),
-        ..empty_list_item()
+        marker_src: src!("*", 0..1),
+        principle: just!("one", 2..5),
+        ..empty_list_item!()
       },
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 6..7),
-        principle: just("two", 8..11),
-        ..empty_list_item()
+        marker_src: src!("*", 6..7),
+        principle: just!("two", 8..11),
+        ..empty_list_item!()
       },
     ]
   );
@@ -41,8 +43,8 @@ fn test_simple_nested_list() {
     &[
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 0..1),
-        principle: just("one", 2..5),
+        marker_src: src!("*", 0..1),
+        principle: just!("one", 2..5),
         type_meta: ListItemTypeMeta::None,
         blocks: vecb![Block {
           content: Content::List {
@@ -50,20 +52,20 @@ fn test_simple_nested_list() {
             depth: 2,
             items: vecb![ListItem {
               marker: ListMarker::Star(2),
-              marker_src: src("**", 6..8),
-              principle: just("two", 9..12),
-              ..empty_list_item()
+              marker_src: src!("**", 6..8),
+              principle: just!("two", 9..12),
+              ..empty_list_item!()
             }],
           },
           context: Context::UnorderedList,
-          ..empty_block(6..12)
+          ..empty_block!(6..12)
         }],
       },
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 13..14),
-        principle: just("one again", 15..24),
-        ..empty_list_item()
+        marker_src: src!("*", 13..14),
+        principle: just!("one again", 15..24),
+        ..empty_list_item!()
       },
     ]
   );
@@ -81,8 +83,8 @@ fn test_nested_list_separated_by_newlines() {
     Context::UnorderedList,
     &[ListItem {
       marker: ListMarker::Star(1),
-      marker_src: src("*", 0..1),
-      principle: just("one", 2..5),
+      marker_src: src!("*", 0..1),
+      principle: just!("one", 2..5),
       type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
         content: Content::List {
@@ -90,13 +92,13 @@ fn test_nested_list_separated_by_newlines() {
           depth: 2,
           items: vecb![ListItem {
             marker: ListMarker::Star(2),
-            marker_src: src("**", 8..10),
-            principle: just("two", 11..14),
-            ..empty_list_item()
+            marker_src: src!("**", 8..10),
+            principle: just!("two", 11..14),
+            ..empty_list_item!()
           }],
         },
         context: Context::UnorderedList,
-        ..empty_block(8..14)
+        ..empty_block!(8..14)
       }],
     },]
   );
@@ -112,13 +114,13 @@ fn test_indented_principle_continuation() {
     Context::UnorderedList,
     &[ListItem {
       marker: ListMarker::Star(1),
-      marker_src: src("*", 0..1),
+      marker_src: src!("*", 0..1),
       principle: nodes![
         node!("foo bar"; 2..9),
         node!(Inline::JoiningNewline, 9..10),
         node!("baz"; 12..15),
       ],
-      ..empty_list_item()
+      ..empty_list_item!()
     }]
   );
 }
@@ -134,8 +136,8 @@ fn test_list_custom_marker() {
     Context::UnorderedList,
     &[ListItem {
       marker: ListMarker::Star(1),
-      marker_src: src("*", 0..1),
-      principle: just("foo", 2..5),
+      marker_src: src!("*", 0..1),
+      principle: just!("foo", 2..5),
       type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
         meta: ChunkMeta::new(Some(attrs::pos("circles", 7..14)), None, 6),
@@ -144,13 +146,13 @@ fn test_list_custom_marker() {
           variant: ListVariant::Unordered,
           items: vecb![ListItem {
             marker: ListMarker::Star(2),
-            marker_src: src("**", 16..18),
-            principle: just("bar", 19..22),
-            ..empty_list_item()
+            marker_src: src!("**", 16..18),
+            principle: just!("bar", 19..22),
+            ..empty_list_item!()
           }],
         },
         context: Context::UnorderedList,
-        ..empty_block(6..22)
+        ..empty_block!(6..22)
       }],
     }]
   );
@@ -168,24 +170,24 @@ fn test_checkbox_list() {
     &[
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 0..1),
-        type_meta: ListItemTypeMeta::Checklist(true, src("[*]", 2..5)),
-        principle: just(" checked", 5..13),
-        ..empty_list_item()
+        marker_src: src!("*", 0..1),
+        type_meta: ListItemTypeMeta::Checklist(true, src!("[*]", 2..5)),
+        principle: just!(" checked", 5..13),
+        ..empty_list_item!()
       },
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 14..15),
-        type_meta: ListItemTypeMeta::Checklist(true, src("[x]", 16..19)),
-        principle: just(" also checked", 19..32),
-        ..empty_list_item()
+        marker_src: src!("*", 14..15),
+        type_meta: ListItemTypeMeta::Checklist(true, src!("[x]", 16..19)),
+        principle: just!(" also checked", 19..32),
+        ..empty_list_item!()
       },
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 33..34),
-        type_meta: ListItemTypeMeta::Checklist(false, src("[ ]", 35..38)),
-        principle: just(" not checked", 38..50),
-        ..empty_list_item()
+        marker_src: src!("*", 33..34),
+        type_meta: ListItemTypeMeta::Checklist(false, src!("[ ]", 35..38)),
+        principle: just!(" not checked", 38..50),
+        ..empty_list_item!()
       },
     ]
   );
@@ -202,13 +204,13 @@ fn test_single_continuation() {
     Context::UnorderedList,
     &[ListItem {
       marker: ListMarker::Star(1),
-      marker_src: src("*", 0..1),
+      marker_src: src!("*", 0..1),
       type_meta: ListItemTypeMeta::None,
-      principle: just("principle", 2..11),
+      principle: just!("principle", 2..11),
       blocks: vecb![Block {
-        content: BlockContent::Simple(just("with continuation", 14..31)),
+        content: BlockContent::Simple(just!("with continuation", 14..31)),
         context: BlockContext::Paragraph,
-        ..empty_block(14..31)
+        ..empty_block!(14..31)
       }],
     }]
   );
@@ -227,19 +229,19 @@ fn test_double_continuation() {
     Context::UnorderedList,
     &[ListItem {
       marker: ListMarker::Star(1),
-      marker_src: src("*", 0..1),
+      marker_src: src!("*", 0..1),
       type_meta: ListItemTypeMeta::None,
-      principle: just("principle", 2..11),
+      principle: just!("principle", 2..11),
       blocks: vecb![
         Block {
-          content: BlockContent::Simple(just("with continuation", 14..31)),
+          content: BlockContent::Simple(just!("with continuation", 14..31)),
           context: BlockContext::Paragraph,
-          ..empty_block(14..31)
+          ..empty_block!(14..31)
         },
         Block {
-          content: BlockContent::Simple(just("and another", 34..45)),
+          content: BlockContent::Simple(just!("and another", 34..45)),
           context: BlockContext::Paragraph,
-          ..empty_block(34..45)
+          ..empty_block!(34..45)
         },
       ],
     }]
@@ -268,31 +270,31 @@ fn test_two_items_w_listing_continuations() {
     &[
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 0..1),
+        marker_src: src!("*", 0..1),
         type_meta: ListItemTypeMeta::None,
-        principle: just("principle", 2..11),
+        principle: just!("principle", 2..11),
         blocks: vecb![
           Block {
-            content: BlockContent::Simple(just("listing 1", 19..28)),
+            content: BlockContent::Simple(just!("listing 1", 19..28)),
             context: BlockContext::Listing,
-            ..empty_block(14..33)
+            ..empty_block!(14..33)
           },
           Block {
-            content: BlockContent::Simple(just("some more principle", 36..55)),
+            content: BlockContent::Simple(just!("some more principle", 36..55)),
             context: BlockContext::Paragraph,
-            ..empty_block(36..55)
+            ..empty_block!(36..55)
           },
         ],
       },
       ListItem {
         marker: ListMarker::Star(1),
-        marker_src: src("*", 57..58),
+        marker_src: src!("*", 57..58),
         type_meta: ListItemTypeMeta::None,
-        principle: just("second principle", 59..75),
+        principle: just!("second principle", 59..75),
         blocks: vecb![Block {
-          content: BlockContent::Simple(just("listing 2", 83..92)),
+          content: BlockContent::Simple(just!("listing 2", 83..92)),
           context: BlockContext::Listing,
-          ..empty_block(78..97)
+          ..empty_block!(78..97)
         }],
       },
     ]

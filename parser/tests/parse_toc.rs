@@ -13,18 +13,18 @@ fn test_basic_toc() {
       == sect 2
     "},
     TableOfContents {
-      title: bstr("Table of Contents"),
+      title: bstr!("Table of Contents"),
       nodes: vecb![
         TocNode {
           level: 1,
-          id: Some(bstr("_sect_1")),
-          title: just("sect 1", 10..16),
+          id: Some(bstr!("_sect_1")),
+          title: just!("sect 1", 10..16),
           children: vecb![],
         },
         TocNode {
           level: 1,
-          id: Some(bstr("_sect_2")),
-          title: just("sect 2", 21..27),
+          id: Some(bstr!("_sect_2")),
+          title: just!("sect 2", 21..27),
           children: vecb![],
         },
       ],
@@ -44,11 +44,11 @@ fn test_toc_macro_block() {
       toc::[]
     "},
     &[
-      simple_text_block("foo", 13..16),
+      simple_text_block!("foo", 13..16),
       Block {
         context: BlockContext::TableOfContents,
         content: BlockContent::Empty(EmptyMetadata::None),
-        ..empty_block(18..26)
+        ..empty_block!(18..26)
       }
     ]
   );
@@ -68,23 +68,23 @@ fn test_nested_toc() {
       == sect 2
     "},
     TableOfContents {
-      title: bstr("Ham Sandwich"),
+      title: bstr!("Ham Sandwich"),
       nodes: vecb![
         TocNode {
           level: 1,
-          id: Some(bstr("_sect_1")),
-          title: just("sect 1", 35..41),
+          id: Some(bstr!("_sect_1")),
+          title: just!("sect 1", 35..41),
           children: vecb![TocNode {
             level: 2,
-            id: Some(bstr("_sect_1_1")),
-            title: just("sect 1.1", 47..55),
+            id: Some(bstr!("_sect_1_1")),
+            title: just!("sect 1.1", 47..55),
             children: vecb![],
           }],
         },
         TocNode {
           level: 1,
-          id: Some(bstr("_sect_2")),
-          title: just("sect 2", 60..66),
+          id: Some(bstr!("_sect_2")),
+          title: just!("sect 2", 60..66),
           children: vecb![],
         },
       ],
@@ -111,27 +111,27 @@ fn test_deeply_nested_toc() {
       ====== sect 1.1.1.1.1
     "},
     TableOfContents {
-      title: bstr("Table of Contents"),
+      title: bstr!("Table of Contents"),
       nodes: vecb![TocNode {
         level: 1,
-        id: Some(bstr("_sect_1")),
-        title: just("sect 1", 24..30),
+        id: Some(bstr!("_sect_1")),
+        title: just!("sect 1", 24..30),
         children: vecb![TocNode {
           level: 2,
-          id: Some(bstr("_sect_1_1")),
-          title: just("sect 1.1", 36..44),
+          id: Some(bstr!("_sect_1_1")),
+          title: just!("sect 1.1", 36..44),
           children: vecb![TocNode {
             level: 3,
-            id: Some(bstr("_sect_1_1_1")),
-            title: just("sect 1.1.1", 51..61),
+            id: Some(bstr!("_sect_1_1_1")),
+            title: just!("sect 1.1.1", 51..61),
             children: vecb![TocNode {
               level: 4,
-              id: Some(bstr("_sect_1_1_1_1")),
-              title: just("sect 1.1.1.1", 69..81),
+              id: Some(bstr!("_sect_1_1_1_1")),
+              title: just!("sect 1.1.1.1", 69..81),
               children: vecb![TocNode {
                 level: 5,
-                id: Some(bstr("_sect_1_1_1_1_1")),
-                title: just("sect 1.1.1.1.1", 90..104),
+                id: Some(bstr!("_sect_1_1_1_1_1")),
+                title: just!("sect 1.1.1.1.1", 90..104),
                 children: vecb![],
               }],
             },],
@@ -163,23 +163,23 @@ fn test_toc_depth() {
       == sect 2
     "},
     TableOfContents {
-      title: bstr("Table of Contents"),
+      title: bstr!("Table of Contents"),
       nodes: vecb![
         TocNode {
           level: 1,
-          id: Some(bstr("_sect_1")),
-          title: just("sect 1", 24..30),
+          id: Some(bstr!("_sect_1")),
+          title: just!("sect 1", 24..30),
           children: vecb![TocNode {
             level: 2,
-            id: Some(bstr("_sect_1_1")),
-            title: just("sect 1.1", 36..44),
+            id: Some(bstr!("_sect_1_1")),
+            title: just!("sect 1.1", 36..44),
             children: vecb![],
           }],
         },
         TocNode {
           level: 1,
-          id: Some(bstr("_sect_2")),
-          title: just("sect 2", 109..115),
+          id: Some(bstr!("_sect_2")),
+          title: just!("sect 2", 109..115),
           children: vecb![],
         },
       ],

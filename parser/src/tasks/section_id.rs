@@ -160,7 +160,7 @@ mod tests {
     for (line, id_prefix, id_sep, prev, expected) in cases {
       let mut parser = Parser::new(leaked_bump(), "");
       for s in prev {
-        parser.ctx.sect_ids.insert(bstr(s));
+        parser.ctx.sect_ids.insert(bstr!(s));
       }
       let id = parser.autogen_sect_id(line, id_prefix, id_sep, false);
       assert_eq!(id, *expected);

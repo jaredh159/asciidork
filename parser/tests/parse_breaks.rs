@@ -3,6 +3,8 @@ use asciidork_ast::{prelude::*, Inline::JoiningNewline};
 use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
 
+mod attrs;
+
 #[test]
 fn test_basic_thematic_break() {
   assert_block!(
@@ -10,7 +12,7 @@ fn test_basic_thematic_break() {
     Block {
       context: Context::ThematicBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..3)
+      ..empty_block!(0..3)
     }
   );
 }
@@ -29,7 +31,7 @@ fn test_themmatic_break_w_attrs() {
       },
       context: Context::ThematicBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..12)
+      ..empty_block!(0..12)
     }
   );
 }
@@ -45,13 +47,13 @@ fn test_break_in_flow_of_blocks() {
       World
     "},
     &[
-      simple_text_block("Hello", 0..5),
+      simple_text_block!("Hello", 0..5),
       Block {
         context: Context::ThematicBreak,
         content: Content::Empty(EmptyMetadata::None),
-        ..empty_block(7..10)
+        ..empty_block!(7..10)
       },
-      simple_text_block("World", 12..17),
+      simple_text_block!("World", 12..17),
     ]
   );
 }
@@ -66,13 +68,13 @@ fn test_break_not_followed_by_empty_line() {
       World
     "},
     &[
-      simple_text_block("Hello", 0..5),
+      simple_text_block!("Hello", 0..5),
       Block {
         context: Context::ThematicBreak,
         content: Content::Empty(EmptyMetadata::None),
-        ..empty_block(7..10)
+        ..empty_block!(7..10)
       },
-      simple_text_block("World", 11..16),
+      simple_text_block!("World", 11..16),
     ]
   );
 }
@@ -94,7 +96,7 @@ fn test_invalid_break_not_preceded_by_empty_line() {
         node!(JoiningNewline, 7..8),
         node!("bar"; 8..11),
       ]),
-      ..empty_block(0..11)
+      ..empty_block!(0..11)
     }],
   );
 }
@@ -106,7 +108,7 @@ fn test_page_break() {
     Block {
       context: Context::PageBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..3)
+      ..empty_block!(0..3)
     }
   );
 }
@@ -125,7 +127,7 @@ fn test_page_break_w_attrs() {
       },
       context: Context::PageBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block(0..13)
+      ..empty_block!(0..13)
     }
   );
 }

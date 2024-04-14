@@ -68,15 +68,15 @@ fn test_parse_callout_behind_comment() {
     Context::Listing,
     Content::Simple(nodes![
       node!("foo "; 5..9),
-      node!(CalloutTuck(bstr("// ")), 9..12),
+      node!(CalloutTuck(bstr!("// ")), 9..12),
       node!(callout(1, 0, 0), 12..15),
       node!(JoiningNewline, 15..16),
       node!("bar "; 16..20),
-      node!(CalloutTuck(bstr("# ")), 20..22),
+      node!(CalloutTuck(bstr!("# ")), 20..22),
       node!(callout(2, 0, 1), 22..25),
       node!(JoiningNewline, 25..26),
       node!("baz "; 26..30),
-      node!(CalloutTuck(bstr(";; ")), 30..33),
+      node!(CalloutTuck(bstr!(";; ")), 30..33),
       node!(callout(3, 0, 2), 33..36),
     ]),
   );
@@ -95,7 +95,7 @@ fn test_parse_callout_behind_custom_comment() {
     Context::Listing,
     Content::Simple(nodes![
       node!("foo "; 22..26),
-      node!(CalloutTuck(bstr("% ")), 26..28),
+      node!(CalloutTuck(bstr!("% ")), 26..28),
       node!(callout(1, 0, 0), 28..31),
     ]),
   );

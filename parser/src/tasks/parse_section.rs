@@ -100,12 +100,12 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
-        id: Some(bstr("_foo")),
+        id: Some(bstr!("_foo")),
         heading: nodes![node!("foo"; 3..6)],
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("bar"; 8..11)]),
-          ..empty_block(8..11)
+          ..empty_block!(8..11)
         }]
       }
     );
@@ -124,7 +124,7 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
-        id: Some(bstr("_one")),
+        id: Some(bstr!("_one")),
         heading: nodes![node!("one"; 3..6)],
         blocks: vecb![Block {
           meta: ChunkMeta::empty(8),
@@ -132,15 +132,15 @@ mod tests {
           content: BlockContent::Section(Section {
             meta: ChunkMeta::empty(8),
             level: 2,
-            id: Some(bstr("_two")),
+            id: Some(bstr!("_two")),
             heading: nodes![node!("two"; 12..15)],
             blocks: vecb![Block {
               context: BlockContext::Paragraph,
               content: BlockContent::Simple(nodes![node!("bar"; 17..20)]),
-              ..empty_block(17..20)
+              ..empty_block!(17..20)
             }]
           }),
-          ..empty_block(8..21)
+          ..empty_block!(8..21)
         }]
       }
     );
@@ -164,12 +164,12 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(0),
         level: 1,
-        id: Some(bstr("_one")),
+        id: Some(bstr!("_one")),
         heading: nodes![node!("one"; 3..6)],
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("foo"; 8..11)]),
-          ..empty_block(8..11)
+          ..empty_block!(8..11)
         }]
       }
     );
@@ -179,12 +179,12 @@ mod tests {
       Section {
         meta: ChunkMeta::empty(13),
         level: 1,
-        id: Some(bstr("_two")),
+        id: Some(bstr!("_two")),
         heading: nodes![node!("two"; 16..19)],
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("bar"; 21..24)]),
-          ..empty_block(21..24)
+          ..empty_block!(21..24)
         }]
       }
     );

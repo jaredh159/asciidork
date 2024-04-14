@@ -10,13 +10,13 @@ fn test_simple_description_list() {
     Context::DescriptionList,
     &[ListItem {
       marker: ListMarker::Colons(2),
-      marker_src: src("::", 3..5),
-      principle: just("foo", 0..3),
+      marker_src: src!("::", 3..5),
+      principle: just!("foo", 0..3),
       type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
-        content: Content::Simple(just("bar", 6..9)),
+        content: Content::Simple(just!("bar", 6..9)),
         context: Context::Paragraph,
-        ..empty_block(6..9)
+        ..empty_block!(6..9)
       }],
     }]
   );
@@ -32,13 +32,13 @@ fn test_two_line_description_list() {
     Context::DescriptionList,
     &[ListItem {
       marker: ListMarker::Colons(2),
-      marker_src: src("::", 3..5),
-      principle: just("foo", 0..3),
+      marker_src: src!("::", 3..5),
+      principle: just!("foo", 0..3),
       type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
-        content: Content::Simple(just("bar", 6..9)),
+        content: Content::Simple(just!("bar", 6..9)),
         context: Context::Paragraph,
-        ..empty_block(6..9)
+        ..empty_block!(6..9)
       }],
     }]
   );
