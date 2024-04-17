@@ -61,7 +61,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-ast"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bumpalo",
  "jsonxf",
@@ -73,7 +73,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-backend"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "asciidork-ast",
  "asciidork-opts",
@@ -81,7 +81,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-cli"
-version = "0.3.0"
+version = "0.3.3"
 dependencies = [
  "asciidork-dr-html-backend",
  "asciidork-eval",
@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-dr-html-backend"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -110,7 +110,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-eval"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -119,11 +119,11 @@ dependencies = [
 
 [[package]]
 name = "asciidork-opts"
-version = "0.3.0"
+version = "0.3.3"
 
 [[package]]
 name = "asciidork-parser"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "asciidork-ast",
  "asciidork-opts",
