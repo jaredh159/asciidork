@@ -382,7 +382,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           }
 
           Backtick if subs.inline_formatting() && line.current_is(DoubleQuote) => {
-            push_simple(Curly(RightDouble), &token, line, &mut acc, lines);
+            push_simple(CurlyQuote(RightDouble), &token, line, &mut acc, lines);
             break;
           }
 
@@ -391,12 +391,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Backtick)
               && stop_tokens != [Backtick] =>
           {
-            push_simple(Curly(LeftDouble), &token, line, &mut acc, lines);
+            push_simple(CurlyQuote(LeftDouble), &token, line, &mut acc, lines);
             break;
           }
 
           Backtick if subs.inline_formatting() && line.current_is(SingleQuote) => {
-            push_simple(Curly(RightSingle), &token, line, &mut acc, lines);
+            push_simple(CurlyQuote(RightSingle), &token, line, &mut acc, lines);
             break;
           }
 
@@ -405,7 +405,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Backtick)
               && stop_tokens != [Backtick] =>
           {
-            push_simple(Curly(LeftSingle), &token, line, &mut acc, lines);
+            push_simple(CurlyQuote(LeftSingle), &token, line, &mut acc, lines);
             break;
           }
 
@@ -465,7 +465,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             if acc.text.is_empty() || acc.text.ends_with(char::is_whitespace) {
               acc.text.push_token(&token);
             } else {
-              acc.push_node(Curly(LegacyImplicitApostrophe), token.loc);
+              acc.push_node(CurlyQuote(LegacyImplicitApostrophe), token.loc);
             }
           }
 
@@ -764,7 +764,7 @@ mod tests {
         "bar`\"\nbaz",
         nodes![
           node!("bar"; 0..3),
-          node!(Curly(RightDouble), 3..5),
+          node!(CurlyQuote(RightDouble), 3..5),
           node!(JoiningNewline, 5..6),
           node!("baz"; 6..9),
         ],
@@ -1047,7 +1047,7 @@ mod tests {
         "Olaf's wrench",
         nodes![
           node!("Olaf"; 0..4),
-          node!(Curly(LegacyImplicitApostrophe), 4..5),
+          node!(CurlyQuote(LegacyImplicitApostrophe), 4..5),
           node!("s wrench"; 5..13),
         ],
       ),

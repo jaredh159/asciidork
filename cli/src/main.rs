@@ -62,7 +62,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
       }
       Output::Ast => {
-        println!("\n{:#?}", parse_result.document);
+        let json = parse_result.document.to_json();
+        println!("{json}");
         if args.print_timings {
           eprintln!();
           print_timings(src.len(), parse_time, None);

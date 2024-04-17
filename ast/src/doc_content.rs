@@ -13,7 +13,7 @@ impl<'bmp> DocContent<'bmp> {
   pub fn push_block(&mut self, block: Block<'bmp>, _bump: &'bmp Bump) {
     match self {
       DocContent::Blocks(blocks) => blocks.push(block),
-      _ => todo!("¯\\_(ツ)_/¯ not sure what to do here..."),
+      _ => unreachable!("DocContent::push_block"),
     }
   }
 
@@ -48,5 +48,33 @@ impl<'bmp> DocContent<'bmp> {
       DocContent::Blocks(blocks) => Some(blocks),
       _ => None,
     }
+  }
+
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    match self {
+      DocContent::Sectioned { sections, .. } => sections
+        .last()
+        .and_then(|section| section.blocks.last().map(|block| block.loc)),
+      DocContent::Blocks(blocks) => blocks.last().map(|block| block.loc),
+    }
+  }
+}
+
+impl Json for DocContent<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("DocContent");
+    buf.push_str(r#","variant":""#);
+    match self {
+      DocContent::Sectioned { preamble, sections } => {
+        buf.push_str("Sectioned\"");
+        buf.add_option_member("preamble", preamble.as_ref());
+        buf.add_member("sections", sections);
+      }
+      DocContent::Blocks(blocks) => {
+        buf.push_str("Blocks\"");
+        buf.add_member("blocks", blocks);
+      }
+    }
+    buf.finish_obj();
   }
 }

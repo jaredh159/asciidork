@@ -286,8 +286,8 @@ fn assert_callout_list(
   expected_items: &[ListItem],
 ) {
   let mut blocks = parse_blocks!(input);
-  let (context, items, ..) =
-    list_block_data!(blocks.pop().unwrap()).expect("expected list block data");
+  let last = blocks.pop().unwrap();
+  let (context, items, ..) = list_block_data!(last).expect("expected list block data");
   assert_eq!(context, expected_context, from: input);
   assert_eq!(items, expected_items, from: input);
 }

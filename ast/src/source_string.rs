@@ -30,6 +30,12 @@ impl<'bmp> SourceString<'bmp> {
   }
 }
 
+impl Json for SourceString<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    self.src.to_json_in(buf);
+  }
+}
+
 impl<'bmp> Deref for SourceString<'bmp> {
   type Target = str;
 

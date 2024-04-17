@@ -1,4 +1,6 @@
-use std::fmt;
+use std::fmt::{Debug, Formatter, Result};
+
+use crate::internal::*;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
 pub struct SourceLocation {
@@ -56,8 +58,18 @@ impl From<usize> for SourceLocation {
   }
 }
 
-impl fmt::Debug for SourceLocation {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Debug for SourceLocation {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     write!(f, "{}..{}", self.start, self.end)
+  }
+}
+
+impl Json for SourceLocation {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.push('[');
+    buf.push_str(&self.start.to_string());
+    buf.push(',');
+    buf.push_str(&self.end.to_string());
+    buf.push(']');
   }
 }

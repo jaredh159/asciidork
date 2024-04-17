@@ -5,7 +5,6 @@ use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
 
 mod attrs;
-// use crate::helpers::*;
 
 #[test]
 fn test_parse_simple_block() {

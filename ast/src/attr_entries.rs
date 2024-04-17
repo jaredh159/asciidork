@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::internal::*;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttrEntry {
   String(String),
@@ -73,5 +75,20 @@ impl AttrEntries {
       Some(AttrEntry::String(s)) => s.parse().unwrap_or(default),
       _ => default,
     }
+  }
+}
+
+impl Json for AttrEntry {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    match self {
+      AttrEntry::String(s) => s.to_json_in(buf),
+      AttrEntry::Bool(b) => b.to_json_in(buf),
+    }
+  }
+}
+
+impl Json for AttrEntries {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    self.0.to_json_in(buf);
   }
 }

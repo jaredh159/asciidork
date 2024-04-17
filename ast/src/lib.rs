@@ -27,6 +27,7 @@ mod internal {
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
     pub use crate::inline::{CurlyKind::*, QuoteKind::*};
     pub use crate::inline_nodes::InlineNodes;
+    pub use crate::json::*;
     pub use crate::list::*;
     pub use crate::node::{Callout, Document, Section};
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme};

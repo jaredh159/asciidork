@@ -299,7 +299,7 @@ mod tests {
       (
         "[foo]",
         AttrList {
-          positional: vecb![Some(nodes![node!("foo bar"; 1..4)])],
+          positional: vecb![Some(nodes![node!("foo"; 1..4)])],
           ..attr_list!(0..5)
         },
       ),

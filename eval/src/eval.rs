@@ -300,7 +300,7 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
       backend.exit_inline_quote(*kind, children);
     }
     LitMono(text) => backend.visit_inline_lit_mono(text),
-    Curly(kind) => backend.visit_curly_quote(*kind),
+    CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws.as_str()),
     Macro(Footnote { id, text }) => {
       backend.enter_footnote(id.as_deref(), text);

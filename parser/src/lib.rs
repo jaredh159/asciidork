@@ -20,6 +20,7 @@ extern crate asciidork_opts as opts;
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
   pub use crate::parser::Parser;
+  pub use asciidork_ast::Json;
   pub use bumpalo::Bump;
 }
 

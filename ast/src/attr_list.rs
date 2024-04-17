@@ -69,13 +69,7 @@ impl<'bmp> AttrList<'bmp> {
     let Some(Some(nodes)) = self.positional.get(index) else {
       return None;
     };
-    if nodes.len() != 1 {
-      return None;
-    }
-    let Inline::Text(positional) = &nodes[0].content else {
-      return None;
-    };
-    Some(positional.as_str())
+    nodes.single_text()
   }
 
   pub fn has_option(&self, option: &str) -> bool {
@@ -101,6 +95,14 @@ impl<'bmp> AttrList<'bmp> {
       _ => None,
     }
   }
+
+  pub fn is_empty(&self) -> bool {
+    self.positional.is_empty()
+      && self.named.0.is_empty()
+      && self.id.is_none()
+      && self.roles.is_empty()
+      && self.options.is_empty()
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -124,5 +126,103 @@ impl<'bmp> Named<'bmp> {
       .0
       .iter()
       .find_map(|(k, v)| if k == key { Some(v) } else { None })
+  }
+}
+
+impl Json for Named<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.push('{');
+    for (i, (key, value)) in self.0.iter().enumerate() {
+      if i > 0 {
+        buf.push(',');
+      }
+      key.src.to_json_in(buf);
+      buf.push(':');
+      value.src.to_json_in(buf);
+    }
+    buf.finish_obj();
+  }
+}
+
+impl Json for AttrList<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("AttrList");
+    if !self.positional.is_empty() {
+      buf.push_str(r#","positional":"#);
+      buf.push('[');
+      for (i, location) in self.positional.iter().enumerate() {
+        if i > 0 {
+          buf.push(',');
+        }
+        match location {
+          Some(nodes) => {
+            if let Some(text) = nodes.single_text() {
+              text.to_json_in(buf);
+            } else {
+              nodes.to_json_in(buf);
+            }
+          }
+          None => location.to_json_in(buf),
+        }
+      }
+      buf.push(']');
+    }
+    if !self.named.0.is_empty() {
+      buf.add_member("named", &self.named);
+    }
+    let id = self.id.as_ref().map(|s| &s.src);
+    buf.add_option_member("id", id);
+    if !self.roles.is_empty() {
+      buf.add_member("roles", &self.roles);
+    }
+    if !self.options.is_empty() {
+      buf.add_member("options", &self.options);
+    }
+    buf.finish_obj();
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::assert_json;
+  use test_utils::*;
+
+  #[test]
+  fn test_attrlist_to_json() {
+    let cases = [
+      (
+        AttrList {
+          positional: vecb![Some(just!("pos1", 0..0)), None],
+          named: Named(vecb![(src!("key", 0..0), src!("value", 0..0),)]),
+          id: Some(src!("foo", 0..0)),
+          roles: vecb![src!("role1", 0..0)],
+          options: vecb![src!("option1", 0..0)],
+          loc: SourceLocation::new(0, 0),
+        },
+        r#"{
+          "type": "AttrList",
+          "positional": ["pos1", null],
+          "named": {"key":"value"},
+          "id": "foo",
+          "roles": ["role1"],
+          "options": ["option1"]
+        }"#,
+      ),
+      (
+        AttrList {
+          positional: vecb![],
+          named: Named(vecb![]),
+          id: None,
+          roles: vecb![],
+          options: vecb![],
+          loc: SourceLocation::new(0, 0),
+        },
+        r#"{"type": "AttrList"}"#,
+      ),
+    ];
+    for (input, expected) in cases {
+      assert_json!(input, expected);
+    }
   }
 }

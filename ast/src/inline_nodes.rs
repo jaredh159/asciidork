@@ -15,7 +15,7 @@ impl<'bmp> InlineNodes<'bmp> {
     self.iter().for_each(|node| match &node.content {
       Inline::AttributeReference(_) => {}
       Inline::Bold(nodes) => text.extend(nodes.plain_text()),
-      Inline::Curly(_) => {}
+      Inline::CurlyQuote(_) => {}
       Inline::Discarded => {}
       Inline::Highlight(nodes) => text.extend(nodes.plain_text()),
       Inline::Macro(_) => {}
@@ -65,6 +65,17 @@ impl<'bmp> InlineNodes<'bmp> {
       self.0[idx].content = Inline::Discarded;
     }
   }
+
+  pub fn single_text(&self) -> Option<&str> {
+    if self.len() == 1 {
+      match &self[0].content {
+        Inline::Text(s) => Some(s.as_str()),
+        _ => None,
+      }
+    } else {
+      None
+    }
+  }
 }
 
 impl<'bmp> Deref for InlineNodes<'bmp> {
@@ -86,38 +97,24 @@ impl<'bmp> From<BumpVec<'bmp, InlineNode<'bmp>>> for InlineNodes<'bmp> {
   }
 }
 
+impl Json for InlineNodes<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    self.0.to_json_in(buf);
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::{assert_eq, *};
 
   #[test]
-  fn test_button_menu_macro() {
-    let b = &Bump::new();
-    let nodes: InlineNodes = bvec![in b;
-      InlineNode::new(
-        Inline::Bold(bvec![in b;
-          InlineNode::new(
-            Inline::Text(BumpString::from_str_in("Document", b)),
-            SourceLocation::new(1, 8),
-          ),
-        ].into()),
-        SourceLocation::new(0, 9),
-      ),
-      InlineNode::new(
-        Inline::Text(BumpString::from_str_in(" ", b)),
-        SourceLocation::new(9, 10),
-      ),
-      InlineNode::new(
-        Inline::Italic(bvec![in b;
-          InlineNode::new(
-            Inline::Text(BumpString::from_str_in("title", b)),
-            SourceLocation::new(12, 18),
-          ),
-        ].into()),
-        SourceLocation::new(11, 19),
-      ),
-    ]
-    .into();
-    assert_eq!(nodes.plain_text(), vec!["Document", " ", "title"]);
+  fn test_plain_text() {
+    let heading: InlineNodes = nodes![
+      node!(Inline::Bold(just!("Document", 1..8)), 0..9),
+      node!(" "; 9..10),
+      node!(Inline::Italic(just!("title", 12..18)), 11..19),
+    ];
+    assert_eq!(heading.plain_text(), vec!["Document", " ", "title"]);
   }
 }

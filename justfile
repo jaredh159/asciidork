@@ -16,7 +16,11 @@ check:
     cargo fmt -- --check && \
     cargo test --all --no-fail-fast && \
     cargo build
+  @just check-ast-json
   @just build-playground
+
+check-ast-json:
+  @cargo run -- --input kitchen-sink.adoc --format ast | jq &> /dev/null
 
 reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm

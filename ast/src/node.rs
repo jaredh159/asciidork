@@ -54,3 +54,46 @@ impl Debug for Callout {
     )
   }
 }
+
+// json
+
+impl Json for Callout {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("Callout");
+    buf.add_member("list_idx", &self.list_idx);
+    buf.add_member("callout_idx", &self.callout_idx);
+    buf.add_member("number", &self.number);
+    buf.finish_obj();
+  }
+}
+
+impl Json for Section<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("Section");
+    if !self.meta.is_empty() {
+      buf.add_member("meta", &self.meta);
+    }
+    buf.add_member("level", &self.level);
+    buf.add_option_member("id", self.id.as_ref());
+    buf.add_member("heading", &self.heading);
+    buf.add_member("blocks", &self.blocks);
+    buf.finish_obj();
+  }
+}
+
+impl Json for Document<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("Document");
+    buf.add_option_member("header", self.header.as_ref());
+    buf.add_member("content", &self.content);
+    buf.add_option_member("toc", self.toc.as_ref());
+    buf.finish_obj();
+  }
+
+  fn size_hint(&self) -> usize {
+    // json is verbose compared to the source len
+    // multiplying by 16 is an explicit choice to accept possible
+    // extra unused memory for fewer/zero realloc + copy
+    self.content.last_loc().map_or(1024, |loc| loc.end * 16)
+  }
+}

@@ -10,7 +10,9 @@ bumpalo = { version = "3.15.4", features = ["collections"] }
 smallvec = "1.13.2"
 
 [dev-dependencies]
+jsonxf = "1.1.1"
 pretty_assertions = "1.4.0"
+serde_json = "1.0.115"
 test-utils = { path = "../test-utils" }
 
 [lints]

@@ -48,3 +48,44 @@ impl<'bmp> Author<'bmp> {
     name
   }
 }
+
+impl Json for DocHeader<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("DocHeader");
+    buf.add_option_member("title", self.title.as_ref());
+    buf.add_member("authors", &self.authors);
+    buf.add_option_member("revision", self.revision.as_ref());
+    buf.add_member("attrs", &self.attrs);
+    buf.finish_obj();
+  }
+}
+
+impl Json for DocTitle<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("DocTitle");
+    buf.add_member("heading", &self.heading);
+    buf.add_option_member("subtitle", self.subtitle.as_ref());
+    buf.finish_obj();
+  }
+}
+
+impl Json for Revision<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("Revision");
+    buf.add_member("version", &self.version);
+    buf.add_option_member("date", self.date.as_ref());
+    buf.add_option_member("remark", self.remark.as_ref());
+    buf.finish_obj();
+  }
+}
+
+impl Json for Author<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("Author");
+    buf.add_member("first_name", &self.first_name);
+    buf.add_option_member("middle_name", self.middle_name.as_ref());
+    buf.add_member("last_name", &self.last_name);
+    buf.add_option_member("email", self.email.as_ref());
+    buf.finish_obj();
+  }
+}

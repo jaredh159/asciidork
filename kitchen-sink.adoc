@@ -1,0 +1,168 @@
+= _Document_ *Title*
+Jared Henderson <jared@netrivet.com>
+:showtitle:
+:toc: preamble
+
+A preamble.
+
+
+== Inlines
+
+Here is _italic_ and *bold*, and and #highlighted text#. Or [.foo]#span#.
+A +word+, a +sequence of words+, or ++char++acters are escaped.
+Don't    use straight quotes, use "`quoted`" '`text.`'
+Mono is `foo`, but lit mono is `+like this+`.
+Super^script^ and sub~script~. <xml> is rad.
+
+== Macros
+
+:foo: bar
+
+This has a footnote attached to it.footnote:[This _is_ a footnote.]
+Press kbd:[F11] or btn:[OK] to do something. This https://google.com is a link.
+And here is an email: jared@netrivet.com.
+
+The text pass:[<u>underline me</u>] is underlined.
+Icon macro: icon:heart[2x,role=red].
+Select menu:View[Zoom > Reset] to reset.
+
+image::cat.jpg[]
+
+[#cust-id.cust-role]
+== Listing
+
+[source,rust]
+----
+fn main() { <1> <2>
+    println!("Hello, world!"); // <3>
+}
+----
+<1> Callout list
+
+== Misc
+
+Lines can have breaks, +
+Topaz is blue.
+// this is a comment
+And so are you.
+Here is _italic_ and *bold*, and and #highlighted text#. Or [.foo]#span#.
+
+.Title for Paragraph
+Howdy!
+
+[comment]
+A paragraph comment
+
+////
+A block comment
+////
+
+[discrete]
+===== Discrete Heading
+
+== Lists
+
+* Item 1
+* Item 2
+** Item 2.1
+* Item 3
+
+[square]
+- dashes
+- are ok too
+
+  * this is
+  * nested
+
+[lowerroman,start=5]
+. ordered
+. list
+
+//-
+
+1. Hand numbered
+   lists
+2. Are harder to maintain
+
+//-
+
+* [*] checklists
+* [x] are easy
+* [ ] to do
+
+'''
+
+foo:: bar
+baz:: qux
+lol::
+
+this is the definition of `lol`
+
+Dairy::
+* Milk
+* Cheese
+Bakery::
+* Bread
+
+=== Continuations
+
+* The header in AsciiDoc must start with a document title.
++
+----
+= Document Title
+----
++
+Keep in mind that the header is optional.
+
+* Optional author and revision information lines immediately follow the document title.
++
+----
+= Document Title
+Doc Writer <doc.writer@asciidoc.org>
+v1.0, 2022-01-01
+----
+
+== Admonitions
+
+TIP: This is a tip.
+CAUTION: This is a caution.
+WARNING: This is a warning.
+NOTE: This is a note.
+
+[CAUTION]
+====
+NOTE: This is a note.
+====
+
+== Delimited
+
+--
+Open block
+--
+
+[subs=normal]
+++++
+foo & _<bar>_
+passthrough
+++++
+
+// empty is ok
+--
+--
+
+====
+Example block
+====
+
+....
+Listing block
+....
+
+****
+Sidebar block
+****
+
+____
+Ask not what AsciiDoc can do for you
+____
+
