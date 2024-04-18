@@ -315,6 +315,11 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
     AttributeReference(name) => backend.visit_attribute_reference(name),
     CalloutNum(callout) => backend.visit_callout(*callout),
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),
+    TextSpan(attrs, nodes) => {
+      backend.enter_text_span(attrs, nodes);
+      nodes.iter().for_each(|node| eval_inline(node, backend));
+      backend.exit_text_span(attrs, nodes);
+    }
     LineComment(_) | Discarded => {}
     _ => {
       println!("\nUnhandled inline node type:");
