@@ -170,7 +170,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     mut lines: ContiguousLines<'bmp, 'src>,
   ) -> Result<Option<ListItem<'bmp>>> {
     let principle = {
-      let before_delim = line.extract_line_before(TermDelimiter, self.bump);
+      let before_delim = line.extract_line_before(&[TermDelimiter], self.bump);
       self.parse_inlines(&mut before_delim.into_lines_in(self.bump))?
     };
 

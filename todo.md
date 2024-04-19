@@ -1,5 +1,7 @@
 ## todo
 
+- [ ] finish eval-ing all inline types, try to eval `kitchen-sink.adoc` to find missing
+      ones
 - [ ] finish fleshing out customizing substitutions, handling append/prepend, etc., see
       `customize_subs.rs`
 - [ ] i don't run substitutions in an _order_. i need to search out some test cases of why

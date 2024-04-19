@@ -344,6 +344,7 @@ impl<'src> Lexer<'src> {
         | "btn"
         | "menu"
         | "toc"
+        | "xref"
     )
   }
 

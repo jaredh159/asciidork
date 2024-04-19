@@ -44,6 +44,14 @@ macro_rules! assert_block {
 }
 
 #[macro_export]
+macro_rules! assert_inlines {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let inlines = parse_inline_nodes!($input);
+    assert_eq!(inlines, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_blocks {
   ($input:expr, $expected:expr$(,)?) => {{
     let blocks = parse_blocks!($input);
@@ -238,6 +246,16 @@ macro_rules! test_error {
 }
 
 #[macro_export]
+macro_rules! test_inlines {
+  ($name:ident, $input:expr, $expected:expr) => {
+    #[test]
+    fn $name() {
+      assert_inlines!($input, $expected);
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! assert_eq {
   ($left:expr, $right:expr$(,)?) => {{
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");
@@ -344,6 +362,17 @@ macro_rules! list_block_data {
       _ => None,
     }
   };
+}
+
+#[macro_export]
+macro_rules! parse_inline_nodes {
+  ($input:expr) => {{
+    let block = parse_single_block!($input);
+    match block.content {
+      BlockContent::Simple(nodes) => nodes,
+      _ => panic!("expected simple block content"),
+    }
+  }};
 }
 
 #[macro_export]

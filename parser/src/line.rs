@@ -233,6 +233,15 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       && self.contains_nonescaped(CloseBracket)
   }
 
+  pub fn continues_xref_shorthand(&self) -> bool {
+    self.current_is(LessThan)
+      && self.num_tokens() > 3
+      && self.contains_seq(&[GreaterThan, GreaterThan])
+      && self.nth_token(1).is_not(GreaterThan)
+      && self.nth_token(1).is_not(LessThan)
+      && self.nth_token(1).is_not(Whitespace)
+  }
+
   /// true if there is no whitespace until token type, and token type is found
   pub fn is_continuous_thru(&self, kind: TokenKind) -> bool {
     for token in self.tokens() {
@@ -468,11 +477,11 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Some((checked, SourceString::new(src, loc)))
   }
 
-  pub fn extract_line_before(&mut self, kind: TokenKind, bump: &'bmp Bump) -> Line<'bmp, 'src> {
+  pub fn extract_line_before(&mut self, seq: &[TokenKind], bump: &'bmp Bump) -> Line<'bmp, 'src> {
     let mut tokens = BumpVec::with_capacity_in(self.num_tokens(), bump);
     let orig_src = self.src;
     let mut src_len = 0;
-    while self.current_token().is_not(kind) {
+    while !self.starts_with_seq(seq) {
       let token = self.consume_current().unwrap();
       src_len += token.lexeme.len();
       tokens.push(token);

@@ -30,6 +30,10 @@ pub enum MacroNode<'bmp> {
   },
   Button(SourceString<'bmp>),
   Menu(BumpVec<'bmp, SourceString<'bmp>>),
+  Xref {
+    id: SourceString<'bmp>,
+    target: InlineNodes<'bmp>,
+  },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -104,6 +108,11 @@ impl Json for MacroNode<'_> {
       MacroNode::Menu(items) => {
         buf.push_str("Menu\"");
         buf.add_member("items", items);
+      }
+      MacroNode::Xref { id, target } => {
+        buf.push_str("Xref\"");
+        buf.add_member("id", id);
+        buf.add_member("target", target);
       }
     }
     buf.finish_obj();

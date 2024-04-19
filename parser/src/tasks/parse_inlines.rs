@@ -115,6 +115,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 acc.push_node(Macro(Footnote { id, text: note }), macro_loc);
                 break;
               }
+              "xref:" => {
+                let id = line.consume_macro_target(self.bump);
+                lines.restore_if_nonempty(line);
+                let target = self.parse_inlines_until(lines, &[CloseBracket])?;
+                if target.is_empty() {
+                  macro_loc.end = id.loc.end + 2;
+                } else {
+                  extend(&mut macro_loc, &target, 1);
+                }
+                acc.push_node(Macro(Xref { id, target }), macro_loc);
+                break;
+              }
               "mailto:" | "link:" => {
                 let target = line.consume_macro_target(self.bump);
                 let attrs = self.parse_attr_list(&mut line)?;
@@ -229,6 +241,23 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             acc.push_node(SpecialChar(SpecialCharKind::LessThan), start);
             acc.text.push_str(&token.lexeme[1..token.lexeme.len() - 1]);
             acc.push_node(SpecialChar(SpecialCharKind::GreaterThan), end);
+          }
+
+          LessThan if line.continues_xref_shorthand() => {
+            let mut loc = token.loc;
+            line.discard_assert(LessThan);
+            let mut inner = line.extract_line_before(&[GreaterThan, GreaterThan], self.bump);
+            let id = inner.consume_to_string_until(Comma, self.bump);
+            let target = if !inner.is_empty() {
+              inner.discard_assert(Comma);
+              let mut target_lines = inner.into_lines_in(self.bump);
+              self.parse_inlines(&mut target_lines)?
+            } else {
+              InlineNodes::new(self.bump)
+            };
+            line.discard_assert(GreaterThan);
+            loc.end = line.consume_current().unwrap().loc.end;
+            acc.push_node(Macro(Xref { id, target }), loc);
           }
 
           LessThan
