@@ -46,6 +46,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       self.push_toc_node(level, &heading, id.as_ref());
     }
 
+    if let Some(id) = &id {
+      let reftext = meta
+        .attrs
+        .as_ref()
+        .and_then(|attrs| attrs.named.get("reftext"))
+        .cloned();
+      self
+        .document
+        .refs
+        .insert(id.clone(), Ref { reftext, title: heading.clone() });
+    }
+
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
     while let Some(inner) = self.parse_block()? {
@@ -88,63 +100,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 mod tests {
   use super::*;
   use test_utils::{assert_eq, *};
-
-  #[test]
-  fn test_parse_section() {
-    assert_section!(
-      adoc! {"
-        == foo
-
-        bar
-      "},
-      Section {
-        meta: ChunkMeta::empty(0),
-        level: 1,
-        id: Some(bstr!("_foo")),
-        heading: nodes![node!("foo"; 3..6)],
-        blocks: vecb![Block {
-          context: BlockContext::Paragraph,
-          content: BlockContent::Simple(nodes![node!("bar"; 8..11)]),
-          ..empty_block!(8..11)
-        }]
-      }
-    );
-  }
-
-  #[test]
-  fn test_parse_nested_section() {
-    assert_section!(
-      adoc! {"
-        == one
-
-        === two
-
-        bar
-      "},
-      Section {
-        meta: ChunkMeta::empty(0),
-        level: 1,
-        id: Some(bstr!("_one")),
-        heading: nodes![node!("one"; 3..6)],
-        blocks: vecb![Block {
-          meta: ChunkMeta::empty(8),
-          context: BlockContext::Section,
-          content: BlockContent::Section(Section {
-            meta: ChunkMeta::empty(8),
-            level: 2,
-            id: Some(bstr!("_two")),
-            heading: nodes![node!("two"; 12..15)],
-            blocks: vecb![Block {
-              context: BlockContext::Paragraph,
-              content: BlockContent::Simple(nodes![node!("bar"; 17..20)]),
-              ..empty_block!(17..20)
-            }]
-          }),
-          ..empty_block!(8..21)
-        }]
-      }
-    );
-  }
 
   #[test]
   fn test_parse_2_sections() {

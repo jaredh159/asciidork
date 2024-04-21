@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result};
 
 use crate::internal::*;
@@ -8,6 +9,13 @@ pub struct Document<'bmp> {
   pub header: Option<DocHeader<'bmp>>,
   pub content: DocContent<'bmp>,
   pub toc: Option<TableOfContents<'bmp>>,
+  pub refs: HashMap<BumpString<'bmp>, Ref<'bmp>>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Ref<'bmp> {
+  pub reftext: Option<InlineNodes<'bmp>>,
+  pub title: InlineNodes<'bmp>,
 }
 
 impl<'bmp> Document<'bmp> {
@@ -16,6 +24,7 @@ impl<'bmp> Document<'bmp> {
       header: None,
       content: DocContent::Blocks(bvec![in bump]),
       toc: None,
+      refs: HashMap::new(),
     }
   }
 }

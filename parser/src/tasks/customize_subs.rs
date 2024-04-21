@@ -2,7 +2,11 @@ use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/subs/apply-subs-to-blocks/
 pub fn from_meta(current: Substitutions, attrs: &Option<AttrList>) -> Substitutions {
-  let Some(subs) = attrs.as_ref().and_then(|a| a.named.get("subs")) else {
+  let Some(subs) = attrs
+    .as_ref()
+    .and_then(|a| a.named.get("subs"))
+    .and_then(InlineNodes::single_text)
+  else {
     return current;
   };
 

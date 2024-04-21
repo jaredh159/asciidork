@@ -62,7 +62,7 @@ impl<'bmp> AttrList<'bmp> {
   }
 
   pub fn named(&self, key: &str) -> Option<&str> {
-    self.named.get(key).map(|s| s.src.as_str())
+    self.named.get(key).and_then(|s| s.single_text())
   }
 
   pub fn str_positional_at(&self, index: usize) -> Option<&str> {
@@ -106,22 +106,22 @@ impl<'bmp> AttrList<'bmp> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Named<'bmp>(BumpVec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>);
+pub struct Named<'bmp>(BumpVec<'bmp, (SourceString<'bmp>, InlineNodes<'bmp>)>);
 
 impl<'bmp> Named<'bmp> {
   pub fn new_in(bump: &'bmp Bump) -> Self {
     Named(BumpVec::new_in(bump))
   }
 
-  pub fn from(vec: BumpVec<'bmp, (SourceString<'bmp>, SourceString<'bmp>)>) -> Self {
+  pub fn from(vec: BumpVec<'bmp, (SourceString<'bmp>, InlineNodes<'bmp>)>) -> Self {
     Named(vec)
   }
 
-  pub fn insert(&mut self, key: SourceString<'bmp>, value: SourceString<'bmp>) {
+  pub fn insert(&mut self, key: SourceString<'bmp>, value: InlineNodes<'bmp>) {
     self.0.push((key, value));
   }
 
-  pub fn get(&self, key: &str) -> Option<&SourceString<'bmp>> {
+  pub fn get(&self, key: &str) -> Option<&InlineNodes<'bmp>> {
     self
       .0
       .iter()
@@ -138,7 +138,11 @@ impl Json for Named<'_> {
       }
       key.src.to_json_in(buf);
       buf.push(':');
-      value.src.to_json_in(buf);
+      if let Some(text) = value.single_text() {
+        text.to_json_in(buf);
+      } else {
+        value.to_json_in(buf);
+      }
     }
     buf.finish_obj();
   }
@@ -194,7 +198,7 @@ mod tests {
       (
         AttrList {
           positional: vecb![Some(just!("pos1", 0..0)), None],
-          named: Named(vecb![(src!("key", 0..0), src!("value", 0..0),)]),
+          named: Named(vecb![(src!("key", 0..0), just!("value", 0..0),)]),
           id: Some(src!("foo", 0..0)),
           roles: vecb![src!("role1", 0..0)],
           options: vecb![src!("option1", 0..0)],

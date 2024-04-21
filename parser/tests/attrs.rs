@@ -14,7 +14,7 @@ pub fn named(
   for (name, name_range, value, value_range) in pairs {
     attrs.named.insert(
       src!(name, name_range.clone()),
-      src!(value, value_range.clone()),
+      just!(value, value_range.clone()),
     );
   }
   attrs

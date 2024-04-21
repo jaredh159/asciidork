@@ -29,7 +29,7 @@ mod internal {
     pub use crate::inline_nodes::InlineNodes;
     pub use crate::json::*;
     pub use crate::list::*;
-    pub use crate::node::{Callout, Document, Section};
+    pub use crate::node::{Callout, Document, Ref, Section};
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
@@ -56,7 +56,7 @@ pub mod prelude {
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
   pub use crate::json::*;
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
-  pub use crate::node::{Callout, Document, Section};
+  pub use crate::node::{Callout, Document, Ref, Section};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
   pub use crate::toc::*;

@@ -258,7 +258,18 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
           if &name == "id" {
             self.attr_list.id = Some(self.attr.take_src());
           } else {
-            self.attr_list.named.insert(name, self.attr.take_src());
+            self.tokens.remove(0); // remove name
+            let tokens = std::mem::replace(&mut self.tokens, BumpVec::new_in(self.bump));
+            let line = parser.line_from(tokens, self.attr.take_src().loc);
+            let restore = parser.ctx.subs;
+            parser.ctx.subs = if &name.src == "subs" {
+              Substitutions::none()
+            } else {
+              Substitutions::attr_value()
+            };
+            let inlines = parser.parse_inlines(&mut line.into_lines_in(self.bump))?;
+            parser.ctx.subs = restore;
+            self.attr_list.named.insert(name, inlines);
           }
         }
         Role => {
@@ -330,7 +341,7 @@ mod tests {
       (
         "[line-comment=%%]",
         AttrList {
-          named: Named::from(vecb![(src!("line-comment", 1..13), src!("%%", 14..16))]),
+          named: Named::from(vecb![(src!("line-comment", 1..13), just!("%%", 14..16))]),
           ..attr_list!(0..17)
         },
       ),
@@ -339,7 +350,7 @@ mod tests {
         AttrList {
           named: Named::from(vecb![(
             src!("link", 1..5),
-            src!("https://example.com", 6..25),
+            just!("https://example.com", 6..25),
           )]),
           ..attr_list!(0..26)
         },
@@ -349,7 +360,7 @@ mod tests {
         AttrList {
           named: Named::from(vecb![(
             src!("link", 1..5),
-            src!("https://example.com", 7..26),
+            just!("https://example.com", 7..26),
           )]),
           ..attr_list!(0..28)
         },
@@ -421,7 +432,7 @@ mod tests {
             Some(nodes![node!("foo"; 1..4)]),
             Some(nodes![node!("bar"; 5..8)]),
           ],
-          named: Named::from(vecb![(src!("a", 9..10), src!("b", 11..12))]),
+          named: Named::from(vecb![(src!("a", 9..10), just!("b", 11..12))]),
           ..attr_list!(0..13)
         },
       ),
@@ -433,8 +444,8 @@ mod tests {
             Some(nodes![node!("bar"; 13..16)]),
           ],
           named: Named::from(vecb![
-            (src!("a", 1..2), src!("b", 3..4)),
-            (src!("b", 9..10), src!("c", 11..12)),
+            (src!("a", 1..2), just!("b", 3..4)),
+            (src!("b", 9..10), just!("c", 11..12)),
           ]),
           ..attr_list!(0..17)
         },
@@ -464,9 +475,9 @@ mod tests {
         "[alt=Sunset,width=300,height=400]",
         AttrList {
           named: Named::from(vecb![
-            (src!("alt", 1..4), src!("Sunset", 5..11)),
-            (src!("width", 12..17), src!("300", 18..21)),
-            (src!("height", 22..28), src!("400", 29..32)),
+            (src!("alt", 1..4), just!("Sunset", 5..11)),
+            (src!("width", 12..17), just!("300", 18..21)),
+            (src!("height", 22..28), just!("400", 29..32)),
           ]),
           ..attr_list!(0..33)
         },
@@ -477,7 +488,7 @@ mod tests {
           id: Some(src!("custom-id", 2..11)),
           named: Named::from(vecb![(
             src!("named", 12..17),
-            src!("value of named", 19..33),
+            just!("value of named", 19..33),
           )]),
           ..attr_list!(0..35)
         },
@@ -530,14 +541,14 @@ mod tests {
       (
         "[foo='bar']",
         AttrList {
-          named: Named::from(vecb![(src!("foo", 1..4), src!("bar", 6..9))]),
+          named: Named::from(vecb![(src!("foo", 1..4), just!("bar", 6..9))]),
           ..attr_list!(0..11)
         },
       ),
       (
         "[foo='.foo#id%opt']",
         AttrList {
-          named: Named::from(vecb![(src!("foo", 1..4), src!(".foo#id%opt", 6..17))]),
+          named: Named::from(vecb![(src!("foo", 1..4), just!(".foo#id%opt", 6..17))]),
           ..attr_list!(0..19)
         },
       ),

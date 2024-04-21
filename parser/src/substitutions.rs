@@ -42,6 +42,21 @@ impl Substitutions {
     }
   }
 
+  pub const fn attr_value() -> Self {
+    Self {
+      order: [
+        Some(Subs::SpecialChars),
+        Some(Subs::InlineFormatting),
+        None,
+        Some(Subs::CharReplacement),
+        None,
+        None,
+        None,
+      ],
+      flags: 0b00001011,
+    }
+  }
+
   pub const fn verbatim() -> Self {
     Self {
       order: [

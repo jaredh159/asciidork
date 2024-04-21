@@ -53,18 +53,26 @@ macro_rules! assert_inlines {
 
 #[macro_export]
 macro_rules! assert_blocks {
-  ($input:expr, $expected:expr$(,)?) => {{
+  ($input:expr, $expected:expr$(,)?) => {
     let blocks = parse_blocks!($input);
     assert_eq!(blocks, $expected);
-  }};
+  };
 }
 
 #[macro_export]
 macro_rules! assert_section {
-  ($input:expr, $expected:expr$(,)?) => {{
-    let block = parse_section!($input);
-    assert_eq!(block, $expected);
-  }};
+  ($input:expr, reftext: $reftext:expr, $expected:expr$(,)?) => {
+    let (section, refs) = parse_section!($input);
+    assert_eq!(section, $expected);
+    let xref = refs
+      .get(&section.id.clone().expect("section id"))
+      .expect("expected parsed section to have xref");
+    assert_eq!(xref.title, section.heading);
+    assert_eq!(xref.reftext, $reftext);
+  };
+  ($input:expr, $expected:expr$(,)?) => {
+    assert_section!($input, reftext: None, $expected);
+  };
 }
 
 #[macro_export]
@@ -316,6 +324,14 @@ macro_rules! parse_doc_content {
 }
 
 #[macro_export]
+macro_rules! parse_doc {
+  ($input:expr) => {{
+    let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().unwrap().document
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_toc {
   ($input:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);
@@ -386,12 +402,13 @@ macro_rules! parse_list {
 #[macro_export]
 macro_rules! parse_section {
   ($input:expr) => {{
-    match parse_doc_content!($input) {
+    let doc = parse_doc!($input);
+    match doc.content {
       ::asciidork_ast::DocContent::Sectioned { mut sections, .. } => {
         if sections.len() != 1 {
           panic!("expected one section, found {}", sections.len());
         }
-        sections.remove(0)
+        (sections.remove(0), doc.refs)
       }
       _ => panic!("expected block content"),
     }
