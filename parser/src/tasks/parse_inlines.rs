@@ -117,13 +117,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               }
               "xref:" => {
                 let id = line.consume_macro_target(self.bump);
+                self.ctx.xrefs.insert(id.src.clone(), id.loc);
                 lines.restore_if_nonempty(line);
-                let target = self.parse_inlines_until(lines, &[CloseBracket])?;
-                if target.is_empty() {
+                let target_nodes = self.parse_inlines_until(lines, &[CloseBracket])?;
+                let target = if target_nodes.is_empty() {
                   macro_loc.end = id.loc.end + 2;
+                  None
                 } else {
-                  extend(&mut macro_loc, &target, 1);
-                }
+                  extend(&mut macro_loc, &target_nodes, 1);
+                  Some(target_nodes)
+                };
                 acc.push_node(Macro(Xref { id, target }), macro_loc);
                 break;
               }
@@ -248,12 +251,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             line.discard_assert(LessThan);
             let mut inner = line.extract_line_before(&[GreaterThan, GreaterThan], self.bump);
             let id = inner.consume_to_string_until(Comma, self.bump);
+            self.ctx.xrefs.insert(id.src.clone(), id.loc);
             let target = if !inner.is_empty() {
               inner.discard_assert(Comma);
               let mut target_lines = inner.into_lines_in(self.bump);
-              self.parse_inlines(&mut target_lines)?
+              Some(self.parse_inlines(&mut target_lines)?)
             } else {
-              InlineNodes::new(self.bump)
+              None
             };
             line.discard_assert(GreaterThan);
             loc.end = line.consume_current().unwrap().loc.end;

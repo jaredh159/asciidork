@@ -113,7 +113,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         Hash if state.quotes == Default => {
           state.commit_prev(self)?;
           if state.attr_list.id.is_some() {
-            self.err("More than one id attribute", Some(&token))?
+            self.err_token_start("More than one id attribute", &token)?
           }
           state.kind = Id;
         }
@@ -208,8 +208,8 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
     if self.formatted_text {
       parser.err_at(
         "Formatted text only supports attribute shorthand: id, roles, & options",
-        self.parse_range.0 + 1,
-        self.parse_range.1 + 1,
+        self.parse_range.0,
+        self.parse_range.1,
       )?;
     }
     Ok(())

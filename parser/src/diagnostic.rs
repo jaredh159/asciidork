@@ -109,34 +109,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       line_num,
       line: self.lexer.line_of(token.loc.start).to_string(),
       message: message.into(),
-      underline_start: offset + 1,
-      underline_width: 1,
-    })
-  }
-
-  pub(crate) fn err_token_end(&self, message: &'static str, token: &Token) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc.start);
-    self.handle_err(Diagnostic {
-      line_num,
-      line: self.lexer.line_of(token.loc.start).to_string(),
-      message: message.into(),
-      underline_start: offset + 1 + token.lexeme.len(),
-      underline_width: 1,
-    })
-  }
-
-  pub(crate) fn err_token_end_opt(
-    &self,
-    message: &'static str,
-    token: Option<&Token>,
-  ) -> Result<()> {
-    let location = token.map_or_else(|| self.lexer.loc(), |t| t.loc);
-    let (line_num, offset) = self.lexer.line_number_with_offset(location.start);
-    self.handle_err(Diagnostic {
-      line_num,
-      line: self.lexer.line_of(location.start).to_string(),
-      message: message.into(),
-      underline_start: offset + 1 + token.map_or(0, |t| t.lexeme.len()),
+      underline_start: offset,
       underline_width: 1,
     })
   }
@@ -148,7 +121,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       line_num,
       line: self.lexer.line_of(location.start).to_string(),
       message: message.into(),
-      underline_start: offset + 1,
+      underline_start: offset,
       underline_width: 1,
     })
   }

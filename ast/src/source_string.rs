@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use crate::internal::*;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub struct SourceString<'bmp> {
   pub src: BumpString<'bmp>,
   pub loc: SourceLocation,

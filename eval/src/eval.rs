@@ -21,7 +21,10 @@ pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
     backend.enter_document_header(header);
     if let Some(title) = &header.title {
       backend.enter_document_title(title);
-      title.heading.iter().for_each(|n| eval_inline(n, backend));
+      title
+        .heading
+        .iter()
+        .for_each(|node| eval_inline(node, &doc, backend));
       backend.exit_document_title(title);
     }
     backend.visit_document_authors(&header.authors);
@@ -52,7 +55,10 @@ pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
 fn eval_section(section: &Section, doc: &Document, backend: &mut impl Backend) {
   backend.enter_section(section);
   backend.enter_section_heading(section);
-  section.heading.iter().for_each(|n| eval_inline(n, backend));
+  section
+    .heading
+    .iter()
+    .for_each(|node| eval_inline(node, doc, backend));
   backend.exit_section_heading(section);
   section
     .blocks
@@ -64,28 +70,28 @@ fn eval_section(section: &Section, doc: &Document, backend: &mut impl Backend) {
 fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
   if let Some(title) = &block.meta.title {
     backend.enter_block_title(title, block);
-    title.iter().for_each(|node| eval_inline(node, backend));
+    title.iter().for_each(|n| eval_inline(n, doc, backend));
     backend.exit_block_title(title, block);
   }
   match (block.context, &block.content) {
     (Context::Paragraph, Content::Simple(children)) => {
       backend.enter_paragraph_block(block);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_paragraph_block(block);
     }
     (Context::Sidebar, Content::Simple(children)) => {
       backend.enter_sidebar_block(block, &block.content);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_sidebar_block(block, &block.content);
     }
     (Context::Listing, Content::Simple(children)) => {
       backend.enter_listing_block(block, &block.content);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_listing_block(block, &block.content);
     }
@@ -99,7 +105,7 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
     (Context::BlockQuote, Content::Simple(children)) => {
       backend.enter_quote_block(block, &block.content);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_quote_block(block, &block.content);
     }
@@ -113,13 +119,13 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
     (Context::Verse, Content::Simple(children)) => {
       backend.enter_verse_block(block, &block.content);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_verse_block(block, &block.content);
     }
     (Context::QuotedParagraph, Content::QuotedParagraph { quote, attr, cite }) => {
       backend.enter_quoted_paragraph(block, attr, cite.as_deref());
-      quote.iter().for_each(|node| eval_inline(node, backend));
+      quote.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_quoted_paragraph(block, attr, cite.as_deref());
     }
     (Context::Open, Content::Compound(blocks)) => {
@@ -139,7 +145,7 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
     (Context::Example, Content::Simple(children)) => {
       backend.enter_example_block(block, &block.content);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_example_block(block, &block.content);
     }
@@ -153,7 +159,7 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
     ) => {
       let kind = AdmonitionKind::try_from(block.context).unwrap();
       backend.enter_admonition_block(kind, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_admonition_block(kind, block);
     }
     (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs })) => {
@@ -167,7 +173,10 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
       backend.enter_ordered_list(block, items, *depth);
       items.iter().for_each(|item| {
         backend.enter_list_item_principal(item, *variant);
-        item.principle.iter().for_each(|n| eval_inline(n, backend));
+        item
+          .principle
+          .iter()
+          .for_each(|node| eval_inline(node, doc, backend));
         backend.exit_list_item_principal(item, *variant);
         backend.enter_list_item_blocks(&item.blocks, item, *variant);
         item.blocks.iter().for_each(|b| eval_block(b, doc, backend));
@@ -179,7 +188,10 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
       backend.enter_unordered_list(block, items, *depth);
       items.iter().for_each(|item| {
         backend.enter_list_item_principal(item, *variant);
-        item.principle.iter().for_each(|n| eval_inline(n, backend));
+        item
+          .principle
+          .iter()
+          .for_each(|node| eval_inline(node, doc, backend));
         backend.exit_list_item_principal(item, *variant);
         backend.enter_list_item_blocks(&item.blocks, item, *variant);
         item.blocks.iter().for_each(|b| eval_block(b, doc, backend));
@@ -191,7 +203,10 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
       backend.enter_description_list(block, items, *depth);
       items.iter().for_each(|item| {
         backend.enter_description_list_term(item);
-        item.principle.iter().for_each(|n| eval_inline(n, backend));
+        item
+          .principle
+          .iter()
+          .for_each(|node| eval_inline(node, doc, backend));
         backend.exit_description_list_term(item);
         backend.enter_description_list_description(&item.blocks, item);
         item.blocks.iter().for_each(|b| eval_block(b, doc, backend));
@@ -206,7 +221,7 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
         item
           .principle
           .iter()
-          .for_each(|node| eval_inline(node, backend));
+          .for_each(|node| eval_inline(node, doc, backend));
         backend.exit_list_item_principal(item, *variant);
         backend.enter_list_item_blocks(&item.blocks, item, *variant);
         item.blocks.iter().for_each(|b| eval_block(b, doc, backend));
@@ -220,14 +235,14 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
     (Context::Literal, Content::Simple(children)) => {
       backend.enter_literal_block(block, &block.content);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_literal_block(block, &block.content);
     }
     (Context::Passthrough, Content::Simple(children)) => {
       backend.enter_passthrough_block(block, &block.content);
       backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_simple_block_content(children, block);
       backend.exit_passthrough_block(block, &block.content);
     }
@@ -236,7 +251,7 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
       Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),
     ) => {
       backend.enter_discrete_heading(*level, id.as_deref(), block);
-      content.iter().for_each(|node| eval_inline(node, backend));
+      content.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_discrete_heading(*level, id.as_deref(), block);
     }
     (Context::ThematicBreak, _) => {
@@ -254,21 +269,21 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
   }
 }
 
-fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
+fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) {
   match &inline.content {
     Bold(children) => {
       backend.enter_inline_bold(children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_bold(children);
     }
     Mono(children) => {
       backend.enter_inline_mono(children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_mono(children);
     }
     InlinePassthrough(children) => {
       backend.enter_inline_passthrough(children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_passthrough(children);
     }
     SpecialChar(char) => backend.visit_inline_specialchar(char),
@@ -276,27 +291,27 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
     JoiningNewline => backend.visit_joining_newline(),
     Italic(children) => {
       backend.enter_inline_italic(children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_italic(children);
     }
     Highlight(children) => {
       backend.enter_inline_highlight(children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_highlight(children);
     }
     Subscript(children) => {
       backend.enter_inline_subscript(children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_subscript(children);
     }
     Superscript(children) => {
       backend.enter_inline_superscript(children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_superscript(children);
     }
     Quote(kind, children) => {
       backend.enter_inline_quote(*kind, children);
-      children.iter().for_each(|node| eval_inline(node, backend));
+      children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_quote(*kind, children);
     }
     LitMono(text) => backend.visit_inline_lit_mono(text),
@@ -304,12 +319,22 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws.as_str()),
     Macro(Footnote { id, text }) => {
       backend.enter_footnote(id.as_deref(), text);
-      text.iter().for_each(|node| eval_inline(node, backend));
+      text.iter().for_each(|node| eval_inline(node, doc, backend));
       backend.exit_footnote(id.as_deref(), text);
     }
     Macro(Button(text)) => backend.visit_button_macro(text),
     Macro(Menu(items)) => {
       backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
+    }
+    Macro(Xref { id, target }) => {
+      backend.enter_xref(id, target.as_ref().map(|t| t.as_slice()));
+      if let Some(xref) = doc.anchors.get(&id.src) {
+        let text = xref.reftext.as_ref().unwrap_or(&xref.title);
+        text.iter().for_each(|node| eval_inline(node, doc, backend));
+      } else {
+        backend.visit_missing_xref(id);
+      }
+      backend.exit_xref(id, target.as_ref().map(|t| t.as_slice()));
     }
     LineBreak => backend.visit_linebreak(),
     AttributeReference(name) => backend.visit_attribute_reference(name),
@@ -317,7 +342,7 @@ fn eval_inline(inline: &InlineNode, backend: &mut impl Backend) {
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),
     TextSpan(attrs, nodes) => {
       backend.enter_text_span(attrs, nodes);
-      nodes.iter().for_each(|node| eval_inline(node, backend));
+      nodes.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_text_span(attrs, nodes);
     }
     LineComment(_) | Discarded => {}
@@ -337,19 +362,19 @@ fn eval_toc_at(document: &Document, positions: &[TocPosition], backend: &mut imp
     return;
   }
   backend.enter_toc(toc);
-  eval_toc_level(&toc.nodes, backend);
+  eval_toc_level(&toc.nodes, document, backend);
   backend.exit_toc(toc);
 }
 
-fn eval_toc_level(nodes: &[TocNode], backend: &mut impl Backend) {
+fn eval_toc_level(nodes: &[TocNode], doc: &Document, backend: &mut impl Backend) {
   if let Some(first) = nodes.first() {
     backend.enter_toc_level(first.level, nodes);
     nodes.iter().for_each(|node| {
       backend.enter_toc_node(node);
       backend.enter_toc_content(&node.title);
-      node.title.iter().for_each(|n| eval_inline(n, backend));
+      node.title.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_toc_content(&node.title);
-      eval_toc_level(&node.children, backend);
+      eval_toc_level(&node.children, doc, backend);
       backend.exit_toc_node(node);
     });
     backend.exit_toc_level(first.level, nodes);

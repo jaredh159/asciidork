@@ -54,8 +54,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         .cloned();
       self
         .document
-        .refs
-        .insert(id.clone(), Ref { reftext, title: heading.clone() });
+        .anchors
+        .insert(id.clone(), Anchor { reftext, title: heading.clone() });
     }
 
     self.restore_lines(lines);

@@ -122,6 +122,9 @@ pub trait Backend {
   fn exit_footnote(&mut self, id: Option<&str>, content: &[InlineNode]);
   fn enter_text_span(&mut self, attrs: &AttrList, children: &[InlineNode]);
   fn exit_text_span(&mut self, attrs: &AttrList, children: &[InlineNode]);
+  fn enter_xref(&mut self, id: &str, target: Option<&[InlineNode]>);
+  fn exit_xref(&mut self, id: &str, target: Option<&[InlineNode]>);
+  fn visit_missing_xref(&mut self, id: &str);
   fn visit_linebreak(&mut self);
 
   // result

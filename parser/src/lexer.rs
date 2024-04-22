@@ -96,7 +96,7 @@ impl<'src> Lexer<'src> {
         offset += 1;
       }
     }
-    (line_number, offset.saturating_sub(1))
+    (line_number, offset)
   }
 
   pub fn consume_line<'bmp>(&mut self, bump: &'bmp Bump) -> Option<Line<'bmp, 'src>> {

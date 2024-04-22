@@ -195,6 +195,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   fn diagnose_document(&self) -> Result<()> {
+    for (ref_id, ref_loc) in &self.ctx.xrefs {
+      if !self.document.anchors.contains_key(ref_id) {
+        self.err_at_loc(
+          format!("Invalid cross reference, no anchor found for `{ref_id}`"),
+          *ref_loc,
+        )?;
+      }
+    }
     let toc_pos = self.document.toc.as_ref().map(|toc| toc.position);
     match toc_pos {
       Some(TocPosition::Macro) if !self.ctx.saw_toc_macro => {

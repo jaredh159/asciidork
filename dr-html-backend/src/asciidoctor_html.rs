@@ -597,6 +597,18 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</span>");
   }
 
+  fn enter_xref(&mut self, id: &str, _target: Option<&[InlineNode]>) {
+    self.push(["<a href=\"#", id, "\">"]);
+  }
+
+  fn exit_xref(&mut self, _id: &str, _target: Option<&[InlineNode]>) {
+    self.push_str("</a>");
+  }
+
+  fn visit_missing_xref(&mut self, id: &str) {
+    self.push(["[", id, "]"]);
+  }
+
   fn visit_callout(&mut self, callout: Callout) {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::internal::*;
 
@@ -11,7 +11,8 @@ pub struct ParseContext<'bmp> {
   pub section_level: u8,
   pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
-  pub sect_ids: HashSet<BumpString<'bmp>>,
+  pub anchor_ids: HashSet<BumpString<'bmp>>,
+  pub xrefs: HashMap<BumpString<'bmp>, SourceLocation>,
   pub saw_toc_macro: bool,
   callouts: BumpVec<'bmp, Callout>,
 }
@@ -27,7 +28,8 @@ impl<'bmp> ParseContext<'bmp> {
       can_nest_blocks: true,
       callouts: bvec![in bump],
       custom_line_comment: None,
-      sect_ids: HashSet::new(),
+      anchor_ids: HashSet::new(),
+      xrefs: HashMap::new(),
       saw_toc_macro: false,
     }
   }

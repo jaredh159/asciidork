@@ -14,7 +14,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
     if let Some(id) = attrs.and_then(|a| a.id.as_ref()) {
       let custom_id = BumpString::from_str_in(&id.src, self.bump);
-      self.ctx.sect_ids.insert(custom_id.clone());
+      self.ctx.anchor_ids.insert(custom_id.clone());
       return Some(custom_id);
     }
     let id_sep = match self.ctx.attrs.get("idseparator") {
@@ -28,7 +28,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       _ => "_",
     };
     let auto_gen_id = self.autogen_sect_id(line, id_prefix, id_sep, false);
-    self.ctx.sect_ids.insert(auto_gen_id.clone());
+    self.ctx.anchor_ids.insert(auto_gen_id.clone());
     Some(auto_gen_id)
   }
 
@@ -85,7 +85,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       id = BumpString::from_str_in(&id[1..], self.bump);
     }
 
-    if self.ctx.sect_ids.contains(&id) {
+    if self.ctx.anchor_ids.contains(&id) {
       let mut i = 2;
       loop {
         let mut sequenced = BumpString::with_capacity_in(id.len() + 2, self.bump);
@@ -94,7 +94,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           sequenced.push(c);
         }
         sequenced.push_str(&i.to_string());
-        if !self.ctx.sect_ids.contains(&sequenced) {
+        if !self.ctx.anchor_ids.contains(&sequenced) {
           return sequenced;
         }
         i += 1;
@@ -160,7 +160,7 @@ mod tests {
     for (line, id_prefix, id_sep, prev, expected) in cases {
       let mut parser = Parser::new(leaked_bump(), "");
       for s in prev {
-        parser.ctx.sect_ids.insert(bstr!(s));
+        parser.ctx.anchor_ids.insert(bstr!(s));
       }
       let id = parser.autogen_sect_id(line, id_prefix, id_sep, false);
       assert_eq!(id, *expected);

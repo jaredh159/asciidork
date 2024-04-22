@@ -264,6 +264,28 @@ macro_rules! test_inlines {
 }
 
 #[macro_export]
+macro_rules! test_inlines_loose {
+  ($name:ident, $input:expr, $expected:expr) => {
+    #[test]
+    fn $name() {
+      let mut opts = ::asciidork_opts::Opts::embedded();
+      opts.strict = false;
+      let parser = Parser::new_opts(leaked_bump(), $input, opts);
+      let content = parser.parse().unwrap().document.content;
+      let blocks = content.blocks().expect("expected blocks").clone();
+      if blocks.len() != 1 {
+        panic!("expected one block, found {}", blocks.len());
+      }
+      let inlines = match blocks[0].clone().content {
+        BlockContent::Simple(nodes) => nodes,
+        _ => panic!("expected simple block content"),
+      };
+      assert_eq!(inlines, $expected);
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! assert_eq {
   ($left:expr, $right:expr$(,)?) => {{
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");
@@ -408,7 +430,7 @@ macro_rules! parse_section {
         if sections.len() != 1 {
           panic!("expected one section, found {}", sections.len());
         }
-        (sections.remove(0), doc.refs)
+        (sections.remove(0), doc.anchors)
       }
       _ => panic!("expected block content"),
     }

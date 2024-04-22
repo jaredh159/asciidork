@@ -9,11 +9,11 @@ pub struct Document<'bmp> {
   pub header: Option<DocHeader<'bmp>>,
   pub content: DocContent<'bmp>,
   pub toc: Option<TableOfContents<'bmp>>,
-  pub refs: HashMap<BumpString<'bmp>, Ref<'bmp>>,
+  pub anchors: HashMap<BumpString<'bmp>, Anchor<'bmp>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Ref<'bmp> {
+pub struct Anchor<'bmp> {
   pub reftext: Option<InlineNodes<'bmp>>,
   pub title: InlineNodes<'bmp>,
 }
@@ -24,7 +24,7 @@ impl<'bmp> Document<'bmp> {
       header: None,
       content: DocContent::Blocks(bvec![in bump]),
       toc: None,
-      refs: HashMap::new(),
+      anchors: HashMap::new(),
     }
   }
 }

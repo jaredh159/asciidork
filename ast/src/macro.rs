@@ -32,7 +32,7 @@ pub enum MacroNode<'bmp> {
   Menu(BumpVec<'bmp, SourceString<'bmp>>),
   Xref {
     id: SourceString<'bmp>,
-    target: InlineNodes<'bmp>,
+    target: Option<InlineNodes<'bmp>>,
   },
 }
 
