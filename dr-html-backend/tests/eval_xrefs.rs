@@ -25,3 +25,163 @@ test_eval_loose!(
     </div>
   "##}
 );
+
+test_eval!(
+  xref_explicit_ids,
+  adoc! {r#"
+    [#custom]
+    == Tigers
+
+    Link to <<custom>>.
+
+    Hashed link to <<#custom,Big CATS>> works too.
+
+    Hashed macro to xref:#custom[] works too.
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="custom">Tigers</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Link to <a href="#custom">Tigers</a>.</p>
+        </div>
+        <div class="paragraph">
+          <p>Hashed link to <a href="#custom">Big CATS</a> works too.</p>
+        </div>
+        <div class="paragraph">
+          <p>Hashed macro to <a href="#custom">Tigers</a> works too.</p>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+test_eval!(
+  xref_custom_reftext,
+  adoc! {r#"
+    [reftext=Big _cats!_]
+    == Tigers
+
+    Link to <<_tigers>>.
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="_tigers">Tigers</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Link to <a href="#_tigers">Big <em>cats!</em></a>.</p>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+test_eval!(
+  xref_explicit_link_text_empty,
+  adoc! {r#"
+    == Tigers
+
+    Link to <<_tigers,>>.
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="_tigers">Tigers</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Link to <a href="#_tigers">Tigers</a>.</p>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+test_eval!(
+  xref_macro,
+  adoc! {r#"
+    [#tigers]
+    == Tigers
+
+    Link to xref:tigers[].
+
+    Link xref:tigers[with target].
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="tigers">Tigers</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Link to <a href="#tigers">Tigers</a>.</p>
+        </div>
+        <div class="paragraph">
+          <p>Link <a href="#tigers">with target</a>.</p>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+test_eval!(
+  xref_complex_linktext,
+  adoc! {r#"
+    == Tigers
+
+    Link to <<_tigers,`+[tigers]+`>>.
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="_tigers">Tigers</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Link to <a href="#_tigers"><code>[tigers]</code></a>.</p>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+test_eval!(
+  xref_quoted_linktext,
+  adoc! {r#"
+    == Tigers
+
+    Link to <<_tigers,"Big Cats">>.
+
+    Link to xref:_tigers["Big Cats"].
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="_tigers">Tigers</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Link to <a href="#_tigers">"Big Cats"</a>.</p>
+        </div>
+        <div class="paragraph">
+          <p>Link to <a href="#_tigers">"Big Cats"</a>.</p>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+test_eval!(
+  xref_escraped_bracket_in_linktext,
+  adoc! {r#"
+    xref:tigers[[tigers\] are cats]
+
+    [#tigers]
+    == Tigers
+  "#},
+  html! {r##"
+    <div id="preamble">
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p><a href="#tigers">[tigers] are cats</a></p>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="tigers">Tigers</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "##}
+);

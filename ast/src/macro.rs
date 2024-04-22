@@ -32,7 +32,7 @@ pub enum MacroNode<'bmp> {
   Menu(BumpVec<'bmp, SourceString<'bmp>>),
   Xref {
     id: SourceString<'bmp>,
-    target: Option<InlineNodes<'bmp>>,
+    linktext: Option<InlineNodes<'bmp>>,
   },
 }
 
@@ -109,10 +109,10 @@ impl Json for MacroNode<'_> {
         buf.push_str("Menu\"");
         buf.add_member("items", items);
       }
-      MacroNode::Xref { id, target } => {
+      MacroNode::Xref { id, linktext } => {
         buf.push_str("Xref\"");
         buf.add_member("id", id);
-        buf.add_member("target", target);
+        buf.add_member("linktext", linktext);
       }
     }
     buf.finish_obj();

@@ -28,6 +28,11 @@ impl<'bmp> SourceString<'bmp> {
       None => (self, None),
     }
   }
+
+  pub fn drop_first(&mut self) {
+    self.src.drain(..1);
+    self.loc.start += 1;
+  }
 }
 
 impl Json for SourceString<'_> {

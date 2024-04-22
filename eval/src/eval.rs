@@ -326,15 +326,18 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     Macro(Menu(items)) => {
       backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
     }
-    Macro(Xref { id, target }) => {
-      backend.enter_xref(id, target.as_ref().map(|t| t.as_slice()));
-      if let Some(xref) = doc.anchors.get(&id.src) {
-        let text = xref.reftext.as_ref().unwrap_or(&xref.title);
+    Macro(Xref { id, linktext }) => {
+      backend.enter_xref(id, linktext.as_ref().map(|t| t.as_slice()));
+      if let Some(anchor) = doc.anchors.get(&id.src) {
+        let text = anchor
+          .reftext
+          .as_ref()
+          .unwrap_or(linktext.as_ref().unwrap_or(&anchor.title));
         text.iter().for_each(|node| eval_inline(node, doc, backend));
       } else {
         backend.visit_missing_xref(id);
       }
-      backend.exit_xref(id, target.as_ref().map(|t| t.as_slice()));
+      backend.exit_xref(id, linktext.as_ref().map(|t| t.as_slice()));
     }
     LineBreak => backend.visit_linebreak(),
     AttributeReference(name) => backend.visit_attribute_reference(name),

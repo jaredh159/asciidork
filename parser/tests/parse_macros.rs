@@ -7,7 +7,10 @@ test_inlines_loose!(
   xref_macro_alone,
   "xref:foo[]",
   nodes![node!(
-    Macro(Xref { id: src!("foo", 5..8), target: None }),
+    Macro(Xref {
+      id: src!("foo", 5..8),
+      linktext: None
+    }),
     0..10
   )]
 );
@@ -18,7 +21,7 @@ test_inlines_loose!(
   nodes![node!(
     Macro(Xref {
       id: src!("foo", 5..8),
-      target: Some(nodes![
+      linktext: Some(nodes![
         node!("bar "; 9..13),
         node!(Inline::Italic(just!("baz", 14..17)), 13..18)
       ])
@@ -33,7 +36,7 @@ test_inlines_loose!(
   nodes![node!(
     Macro(Xref {
       id: src!("f-o", 5..8),
-      target: Some(just!(" ", 9..10))
+      linktext: Some(just!(" ", 9..10))
     }),
     0..11
   )]
@@ -44,7 +47,13 @@ test_inlines_loose!(
   "foo xref:bar[] baz",
   nodes![
     node!("foo "; 0..4),
-    node!(Macro(Xref { id: src!("bar", 9..12), target: None }), 4..14),
+    node!(
+      Macro(Xref {
+        id: src!("bar", 9..12),
+        linktext: None
+      }),
+      4..14
+    ),
     node!(" baz"; 14..18)
   ]
 );
@@ -53,8 +62,23 @@ test_inlines_loose!(
   test_xref_shorthand,
   "<<foo>>",
   nodes![node!(
-    Macro(Xref { id: src!("foo", 2..5), target: None }),
+    Macro(Xref {
+      id: src!("foo", 2..5),
+      linktext: None
+    }),
     0..7
+  )]
+);
+
+test_inlines_loose!(
+  test_xref_shorthand_explicit_id,
+  "<<#foo>>",
+  nodes![node!(
+    Macro(Xref {
+      id: src!("foo", 3..6),
+      linktext: None
+    }),
+    0..8
   )]
 );
 
@@ -63,7 +87,13 @@ test_inlines_loose!(
   "<<<foo>>",
   nodes![
     node!(Inline::SpecialChar(SpecialCharKind::LessThan), 0..1),
-    node!(Macro(Xref { id: src!("foo", 3..6), target: None }), 1..8)
+    node!(
+      Macro(Xref {
+        id: src!("foo", 3..6),
+        linktext: None
+      }),
+      1..8
+    )
   ]
 );
 
@@ -75,7 +105,7 @@ test_inlines_loose!(
     node!(
       Macro(Xref {
         id: src!("foo-rofl", 6..14),
-        target: Some(nodes![
+        linktext: Some(nodes![
           node!("so "; 15..18),
           node!(Inline::Italic(just!("cool", 19..23)), 18..24),
           node!(" wow"; 24..28)

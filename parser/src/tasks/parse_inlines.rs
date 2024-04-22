@@ -116,18 +116,21 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 break;
               }
               "xref:" => {
-                let id = line.consume_macro_target(self.bump);
+                let mut id = line.consume_macro_target(self.bump);
+                if id.src.starts_with('#') {
+                  id.drop_first();
+                }
                 self.ctx.xrefs.insert(id.src.clone(), id.loc);
                 lines.restore_if_nonempty(line);
-                let target_nodes = self.parse_inlines_until(lines, &[CloseBracket])?;
-                let target = if target_nodes.is_empty() {
+                let nodes = self.parse_inlines_until(lines, &[CloseBracket])?;
+                let linktext = if nodes.is_empty() {
                   macro_loc.end = id.loc.end + 2;
                   None
                 } else {
-                  extend(&mut macro_loc, &target_nodes, 1);
-                  Some(target_nodes)
+                  extend(&mut macro_loc, &nodes, 1);
+                  Some(nodes)
                 };
-                acc.push_node(Macro(Xref { id, target }), macro_loc);
+                acc.push_node(Macro(Xref { id, linktext }), macro_loc);
                 break;
               }
               "mailto:" | "link:" => {
@@ -249,19 +252,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           LessThan if line.continues_xref_shorthand() => {
             let mut loc = token.loc;
             line.discard_assert(LessThan);
+            if line.current_is(Hash) {
+              line.discard(1);
+            }
             let mut inner = line.extract_line_before(&[GreaterThan, GreaterThan], self.bump);
             let id = inner.consume_to_string_until(Comma, self.bump);
             self.ctx.xrefs.insert(id.src.clone(), id.loc);
-            let target = if !inner.is_empty() {
+            let mut linktext = None;
+            if !inner.is_empty() {
               inner.discard_assert(Comma);
-              let mut target_lines = inner.into_lines_in(self.bump);
-              Some(self.parse_inlines(&mut target_lines)?)
-            } else {
-              None
-            };
+              if !inner.is_empty() {
+                linktext = Some(self.parse_inlines(&mut inner.into_lines_in(self.bump))?);
+              }
+            }
             line.discard_assert(GreaterThan);
             loc.end = line.consume_current().unwrap().loc.end;
-            acc.push_node(Macro(Xref { id, target }), loc);
+            acc.push_node(Macro(Xref { id, linktext }), loc);
           }
 
           LessThan
@@ -524,7 +530,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
           Discard => acc.text.loc = token.loc.clamp_end(),
 
-          Backslash if escapes_pattern(&line, &subs) => {
+          Backslash if !line.is_empty() => {
             acc.push_node(Discarded, token.loc);
             // pushing the next token as text prevents recognizing the pattern
             let next_token = line.consume_current().unwrap();
@@ -667,13 +673,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       state.push_node(CalloutTuck(tuck), tuck_loc);
     }
   }
-}
-
-fn escapes_pattern(line: &Line, subs: &Substitutions) -> bool {
-  // escaped email
-  subs.macros() && (line.current_is(MaybeEmail) || line.current_token().is_url_scheme())
-  // escaped attr ref
-  || subs.attr_refs() && line.current_is(OpenBrace) && line.is_continuous_thru(CloseBrace)
 }
 
 fn push_newline_if_needed<'bmp>(state: &mut Accum<'bmp>, lines: &ContiguousLines<'bmp, '_>) {
