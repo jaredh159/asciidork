@@ -185,3 +185,20 @@ test_eval!(
     </div>
   "##}
 );
+
+test_eval!(
+  xref_to_text_span,
+  adoc! {r#"
+    Here is [#tigers]#a text span#.
+
+    And a <<tigers>> link.
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>Here is <span id="tigers">a text span</span>.</p>
+    </div>
+    <div class="paragraph">
+      <p>And a <a href="#tigers">a text span</a> link.</p>
+    </div>
+  "##}
+);

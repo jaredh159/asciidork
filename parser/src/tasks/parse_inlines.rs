@@ -335,6 +335,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             } else {
               self.parse_constrained(&parse_token, wrap, &mut acc, line, lines)?;
             };
+            if let Some(InlineNode { content: TextSpan(attrs, nodes), .. }) = acc.inlines.last() {
+              if let Some(id) = &attrs.id {
+                self.document.anchors.insert(
+                  id.src.clone(),
+                  Anchor { reftext: None, title: nodes.clone() },
+                );
+              }
+            }
             break;
           }
 

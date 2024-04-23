@@ -71,7 +71,6 @@ Be sure to pop the dev tools to see timing info.
 Known **unfinished or unimplemented** areas include:
 
 - [ ] Tables
-- [ ] Cross References
 - [ ] STEM
 - [ ] Source highlighting
 - [ ] Include directives
