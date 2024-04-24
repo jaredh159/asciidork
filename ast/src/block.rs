@@ -141,6 +141,7 @@ impl BlockContext {
       "comment" => Some(BlockContext::Comment),
       "verse" => Some(BlockContext::Verse),
       "example" => Some(BlockContext::Example),
+      "normal" => Some(BlockContext::Paragraph),
       _ => Self::derive_admonition(string),
     }
   }

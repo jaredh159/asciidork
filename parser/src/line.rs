@@ -51,6 +51,14 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.current_token().is_len(kind, len)
   }
 
+  pub fn heading_level(&self) -> Option<u8> {
+    if self.starts_with_seq(&[EqualSigns, Whitespace]) && self.num_tokens() > 2 {
+      Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
+    } else {
+      None
+    }
+  }
+
   pub fn is_empty(&self) -> bool {
     self.pos >= self.all_tokens.len()
   }
@@ -61,14 +69,6 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn is_heading_level(&self, level: u8) -> bool {
     self.heading_level() == Some(level)
-  }
-
-  pub fn heading_level(&self) -> Option<u8> {
-    if self.starts_with_seq(&[EqualSigns, Whitespace]) && self.num_tokens() > 2 {
-      Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
-    } else {
-      None
-    }
   }
 
   pub fn is_block_macro(&self) -> bool {
@@ -96,6 +96,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
     self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter() == Some(delimiter)
+  }
+
+  pub fn is_indented(&self) -> bool {
+    self.starts(Whitespace) && self.num_tokens() > 1
   }
 
   pub fn discard(&mut self, n: usize) {

@@ -17,10 +17,13 @@ impl<'bmp> ChunkMetaExt<'bmp> for ChunkMeta<'bmp> {
   }
 
   fn block_paragraph_context(&self, lines: &mut ContiguousLines) -> BlockContext {
+    let uniform_indented = lines.trim_uniform_leading_whitespace();
+
     // line from block attrs takes precedence
     if let Some(block_style) = self.attrs.as_ref().and_then(|attrs| attrs.block_style()) {
       return block_style;
     }
+
     // handle inline admonitions, e.g. `TIP: never start a land war in asia`
     if lines
       .current()
@@ -35,7 +38,12 @@ impl<'bmp> ChunkMetaExt<'bmp> for ChunkMeta<'bmp> {
         return context;
       }
     }
-    // default to pararagraph
+
+    // https://docs.asciidoctor.org/asciidoc/latest/verbatim/listing-blocks/#indent-method
+    if uniform_indented || lines.current_satisfies(Line::is_indented) {
+      return BlockContext::Literal;
+    }
+
     BlockContext::Paragraph
   }
 

@@ -2,7 +2,7 @@ use crate::internal::*;
 
 #[derive(Debug, Clone)]
 pub struct ContiguousLines<'bmp, 'src> {
-  // NB: lines kept in reverse, as there is no VeqDeque in bumpalo
+  // NB: lines kept in reverse, as there is no VecDeque in bumpalo
   // and we almost always want to consume from the front, so fake it
   reversed_lines: BumpVec<'bmp, Line<'bmp, 'src>>,
 }
@@ -209,6 +209,25 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       }
     }
     None
+  }
+
+  pub fn trim_uniform_leading_whitespace(&mut self) -> bool {
+    if self.is_empty() || !self.first().unwrap().starts(TokenKind::Whitespace) {
+      return false;
+    }
+    let len = self.first().unwrap().current_token().unwrap().lexeme.len();
+    if !self
+      .reversed_lines
+      .iter()
+      .all(|l| l.current_is_len(TokenKind::Whitespace, len) && l.num_tokens() > 1)
+    {
+      return false;
+    }
+
+    for line in self.reversed_lines.iter_mut() {
+      line.discard_assert(TokenKind::Whitespace);
+    }
+    true
   }
 }
 

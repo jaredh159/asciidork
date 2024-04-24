@@ -1,6 +1,24 @@
-use test_utils::{adoc, raw_html};
+use test_utils::{adoc, html, raw_html};
 
 mod helpers;
+
+test_eval!(
+  indented_literal_block,
+  " foo bar",
+  html! {r#"
+    <div class="literalblock">
+      <div class="content">
+        <pre>foo bar</pre>
+      </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  indented_multiline_literal_block,
+  " foo bar\n so baz",
+  wrap_literal("<pre>foo bar\nso baz</pre>")
+);
 
 test_eval!(
   source_block_explicit,
@@ -125,6 +143,13 @@ test_eval!(
 fn wrap_listing(inner: &str) -> String {
   format!(
     r#"<div class="listingblock"><div class="content">{}</div></div>"#,
+    inner.trim(),
+  )
+}
+
+fn wrap_literal(inner: &str) -> String {
+  format!(
+    r#"<div class="literalblock"><div class="content">{}</div></div>"#,
     inner.trim(),
   )
 }
