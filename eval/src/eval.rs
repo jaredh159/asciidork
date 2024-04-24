@@ -323,6 +323,9 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       backend.exit_footnote(id.as_deref(), text);
     }
     Macro(Button(text)) => backend.visit_button_macro(text),
+    Macro(Keyboard { keys, .. }) => {
+      backend.visit_keyboard_macro(&keys.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
+    }
     Macro(Menu(items)) => {
       backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
     }

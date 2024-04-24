@@ -684,6 +684,21 @@ impl Backend for AsciidoctorHtml {
     self.push([r#"<b class="button">"#, text, "</b>"])
   }
 
+  fn visit_keyboard_macro(&mut self, keys: &[&str]) {
+    if keys.len() > 1 {
+      self.push_str(r#"<span class="keyseq">"#);
+    }
+    for (idx, key) in keys.iter().enumerate() {
+      if idx > 0 {
+        self.push_ch('+');
+      }
+      self.push(["<kbd>", key, "</kbd>"]);
+    }
+    if keys.len() > 1 {
+      self.push_str("</span>");
+    }
+  }
+
   fn visit_menu_macro(&mut self, items: &[&str]) {
     let mut items = items.iter();
     self.push_str(r#"<span class="menuseq"><span class="menu">"#);

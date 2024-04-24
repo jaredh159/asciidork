@@ -98,6 +98,12 @@ pub trait Backend {
   fn visit_multichar_whitespace(&mut self, whitespace: &str);
   fn visit_button_macro(&mut self, text: &str);
   fn visit_menu_macro(&mut self, items: &[&str]);
+
+  fn visit_keyboard_macro(&mut self, keys: &[&str]) {
+    _ = keys;
+    eprintln!("WARN: Backend::visit_keyboard_macro() called but not implemented");
+  }
+
   fn visit_attribute_reference(&mut self, name: &str);
   fn visit_callout(&mut self, callout: Callout);
   fn visit_callout_tuck(&mut self, comment: &str);
