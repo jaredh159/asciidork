@@ -24,7 +24,6 @@ const App: React.FC = () => {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    console.log(theme);
     async function inner() {
       if (!window.convert) return;
       console.time(`converted in`);
