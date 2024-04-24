@@ -346,6 +346,14 @@ macro_rules! parse_doc_content {
 }
 
 #[macro_export]
+macro_rules! parse {
+  ($input:expr) => {{
+    let parser = Parser::new(leaked_bump(), $input);
+    parser.parse()
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_doc {
   ($input:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);

@@ -1,5 +1,6 @@
 ## todo
 
+- [ ] attr list `options` longhand (maybe role too?), i.e. `[options="a,b"]` == `[%a%b]`
 - [ ] finish eval-ing all inline types, try to eval `kitchen-sink.adoc` to find missing
       ones
 - [ ] finish fleshing out customizing substitutions, handling append/prepend, etc., see
@@ -8,8 +9,6 @@
       (if?) this is naive/problematic, and fix
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
-- [ ] breaks
-- [ ] indented listing/literal blocks
 - [ ] should `--embedded` be passed to Parser? so it doesn't try to parse a doc header?
       (pretty confident: yes)
 - [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
@@ -19,13 +18,14 @@
       `html5.rb`
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
-- [ ] explore whether adding `std` to bumpalo gives more stuff for file conversion, etc
 - [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] all attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example, see also
       https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#note-docdatetime
 - [ ] h1 subtitle
+- [√] indented listing/literal blocks
+- [√] breaks
 - [√] hard breaks
 - [√] basic multi-byte char test
 - [√] sections

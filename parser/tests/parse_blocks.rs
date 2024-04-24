@@ -480,6 +480,13 @@ fn test_parse_multi_para_delimited_sidebar_block() {
   );
 }
 
+#[test]
+fn test_unattached_attr_list() {
+  assert!(parse!("[normal]").is_ok());
+  assert!(parse!("[foo]\n").is_ok());
+  assert!(parse!("[]\n\n").is_ok());
+}
+
 test_error!(
   unclosed_delimited_block_err,
   adoc! {"

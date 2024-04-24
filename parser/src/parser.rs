@@ -177,13 +177,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut attrs = None;
     let mut title = None;
     loop {
-      match lines.current().unwrap() {
-        line if line.is_chunk_title() => {
+      match lines.current() {
+        Some(line) if line.is_chunk_title() => {
           let mut line = lines.consume_current().unwrap();
           line.discard_assert(TokenKind::Dots);
           title = Some(self.parse_inlines(&mut line.into_lines_in(self.bump))?);
         }
-        line if line.is_attr_list() => {
+        Some(line) if line.is_attr_list() => {
           let mut line = lines.consume_current().unwrap();
           line.discard_assert(TokenKind::OpenBracket);
           attrs = Some(self.parse_attr_list(&mut line)?);
