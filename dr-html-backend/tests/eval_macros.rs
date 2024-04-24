@@ -56,3 +56,20 @@ test_eval!(
     </div>
   "#}
 );
+
+test_eval!(
+  inline_pass_macro,
+  adoc! {r#"
+    The text pass:[<u>underline me</u>] is underlined.
+
+    Custom pass:q[<u>underline *me*</u>] is underlined.
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>The text <u>underline me</u> is underlined.</p>
+    </div>
+    <div class="paragraph">
+      <p>Custom <u>underline <strong>me</strong></u> is underlined.</p>
+    </div>
+  "#}
+);

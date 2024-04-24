@@ -1,5 +1,6 @@
 ## todo
 
+- [ ] xref to discrete heading
 - [ ] attr list `options` longhand (maybe role too?), i.e. `[options="a,b"]` == `[%a%b]`
 - [ ] finish eval-ing all inline types, try to eval `kitchen-sink.adoc` to find missing
       ones

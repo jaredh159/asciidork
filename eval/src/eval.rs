@@ -330,6 +330,9 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       }
       backend.exit_link_macro(target, attrs.as_ref(), *scheme);
     }
+    Macro(Pass { content, .. }) => {
+      content.iter().for_each(|n| eval_inline(n, doc, backend));
+    }
     Macro(Keyboard { keys, .. }) => {
       backend.visit_keyboard_macro(&keys.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
     }

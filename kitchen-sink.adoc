@@ -20,6 +20,7 @@ This has a footnote attached to it.footnote:[This _is_ a footnote.]
 Press kbd:[F11] or btn:[OK] to do something.
 
 The text pass:[<u>underline me</u>] is underlined.
+The text pass:q[<u>underline *me*</u>] has custom substitutions.
 Icon macro: icon:heart[2x,role=red].
 Select menu:View[Zoom > Reset] to reset.
 
