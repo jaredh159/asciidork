@@ -300,3 +300,9 @@ fn test_two_items_w_listing_continuations() {
     ]
   );
 }
+
+#[test]
+fn test_incomplete_list_item() {
+  assert_block_core!("*", Context::Paragraph, Content::Simple(just!("*", 0..1)));
+  assert_block_core!("* ", Context::Paragraph, Content::Simple(just!("* ", 0..2)));
+}

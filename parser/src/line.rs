@@ -382,14 +382,19 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     if self.current_token().is(Whitespace) {
       offset += 1;
     }
-    let token = self.nth_token(offset).unwrap();
-    let next = self.nth_token(offset + 1);
+    let Some(token) = self.nth_token(offset) else {
+      return None;
+    };
+    let second = self.nth_token(offset + 1);
+    let third = self.nth_token(offset + 2);
 
     match token.kind {
-      Star if next.is(Whitespace) => Some(ListMarker::Star(1)),
-      Dots if next.is(Whitespace) => Some(ListMarker::Dot(token.len() as u8)),
-      Dashes if next.is(Whitespace) && token.len() == 1 => Some(ListMarker::Dash),
-      Star if next.is(Star) => {
+      Star if second.is(Whitespace) && third.is_some() => Some(ListMarker::Star(1)),
+      Dots if second.is(Whitespace) && third.is_some() => Some(ListMarker::Dot(token.len() as u8)),
+      Dashes if second.is(Whitespace) && token.len() == 1 && third.is_some() => {
+        Some(ListMarker::Dash)
+      }
+      Star if second.is(Star) => {
         let Some(captures) = REPEAT_STAR_LI_START.captures(self.src) else {
           return None;
         };
@@ -398,7 +403,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       CalloutNumber if token.lexeme.as_bytes()[1] != b'!' => {
         Some(ListMarker::Callout(token.parse_callout_num()))
       }
-      Digits if next.is(Dots) && self.nth_token(offset + 2).is(Whitespace) => {
+      Digits if second.is(Dots) && third.is(Whitespace) => {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
       _ => {
@@ -575,6 +580,14 @@ mod tests {
       ("--- foo", None),
       ("33.44. foo", None),
       (":: bar", None),
+      ("* ", None),
+      ("** ", None),
+      ("*** ", None),
+      (" ", None),
+      (". ", None),
+      (".. ", None),
+      ("... ", None),
+      ("- ", None),
       ("foo:: bar", Some(Colons(2))),
       ("foo::", Some(Colons(2))),
       ("image:: baz", Some(Colons(2))),
