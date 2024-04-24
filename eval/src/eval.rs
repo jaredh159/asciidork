@@ -323,6 +323,13 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       backend.exit_footnote(id.as_deref(), text);
     }
     Macro(Button(text)) => backend.visit_button_macro(text),
+    Macro(Link { target, attrs, scheme }) => {
+      backend.enter_link_macro(target, attrs.as_ref(), *scheme);
+      if let Some(Some(nodes)) = attrs.as_ref().and_then(|a| a.positional.first()) {
+        nodes.iter().for_each(|n| eval_inline(n, doc, backend));
+      }
+      backend.exit_link_macro(target, attrs.as_ref(), *scheme);
+    }
     Macro(Keyboard { keys, .. }) => {
       backend.visit_keyboard_macro(&keys.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
     }

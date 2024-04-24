@@ -57,6 +57,7 @@ pub mod prelude {
   pub use crate::json::*;
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
   pub use crate::node::{Anchor, Callout, Document, Section};
+  pub use crate::r#macro::UrlScheme;
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
   pub use crate::toc::*;

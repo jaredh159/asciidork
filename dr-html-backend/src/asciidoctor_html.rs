@@ -699,6 +699,36 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
+  fn enter_link_macro(
+    &mut self,
+    target: &str,
+    attrs: Option<&AttrList>,
+    scheme: Option<UrlScheme>,
+  ) {
+    self.push_str("<a href=\"");
+    if matches!(scheme, Some(UrlScheme::Mailto)) {
+      self.push_str("mailto:");
+    }
+    self.push([target, "\""]);
+    if attrs.is_none() && !matches!(scheme, Some(UrlScheme::Mailto)) {
+      self.push_str(" class=\"bare\">");
+    } else {
+      self.push_ch('>');
+    }
+  }
+
+  fn exit_link_macro(
+    &mut self,
+    target: &str,
+    attrs: Option<&AttrList>,
+    _scheme: Option<UrlScheme>,
+  ) {
+    if matches!(attrs.and_then(|a| a.positional.first()), None | Some(None)) {
+      self.push_str(target);
+    }
+    self.push_str("</a>");
+  }
+
   fn visit_menu_macro(&mut self, items: &[&str]) {
     let mut items = items.iter();
     self.push_str(r#"<span class="menuseq"><span class="menu">"#);

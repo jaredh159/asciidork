@@ -16,17 +16,22 @@ Super^script^ and sub~script~. <xml> is rad.
 
 == Macros
 
-:foo: bar
-
 This has a footnote attached to it.footnote:[This _is_ a footnote.]
-Press kbd:[F11] or btn:[OK] to do something. This https://google.com is a link.
-And here is an email: jared@netrivet.com.
+Press kbd:[F11] or btn:[OK] to do something.
 
 The text pass:[<u>underline me</u>] is underlined.
 Icon macro: icon:heart[2x,role=red].
 Select menu:View[Zoom > Reset] to reset.
 
 image::cat.jpg[]
+
+=== Links
+
+This https://google.com is an autolink.
+And here is an email: jared@netrivet.com.
+<https://google.com> brackets are discarded.
+Longer form macro link is link:https://google.com[Google].
+Escaped link: \https://google.com.
 
 [#cust-id.cust-role]
 == Listing
@@ -39,7 +44,11 @@ fn main() { <1> <2>
 ----
 <1> Callout list
 
+ cd /path/to/project
+
 == Misc
+
+:foo: bar
 
 Lines can have breaks, +
 Topaz is blue.

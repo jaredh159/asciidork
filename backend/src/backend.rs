@@ -2,6 +2,15 @@ use super::admonition::AdmonitionKind;
 use ast::prelude::*;
 use opts::Opts;
 
+macro_rules! warn_unimplemented {
+  ($x:ident) => {
+    eprintln!(
+      "WARN: Backend::{}(...) called but not implemented",
+      stringify!($x)
+    );
+  };
+}
+
 pub trait Backend {
   type Output;
   type Error;
@@ -101,7 +110,22 @@ pub trait Backend {
 
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
     _ = keys;
-    eprintln!("WARN: Backend::visit_keyboard_macro() called but not implemented");
+    warn_unimplemented!(visit_keyboard_macro);
+  }
+
+  fn enter_link_macro(
+    &mut self,
+    target: &str,
+    attrs: Option<&AttrList>,
+    scheme: Option<UrlScheme>,
+  ) {
+    _ = (target, attrs, scheme);
+    warn_unimplemented!(enter_link_macro);
+  }
+
+  fn exit_link_macro(&mut self, target: &str, attrs: Option<&AttrList>, scheme: Option<UrlScheme>) {
+    _ = (target, attrs, scheme);
+    warn_unimplemented!(exit_link_macro);
   }
 
   fn visit_attribute_reference(&mut self, name: &str);
