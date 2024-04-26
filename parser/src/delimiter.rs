@@ -6,6 +6,7 @@ pub enum Delimiter {
   Example,
   Open,
   Sidebar,
+  // Table(u8),
   Literal,
   Listing,
   Passthrough,
@@ -23,6 +24,7 @@ impl From<Delimiter> for BlockContext {
       Delimiter::Literal => BlockContext::Literal,
       Delimiter::Passthrough => BlockContext::Passthrough,
       Delimiter::Comment => BlockContext::Comment,
+      // Delimiter::Table(_) => BlockContext::Table,
     }
   }
 }

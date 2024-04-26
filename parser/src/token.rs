@@ -31,6 +31,7 @@ pub enum TokenKind {
   OpenBrace,
   OpenBracket,
   Percent,
+  Pipe,
   Plus,
   SemiColon,
   SingleQuote,

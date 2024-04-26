@@ -131,6 +131,7 @@ impl<'src> Lexer<'src> {
     {
       return None;
     }
+    // | , !
     let mut c = self.bytes.clone();
     let sequence = [self.peek, c.next(), c.next(), c.next(), c.next()];
     match sequence {
@@ -186,6 +187,7 @@ impl<'src> Lexer<'src> {
       Some(b'#') => self.single(Hash),
       Some(b'%') => self.single(Percent),
       Some(b'"') => self.single(DoubleQuote),
+      Some(b'|') => self.single(Pipe),
       Some(b'\'') => self.single(SingleQuote),
       Some(b'\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
@@ -529,6 +531,7 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("|===", vec![(Pipe, "|"), (EqualSigns, "===")]),
       ("////", vec![(DelimiterLine, "////")]),
       ("<.>", vec![(CalloutNumber, "<.>")]),
       ("<1>", vec![(CalloutNumber, "<1>")]),

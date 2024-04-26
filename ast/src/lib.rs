@@ -12,6 +12,7 @@ mod r#macro;
 mod node;
 mod source_location;
 mod source_string;
+mod table;
 mod toc;
 
 pub use internal::types::*;
@@ -33,6 +34,7 @@ mod internal {
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
+    pub use crate::table::*;
     pub use crate::toc::*;
     pub use smallvec::SmallVec;
   }
@@ -60,6 +62,7 @@ pub mod prelude {
   pub use crate::r#macro::UrlScheme;
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
+  pub use crate::table::*;
   pub use crate::toc::*;
 }
 

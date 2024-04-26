@@ -10,4 +10,6 @@ mod parse_inlines_utils;
 mod parse_list;
 mod parse_revision_line;
 pub mod parse_section;
+mod parse_table;
+mod parse_table_spec;
 mod section_id;

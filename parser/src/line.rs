@@ -307,8 +307,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   #[must_use]
   pub fn consume_macro_target(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
     let target = self.consume_to_string_until(OpenBracket, bump);
-    debug_assert!(self.current_is(OpenBracket));
-    self.discard(1); // `[`
+    self.discard_assert(OpenBracket);
     target
   }
 
@@ -318,8 +317,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       true => None,
       false => Some(self.consume_to_string_until(OpenBracket, bump)),
     };
-    debug_assert!(self.current_is(OpenBracket));
-    self.discard(1); // `[`
+    self.discard_assert(OpenBracket);
     target
   }
 
@@ -374,6 +372,13 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   pub fn last_location(&self) -> Option<SourceLocation> {
     self.last_token().map(|t| t.loc)
   }
+
+  // pub fn first_byte(&self) -> Option<u8> {
+  //   self
+  //     .current_token()
+  //     .and_then(|t| t.lexeme.as_bytes().first())
+  //     .copied()
+  // }
 
   pub fn list_marker(&self) -> Option<ListMarker> {
     // PERF: checking for list markers seems sort of sad, wonder if the

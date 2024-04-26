@@ -30,7 +30,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.parse_inlines_until(lines, &[])
   }
 
-  fn parse_inlines_until(
+  pub(crate) fn parse_inlines_until(
     &mut self,
     lines: &mut ContiguousLines<'bmp, 'src>,
     stop_tokens: &[TokenKind],

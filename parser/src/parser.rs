@@ -96,11 +96,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if lines.any(|l| l.is_delimiter(delimiter)) {
       return Some(lines);
     }
+
+    let mut additional_lines = BumpVec::new_in(self.bump);
     while !self.lexer.is_eof() && !self.at_delimiter(delimiter) {
-      // PERF: pushing a bunch is bad, because this is actually
-      // vec.insert(0, line), probably better to accum and concat
-      lines.push(self.read_line().unwrap());
+      additional_lines.push(self.read_line().unwrap());
     }
+    lines.extend(additional_lines);
     Some(lines)
   }
 
@@ -114,6 +115,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
       Delimiter::Passthrough => self.lexer.at_delimiter_line() == Some((4, b'+')),
       Delimiter::Comment => self.lexer.at_delimiter_line() == Some((4, b'/')),
+      // Delimiter::Table(ch) => self.lexer.at_delimiter_line() == Some((4, ch)),
     }
   }
 
