@@ -105,7 +105,7 @@ impl<'src> Lexer<'src> {
     }
     let start = self.offset();
     let mut end = start;
-    let mut tokens = BumpVec::new_in(bump);
+    let mut tokens = bvec![in bump];
     while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token();
       end = token.loc.end;
