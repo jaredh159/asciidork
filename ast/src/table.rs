@@ -52,8 +52,8 @@ pub struct Row<'bmp> {
   pub cells: BumpVec<'bmp, Cell<'bmp>>,
 }
 
-// struct Table<'bmp> {
-//   header_row: Option<Row<'bmp>>,
-//   rows: BumpVec<'bmp, Row<'bmp>>,
-//   footer_row: Option<Row<'bmp>>,
-// }
+impl<'bmp> Row<'bmp> {
+  pub fn new(cells: BumpVec<'bmp, Cell<'bmp>>) -> Self {
+    Self { cells }
+  }
+}

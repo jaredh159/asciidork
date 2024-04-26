@@ -122,6 +122,15 @@ macro_rules! just {
 }
 
 #[macro_export]
+macro_rules! cell {
+  (d: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Default(just!($text, $range)),
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! empty_block {
   ($range:expr) => {
     Block {

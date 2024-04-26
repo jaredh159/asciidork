@@ -62,41 +62,39 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     lines: &mut ContiguousLines<'bmp, 'src>,
     max: Option<u8>,
   ) -> Result<BumpVec<'bmp, Cell<'bmp>>> {
+    dbg!(&lines);
     let mut cells = bvec![in self.bump];
     let (sep_kind, sep_char) = (TokenKind::Pipe, b'|'); // todo, configurable
-
-    let mut count = 0;
     loop {
-      count += 1;
       if cells.len() == max.unwrap_or(u8::MAX) as usize {
         return Ok(cells);
       }
       let Some(mut line) = lines.consume_current() else {
         return Ok(cells);
       };
-      if count > 50 {
-        panic!("infinite loop");
-      }
       if line.is_empty() {
-        // dbg!(&lines);
-        // panic!("empty line");
         continue;
       }
-
       let first_token = line.current_token();
       if first_token.is(sep_kind) {
         line.discard(1);
-      } else {
+      } else if cells.is_empty() {
         self.err(
           format!("Expected cell separator `{}`", char::from(sep_char)),
           first_token,
         )?;
       }
-      let mut cell_lines = line.into_lines_in(self.bump);
-      let inlines = self.parse_inlines(&mut cell_lines)?;
+      // let mut cell_lines = line.into_lines_in(self.bump);
+      // while !cell_lines.is_empty() {
+      dbg!(line.src);
+      lines.restore_if_nonempty(line);
+      let inlines = self.parse_inlines_until(lines, &[sep_kind])?;
+      // inlines.discard_trailing_newline();
+      // inlines.
       cells.push(Cell {
         content: CellContent::Default(inlines),
       });
+      // }
     }
   }
 
@@ -159,26 +157,45 @@ mod tests {
       Table {
         col_specs: vecb![ColSpec { width: 1 }, ColSpec { width: 1 }],
         rows: vecb![
-          Row {
-            cells: vecb![
-              Cell {
-                content: CellContent::Default(just!("c1, r1", 19..25))
-              },
-              Cell {
-                content: CellContent::Default(just!("c2, r1", 27..33))
-              },
-            ]
-          },
-          Row {
-            cells: vecb![
-              Cell {
-                content: CellContent::Default(just!("c1, r2", 36..42))
-              },
-              Cell {
-                content: CellContent::Default(just!("c2, r2", 44..50))
-              },
-            ]
-          }
+          Row::new(vecb![
+            cell!(d: "c1, r1", 19..25),
+            cell!(d: "c2, r1", 27..33)
+          ]),
+          Row::new(vecb![
+            cell!(d: "c1, r2", 36..42),
+            cell!(d: "c2, r2", 44..50),
+          ])
+        ],
+      }
+    )
+  }
+
+  // #[test]
+  fn test_parse_table_implicit_num_rows() {
+    let input = adoc! {r#"
+      |===
+      |c1, r1|c2, r1
+
+      |c1, r2
+      |c2, r2
+      |===
+    "#};
+
+    let block = parse_single_block!(input);
+    let table = match block.content {
+      BlockContent::Table(table) => table,
+      _ => panic!("unexpected block content"),
+    };
+    assert_eq!(
+      table,
+      Table {
+        col_specs: vecb![],
+        rows: vecb![
+          Row::new(vecb![cell!(d: "c1, r1", 6..12), cell!(d: "c2, r1", 13..19)]),
+          Row::new(vecb![
+            cell!(d: "c1, r2", 22..28),
+            cell!(d: "c2, r2", 30..36),
+          ])
         ],
       }
     )
