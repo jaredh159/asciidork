@@ -58,6 +58,12 @@ impl From<usize> for SourceLocation {
   }
 }
 
+impl From<Range<usize>> for SourceLocation {
+  fn from(range: Range<usize>) -> Self {
+    Self::new(range.start, range.end)
+  }
+}
+
 impl Debug for SourceLocation {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     write!(f, "{}..{}", self.start, self.end)
@@ -73,3 +79,5 @@ impl Json for SourceLocation {
     buf.push(']');
   }
 }
+
+use std::ops::Range;

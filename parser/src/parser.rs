@@ -60,9 +60,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn line_from(
     &self,
     tokens: BumpVec<'bmp, Token<'src>>,
-    loc: SourceLocation,
+    loc: impl Into<SourceLocation>,
   ) -> Line<'bmp, 'src> {
-    Line::new(tokens, self.lexer.loc_src(loc))
+    Line::new(tokens, self.lexer.loc_src(loc.into()))
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {

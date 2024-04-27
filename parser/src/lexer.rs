@@ -126,7 +126,7 @@ impl<'src> Lexer<'src> {
       || self.is_eof()
       || !matches!(
         self.peek,
-        Some(b'_') | Some(b'-') | Some(b'*') | Some(b'=') | Some(b'.') | Some(b'+') | Some(b'/')
+        Some(b'_' | b'-' | b'*' | b'=' | b'.' | b'+' | b'/')
       )
     {
       return None;

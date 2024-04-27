@@ -56,27 +56,14 @@ pub struct ColSpec {
   // style: CellStyle,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct CellSpec {
-  pub duplication: u8,
-  pub col_span: u8,
-  pub row_span: u8,
-  pub h_align: HorizontalAlignment,
-  pub v_align: VerticalAlignment,
-  pub style: CellContentStyle,
-}
-
-impl Default for CellSpec {
-  fn default() -> Self {
-    Self {
-      duplication: 1,
-      col_span: 1,
-      row_span: 1,
-      h_align: HorizontalAlignment::default(),
-      v_align: VerticalAlignment::default(),
-      style: CellContentStyle::default(),
-    }
-  }
+  pub duplication: Option<u8>,
+  pub col_span: Option<u8>,
+  pub row_span: Option<u8>,
+  pub h_align: Option<HorizontalAlignment>,
+  pub v_align: Option<VerticalAlignment>,
+  pub style: Option<CellContentStyle>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

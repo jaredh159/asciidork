@@ -1,5 +1,4 @@
 use bumpalo::collections::CollectIn;
-// use regex::Regex;
 
 use crate::internal::*;
 use TokenKind::*;
@@ -16,13 +15,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ColSpec { width: col_attr.parse().unwrap_or(1) }
   }
 
-  fn parse_cell_spec(&self, line: &mut Line, sep: u8) -> Option<CellSpec> {
+  pub(super) fn cell_start(&self, line: &mut Line, sep: u8) -> Option<(CellSpec, usize)> {
     let Some(first_token) = line.current_token_mut() else {
+      return None;
+    };
+    let Some(first_byte) = first_token.lexeme.as_bytes().first() else {
       return None;
     };
 
     // no explicit cell spec, but we're sitting on the sep, so infer default
-    if first_token.lexeme.as_bytes().first() == Some(&sep) {
+    if first_byte == &sep {
+      let end = first_token.loc.start + 1;
       if first_token.len() == 1 {
         line.discard(1);
       } else {
@@ -30,7 +33,21 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         first_token.loc = first_token.loc.incr_start();
         line.src = &line.src[1..];
       }
-      return Some(CellSpec::default());
+      return Some((CellSpec::default(), end));
+    }
+
+    // optimization: words are most common, so reject non-candidates
+    if first_token.is(Word) {
+      match first_byte {
+        b'a' | b'd' | b'e' | b'h' | b'l' | b'm' | b's' => {}
+        _ => return None,
+      }
+      // otherwise, it would need to be one of these to start a spec
+    } else if !matches!(
+      first_token.kind,
+      Digits | Dots | LessThan | GreaterThan | Caret
+    ) {
+      return None;
     }
 
     // speculatively parse a cell spec
@@ -41,7 +58,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     parse_h_align(line, &mut spec, &mut cursor);
     parse_v_align(line, &mut spec, &mut cursor);
 
-    // style could be found within a word only if they used a custom separator
+    // style can be found within a word only if they used a custom separator
     // that wasn't its own token or a word boundary, e.g. `x` in `3*2.4+>.^sx`
     let style_within_word = parse_style(line, &mut spec, &mut cursor);
 
@@ -53,20 +70,23 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
     match (style_within_word, cursor_token.lexeme.as_bytes()) {
       (false, bytes) if bytes == [sep] => {
+        let end = cursor_token.loc.end;
         line.discard(cursor + 1);
-        Some(spec)
+        Some((spec, end))
       }
       (true, bytes) if bytes.len() == 2 && bytes.get(1) == Some(&sep) => {
+        let end = cursor_token.loc.end;
         line.discard(cursor + 1);
-        Some(spec)
+        Some((spec, end))
       }
       (true, bytes) if bytes.len() > 2 && bytes.get(1) == Some(&sep) => {
         line.discard(cursor);
         let joined = line.current_token_mut().unwrap();
         joined.lexeme = &joined.lexeme[2..];
         joined.loc.start += 2;
+        let end = joined.loc.start;
         line.src = &line.src[2..];
-        Some(spec)
+        Some((spec, end))
       }
       _ => None,
     }
@@ -81,13 +101,13 @@ fn parse_style(line: &Line, spec: &mut CellSpec, cursor: &mut usize) -> bool {
     return false;
   }
   match token.lexeme.as_bytes().first() {
-    Some(b'a') => spec.style = CellContentStyle::AsciiDoc,
-    Some(b'd') => spec.style = CellContentStyle::Default,
-    Some(b'e') => spec.style = CellContentStyle::Emphasis,
-    Some(b'h') => spec.style = CellContentStyle::Header,
-    Some(b'l') => spec.style = CellContentStyle::Literal,
-    Some(b'm') => spec.style = CellContentStyle::Monospace,
-    Some(b's') => spec.style = CellContentStyle::Strong,
+    Some(b'a') => spec.style = Some(CellContentStyle::AsciiDoc),
+    Some(b'd') => spec.style = Some(CellContentStyle::Default),
+    Some(b'e') => spec.style = Some(CellContentStyle::Emphasis),
+    Some(b'h') => spec.style = Some(CellContentStyle::Header),
+    Some(b'l') => spec.style = Some(CellContentStyle::Literal),
+    Some(b'm') => spec.style = Some(CellContentStyle::Monospace),
+    Some(b's') => spec.style = Some(CellContentStyle::Strong),
     _ => return false,
   }
   if token.len() == 1 {
@@ -101,7 +121,7 @@ fn parse_style(line: &Line, spec: &mut CellSpec, cursor: &mut usize) -> bool {
 fn parse_duplication_factor(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
   if line.has_seq_at(&[Digits, Star], *cursor) {
     if let Some(Ok(digits)) = line.nth_token(*cursor).map(|t| t.lexeme.parse::<u8>()) {
-      spec.duplication = digits;
+      spec.duplication = Some(digits);
       *cursor += 2;
     }
   }
@@ -110,7 +130,7 @@ fn parse_duplication_factor(line: &Line, spec: &mut CellSpec, cursor: &mut usize
 fn parse_span_factor(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
   if line.has_seq_at(&[Digits, Plus], *cursor) {
     if let Some(Ok(digits)) = line.nth_token(*cursor).map(|t| t.lexeme.parse::<u8>()) {
-      spec.col_span = digits;
+      spec.col_span = Some(digits);
       *cursor += 2;
     }
   } else if line.has_seq_at(&[Dots, Digits, Plus], *cursor) {
@@ -118,7 +138,7 @@ fn parse_span_factor(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
       return;
     }
     if let Some(Ok(digits)) = line.nth_token(*cursor + 1).map(|t| t.lexeme.parse::<u8>()) {
-      spec.row_span = digits;
+      spec.row_span = Some(digits);
       *cursor += 3;
     }
   } else if line.has_seq_at(&[Digits, Dots, Digits, Plus], *cursor) {
@@ -128,8 +148,8 @@ fn parse_span_factor(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
     let col = line.nth_token(*cursor).map(|t| t.lexeme.parse::<u8>());
     let row = line.nth_token(*cursor + 2).map(|t| t.lexeme.parse::<u8>());
     if let (Some(Ok(col)), Some(Ok(row))) = (col, row) {
-      spec.col_span = col;
-      spec.row_span = row;
+      spec.col_span = Some(col);
+      spec.row_span = Some(row);
       *cursor += 4;
     }
   }
@@ -137,9 +157,9 @@ fn parse_span_factor(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
 
 fn parse_h_align(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
   match line.nth_token(*cursor).map(|t| t.kind) {
-    Some(LessThan) => spec.h_align = HorizontalAlignment::Left,
-    Some(GreaterThan) => spec.h_align = HorizontalAlignment::Right,
-    Some(Caret) => spec.h_align = HorizontalAlignment::Center,
+    Some(LessThan) => spec.h_align = Some(HorizontalAlignment::Left),
+    Some(GreaterThan) => spec.h_align = Some(HorizontalAlignment::Right),
+    Some(Caret) => spec.h_align = Some(HorizontalAlignment::Center),
     _ => return,
   }
   *cursor += 1;
@@ -150,9 +170,9 @@ fn parse_v_align(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
     return;
   }
   match line.nth_token(*cursor + 1).map(|t| t.kind) {
-    Some(GreaterThan) => spec.v_align = VerticalAlignment::Top,
-    Some(LessThan) => spec.v_align = VerticalAlignment::Bottom,
-    Some(Caret) => spec.v_align = VerticalAlignment::Middle,
+    Some(GreaterThan) => spec.v_align = Some(VerticalAlignment::Top),
+    Some(LessThan) => spec.v_align = Some(VerticalAlignment::Bottom),
+    Some(Caret) => spec.v_align = Some(VerticalAlignment::Middle),
     _ => return,
   }
   *cursor += 2;
@@ -166,34 +186,52 @@ mod tests {
   #[test]
   fn test_parse_cell_specs() {
     let cases = [
-      (b'|', "|foo", "foo", Some(CellSpec::default())),
+      (b'|', "|foo", "foo", Some((CellSpec::default(), 1))),
       (b'|', "foo", "foo", None),
+      (
+        b'|',
+        "m|foo",
+        "foo",
+        Some((
+          CellSpec {
+            style: Some(CellContentStyle::Monospace),
+            ..CellSpec::default()
+          },
+          2,
+        )),
+      ),
       (
         b'|',
         "3*2.4+>.^s|foo",
         "foo",
-        Some(CellSpec {
-          duplication: 3,
-          col_span: 2,
-          row_span: 4,
-          h_align: HorizontalAlignment::Right,
-          v_align: VerticalAlignment::Middle,
-          style: CellContentStyle::Strong,
-        }),
+        Some((
+          CellSpec {
+            duplication: Some(3),
+            col_span: Some(2),
+            row_span: Some(4),
+            h_align: Some(HorizontalAlignment::Right),
+            v_align: Some(VerticalAlignment::Middle),
+            style: Some(CellContentStyle::Strong),
+          },
+          11,
+        )),
       ),
-      (b'x', "xfoo", "foo", Some(CellSpec::default())),
+      (b'x', "xfoo", "foo", Some((CellSpec::default(), 1))),
       (
         b'x',
         "3*2.4+>.^sxfoo",
         "foo",
-        Some(CellSpec {
-          duplication: 3,
-          col_span: 2,
-          row_span: 4,
-          h_align: HorizontalAlignment::Right,
-          v_align: VerticalAlignment::Middle,
-          style: CellContentStyle::Strong,
-        }),
+        Some((
+          CellSpec {
+            duplication: Some(3),
+            col_span: Some(2),
+            row_span: Some(4),
+            h_align: Some(HorizontalAlignment::Right),
+            v_align: Some(VerticalAlignment::Middle),
+            style: Some(CellContentStyle::Strong),
+          },
+          11,
+        )),
       ),
     ];
 
@@ -201,9 +239,12 @@ mod tests {
     for (sep, input, remaining, expected) in &cases {
       let mut lexer = Lexer::new(input);
       let mut line = lexer.consume_line(leaked_bump()).unwrap();
-      let cell_spec = parser.parse_cell_spec(&mut line, *sep);
-      assert_eq!(cell_spec, *expected);
+      let start = parser.cell_start(&mut line, *sep);
+      assert_eq!(start, *expected, from: input);
       assert_eq!(line.src, *remaining);
+      if let Some((_, loc)) = *expected {
+        assert_eq!(input.as_bytes().get(loc), remaining.as_bytes().first());
+      }
     }
   }
 

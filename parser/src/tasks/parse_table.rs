@@ -2,7 +2,7 @@ use crate::internal::*;
 
 #[derive(Debug, Clone)]
 struct TableConfig<'bmp> {
-  delim_start: u8,
+  delim_ch: u8,
   format: DataFormat,
   col_specs: BumpVec<'bmp, ColSpec>,
 }
@@ -12,6 +12,16 @@ enum DataFormat {
   Prefix(u8),
   Csv(u8),
   Delimited(u8),
+}
+
+impl DataFormat {
+  pub const fn sep(&self) -> u8 {
+    match self {
+      DataFormat::Prefix(c) => *c,
+      DataFormat::Csv(c) => *c,
+      DataFormat::Delimited(c) => *c,
+    }
+  }
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -34,7 +44,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .unwrap_or_else(|| bvec![in self.bump]);
 
     let config = TableConfig {
-      delim_start: first_token.lexeme.as_bytes()[0],
+      delim_ch: first_token.lexeme.as_bytes()[0],
       format: DataFormat::Prefix(b'|'), // todo derive
       col_specs,
     };
@@ -65,40 +75,72 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_table_cell(
     &mut self,
-    config: &TableConfig,
+    conf: &TableConfig,
     counting_cols: bool,
   ) -> Result<Option<Cell<'bmp>>> {
-    _ = config;
     while let Some(mut lines) = self.read_lines() {
       while let Some(mut line) = lines.consume_current() {
-        dbg!(line.src);
+        // RETURN: we hit the end of the table
+        if ends_table(&line, conf) {
+          self.restore_lines(lines);
+          return Ok(None);
+        }
+        let Some((spec, start)) = self.cell_start(&mut line, conf.format.sep()) else {
+          // RETURN: we couldn't find a cell start
+          // TODO: maybe be permissive and just warn if there is some content?
+          lines.restore_if_nonempty(line);
+          self.restore_lines(lines);
+          return Ok(None);
+        };
+        let mut end = start;
         let mut cell_tokens = bvec![in self.bump];
-        let _cell_start = line.loc().expect("maybe?").start;
-        // parse an optional cell spec
-        // parse prefix
-        // then, parse until:
-        //  - we hit the beginning of another cell
-        //  - or we hit end of line (if counting lines)
-        //  - or we hit the end of the table
-        //  - or we run out of lines
         loop {
+          if self.cell_start(&mut line, conf.format.sep()).is_some() {
+            // RETURN: we hit the beginning of another cell
+            return self.finish_cell(line, lines, spec, cell_tokens, conf, start..end);
+          }
           let Some(token) = line.consume_current() else {
-            // we hit the end of a line
             if counting_cols {
-              return Ok(None);
+              // RETURN: hit end of a line, and we're only parsing 1st line implicit cols
+              return self.finish_cell(line, lines, spec, cell_tokens, conf, start..end);
             } else {
               break; // read another line
             }
           };
 
-          dbg!(&token);
+          end = token.loc.end;
           cell_tokens.push(token);
-
-          todo!("parse_table_cell()")
         }
-      } // consume_current LINE
-    } // read_lines()
+      }
+    }
     Ok(None)
+  }
+
+  fn finish_cell(
+    &mut self,
+    line: Line<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp, 'src>,
+    cell_spec: CellSpec,
+    cell_tokens: BumpVec<'bmp, Token<'src>>,
+    _conf: &TableConfig,
+    loc: std::ops::Range<usize>,
+  ) -> Result<Option<Cell<'bmp>>> {
+    lines.restore_if_nonempty(line);
+    self.restore_lines(lines);
+    let cell_line = self.line_from(cell_tokens, loc);
+    let mut cell_lines = cell_line.into_lines_in(self.bump);
+    let inlines = self.parse_inlines(&mut cell_lines)?;
+    let content = match cell_spec.style {
+      Some(CellContentStyle::Default) => CellContent::Default(inlines),
+      Some(CellContentStyle::Emphasis) => CellContent::Emphasis(inlines),
+      Some(CellContentStyle::Header) => CellContent::Header(inlines),
+      Some(CellContentStyle::Literal) => CellContent::Literal(inlines),
+      Some(CellContentStyle::Monospace) => CellContent::Monospace(inlines),
+      Some(CellContentStyle::Strong) => CellContent::Strong(inlines),
+      Some(CellContentStyle::AsciiDoc) => todo!("asciidoc"),
+      None => CellContent::Default(inlines),
+    };
+    Ok(Some(Cell { content }))
   }
 
   fn parse_table_row(
@@ -214,12 +256,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   // }
 }
 
+fn ends_table(line: &Line, conf: &TableConfig) -> bool {
+  line.src.len() == 4
+    && line.num_tokens() == 2
+    && line.nth_token(1).is_len(TokenKind::EqualSigns, 3)
+    && line.src.as_bytes().first() == Some(&conf.delim_ch)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
   use test_utils::{assert_eq, *};
 
-  // #[test]
+  #[test]
   fn test_parse_table() {
     let input = adoc! {r#"
       [cols="1,1"]
