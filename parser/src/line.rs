@@ -20,6 +20,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.all_tokens.get(self.pos)
   }
 
+  pub fn current_token_mut(&mut self) -> Option<&mut Token<'src>> {
+    self.all_tokens.get_mut(self.pos)
+  }
+
   pub fn peek_token(&self) -> Option<&Token<'src>> {
     self.nth_token(1)
   }

@@ -16,39 +16,21 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ColSpec { width: col_attr.parse().unwrap_or(1) }
   }
 
-  // <duplication factor><duplication operator><span factor><span operator><horizontal alignment operator><vertical alignment operator><style operator>|<cell’s content>
-  // >s
-  // 3*2.2+>.^s| (kitchen sink)
-  // (3*)(2.2+)(>)(.^)(s)| (kitchen sink)
-  // 2.2+>.^s|
-  // 2+>s|
-  // Digits | Dots | GreaterThan | LessThan | Caret | Star
   fn parse_cell_spec(&self, line: &mut Line, sep: u8) -> Option<CellSpec> {
-    let Some(first_token) = line.current_token() else {
+    let Some(first_token) = line.current_token_mut() else {
       return None;
     };
 
     // no explicit cell spec, but we're sitting on the sep, so infer default
-    if first_token.lexeme.as_bytes() == [sep] {
-      line.discard(1);
+    if first_token.lexeme.as_bytes().first() == Some(&sep) {
+      if first_token.len() == 1 {
+        line.discard(1);
+      } else {
+        first_token.lexeme = &first_token.lexeme[1..];
+        first_token.loc = first_token.loc.incr_start();
+        line.src = &line.src[1..];
+      }
       return Some(CellSpec::default());
-    }
-
-    // todo: handle custom sep that got caught in word token
-
-    // try to pitch cases where we don't need to parse the cell spec
-    // should probably benchmark to see if this is worth it
-    match &first_token {
-      Token {
-        kind: Digits | Dots | GreaterThan | LessThan | Caret | Star,
-        ..
-      } => {}
-      Token { kind: Word, lexeme, .. }
-        if matches!(
-          lexeme.as_bytes().first(),
-          Some(b'a' | b'd' | b'e' | b'h' | b'l' | b'm' | b's')
-        ) => {}
-      _ => return None,
     }
 
     // speculatively parse a cell spec
@@ -58,15 +40,61 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     parse_span_factor(line, &mut spec, &mut cursor);
     parse_h_align(line, &mut spec, &mut cursor);
     parse_v_align(line, &mut spec, &mut cursor);
-    parse_style(line, &mut spec, &mut cursor);
 
-    // w/ a valid spec, cursor will be > 0 and line will be on sep
-    if cursor == 0 || line.nth_token(cursor).map(|t| t.lexeme.as_bytes()) != Some(&[sep]) {
-      None
-    } else {
-      line.discard(cursor + 1);
-      Some(spec)
+    // style could be found within a word only if they used a custom separator
+    // that wasn't its own token or a word boundary, e.g. `x` in `3*2.4+>.^sx`
+    let style_within_word = parse_style(line, &mut spec, &mut cursor);
+
+    if cursor == 0 {
+      return None;
     }
+    let Some(cursor_token) = line.nth_token(cursor) else {
+      return None;
+    };
+    match (style_within_word, cursor_token.lexeme.as_bytes()) {
+      (false, bytes) if bytes == [sep] => {
+        line.discard(cursor + 1);
+        Some(spec)
+      }
+      (true, bytes) if bytes.len() == 2 && bytes.get(1) == Some(&sep) => {
+        line.discard(cursor + 1);
+        Some(spec)
+      }
+      (true, bytes) if bytes.len() > 2 && bytes.get(1) == Some(&sep) => {
+        line.discard(cursor);
+        let joined = line.current_token_mut().unwrap();
+        joined.lexeme = &joined.lexeme[2..];
+        joined.loc.start += 2;
+        line.src = &line.src[2..];
+        Some(spec)
+      }
+      _ => None,
+    }
+  }
+}
+
+fn parse_style(line: &Line, spec: &mut CellSpec, cursor: &mut usize) -> bool {
+  let Some(token) = line.nth_token(*cursor) else {
+    return false;
+  };
+  if !token.is(Word) {
+    return false;
+  }
+  match token.lexeme.as_bytes().first() {
+    Some(b'a') => spec.style = CellContentStyle::AsciiDoc,
+    Some(b'd') => spec.style = CellContentStyle::Default,
+    Some(b'e') => spec.style = CellContentStyle::Emphasis,
+    Some(b'h') => spec.style = CellContentStyle::Header,
+    Some(b'l') => spec.style = CellContentStyle::Literal,
+    Some(b'm') => spec.style = CellContentStyle::Monospace,
+    Some(b's') => spec.style = CellContentStyle::Strong,
+    _ => return false,
+  }
+  if token.len() == 1 {
+    *cursor += 1;
+    false
+  } else {
+    true
   }
 }
 
@@ -130,26 +158,6 @@ fn parse_v_align(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
   *cursor += 2;
 }
 
-fn parse_style(line: &Line, spec: &mut CellSpec, cursor: &mut usize) {
-  let Some(token) = line.nth_token(*cursor) else {
-    return;
-  };
-  if !token.is(Word) {
-    return;
-  }
-  match token.lexeme.as_bytes() {
-    [b'a'] => spec.style = CellContentStyle::AsciiDoc,
-    [b'd'] => spec.style = CellContentStyle::Default,
-    [b'e'] => spec.style = CellContentStyle::Emphasis,
-    [b'h'] => spec.style = CellContentStyle::Header,
-    [b'l'] => spec.style = CellContentStyle::Literal,
-    [b'm'] => spec.style = CellContentStyle::Monospace,
-    [b's'] => spec.style = CellContentStyle::Strong,
-    _ => return,
-  }
-  *cursor += 1;
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -163,6 +171,20 @@ mod tests {
       (
         b'|',
         "3*2.4+>.^s|foo",
+        "foo",
+        Some(CellSpec {
+          duplication: 3,
+          col_span: 2,
+          row_span: 4,
+          h_align: HorizontalAlignment::Right,
+          v_align: VerticalAlignment::Middle,
+          style: CellContentStyle::Strong,
+        }),
+      ),
+      (b'x', "xfoo", "foo", Some(CellSpec::default())),
+      (
+        b'x',
+        "3*2.4+>.^sxfoo",
         "foo",
         Some(CellSpec {
           duplication: 3,
