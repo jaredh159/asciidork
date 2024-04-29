@@ -47,7 +47,8 @@ impl<'src> Lexer<'src> {
     self.peek == Some(c)
   }
 
-  pub fn loc_src(&self, loc: SourceLocation) -> &'src str {
+  pub fn loc_src(&self, loc: impl Into<SourceLocation>) -> &'src str {
+    let loc = loc.into();
     &self.src[loc.start..loc.end]
   }
 

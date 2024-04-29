@@ -62,10 +62,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     tokens: BumpVec<'bmp, Token<'src>>,
     loc: impl Into<SourceLocation>,
   ) -> Line<'bmp, 'src> {
-    Line::new(tokens, self.lexer.loc_src(loc.into()))
+    Line::new(tokens, self.lexer.loc_src(loc))
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
+    debug_assert!(self.peeked_lines.is_none());
     self.lexer.consume_line(self.bump)
   }
 

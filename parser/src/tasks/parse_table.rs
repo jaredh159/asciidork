@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use crate::internal::*;
 
 #[derive(Debug, Clone)]
@@ -12,6 +14,43 @@ enum DataFormat {
   Prefix(u8),
   Csv(u8),
   Delimited(u8),
+}
+
+#[derive(Debug, Clone)]
+pub struct TableTokens<'bmp, 'src>(Line<'bmp, 'src>);
+
+impl<'bmp, 'src> TableTokens<'bmp, 'src> {
+  pub fn new(tokens: BumpVec<'bmp, Token<'src>>, src: &'src str) -> Self {
+    Self(Line::new(tokens, src))
+  }
+
+  pub fn discard(&mut self, n: usize) {
+    self.0.discard(n);
+  }
+
+  pub fn current(&self) -> Option<&Token<'src>> {
+    self.0.current_token()
+  }
+
+  pub fn current_mut(&mut self) -> Option<&mut Token<'src>> {
+    self.0.current_token_mut()
+  }
+
+  pub fn nth(&self, n: usize) -> Option<&Token<'src>> {
+    self.0.nth_token(n)
+  }
+
+  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: usize) -> bool {
+    self.0.has_seq_at(kinds, offset)
+  }
+
+  pub fn consume_current(&mut self) -> Option<Token<'src>> {
+    self.0.consume_current()
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.0.is_empty()
+  }
 }
 
 impl DataFormat {
@@ -34,8 +73,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let first_token = delim_line.current_token().unwrap();
     debug_assert!(first_token.lexeme.len() == 1);
 
-    self.restore_lines(lines);
-
     let col_specs = meta
       .attrs
       .as_ref()
@@ -49,84 +86,147 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       col_specs,
     };
 
+    let (mut tokens, end) = self.table_content(lines, &delim_line)?;
     let mut rows = bvec![in self.bump];
-
     let mut num_cols = config.col_specs.len();
+
     if config.col_specs.is_empty() {
       let mut first_row = bvec![in self.bump];
-      while let Some(cell) = self.parse_table_cell(&config, true)? {
+      while let Some(cell) = self.parse_table_cell(&mut tokens, &config, true)? {
         first_row.push(cell);
       }
       num_cols = first_row.len();
       rows.push(Row::new(first_row));
+      while tokens.current().is(TokenKind::Newline) {
+        tokens.consume_current();
+      }
     }
 
-    while let Some(row) = self.parse_table_row(&config, num_cols)? {
+    while let Some(row) = self.parse_table_row(&mut tokens, &config, num_cols)? {
       rows.push(row);
     }
 
     Ok(Block {
       content: BlockContent::Table(Table { col_specs: config.col_specs, rows }),
       context: BlockContext::Table,
-      loc: SourceLocation::new(meta.start, 999), // _end
+      loc: SourceLocation::new(meta.start, end),
       meta,
     })
   }
 
   fn parse_table_cell(
     &mut self,
+    tokens: &mut TableTokens<'bmp, 'src>,
     conf: &TableConfig,
     counting_cols: bool,
   ) -> Result<Option<Cell<'bmp>>> {
-    while let Some(mut lines) = self.read_lines() {
-      while let Some(mut line) = lines.consume_current() {
-        // RETURN: we hit the end of the table
-        if ends_table(&line, conf) {
-          self.restore_lines(lines);
-          return Ok(None);
-        }
-        let Some((spec, start)) = self.cell_start(&mut line, conf.format.sep()) else {
-          // RETURN: we couldn't find a cell start
-          // TODO: maybe be permissive and just warn if there is some content?
-          lines.restore_if_nonempty(line);
-          self.restore_lines(lines);
-          return Ok(None);
-        };
-        let mut end = start;
-        let mut cell_tokens = bvec![in self.bump];
-        loop {
-          if self.cell_start(&mut line, conf.format.sep()).is_some() {
-            // RETURN: we hit the beginning of another cell
-            return self.finish_cell(line, lines, spec, cell_tokens, conf, start..end);
-          }
-          let Some(token) = line.consume_current() else {
-            if counting_cols {
-              // RETURN: hit end of a line, and we're only parsing 1st line implicit cols
-              return self.finish_cell(line, lines, spec, cell_tokens, conf, start..end);
-            } else {
-              break; // read another line
-            }
-          };
+    let Some((spec, start)) = self.consume_cell_start(tokens, conf.format.sep()) else {
+      return Ok(None);
+    };
+    let mut end = start;
+    let mut cell_tokens = bvec![in self.bump];
+    loop {
+      if self.starts_cell(tokens, conf.format.sep()) {
+        return self.finish_cell(spec, cell_tokens, conf, start..end);
+      }
+      let Some(token) = tokens.consume_current() else {
+        return self.finish_cell(spec, cell_tokens, conf, start..end);
+      };
+      if counting_cols && token.is(TokenKind::Newline) {
+        return self.finish_cell(spec, cell_tokens, conf, start..end);
+      }
+      end = token.loc.end;
+      cell_tokens.push(token);
+    }
+  }
 
-          end = token.loc.end;
-          cell_tokens.push(token);
-        }
+  fn parse_table_row(
+    &mut self,
+    tokens: &mut TableTokens<'bmp, 'src>,
+    config: &TableConfig,
+    num_cols: usize,
+  ) -> Result<Option<Row<'bmp>>> {
+    let mut cells = bvec![in self.bump];
+    while let Some(cell) = self.parse_table_cell(tokens, config, false)? {
+      cells.push(cell);
+      if cells.len() == num_cols {
+        break;
       }
     }
-    Ok(None)
+    if cells.is_empty() {
+      Ok(None)
+    } else {
+      Ok(Some(Row::new(cells)))
+    }
+  }
+
+  fn table_content(
+    &mut self,
+    mut lines: ContiguousLines<'bmp, 'src>,
+    start_delim: &Line<'bmp, 'src>,
+  ) -> Result<(TableTokens<'bmp, 'src>, usize)> {
+    let mut tokens = BumpVec::with_capacity_in(lines.num_tokens(), self.bump);
+    let delim_loc = start_delim.last_loc().unwrap();
+    let start = delim_loc.end + 1;
+    let mut end = delim_loc.end + 1;
+    while let Some(line) = lines.consume_current() {
+      if line.src == start_delim.src {
+        self.restore_lines(lines);
+        return Ok((
+          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
+          line.loc().unwrap().end,
+        ));
+      }
+      if let Some(loc) = line.last_loc() {
+        end = loc.end;
+      }
+      line.drain_into(&mut tokens);
+      if !lines.is_empty() {
+        tokens.push(Token {
+          kind: TokenKind::Newline,
+          lexeme: "\n",
+          loc: SourceLocation::new(end, end + 1),
+        });
+        end += 1;
+      }
+    }
+    while let Some(next_line) = self.read_line() {
+      if next_line.src == start_delim.src {
+        return Ok((
+          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
+          next_line.loc().unwrap().end,
+        ));
+      }
+      if !tokens.is_empty() {
+        tokens.push(Token {
+          kind: TokenKind::Newline,
+          lexeme: "\n",
+          loc: SourceLocation::new(end, end + 1),
+        });
+        end += 1;
+      }
+      if let Some(loc) = next_line.last_loc() {
+        end = loc.end;
+      }
+      next_line.drain_into(&mut tokens);
+    }
+    self.err_line("Table never closed, started here", start_delim)?;
+    Ok((
+      TableTokens::new(tokens, self.lexer.loc_src(start..end)),
+      end,
+    ))
   }
 
   fn finish_cell(
     &mut self,
-    line: Line<'bmp, 'src>,
-    mut lines: ContiguousLines<'bmp, 'src>,
     cell_spec: CellSpec,
-    cell_tokens: BumpVec<'bmp, Token<'src>>,
+    mut cell_tokens: BumpVec<'bmp, Token<'src>>,
     _conf: &TableConfig,
-    loc: std::ops::Range<usize>,
+    loc: Range<usize>,
   ) -> Result<Option<Cell<'bmp>>> {
-    lines.restore_if_nonempty(line);
-    self.restore_lines(lines);
+    while cell_tokens.last().is(TokenKind::Newline) {
+      cell_tokens.pop();
+    }
     let cell_line = self.line_from(cell_tokens, loc);
     let mut cell_lines = cell_line.into_lines_in(self.bump);
     let inlines = self.parse_inlines(&mut cell_lines)?;
@@ -142,118 +242,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
     Ok(Some(Cell { content }))
   }
-
-  fn parse_table_row(
-    &mut self,
-    config: &TableConfig,
-    num_cols: usize,
-  ) -> Result<Option<Row<'bmp>>> {
-    let mut cells = bvec![in self.bump];
-    while let Some(cell) = self.parse_table_cell(config, true)? {
-      cells.push(cell);
-      if cells.len() == num_cols {
-        break;
-      }
-    }
-    if cells.is_empty() {
-      Ok(None)
-    } else {
-      // err?
-      Ok(Some(Row::new(cells)))
-    }
-  }
-
-  // fn parse_table_row(
-  //   &mut self,
-  //   lines: &mut ContiguousLines<'bmp, 'src>,
-  //   expected_cols: &mut Option<u8>,
-  // ) -> Result<Option<Row<'bmp>>> {
-  //   if lines.is_empty() {
-  //     return Ok(None);
-  //   }
-  //   if let Some(num_cols) = expected_cols {
-  //     let cells = self.parse_table_cells(lines, Some(*num_cols))?;
-  //     return Ok(Some(Row { cells }));
-  //   }
-  //   let Some(line) = lines.consume_current() else {
-  //     return Ok(None);
-  //   };
-  //   let mut implicit_row = line.into_lines_in(self.bump);
-  //   let cells = self.parse_table_cells(&mut implicit_row, None)?;
-  //   *expected_cols = Some(cells.len() as u8);
-  //   Ok(Some(Row { cells }))
-  // }
-
-  // fn parse_table_cells(
-  //   &mut self,
-  //   lines: &mut ContiguousLines<'bmp, 'src>,
-  //   max: Option<u8>,
-  // ) -> Result<BumpVec<'bmp, Cell<'bmp>>> {
-  //   dbg!(&lines);
-  //   let mut cells = bvec![in self.bump];
-  //   let (sep_kind, sep_char) = (TokenKind::Pipe, b'|'); // todo, configurable
-  //   loop {
-  //     if cells.len() == max.unwrap_or(u8::MAX) as usize {
-  //       return Ok(cells);
-  //     }
-  //     let Some(mut line) = lines.consume_current() else {
-  //       return Ok(cells);
-  //     };
-  //     if line.is_empty() {
-  //       continue;
-  //     }
-  //     let first_token = line.current_token();
-  //     if first_token.is(sep_kind) {
-  //       line.discard(1);
-  //     } else if cells.is_empty() {
-  //       self.err(
-  //         format!("Expected cell separator `{}`", char::from(sep_char)),
-  //         first_token,
-  //       )?;
-  //     }
-  //     // let mut cell_lines = line.into_lines_in(self.bump);
-  //     // while !cell_lines.is_empty() {
-  //     dbg!(line.src);
-  //     lines.restore_if_nonempty(line);
-  //     let inlines = self.parse_inlines_until(lines, &[sep_kind])?;
-  //     // inlines.discard_trailing_newline();
-  //     // inlines.
-  //     cells.push(Cell {
-  //       content: CellContent::Default(inlines),
-  //     });
-  //     // }
-  //   }
-  // }
-
-  // fn gather_table_lines(
-  //   &mut self,
-  //   lines: &mut ContiguousLines<'bmp, 'src>,
-  //   start_delim: &Line<'bmp, 'src>,
-  // ) -> Result<usize> {
-  //   let mut end = start_delim.last_loc().unwrap().end;
-  //   for line in lines.iter() {
-  //     if let Some(loc) = line.last_loc() {
-  //       end = loc.end;
-  //     }
-  //     if line.src == start_delim.src {
-  //       return Ok(end);
-  //     }
-  //   }
-  //   let mut more_lines = BumpVec::new_in(self.bump);
-  //   while let Some(next_line) = self.read_line() {
-  //     if let Some(loc) = next_line.last_loc() {
-  //       end = loc.end;
-  //     }
-  //     if next_line.src == start_delim.src {
-  //       lines.extend(more_lines);
-  //       return Ok(end);
-  //     } else {
-  //       more_lines.push(next_line);
-  //     }
-  //   }
-  //   self.err_line("Table never closed, started here", start_delim)?;
-  //   Ok(end)
-  // }
 }
 
 fn ends_table(line: &Line, conf: &TableConfig) -> bool {
@@ -304,7 +292,7 @@ mod tests {
     )
   }
 
-  // #[test]
+  #[test]
   fn test_parse_table_implicit_num_rows() {
     let input = adoc! {r#"
       |===

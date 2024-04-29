@@ -16,6 +16,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Line { all_tokens: tokens, src, pos: 0 }
   }
 
+  pub fn drain_into(mut self, tokens: &mut BumpVec<'bmp, Token<'src>>) {
+    tokens.extend(self.all_tokens.drain(self.pos..));
+  }
+
   pub fn current_token(&self) -> Option<&Token<'src>> {
     self.all_tokens.get(self.pos)
   }

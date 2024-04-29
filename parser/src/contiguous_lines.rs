@@ -17,6 +17,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.reversed_lines.len()
   }
 
+  pub fn num_tokens(&self) -> usize {
+    self.reversed_lines.iter().map(Line::num_tokens).sum()
+  }
+
   pub fn current(&self) -> Option<&Line<'bmp, 'src>> {
     self.reversed_lines.last()
   }
