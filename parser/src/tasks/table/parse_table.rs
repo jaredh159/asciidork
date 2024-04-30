@@ -68,6 +68,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     conf: &TableConfig,
     counting_cols: bool,
   ) -> Result<Option<Cell<'bmp>>> {
+    if tokens.is_empty() {
+      println!("finish 6 (empty tokens)");
+      return Ok(None);
+    }
+
     if counting_cols && tokens.current().is(TokenKind::Newline) {
       while tokens.current().is(TokenKind::Newline) {
         tokens.consume_current();
@@ -75,10 +80,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       println!("finish 5 (done counting cols)");
       return Ok(None);
     }
-    let Some((spec, start)) = self.consume_cell_start(tokens, conf.format.sep()) else {
-      println!("finish 4 (no cell start)");
-      return Ok(None);
+
+    let (spec, start) = match self.consume_cell_start(tokens, conf.format.sep()) {
+      Some((spec, start)) => (spec, start),
+      None => {
+        println!("finish 4 (no cell start)");
+        self.err(
+          format!(
+            "Expected cell separator `{}`",
+            char::from(conf.format.sep())
+          ),
+          tokens.nth(0),
+        )?;
+        (CellSpec::default(), tokens.current().unwrap().loc.start)
+      }
     };
+
     let mut end = start;
     let mut cell_tokens = bvec![in self.bump];
     // trim leading whitespace
@@ -320,6 +337,25 @@ mod tests {
   }
 
   #[test]
+  fn missing_first_sep_recovers() {
+    assert_table_loose!(
+      adoc! {r#"
+        |===
+        a | b | c
+        |===
+      "#},
+      Table {
+        col_specs: vecb![],
+        rows: vecb![Row::new(vecb![
+          cell!(d: "a", 5..6),
+          cell!(d: "b", 9..10),
+          cell!(d: "c", 13..14),
+        ]),],
+      }
+    )
+  }
+
+  #[test]
   fn test_parse_table_implicit_num_rows() {
     assert_table!(
       adoc! {r#"
@@ -386,28 +422,28 @@ mod tests {
     )
   }
 
-  // test_error!(
-  //   no_table_end_delim,
-  //   adoc! {r"
-  //     |===
-  //     |c1, r1
-  //   "},
-  //   error! {r"
-  //     1: |===
-  //        ^^^^ Table never closed, started here
-  //   "}
-  // );
+  test_error!(
+    no_table_end_delim,
+    adoc! {r"
+      |===
+      |c1, r1
+    "},
+    error! {r"
+      1: |===
+         ^^^^ Table never closed, started here
+    "}
+  );
 
-  // test_error!(
-  //   no_cell_sep,
-  //   adoc! {r"
-  //     |===
-  //     foo
-  //     |===
-  //   "},
-  //   error! {r"
-  //     2: foo
-  //        ^ Expected cell separator `|`
-  //   "}
-  // );
+  test_error!(
+    no_cell_sep,
+    adoc! {r"
+      |===
+      foo
+      |===
+    "},
+    error! {r"
+      2: foo
+         ^ Expected cell separator `|`
+    "}
+  );
 }

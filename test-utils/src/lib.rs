@@ -56,6 +56,18 @@ macro_rules! assert_table {
 }
 
 #[macro_export]
+macro_rules! assert_table_loose {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let block = parse_single_block_loose!($input);
+    let table = match block.content {
+      BlockContent::Table(table) => table,
+      _ => panic!("expected table block content"),
+    };
+    assert_eq!(table, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_inlines {
   ($input:expr, $expected:expr$(,)?) => {{
     let inlines = parse_inline_nodes!($input);
@@ -348,6 +360,16 @@ macro_rules! parse_blocks {
 }
 
 #[macro_export]
+macro_rules! parse_blocks_loose {
+  ($input:expr) => {
+    parse_doc_content_loose!($input)
+      .blocks()
+      .expect("expected blocks")
+      .clone()
+  };
+}
+
+#[macro_export]
 macro_rules! parse_single_block {
   ($input:expr) => {{
     let blocks = parse_blocks!($input);
@@ -359,9 +381,30 @@ macro_rules! parse_single_block {
 }
 
 #[macro_export]
+macro_rules! parse_single_block_loose {
+  ($input:expr) => {{
+    let blocks = parse_blocks_loose!($input);
+    if blocks.len() != 1 {
+      panic!("expected one block, found {}", blocks.len());
+    }
+    blocks[0].clone()
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_doc_content {
   ($input:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().unwrap().document.content
+  }};
+}
+
+#[macro_export]
+macro_rules! parse_doc_content_loose {
+  ($input:expr) => {{
+    let mut opts = ::asciidork_opts::Opts::embedded();
+    opts.strict = false;
+    let parser = Parser::new_opts(leaked_bump(), $input, opts);
     parser.parse().unwrap().document.content
   }};
 }
