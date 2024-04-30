@@ -14,15 +14,21 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     debug_assert!(first_token.lexeme.len() == 1);
 
     let col_specs = meta
-      .attrs
-      .as_ref()
-      .and_then(|attrs| attrs.named("cols"))
+      .attr_named("cols")
       .map(|cols_attr| self.parse_col_specs(cols_attr))
       .unwrap_or_else(|| bvec![in self.bump]);
 
+    let format = meta
+      .attr_named("separator")
+      .and_then(|sep| match sep.len() {
+        1 => Some(DataFormat::Prefix(sep.as_bytes()[0])),
+        _ => None, // err ??
+      })
+      .unwrap_or(DataFormat::Prefix(b'|'));
+
     let config = TableConfig {
       delim_ch: first_token.lexeme.as_bytes()[0],
-      format: DataFormat::Prefix(b'|'), // todo derive
+      format,
       col_specs,
     };
 
@@ -42,6 +48,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
 
+    println!("num_cols: {}", num_cols);
+
     while let Some(row) = self.parse_table_row(&mut tokens, &config, num_cols)? {
       rows.push(row);
     }
@@ -60,23 +68,43 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     conf: &TableConfig,
     counting_cols: bool,
   ) -> Result<Option<Cell<'bmp>>> {
+    if counting_cols && tokens.current().is(TokenKind::Newline) {
+      while tokens.current().is(TokenKind::Newline) {
+        tokens.consume_current();
+      }
+      println!("finish 5 (done counting cols)");
+      return Ok(None);
+    }
     let Some((spec, start)) = self.consume_cell_start(tokens, conf.format.sep()) else {
+      println!("finish 4 (no cell start)");
       return Ok(None);
     };
     let mut end = start;
     let mut cell_tokens = bvec![in self.bump];
+    // trim leading whitespace
+    while tokens.current().is(TokenKind::Whitespace) {
+      tokens.consume_current();
+    }
     loop {
       if self.starts_cell(tokens, conf.format.sep()) {
+        println!("finish 1 (found next cell)");
+        return self.finish_cell(spec, cell_tokens, conf, start..end);
+      }
+      if counting_cols && tokens.current().is(TokenKind::Newline) {
+        println!("finish 2 (found newline, counting cols)");
         return self.finish_cell(spec, cell_tokens, conf, start..end);
       }
       let Some(token) = tokens.consume_current() else {
+        println!("finish 3 (out of tokens)");
         return self.finish_cell(spec, cell_tokens, conf, start..end);
       };
-      if counting_cols && token.is(TokenKind::Newline) {
-        return self.finish_cell(spec, cell_tokens, conf, start..end);
-      }
       end = token.loc.end;
-      cell_tokens.push(token);
+      if !token.is(TokenKind::Backslash) {
+        cell_tokens.push(token);
+      } else if let Some(next) = tokens.consume_current() {
+        end = next.loc.end;
+        cell_tokens.push(next);
+      }
     }
   }
 
@@ -164,12 +192,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     _conf: &TableConfig,
     loc: Range<usize>,
   ) -> Result<Option<Cell<'bmp>>> {
-    while cell_tokens.last().is(TokenKind::Newline) {
+    while cell_tokens.last().is_whitespaceish() {
       cell_tokens.pop();
     }
-    let cell_line = self.line_from(cell_tokens, loc);
-    let mut cell_lines = cell_line.into_lines_in(self.bump);
-    let inlines = self.parse_inlines(&mut cell_lines)?;
+    let inlines = if cell_tokens.is_empty() {
+      InlineNodes::new(self.bump)
+    } else {
+      let cell_line = self.line_from(cell_tokens, loc);
+      let mut cell_lines = cell_line.into_lines_in(self.bump);
+      self.parse_inlines(&mut cell_lines)?
+    };
     let content = match cell_spec.style {
       Some(CellContentStyle::Default) => CellContent::Default(inlines),
       Some(CellContentStyle::Emphasis) => CellContent::Emphasis(inlines),
@@ -198,24 +230,17 @@ mod tests {
 
   #[test]
   fn test_parse_table() {
-    let input = adoc! {r#"
-      [cols="1,1"]
-      |===
-      |c1, r1
-      |c2, r1
+    assert_table!(
+      adoc! {r#"
+        [cols="1,1"]
+        |===
+        |c1, r1
+        |c2, r1
 
-      |c1, r2
-      |c2, r2
-      |===
-    "#};
-
-    let block = parse_single_block!(input);
-    let table = match block.content {
-      BlockContent::Table(table) => table,
-      _ => panic!("unexpected block content"),
-    };
-    assert_eq!(
-      table,
+        |c1, r2
+        |c2, r2
+        |===
+      "#},
       Table {
         col_specs: vecb![ColSpec { width: 1 }, ColSpec { width: 1 }],
         rows: vecb![
@@ -232,24 +257,79 @@ mod tests {
     )
   }
 
-  // #[test]
+  #[test]
+  fn test_table_escaped_separator() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        |a \| b |c \| d \|
+        |===
+      "#},
+      Table {
+        col_specs: vecb![],
+        rows: vecb![Row::new(vecb![
+          cell!(d: "a | b", 6..12),
+          cell!(d: "c | d |", 14..23),
+        ])],
+      }
+    )
+  }
+
+  #[test]
+  fn trailing_sep_is_empty_cell() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        |a |
+        |c | d
+        |===
+      "#},
+      Table {
+        col_specs: vecb![],
+        rows: vecb![
+          Row::new(vecb![
+            cell!(d: "a", 6..7),
+            Cell {
+              content: CellContent::Default(InlineNodes::new(leaked_bump()))
+            }
+          ]),
+          Row::new(vecb![cell!(d: "c", 11..12), cell!(d: "d", 15..16)])
+        ],
+      }
+    )
+  }
+
+  #[test]
+  fn custom_sep_psv() {
+    assert_table!(
+      adoc! {r#"
+        [separator=;]
+        |===
+        ;a ; b ;  c
+        |===
+      "#},
+      Table {
+        col_specs: vecb![],
+        rows: vecb![Row::new(vecb![
+          cell!(d: "a", 20..21),
+          cell!(d: "b", 24..25),
+          cell!(d: "c", 29..30),
+        ]),],
+      }
+    )
+  }
+
+  #[test]
   fn test_parse_table_implicit_num_rows() {
-    let input = adoc! {r#"
-      |===
-      |c1, r1|c2, r1
+    assert_table!(
+      adoc! {r#"
+        |===
+        |c1, r1|c2, r1
 
-      |c1, r2
-      |c2, r2
-      |===
-    "#};
-
-    let block = parse_single_block!(input);
-    let table = match block.content {
-      BlockContent::Table(table) => table,
-      _ => panic!("unexpected block content"),
-    };
-    assert_eq!(
-      table,
+        |c1, r2
+        |c2, r2
+        |===
+      "#},
       Table {
         col_specs: vecb![],
         rows: vecb![
@@ -259,6 +339,49 @@ mod tests {
             cell!(d: "c2, r2", 30..36),
           ])
         ],
+      }
+    )
+  }
+
+  #[test]
+  fn test_table_w_title() {
+    assert_block!(
+      adoc! {r"
+        .Simple psv table
+        |===
+        |A |B |C
+        |a |b |c
+        |1 |2 |3
+        |===
+      "},
+      Block {
+        meta: ChunkMeta {
+          attrs: None,
+          title: Some(just!("Simple psv table", 1..17)),
+          start: 0
+        },
+        content: BlockContent::Table(Table {
+          col_specs: vecb![],
+          rows: vecb![
+            Row::new(vecb![
+              cell!(d: "A", 24..25),
+              cell!(d: "B", 27..28),
+              cell!(d: "C", 30..31),
+            ]),
+            Row::new(vecb![
+              cell!(d: "a", 33..34),
+              cell!(d: "b", 36..37),
+              cell!(d: "c", 39..40),
+            ]),
+            Row::new(vecb![
+              cell!(d: "1", 42..43),
+              cell!(d: "2", 45..46),
+              cell!(d: "3", 48..49),
+            ]),
+          ],
+        }),
+        context: BlockContext::Table,
+        loc: SourceLocation::new(0, 51),
       }
     )
   }

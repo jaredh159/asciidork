@@ -44,6 +44,18 @@ macro_rules! assert_block {
 }
 
 #[macro_export]
+macro_rules! assert_table {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let block = parse_single_block!($input);
+    let table = match block.content {
+      BlockContent::Table(table) => table,
+      _ => panic!("expected table block content"),
+    };
+    assert_eq!(table, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_inlines {
   ($input:expr, $expected:expr$(,)?) => {{
     let inlines = parse_inline_nodes!($input);
