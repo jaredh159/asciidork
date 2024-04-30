@@ -1,6 +1,6 @@
 use bumpalo::collections::CollectIn;
 
-use super::parse_table::TableTokens;
+use super::TableTokens;
 use crate::internal::*;
 use TokenKind::*;
 
@@ -39,7 +39,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       let token = tokens.current_mut().unwrap();
       token.lexeme = &token.lexeme[data.drop_bytes..];
       token.loc.start += data.drop_bytes;
-      // line.src = &line.src[data.drop_bytes..];
     }
     Some((data.spec, data.resuming))
   }
