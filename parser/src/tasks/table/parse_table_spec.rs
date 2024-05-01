@@ -16,7 +16,7 @@ struct CellStart {
 lazy_static! {
   // multiplier(1), horiz(2), vert(3), width(4), style(5)
   pub static ref COLSPEC_RE: Regex =
-    Regex::new(r"^(?:(\d+)\*)?([<^>])?(?:\.([<^>]))?(\d+)?(a|d|e|h|l|m|s)?$").unwrap();
+    Regex::new(r"^\s*(?:(\d+)\*)?([<^>])?(?:\.([<^>]))?(\d+)?(a|d|e|h|l|m|s)?\s*$").unwrap();
 }
 
 fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
@@ -62,6 +62,9 @@ fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_col_specs(&mut self, cols_attr: &str) -> BumpVec<'bmp, ColSpec> {
     let mut specs = bvec![in self.bump];
+    if cols_attr.trim().is_empty() {
+      return specs;
+    }
     cols_attr
       .split(',')
       .for_each(|col| parse_col_spec(col, &mut specs));
@@ -352,6 +355,18 @@ mod tests {
           ColSpec { width: 2, ..ColSpec::default() },
         ],
       ),
+      (
+        " 1,2  , 1 ", // ignore spaces
+        &[
+          ColSpec::default(),
+          ColSpec { width: 2, ..ColSpec::default() },
+          ColSpec::default(),
+        ],
+      ),
+      // ignore empty colspec
+      ("", &[]),
+      // ignore empty colspec
+      (" ", &[]),
       (
         "2*>.>3e,,9",
         &[
