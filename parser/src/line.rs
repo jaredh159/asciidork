@@ -518,6 +518,18 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   pub const fn is_fully_unconsumed(&self) -> bool {
     self.pos == 0
   }
+
+  pub fn trim_for_cell(&mut self, style: CellContentStyle) {
+    // literal cell should preserve only leading spaces
+    if matches!(style, CellContentStyle::Literal) {
+      while self.current_is(Newline) {
+        self.discard(1);
+      }
+    }
+    while self.last_token().is_whitespaceish() {
+      self.discard_last();
+    }
+  }
 }
 
 lazy_static! {

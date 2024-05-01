@@ -213,6 +213,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     _conf: &TableContext,
     loc: Range<usize>,
   ) -> Result<Option<Cell<'bmp>>> {
+    let cell_style = cell_spec.style.unwrap_or(CellContentStyle::Default);
+    // jared
     while cell_tokens.last().is_whitespaceish() {
       cell_tokens.pop();
     }
@@ -220,23 +222,21 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let inlines = if cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
     } else {
-      let cell_line = self.line_from(cell_tokens, loc);
+      let mut cell_line = self.line_from(cell_tokens, loc);
+      cell_line.trim_for_cell(cell_style);
       let mut cell_lines = cell_line.into_lines_in(self.bump);
-      self.ctx.subs = cell_spec
-        .style
-        .map_or(Substitutions::normal(), |style| style.into());
+      self.ctx.subs = cell_style.into();
       self.parse_inlines(&mut cell_lines)?
     };
     self.ctx.subs = restore;
-    let content = match cell_spec.style {
-      Some(CellContentStyle::Default) => CellContent::Default(inlines),
-      Some(CellContentStyle::Emphasis) => CellContent::Emphasis(inlines),
-      Some(CellContentStyle::Header) => CellContent::Header(inlines),
-      Some(CellContentStyle::Literal) => CellContent::Literal(inlines),
-      Some(CellContentStyle::Monospace) => CellContent::Monospace(inlines),
-      Some(CellContentStyle::Strong) => CellContent::Strong(inlines),
-      Some(CellContentStyle::AsciiDoc) => todo!("asciidoc"),
-      None => CellContent::Default(inlines),
+    let content = match cell_style {
+      CellContentStyle::Default => CellContent::Default(inlines),
+      CellContentStyle::Emphasis => CellContent::Emphasis(inlines),
+      CellContentStyle::Header => CellContent::Header(inlines),
+      CellContentStyle::Literal => CellContent::Literal(inlines),
+      CellContentStyle::Monospace => CellContent::Monospace(inlines),
+      CellContentStyle::Strong => CellContent::Strong(inlines),
+      CellContentStyle::AsciiDoc => todo!("asciidoc"),
     };
     Ok(Some(Cell { content }))
   }
@@ -446,7 +446,39 @@ mod tests {
             node!("four"; 24..28),
             node!(Inline::SpecialChar(SpecialCharKind::GreaterThan), 28..29),
           ])
-        }]),],
+        }])],
+      }
+    )
+  }
+
+  #[test]
+  fn literal_cell_spacing() {
+    assert_table!(
+      adoc! {r#"
+        [cols="1,1"]
+        |===
+        l|
+          one
+          two
+        three
+
+          | normal
+        |===
+      "#},
+      Table {
+        col_specs: vecb![ColSpec { width: 1 }, ColSpec { width: 1 }],
+        rows: vecb![Row::new(vecb![
+          Cell {
+            content: CellContent::Literal(nodes![
+              node!("  one"; 21..26),
+              node!(Inline::Newline, 26..27),
+              node!("  two"; 27..32),
+              node!(Inline::Newline, 32..33),
+              node!("three"; 33..38),
+            ])
+          },
+          cell!(d: "normal", 44..50),
+        ])],
       }
     )
   }
