@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use super::{DataFormat, TableConfig, TableTokens};
+use super::{DataFormat, TableContext, TableTokens};
 use crate::internal::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -26,95 +26,102 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       })
       .unwrap_or(DataFormat::Prefix(b'|'));
 
-    let config = TableConfig {
+    let mut ctx = TableContext {
       delim_ch: first_token.lexeme.as_bytes()[0],
       format,
+      num_cols: col_specs.len(),
+      counting_cols: col_specs.is_empty(),
       col_specs,
     };
 
     let (mut tokens, end) = self.table_content(lines, &delim_line)?;
     let mut rows = bvec![in self.bump];
-    let mut num_cols = config.col_specs.len();
 
-    if config.col_specs.is_empty() {
-      let mut first_row = bvec![in self.bump];
-      while let Some(cell) = self.parse_table_cell(&mut tokens, &config, true)? {
-        first_row.push(cell);
-      }
-      num_cols = first_row.len();
-      rows.push(Row::new(first_row));
-      while tokens.current().is(TokenKind::Newline) {
-        tokens.consume_current();
-      }
+    if ctx.counting_cols {
+      self.parse_implicit_first_row(&mut tokens, &mut rows, &mut ctx)?;
     }
 
-    println!("num_cols: {}", num_cols);
-
-    while let Some(row) = self.parse_table_row(&mut tokens, &config, num_cols)? {
+    while let Some(row) = self.parse_table_row(&mut tokens, &mut ctx)? {
       rows.push(row);
     }
 
     Ok(Block {
-      content: BlockContent::Table(Table { col_specs: config.col_specs, rows }),
+      content: BlockContent::Table(Table { col_specs: ctx.col_specs, rows }),
       context: BlockContext::Table,
       loc: SourceLocation::new(meta.start, end),
       meta,
     })
   }
 
+  fn parse_implicit_first_row(
+    &mut self,
+    tokens: &mut TableTokens<'bmp, 'src>,
+    rows: &mut BumpVec<'bmp, Row<'bmp>>,
+    ctx: &mut TableContext,
+  ) -> Result<()> {
+    let mut first_row = bvec![in self.bump];
+    loop {
+      let Some(cell) = self.parse_table_cell(tokens, ctx)? else {
+        break;
+      };
+      first_row.push(cell);
+      if !ctx.counting_cols {
+        break;
+      }
+    }
+    ctx.num_cols = first_row.len();
+    rows.push(Row::new(first_row));
+    while tokens.current().is(TokenKind::Newline) {
+      tokens.consume_current();
+    }
+    Ok(())
+  }
+
   fn parse_table_cell(
     &mut self,
     tokens: &mut TableTokens<'bmp, 'src>,
-    conf: &TableConfig,
-    counting_cols: bool,
+    ctx: &mut TableContext,
   ) -> Result<Option<Cell<'bmp>>> {
     if tokens.is_empty() {
       println!("finish 6 (empty tokens)");
       return Ok(None);
     }
 
-    if counting_cols && tokens.current().is(TokenKind::Newline) {
-      while tokens.current().is(TokenKind::Newline) {
-        tokens.consume_current();
-      }
-      println!("finish 5 (done counting cols)");
-      return Ok(None);
-    }
-
-    let (spec, start) = match self.consume_cell_start(tokens, conf.format.sep()) {
+    let (spec, start) = match self.consume_cell_start(tokens, ctx.format.sep()) {
       Some((spec, start)) => (spec, start),
       None => {
         println!("finish 4 (no cell start)");
-        self.err(
-          format!(
-            "Expected cell separator `{}`",
-            char::from(conf.format.sep())
-          ),
-          tokens.nth(0),
-        )?;
+        let sep = char::from(ctx.format.sep());
+        self.err(format!("Expected cell separator `{}`", sep), tokens.nth(0))?;
         (CellSpec::default(), tokens.current().unwrap().loc.start)
       }
     };
 
     let mut end = start;
     let mut cell_tokens = bvec![in self.bump];
+
     // trim leading whitespace
     while tokens.current().is(TokenKind::Whitespace) {
       tokens.consume_current();
     }
+
     loop {
-      if self.starts_cell(tokens, conf.format.sep()) {
+      if self.starts_cell(tokens, ctx.format.sep()) {
         println!("finish 1 (found next cell)");
-        return self.finish_cell(spec, cell_tokens, conf, start..end);
-      }
-      if counting_cols && tokens.current().is(TokenKind::Newline) {
-        println!("finish 2 (found newline, counting cols)");
-        return self.finish_cell(spec, cell_tokens, conf, start..end);
+        return self.finish_cell(spec, cell_tokens, ctx, start..end);
       }
       let Some(token) = tokens.consume_current() else {
         println!("finish 3 (out of tokens)");
-        return self.finish_cell(spec, cell_tokens, conf, start..end);
+        return self.finish_cell(spec, cell_tokens, ctx, start..end);
       };
+
+      if token.is(TokenKind::Newline) {
+        // once we've seen one newline, we finish the current cell (even if
+        // it continues multiple lines) but we're done counting newlines
+        // doesn't exactly match asciidoctor docs, but matches behavior
+        ctx.counting_cols = false;
+      }
+
       end = token.loc.end;
       if !token.is(TokenKind::Backslash) {
         cell_tokens.push(token);
@@ -128,13 +135,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_table_row(
     &mut self,
     tokens: &mut TableTokens<'bmp, 'src>,
-    config: &TableConfig,
-    num_cols: usize,
+    ctx: &mut TableContext,
   ) -> Result<Option<Row<'bmp>>> {
     let mut cells = bvec![in self.bump];
-    while let Some(cell) = self.parse_table_cell(tokens, config, false)? {
+    while let Some(cell) = self.parse_table_cell(tokens, ctx)? {
       cells.push(cell);
-      if cells.len() == num_cols {
+      if cells.len() == ctx.num_cols {
         break;
       }
     }
@@ -196,29 +202,32 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       next_line.drain_into(&mut tokens);
     }
     self.err_line("Table never closed, started here", start_delim)?;
-    Ok((
-      TableTokens::new(tokens, self.lexer.loc_src(start..end)),
-      end,
-    ))
+    let loc = self.lexer.loc_src(start..end);
+    Ok((TableTokens::new(tokens, loc), end))
   }
 
   fn finish_cell(
     &mut self,
     cell_spec: CellSpec,
     mut cell_tokens: BumpVec<'bmp, Token<'src>>,
-    _conf: &TableConfig,
+    _conf: &TableContext,
     loc: Range<usize>,
   ) -> Result<Option<Cell<'bmp>>> {
     while cell_tokens.last().is_whitespaceish() {
       cell_tokens.pop();
     }
+    let restore = self.ctx.subs;
     let inlines = if cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
     } else {
       let cell_line = self.line_from(cell_tokens, loc);
       let mut cell_lines = cell_line.into_lines_in(self.bump);
+      self.ctx.subs = cell_spec
+        .style
+        .map_or(Substitutions::normal(), |style| style.into());
       self.parse_inlines(&mut cell_lines)?
     };
+    self.ctx.subs = restore;
     let content = match cell_spec.style {
       Some(CellContentStyle::Default) => CellContent::Default(inlines),
       Some(CellContentStyle::Emphasis) => CellContent::Emphasis(inlines),
@@ -233,7 +242,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 }
 
-fn ends_table(line: &Line, conf: &TableConfig) -> bool {
+fn ends_table(line: &Line, conf: &TableContext) -> bool {
   line.src.len() == 4
     && line.num_tokens() == 2
     && line.nth_token(1).is_len(TokenKind::EqualSigns, 3)
@@ -356,7 +365,7 @@ mod tests {
   }
 
   #[test]
-  fn test_parse_table_implicit_num_rows() {
+  fn table_implicit_num_rows() {
     assert_table!(
       adoc! {r#"
         |===
@@ -375,6 +384,69 @@ mod tests {
             cell!(d: "c2, r2", 30..36),
           ])
         ],
+      }
+    )
+  }
+
+  #[test]
+  fn table_implicit_num_rows_multiline_cell_content() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        |c1, r1|c2,
+        r1
+        |c1, r2
+        |c2, r2
+        |===
+      "#},
+      Table {
+        col_specs: vecb![],
+        rows: vecb![
+          Row::new(vecb![
+            cell!(d: "c1, r1", 6..12),
+            Cell {
+              content: CellContent::Default(nodes![
+                node!("c2,"; 13..16),
+                node!(Inline::Newline, 16..17),
+                node!("r1"; 17..19),
+              ])
+            }
+          ]),
+          Row::new(vecb![
+            cell!(d: "c1, r2", 21..27),
+            cell!(d: "c2, r2", 29..35),
+          ])
+        ],
+      }
+    )
+  }
+
+  #[test]
+  fn literal_cell_only_escapes_special_chars() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        l|one
+        *two*
+        three
+        <four>
+        |===
+      "#},
+      Table {
+        col_specs: vecb![],
+        rows: vecb![Row::new(vecb![Cell {
+          content: CellContent::Literal(nodes![
+            node!("one"; 7..10),
+            node!(Inline::Newline, 10..11),
+            node!("*two*"; 11..16),
+            node!(Inline::Newline, 16..17),
+            node!("three"; 17..22),
+            node!(Inline::Newline, 22..23),
+            node!(Inline::SpecialChar(SpecialCharKind::LessThan), 23..24),
+            node!("four"; 24..28),
+            node!(Inline::SpecialChar(SpecialCharKind::GreaterThan), 28..29),
+          ])
+        }]),],
       }
     )
   }

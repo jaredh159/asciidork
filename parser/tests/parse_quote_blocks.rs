@@ -16,7 +16,7 @@ fn test_quoted_paragraph() {
     content: Content::QuotedParagraph {
       quote: nodes![
         node!("I hold it that a little blah,"; 1..30),
-        node!(JoiningNewline, 30..31),
+        node!(Newline, 30..31),
         node!("and as necessary in the blah."; 31..60),
       ],
       attr: src!("Thomas Jefferson", 65..81),
@@ -49,7 +49,7 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
     content: Content::QuotedParagraph {
       quote: nodes![
         node!("I hold it that a little blah,"; 17..46),
-        node!(JoiningNewline, 46..47),
+        node!(Newline, 46..47),
         node!("and as necessary in the blah."; 47..76),
       ],
       attr: src!("Thomas Jefferson", 81..97),
@@ -141,7 +141,7 @@ fn test_delimited_verse_block() {
       context: Context::Verse,
       content: Content::Simple(nodes![
         node!("foo"; 29..32),
-        node!(JoiningNewline, 32..33),
+        node!(Newline, 32..33),
         node!("bar"; 33..36),
       ]),
       ..empty_block!(0..41)

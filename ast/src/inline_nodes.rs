@@ -21,7 +21,7 @@ impl<'bmp> InlineNodes<'bmp> {
       Inline::Macro(_) => {}
       Inline::Italic(nodes) => text.extend(nodes.plain_text()),
       Inline::InlinePassthrough(nodes) => text.extend(nodes.plain_text()),
-      Inline::JoiningNewline => text.push(" "),
+      Inline::Newline => text.push(" "),
       Inline::LineBreak => {}
       Inline::LineComment(_) => {}
       Inline::CalloutNum(_) => {}
@@ -48,19 +48,13 @@ impl<'bmp> InlineNodes<'bmp> {
   }
 
   pub fn remove_trailing_newline(&mut self) {
-    if matches!(
-      self.last().map(|n| &n.content),
-      Some(Inline::JoiningNewline)
-    ) {
+    if matches!(self.last().map(|n| &n.content), Some(Inline::Newline)) {
       self.pop();
     }
   }
 
   pub fn discard_trailing_newline(&mut self) {
-    if matches!(
-      self.last().map(|n| &n.content),
-      Some(Inline::JoiningNewline)
-    ) {
+    if matches!(self.last().map(|n| &n.content), Some(Inline::Newline)) {
       let idx = self.len() - 1;
       self.0[idx].content = Inline::Discarded;
     }

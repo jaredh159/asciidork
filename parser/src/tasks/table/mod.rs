@@ -4,10 +4,12 @@ mod parse_table;
 mod parse_table_spec;
 
 #[derive(Debug, Clone)]
-struct TableConfig<'bmp> {
+struct TableContext<'bmp> {
   delim_ch: u8,
   format: DataFormat,
   col_specs: BumpVec<'bmp, ColSpec>,
+  num_cols: usize,
+  counting_cols: bool,
 }
 
 #[derive(Debug, Clone, Copy)]

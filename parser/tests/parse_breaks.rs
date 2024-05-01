@@ -1,5 +1,5 @@
 use asciidork_ast::short::block::*;
-use asciidork_ast::{prelude::*, Inline::JoiningNewline};
+use asciidork_ast::{prelude::*, Inline::Newline};
 use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
 
@@ -91,9 +91,9 @@ fn test_invalid_break_not_preceded_by_empty_line() {
       context: Context::Paragraph,
       content: Content::Simple(nodes![
         node!("foo"; 0..3),
-        node!(JoiningNewline, 3..4),
+        node!(Newline, 3..4),
         node!("'''"; 4..7),
-        node!(JoiningNewline, 7..8),
+        node!(Newline, 7..8),
         node!("bar"; 8..11),
       ]),
       ..empty_block!(0..11)

@@ -208,6 +208,22 @@ impl Subs {
   }
 }
 
+use ast::CellContentStyle;
+
+impl From<CellContentStyle> for Substitutions {
+  fn from(style: CellContentStyle) -> Self {
+    match style {
+      CellContentStyle::AsciiDoc => Substitutions::normal(),
+      CellContentStyle::Default => Substitutions::normal(),
+      CellContentStyle::Emphasis => Substitutions::normal(),
+      CellContentStyle::Header => Substitutions::normal(),
+      CellContentStyle::Literal => Substitutions::verbatim(),
+      CellContentStyle::Monospace => Substitutions::normal(),
+      CellContentStyle::Strong => Substitutions::normal(),
+    }
+  }
+}
+
 // tests
 
 #[cfg(test)]

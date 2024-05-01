@@ -74,7 +74,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           if !lines.is_empty() {
             acc.commit();
             acc.text.loc.end += 1;
-            acc.push_node(JoiningNewline, acc.text.loc);
+            acc.push_node(Inline::Newline, acc.text.loc);
           }
           break;
         };
@@ -536,6 +536,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             acc.push_node(AttributeReference(aref), loc);
           }
 
+          TokenKind::Newline => acc.push_node(Inline::Newline, token.loc),
+
           Discard => acc.text.loc = token.loc.clamp_end(),
 
           Backslash if !line.is_empty() => {
@@ -708,7 +710,7 @@ fn push_newline_if_needed<'bmp>(state: &mut Accum<'bmp>, lines: &ContiguousLines
     .map_or(false, |line| line.is_fully_unconsumed())
   {
     state.text.loc.end += 1;
-    state.push_node(JoiningNewline, state.text.loc);
+    state.push_node(Inline::Newline, state.text.loc);
   }
 }
 
@@ -738,7 +740,7 @@ mod tests {
       "foo\n// baz\nbar",
       nodes![
         node!("foo"; 0..3),
-        node!(JoiningNewline, 3..4),
+        node!(Inline::Newline, 3..4),
         node!(LineComment(bstr!(" baz")), 4..11),
         node!("bar"; 11..14),
       ],
@@ -761,7 +763,7 @@ mod tests {
         "_foo_\nbar",
         nodes![
           node!(Italic(nodes![node!("foo"; 1..4)]), 0..5),
-          node!(JoiningNewline, 5..6),
+          node!(Inline::Newline, 5..6),
           node!("bar"; 6..9),
         ],
       ),
@@ -769,7 +771,7 @@ mod tests {
         "__foo__\nbar",
         nodes![
           node!(Italic(nodes![node!("foo"; 2..5)]), 0..7),
-          node!(JoiningNewline, 7..8),
+          node!(Inline::Newline, 7..8),
           node!("bar"; 8..11),
         ],
       ),
@@ -778,7 +780,7 @@ mod tests {
         nodes![
           node!("foo "; 0..4),
           node!(Quote(QuoteKind::Double, nodes![node!("bar"; 6..9)]), 4..11),
-          node!(JoiningNewline, 11..12),
+          node!(Inline::Newline, 11..12),
           node!("baz"; 12..15),
         ],
       ),
@@ -790,13 +792,13 @@ mod tests {
               QuoteKind::Double,
               nodes![
                 node!("foo"; 2..5),
-                node!(JoiningNewline, 5..6),
+                node!(Inline::Newline, 5..6),
                 node!("bar"; 6..9),
               ],
             ),
             0..11,
           ),
-          node!(JoiningNewline, 11..12),
+          node!(Inline::Newline, 11..12),
           node!("baz"; 12..15),
         ],
       ),
@@ -805,7 +807,7 @@ mod tests {
         nodes![
           node!("bar"; 0..3),
           node!(CurlyQuote(RightDouble), 3..5),
-          node!(JoiningNewline, 5..6),
+          node!(Inline::Newline, 5..6),
           node!("baz"; 6..9),
         ],
       ),
@@ -813,7 +815,7 @@ mod tests {
         "^foo^\nbar",
         nodes![
           node!(Superscript(nodes![node!("foo"; 1..4)]), 0..5),
-          node!(JoiningNewline, 5..6),
+          node!(Inline::Newline, 5..6),
           node!("bar"; 6..9),
         ],
       ),
@@ -821,7 +823,7 @@ mod tests {
         "~foo~\nbar",
         nodes![
           node!(Subscript(nodes![node!("foo"; 1..4)]), 0..5),
-          node!(JoiningNewline, 5..6),
+          node!(Inline::Newline, 5..6),
           node!("bar"; 6..9),
         ],
       ),
@@ -829,7 +831,7 @@ mod tests {
         "`+{name}+`\nbar",
         nodes![
           node!(LitMono(src!("{name}", 2..8)), 0..10),
-          node!(JoiningNewline, 10..11),
+          node!(Inline::Newline, 10..11),
           node!("bar"; 11..14),
         ],
       ),
@@ -837,7 +839,7 @@ mod tests {
         "+_foo_+\nbar",
         nodes![
           node!(InlinePassthrough(nodes![node!("_foo_"; 1..6)]), 0..7,),
-          node!(JoiningNewline, 7..8),
+          node!(Inline::Newline, 7..8),
           node!("bar"; 8..11),
         ],
       ),
@@ -845,7 +847,7 @@ mod tests {
         "+++_<foo>&_+++\nbar",
         nodes![
           node!(InlinePassthrough(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
-          node!(JoiningNewline, 14..15),
+          node!(Inline::Newline, 14..15),
           node!("bar"; 15..18),
         ],
       ),
@@ -869,7 +871,7 @@ mod tests {
         "foo+\nbar", // not valid linebreak
         nodes![
           node!("foo+"; 0..4),
-          node!(JoiningNewline, 4..5),
+          node!(Inline::Newline, 4..5),
           node!("bar"; 5..8),
         ],
       ),
@@ -901,7 +903,7 @@ mod tests {
         nodes![node!(
           InlinePassthrough(nodes![
             node!("_foo"; 1..5),
-            node!(JoiningNewline, 5..6),
+            node!(Inline::Newline, 5..6),
             node!("bar_"; 6..10),
           ]),
           0..11,
@@ -997,7 +999,7 @@ mod tests {
           node!(
             Italic(nodes![
               node!("bar"; 5..8),
-              node!(JoiningNewline, 8..9),
+              node!(Inline::Newline, 8..9),
               node!("baz"; 9..12),
             ]),
             4..13,
@@ -1068,7 +1070,7 @@ mod tests {
               QuoteKind::Double,
               nodes![
                 node!("bar"; 6..9),
-                node!(JoiningNewline, 9..10),
+                node!(Inline::Newline, 9..10),
                 node!("baz"; 10..13),
               ],
             ),

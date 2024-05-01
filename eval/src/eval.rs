@@ -288,7 +288,7 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     }
     SpecialChar(char) => backend.visit_inline_specialchar(char),
     Text(text) => backend.visit_inline_text(text.as_str()),
-    JoiningNewline => backend.visit_joining_newline(),
+    Newline => backend.visit_joining_newline(),
     Italic(children) => {
       backend.enter_inline_italic(children);
       children.iter().for_each(|n| eval_inline(n, doc, backend));

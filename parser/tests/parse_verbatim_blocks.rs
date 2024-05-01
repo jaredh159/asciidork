@@ -36,7 +36,7 @@ fn test_parse_delimited_literal_block() {
       context: Context::Literal,
       content: Content::Simple(nodes![
         node!("foo `bar`"; 5..14),
-        node!(JoiningNewline, 14..15),
+        node!(Newline, 14..15),
         node!("baz"; 15..18),
       ]),
       ..empty_block!(0..23)
@@ -57,8 +57,8 @@ fn test_parse_delimited_literal_block_w_double_newline() {
     context: Context::Literal,
     content: Content::Simple(nodes![
       node!("foo `bar`"; 5..14),
-      node!(JoiningNewline, 14..15),
-      node!(JoiningNewline, 15..16),
+      node!(Newline, 14..15),
+      node!(Newline, 15..16),
       node!("baz"; 16..19),
     ]),
     ..empty_block!(0..24)
@@ -94,7 +94,7 @@ fn test_parse_delimited_listing_block() {
     context: Context::Listing,
     content: Content::Simple(nodes![
       node!("foo `bar`"; 5..14),
-      node!(JoiningNewline, 14..15),
+      node!(Newline, 14..15),
       node!("baz"; 15..18),
     ]),
     ..empty_block!(0..23)
@@ -115,8 +115,8 @@ fn test_parse_delimited_listing_block_w_double_newline() {
     context: Context::Listing,
     content: Content::Simple(nodes![
       node!("foo `bar`"; 5..14),
-      node!(JoiningNewline, 14..15),
-      node!(JoiningNewline, 15..16),
+      node!(Newline, 14..15),
+      node!(Newline, 15..16),
       node!("baz"; 16..19),
     ]),
     ..empty_block!(0..24)
@@ -154,7 +154,7 @@ fn test_parse_indented_literal_block() {
       context: Context::Literal, // <-- still literal...
       content: Content::Simple(nodes![
         node!(" foo"; 0..4), // <-- ... but preserve leading space
-        node!(JoiningNewline, 4..5),
+        node!(Newline, 4..5),
         node!("bar"; 5..8),
       ]),
       ..empty_block!(0..8)
@@ -173,7 +173,7 @@ fn test_parse_indented_literal_block() {
       context: Context::Paragraph,
       content: Content::Simple(nodes![
         node!("foo"; 10..13),
-        node!(JoiningNewline, 13..14),
+        node!(Newline, 13..14),
         node!("bar"; 14..18),
       ]),
       ..empty_block!(0..18)
