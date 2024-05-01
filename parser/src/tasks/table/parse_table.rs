@@ -268,7 +268,7 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![ColSpec { width: 1 }, ColSpec { width: 1 }],
+        col_specs: vecb![ColSpec::default(), ColSpec::default()],
         rows: vecb![
           Row::new(vecb![
             cell!(d: "c1, r1", 19..25),
@@ -466,7 +466,7 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![ColSpec { width: 1 }, ColSpec { width: 1 }],
+        col_specs: vecb![ColSpec::default(), ColSpec::default()],
         rows: vecb![Row::new(vecb![
           Cell {
             content: CellContent::Literal(nodes![
@@ -493,11 +493,7 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![
-          ColSpec { width: 1 },
-          ColSpec { width: 1 },
-          ColSpec { width: 1 }
-        ],
+        col_specs: vecb![ColSpec::default(), ColSpec::default(), ColSpec::default()],
         rows: vecb![
           Row::new(vecb![
             cell!(d: "A", 18..19),
@@ -509,6 +505,33 @@ mod tests {
             cell!(d: "b", 30..31),
             cell!(d: "c", 33..34),
           ]),
+        ],
+      }
+    )
+  }
+
+  #[test]
+  fn empty_colspec() {
+    assert_table!(
+      adoc! {r#"
+        [cols=">,"]
+        |===
+        |one |two
+        |1 |2 |a |b
+        |===
+      "#},
+      Table {
+        col_specs: vecb![
+          ColSpec {
+            h_align: HorizontalAlignment::Right,
+            ..ColSpec::default()
+          },
+          ColSpec::default(),
+        ],
+        rows: vecb![
+          Row::new(vecb![cell!(d: "one", 18..21), cell!(d: "two", 23..26)]),
+          Row::new(vecb![cell!(d: "1", 28..29), cell!(d: "2", 31..32)]),
+          Row::new(vecb![cell!(d: "a", 34..35), cell!(d: "b", 37..38)]),
         ],
       }
     )

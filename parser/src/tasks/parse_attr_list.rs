@@ -262,7 +262,8 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
             let tokens = std::mem::replace(&mut self.tokens, BumpVec::new_in(self.bump));
             let line = parser.line_from(tokens, self.attr.take_src().loc);
             let restore = parser.ctx.subs;
-            parser.ctx.subs = if &name.src == "subs" {
+            // parser.ctx.subs = if &name.src == "subs" {
+            parser.ctx.subs = if matches!(name.src.as_str(), "subs" | "cols") {
               Substitutions::none()
             } else {
               Substitutions::attr_value()

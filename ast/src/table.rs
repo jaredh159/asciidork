@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::str::FromStr;
+
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -51,9 +53,20 @@ pub struct Table<'bmp> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ColSpec {
   pub width: u8,
-  // h_align: HorizontalAlignment,
-  // v_align: VerticalAlignment,
-  // style: CellStyle,
+  pub h_align: HorizontalAlignment,
+  pub v_align: VerticalAlignment,
+  pub style: CellContentStyle,
+}
+
+impl Default for ColSpec {
+  fn default() -> Self {
+    Self {
+      width: 1,
+      h_align: HorizontalAlignment::default(),
+      v_align: VerticalAlignment::default(),
+      style: CellContentStyle::default(),
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
@@ -79,5 +92,45 @@ pub struct Row<'bmp> {
 impl<'bmp> Row<'bmp> {
   pub fn new(cells: BumpVec<'bmp, Cell<'bmp>>) -> Self {
     Self { cells }
+  }
+}
+
+impl FromStr for HorizontalAlignment {
+  type Err = ();
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s {
+      "<" => Ok(Self::Left),
+      "^" => Ok(Self::Center),
+      ">" => Ok(Self::Right),
+      _ => Err(()),
+    }
+  }
+}
+
+impl FromStr for VerticalAlignment {
+  type Err = ();
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s {
+      "<" => Ok(Self::Top),
+      "^" => Ok(Self::Middle),
+      ">" => Ok(Self::Bottom),
+      _ => Err(()),
+    }
+  }
+}
+
+impl FromStr for CellContentStyle {
+  type Err = ();
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s {
+      "a" => Ok(Self::AsciiDoc),
+      "d" => Ok(Self::Default),
+      "e" => Ok(Self::Emphasis),
+      "h" => Ok(Self::Header),
+      "l" => Ok(Self::Literal),
+      "m" => Ok(Self::Monospace),
+      "s" => Ok(Self::Strong),
+      _ => Err(()),
+    }
   }
 }

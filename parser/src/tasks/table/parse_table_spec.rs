@@ -1,3 +1,6 @@
+use lazy_static::lazy_static;
+use regex::Regex;
+
 use super::TableTokens;
 use crate::internal::*;
 use TokenKind::*;
@@ -10,24 +13,59 @@ struct CellStart {
   resuming: usize,
 }
 
+lazy_static! {
+  // multiplier(1), horiz(2), vert(3), width(4), style(5)
+  pub static ref COLSPEC_RE: Regex =
+    Regex::new(r"^(?:(\d+)\*)?([<^>])?(?:\.([<^>]))?(\d+)?(a|d|e|h|l|m|s)?$").unwrap();
+}
+
+fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
+  if col_attr.is_empty() {
+    specs.push(ColSpec::default());
+    return;
+  }
+
+  let Some(captures) = COLSPEC_RE.captures(col_attr) else {
+    specs.push(ColSpec::default());
+    return;
+  };
+
+  let mut spec = ColSpec::default();
+
+  if let Some(h_align) = captures.get(2) {
+    spec.h_align = h_align.as_str().parse().unwrap_or(Default::default());
+  }
+
+  if let Some(v_align) = captures.get(3) {
+    spec.v_align = v_align.as_str().parse().unwrap_or(Default::default());
+  }
+
+  if let Some(width) = captures.get(4) {
+    spec.width = width.as_str().parse().unwrap_or(1);
+  }
+
+  if let Some(style) = captures.get(5) {
+    spec.style = style.as_str().parse().unwrap_or(Default::default());
+  }
+
+  if let Some(repeat_match) = captures.get(1) {
+    let repeat = repeat_match.as_str().parse().unwrap_or(1);
+    if repeat > 1 {
+      for _ in 1..repeat {
+        specs.push(spec.clone());
+      }
+    }
+  }
+  specs.push(spec);
+}
+
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_col_specs(&mut self, cols_attr: &str) -> BumpVec<'bmp, ColSpec> {
     let mut specs = bvec![in self.bump];
     cols_attr
       .split(',')
-      .for_each(|col| self.parse_col_spec(col, &mut specs));
+      .for_each(|col| parse_col_spec(col, &mut specs));
     specs
-  }
-
-  fn parse_col_spec(&self, col_attr: &str, specs: &mut BumpVec<'bmp, ColSpec>) {
-    if let Some(trimmed) = col_attr.strip_suffix('*') {
-      let repeat = trimmed.parse().unwrap_or(1);
-      for _ in 0..repeat {
-        specs.push(ColSpec { width: 1 });
-      }
-    } else {
-      specs.push(ColSpec { width: col_attr.parse().unwrap_or(1) });
-    }
   }
 
   pub(super) fn starts_cell(&self, tokens: &mut TableTokens, sep: u8) -> bool {
@@ -134,16 +172,10 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) ->
   if !token.is(Word) {
     return false;
   }
-  match token.lexeme.as_bytes().first() {
-    Some(b'a') => spec.style = Some(CellContentStyle::AsciiDoc),
-    Some(b'd') => spec.style = Some(CellContentStyle::Default),
-    Some(b'e') => spec.style = Some(CellContentStyle::Emphasis),
-    Some(b'h') => spec.style = Some(CellContentStyle::Header),
-    Some(b'l') => spec.style = Some(CellContentStyle::Literal),
-    Some(b'm') => spec.style = Some(CellContentStyle::Monospace),
-    Some(b's') => spec.style = Some(CellContentStyle::Strong),
-    _ => return false,
-  }
+  let Some(style) = &token.lexeme[0..1].parse().ok() else {
+    return false;
+  };
+  spec.style = Some(*style);
   if token.len() == 1 {
     *cursor += 1;
     false
@@ -278,7 +310,6 @@ mod tests {
       let mut tokens = TableTokens::new(tokens, lexer.loc_src(0..input.len()));
       let start = parser.consume_cell_start(&mut tokens, *sep);
       assert_eq!(start, *expected, from: input);
-      // assert_eq!(line.src, *remaining, from: input);
       if let Some((_, loc)) = *expected {
         assert_eq!(input.as_bytes().get(loc), remaining.as_bytes().first());
       }
@@ -290,14 +321,56 @@ mod tests {
     let cases: &[(&str, &[ColSpec])] = &[
       (
         "3*",
+        &[ColSpec::default(), ColSpec::default(), ColSpec::default()],
+      ),
+      ("1", &[ColSpec::default()]),
+      (
+        ">",
+        &[ColSpec {
+          h_align: HorizontalAlignment::Right,
+          ..ColSpec::default()
+        }],
+      ),
+      (
+        ".^",
+        &[ColSpec {
+          v_align: VerticalAlignment::Middle,
+          ..ColSpec::default()
+        }],
+      ),
+      (
+        "l",
+        &[ColSpec {
+          style: CellContentStyle::Literal,
+          ..ColSpec::default()
+        }],
+      ),
+      (
+        "1,2",
         &[
-          ColSpec { width: 1 },
-          ColSpec { width: 1 },
-          ColSpec { width: 1 },
+          ColSpec::default(),
+          ColSpec { width: 2, ..ColSpec::default() },
         ],
       ),
-      // ("1", &[ColSpec { width: 1 }]),
-      // ("1,2", &[ColSpec { width: 1 }, ColSpec { width: 2 }]),
+      (
+        "2*>.>3e,,9",
+        &[
+          ColSpec {
+            width: 3,
+            h_align: HorizontalAlignment::Right,
+            v_align: VerticalAlignment::Bottom,
+            style: CellContentStyle::Emphasis,
+          },
+          ColSpec {
+            width: 3,
+            h_align: HorizontalAlignment::Right,
+            v_align: VerticalAlignment::Bottom,
+            style: CellContentStyle::Emphasis,
+          },
+          ColSpec::default(),
+          ColSpec { width: 9, ..ColSpec::default() },
+        ],
+      ),
     ];
     let mut parser = Parser::new(leaked_bump(), "");
     for (input, expected) in cases {
