@@ -59,18 +59,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     rows: &mut BumpVec<'bmp, Row<'bmp>>,
     ctx: &mut TableContext,
   ) -> Result<()> {
-    let mut first_row = bvec![in self.bump];
+    let mut cells = bvec![in self.bump];
     loop {
-      let Some(cell) = self.parse_table_cell(tokens, ctx)? else {
+      let Some(cell) = self.parse_table_cell(tokens, ctx, cells.len())? else {
         break;
       };
-      first_row.push(cell);
+      cells.push(cell);
       if !ctx.counting_cols {
         break;
       }
     }
-    ctx.num_cols = first_row.len();
-    rows.push(Row::new(first_row));
+    ctx.num_cols = cells.len();
+    rows.push(Row::new(cells));
     while tokens.current().is(TokenKind::Newline) {
       tokens.consume_current();
     }
@@ -81,6 +81,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     tokens: &mut TableTokens<'bmp, 'src>,
     ctx: &mut TableContext,
+    col_index: usize,
   ) -> Result<Option<Cell<'bmp>>> {
     if tokens.is_empty() {
       println!("finish 6 (empty tokens)");
@@ -108,11 +109,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     loop {
       if self.starts_cell(tokens, ctx.format.sep()) {
         println!("finish 1 (found next cell)");
-        return self.finish_cell(spec, cell_tokens, ctx, start..end);
+        return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       }
       let Some(token) = tokens.consume_current() else {
         println!("finish 3 (out of tokens)");
-        return self.finish_cell(spec, cell_tokens, ctx, start..end);
+        return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       };
 
       if token.is(TokenKind::Newline) {
@@ -138,7 +139,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ctx: &mut TableContext,
   ) -> Result<Option<Row<'bmp>>> {
     let mut cells = bvec![in self.bump];
-    while let Some(cell) = self.parse_table_cell(tokens, ctx)? {
+    while let Some(cell) = self.parse_table_cell(tokens, ctx, cells.len())? {
       cells.push(cell);
       if cells.len() == ctx.num_cols {
         break;
@@ -210,11 +211,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     cell_spec: CellSpec,
     mut cell_tokens: BumpVec<'bmp, Token<'src>>,
-    _conf: &TableContext,
+    col_index: usize,
+    ctx: &TableContext,
     loc: Range<usize>,
   ) -> Result<Option<Cell<'bmp>>> {
-    let cell_style = cell_spec.style.unwrap_or(CellContentStyle::Default);
-    // jared
+    let cell_style = cell_spec.style.unwrap_or_else(|| {
+      ctx
+        .col_specs
+        .get(col_index)
+        .map_or(CellContentStyle::Default, |colspec| colspec.style)
+    });
     while cell_tokens.last().is_whitespaceish() {
       cell_tokens.pop();
     }
@@ -532,6 +538,35 @@ mod tests {
           Row::new(vecb![cell!(d: "one", 18..21), cell!(d: "two", 23..26)]),
           Row::new(vecb![cell!(d: "1", 28..29), cell!(d: "2", 31..32)]),
           Row::new(vecb![cell!(d: "a", 34..35), cell!(d: "b", 37..38)]),
+        ],
+      }
+    )
+  }
+
+  #[test]
+  fn colspec_style_inheritance() {
+    assert_table!(
+      adoc! {r#"
+        [cols="e,s"]
+        |===
+        |one |two
+        |1 d|2
+        |===
+      "#},
+      Table {
+        col_specs: vecb![
+          ColSpec {
+            style: CellContentStyle::Emphasis,
+            ..ColSpec::default()
+          },
+          ColSpec {
+            style: CellContentStyle::Strong,
+            ..ColSpec::default()
+          },
+        ],
+        rows: vecb![
+          Row::new(vecb![cell!(e: "one", 19..22), cell!(s: "two", 24..27)]),
+          Row::new(vecb![cell!(e: "1", 29..30), cell!(d: "2", 33..34)]),
         ],
       }
     )

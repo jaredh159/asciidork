@@ -152,6 +152,21 @@ macro_rules! cell {
       content: CellContent::Default(just!($text, $range)),
     }
   };
+  (e: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Emphasis(just!($text, $range)),
+    }
+  };
+  (s: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Strong(just!($text, $range)),
+    }
+  };
+  (l: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Literal(just!($text, $range)),
+    }
+  };
 }
 
 #[macro_export]
