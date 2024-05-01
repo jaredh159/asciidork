@@ -484,6 +484,37 @@ mod tests {
   }
 
   #[test]
+  fn col_spec_multiplier() {
+    assert_table!(
+      adoc! {r#"
+        [cols="3*"]
+        |===
+        |A |B |C |a |b |c
+        |===
+      "#},
+      Table {
+        col_specs: vecb![
+          ColSpec { width: 1 },
+          ColSpec { width: 1 },
+          ColSpec { width: 1 }
+        ],
+        rows: vecb![
+          Row::new(vecb![
+            cell!(d: "A", 18..19),
+            cell!(d: "B", 21..22),
+            cell!(d: "C", 24..25),
+          ]),
+          Row::new(vecb![
+            cell!(d: "a", 27..28),
+            cell!(d: "b", 30..31),
+            cell!(d: "c", 33..34),
+          ]),
+        ],
+      }
+    )
+  }
+
+  #[test]
   fn test_table_w_title() {
     assert_block!(
       adoc! {r"

@@ -1,5 +1,3 @@
-use bumpalo::collections::CollectIn;
-
 use super::TableTokens;
 use crate::internal::*;
 use TokenKind::*;
@@ -14,14 +12,22 @@ struct CellStart {
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_col_specs(&mut self, cols_attr: &str) -> BumpVec<'bmp, ColSpec> {
+    let mut specs = bvec![in self.bump];
     cols_attr
       .split(',')
-      .map(|col| self.parse_col_spec(col))
-      .collect_in(self.bump)
+      .for_each(|col| self.parse_col_spec(col, &mut specs));
+    specs
   }
 
-  fn parse_col_spec(&self, col_attr: &str) -> ColSpec {
-    ColSpec { width: col_attr.parse().unwrap_or(1) }
+  fn parse_col_spec(&self, col_attr: &str, specs: &mut BumpVec<'bmp, ColSpec>) {
+    if let Some(trimmed) = col_attr.strip_suffix('*') {
+      let repeat = trimmed.parse().unwrap_or(1);
+      for _ in 0..repeat {
+        specs.push(ColSpec { width: 1 });
+      }
+    } else {
+      specs.push(ColSpec { width: col_attr.parse().unwrap_or(1) });
+    }
   }
 
   pub(super) fn starts_cell(&self, tokens: &mut TableTokens, sep: u8) -> bool {
@@ -282,8 +288,16 @@ mod tests {
   #[test]
   fn test_parse_col_specs() {
     let cases: &[(&str, &[ColSpec])] = &[
-      ("1", &[ColSpec { width: 1 }]),
-      ("1,2", &[ColSpec { width: 1 }, ColSpec { width: 2 }]),
+      (
+        "3*",
+        &[
+          ColSpec { width: 1 },
+          ColSpec { width: 1 },
+          ColSpec { width: 1 },
+        ],
+      ),
+      // ("1", &[ColSpec { width: 1 }]),
+      // ("1,2", &[ColSpec { width: 1 }, ColSpec { width: 2 }]),
     ];
     let mut parser = Parser::new(leaked_bump(), "");
     for (input, expected) in cases {
