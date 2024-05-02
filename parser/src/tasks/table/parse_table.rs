@@ -95,9 +95,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ) -> Result<()> {
     let mut cells = bvec![in self.bump];
     loop {
-      let Some(cell) = self.parse_table_cell(tokens, ctx, cells.len())? else {
+      let Some((cell, dupe)) = self.parse_table_cell(tokens, ctx, cells.len())? else {
         break;
       };
+      if dupe > 1 {
+        for _ in 1..dupe {
+          cells.push(cell.clone());
+        }
+      }
       cells.push(cell);
       if !ctx.counting_cols {
         break;
@@ -116,7 +121,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     tokens: &mut TableTokens<'bmp, 'src>,
     ctx: &mut TableContext,
     col_index: usize,
-  ) -> Result<Option<Cell<'bmp>>> {
+  ) -> Result<Option<(Cell<'bmp>, u8)>> {
     if tokens.is_empty() {
       println!("finish 6 (empty tokens)");
       return Ok(None);
@@ -174,7 +179,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ctx: &mut TableContext,
   ) -> Result<Option<Row<'bmp>>> {
     let mut cells = bvec![in self.bump];
-    while let Some(cell) = self.parse_table_cell(tokens, ctx, cells.len())? {
+    'outer: while let Some((cell, dupe)) = self.parse_table_cell(tokens, ctx, cells.len())? {
+      if dupe > 1 {
+        for _ in 1..dupe {
+          cells.push(cell.clone());
+          if cells.len() == ctx.num_cols {
+            break 'outer;
+          }
+        }
+      }
       cells.push(cell);
       if cells.len() == ctx.num_cols {
         break;
@@ -242,6 +255,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Ok((TableTokens::new(tokens, loc), end))
   }
 
+  // jared
   fn finish_cell(
     &mut self,
     cell_spec: CellSpec,
@@ -249,8 +263,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     col_index: usize,
     ctx: &mut TableContext,
     mut loc: Range<usize>,
-  ) -> Result<Option<Cell<'bmp>>> {
-    dbg!(&cell_tokens);
+  ) -> Result<Option<(Cell<'bmp>, u8)>> {
     let cell_style = cell_spec.style.unwrap_or_else(|| {
       ctx
         .col_specs
@@ -275,6 +288,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
 
+    let repeat = cell_spec.duplication.unwrap_or(1);
     if cell_style == CellContentStyle::AsciiDoc {
       let mut cell_line = self.line_from(cell_tokens, loc.clone());
       cell_line.trim_for_cell(cell_style);
@@ -282,9 +296,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return match cell_parser.parse() {
         Ok(ParseResult { document, warnings }) => {
           self.errors.borrow_mut().extend(warnings);
-          Ok(Some(Cell {
-            content: CellContent::AsciiDoc(document.content),
-          }))
+          let content = CellContent::AsciiDoc(document.content);
+          Ok(Some((Cell { content }, repeat)))
         }
         Err(mut diagnostics) => {
           if !diagnostics.is_empty() && self.strict {
@@ -319,7 +332,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       CellContentStyle::AsciiDoc => unreachable!("Parser::finish_cell() asciidoc"),
     };
 
-    Ok(Some(Cell { content }))
+    Ok(Some((Cell { content }, repeat)))
   }
 }
 
@@ -644,6 +657,22 @@ mod tests {
         ..empty_table!()
       }
     )
+  }
+
+  #[test]
+  fn duplicate_cels() {
+    let table = parse_table!(adoc! {r#"
+      |===
+      2*|dupe
+      |===
+    "#});
+    assert_eq!(
+      table.rows,
+      vecb![Row::new(vecb![
+        cell!(d: "dupe", 8..12),
+        cell!(d: "dupe", 8..12),
+      ]),]
+    );
   }
 
   #[test]
