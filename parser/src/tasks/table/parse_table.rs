@@ -386,10 +386,34 @@ mod tests {
             }]))
           },
           cell!(d: "two", 15..18)
-        ]),],
+        ])],
         ..empty_table!()
       }
     )
+  }
+
+  #[test]
+  fn indented_literal_in_asciidoc_cell() {
+    let input = adoc! {r#"
+      [cols="1a,1"]
+      |===
+      |
+        literal
+      | normal
+      |===
+    "#};
+    assert_eq!(
+      parse_table!(input).rows[0].cells[0],
+      Cell {
+        content: CellContent::AsciiDoc(DocContent::Blocks(vecb![Block {
+          context: BlockContext::Literal,
+          content: BlockContent::Simple(just!("literal", 23..30)),
+          ..empty_block!(21..30)
+        }])),
+      }
+    );
+    // make sure our nested parser offsets are correct
+    assert_eq!(&input[23..30], "literal");
   }
 
   #[test]
@@ -725,6 +749,25 @@ mod tests {
       |===
     "#});
     assert!(table.header_row.is_none());
+  }
+
+  #[test]
+  fn table_empty_first_line() {
+    assert_table!(
+      adoc! {r#"
+        |===
+
+        |one |two
+        |===
+      "#},
+      Table {
+        rows: vecb![Row::new(vecb![
+          cell!(d: "one", 7..10),
+          cell!(d: "two", 12..15),
+        ])],
+        ..empty_table!()
+      }
+    );
   }
 
   #[test]

@@ -16,7 +16,7 @@ struct CellStart {
 lazy_static! {
   // multiplier(1), horiz(2), vert(3), width(4), style(5)
   pub static ref COLSPEC_RE: Regex =
-    Regex::new(r"^\s*(?:(\d+)\*)?([<^>])?(?:\.([<^>]))?(\d+)?(a|d|e|h|l|m|s)?\s*$").unwrap();
+    Regex::new(r"^\s*(?:(\d+)\*)?([<^>])?(?:\.([<^>]))?(\d+%?)?(a|d|e|h|l|m|s)?\s*$").unwrap();
 }
 
 fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
@@ -40,8 +40,12 @@ fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
     spec.v_align = v_align.as_str().parse().unwrap_or(Default::default());
   }
 
-  if let Some(width) = captures.get(4) {
-    spec.width = width.as_str().parse().unwrap_or(1);
+  if let Some(width) = captures.get(4).map(|m| m.as_str()) {
+    if let Some(digits) = width.strip_suffix('%') {
+      spec.width = ColWidth::Percentage(digits.parse().unwrap_or(1));
+    } else {
+      spec.width = ColWidth::Proportional(width.parse().unwrap_or(1));
+    }
   }
 
   if let Some(style) = captures.get(5) {
@@ -321,6 +325,7 @@ mod tests {
 
   #[test]
   fn test_parse_col_specs() {
+    use ColWidth::*;
     let cases: &[(&str, &[ColSpec])] = &[
       (
         "3*",
@@ -352,14 +357,20 @@ mod tests {
         "1,2",
         &[
           ColSpec::default(),
-          ColSpec { width: 2, ..ColSpec::default() },
+          ColSpec {
+            width: Proportional(2),
+            ..ColSpec::default()
+          },
         ],
       ),
       (
         " 1,2  , 1 ", // ignore spaces
         &[
           ColSpec::default(),
-          ColSpec { width: 2, ..ColSpec::default() },
+          ColSpec {
+            width: Proportional(2),
+            ..ColSpec::default()
+          },
           ColSpec::default(),
         ],
       ),
@@ -368,22 +379,25 @@ mod tests {
       // ignore empty colspec
       (" ", &[]),
       (
-        "2*>.>3e,,9",
+        "2*>.>3e,,15%",
         &[
           ColSpec {
-            width: 3,
+            width: Proportional(3),
             h_align: HorizontalAlignment::Right,
             v_align: VerticalAlignment::Bottom,
             style: CellContentStyle::Emphasis,
           },
           ColSpec {
-            width: 3,
+            width: Proportional(3),
             h_align: HorizontalAlignment::Right,
             v_align: VerticalAlignment::Bottom,
             style: CellContentStyle::Emphasis,
           },
           ColSpec::default(),
-          ColSpec { width: 9, ..ColSpec::default() },
+          ColSpec {
+            width: Percentage(15),
+            ..ColSpec::default()
+          },
         ],
       ),
     ];

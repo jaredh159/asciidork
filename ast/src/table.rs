@@ -43,6 +43,20 @@ pub enum CellContentStyle {
   Strong,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ColWidth {
+  Proportional(u8),
+  Percentage(u8),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ColSpec {
+  pub width: ColWidth,
+  pub h_align: HorizontalAlignment,
+  pub v_align: VerticalAlignment,
+  pub style: CellContentStyle,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Table<'bmp> {
   pub col_specs: BumpVec<'bmp, ColSpec>, // do i actually need this?
@@ -51,18 +65,10 @@ pub struct Table<'bmp> {
   pub footer_row: Option<Row<'bmp>>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ColSpec {
-  pub width: u8,
-  pub h_align: HorizontalAlignment,
-  pub v_align: VerticalAlignment,
-  pub style: CellContentStyle,
-}
-
 impl Default for ColSpec {
   fn default() -> Self {
     Self {
-      width: 1,
+      width: ColWidth::Proportional(1),
       h_align: HorizontalAlignment::default(),
       v_align: VerticalAlignment::default(),
       style: CellContentStyle::default(),
