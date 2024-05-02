@@ -45,6 +45,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     p
   }
 
+  pub fn nest(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {
+    let mut nested = Parser::new(self.bump, src);
+    nested.strict = self.strict;
+    nested.lexer.adjust_offset(offset);
+    nested
+  }
+
   pub(crate) fn debug_loc(&self, loc: SourceLocation) {
     println!("{:?}, {}", loc, self.lexer.loc_src(loc));
   }

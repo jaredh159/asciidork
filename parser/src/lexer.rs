@@ -9,6 +9,7 @@ pub struct Lexer<'src> {
   bytes: Bytes<'src>,
   peek: Option<u8>,
   at_line_start: bool,
+  offset_adjustment: usize,
   pattern_breaker: Option<TokenKind>,
 }
 
@@ -19,10 +20,21 @@ impl<'src> Lexer<'src> {
       bytes: src.bytes(),
       peek: None,
       at_line_start: true,
+      offset_adjustment: 0,
       pattern_breaker: None,
     };
     lexer.peek = lexer.bytes.next();
     lexer
+  }
+
+  // pub fn new_adjusted(src: &'src str, offset_adjustment: usize) -> Lexer<'src> {
+  //   let mut lexer = Lexer::new(src);
+  //   lexer.offset_adjustment = offset_adjustment;
+  //   lexer
+  // }
+
+  pub fn adjust_offset(&mut self, offset_adjustment: usize) {
+    self.offset_adjustment = offset_adjustment;
   }
 
   pub fn consume_empty_lines(&mut self) {
@@ -109,7 +121,7 @@ impl<'src> Lexer<'src> {
     let mut tokens = bvec![in bump];
     while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token();
-      end = token.loc.end;
+      end = token.loc.end - self.offset_adjustment;
       tokens.push(token);
     }
     if self.peek_is(b'\n') {
@@ -132,7 +144,6 @@ impl<'src> Lexer<'src> {
     {
       return None;
     }
-    // | , !
     let mut c = self.bytes.clone();
     let sequence = [self.peek, c.next(), c.next(), c.next(), c.next()];
     match sequence {
@@ -199,7 +210,7 @@ impl<'src> Lexer<'src> {
   }
 
   fn offset(&self) -> usize {
-    self.src.len() - self.bytes.len() - self.peek.is_some() as usize // O(1) √
+    self.src.len() - self.bytes.len() - (self.peek.is_some() as usize)
   }
 
   fn advance(&mut self) -> Option<u8> {
@@ -397,7 +408,7 @@ impl<'src> Lexer<'src> {
   fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'src> {
     Token {
       kind,
-      loc: SourceLocation::new(start, end),
+      loc: SourceLocation::new(start + self.offset_adjustment, end + self.offset_adjustment),
       lexeme: &self.src[start..end],
     }
   }

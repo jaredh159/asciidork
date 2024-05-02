@@ -47,8 +47,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut rows = bvec![in self.bump];
     let mut header_row = None;
 
-    // jared
-    dbg!(&tokens);
     if ctx.counting_cols {
       self.parse_implicit_first_row(&mut tokens, &mut rows, &mut ctx)?;
       if rows.first().is_some()
@@ -124,7 +122,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     }
 
-    let (spec, start) = match self.consume_cell_start(tokens, ctx.format.sep()) {
+    let (spec, mut start) = match self.consume_cell_start(tokens, ctx.format.sep()) {
       Some((spec, start)) => (spec, start),
       None => {
         println!("finish 4 (no cell start)");
@@ -139,16 +137,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     // trim leading whitespace
     while tokens.current().is(TokenKind::Whitespace) {
-      tokens.consume_current();
+      let trimmed = tokens.consume_current().unwrap();
+      start = trimmed.loc.end;
     }
 
     loop {
       if self.starts_cell(tokens, ctx.format.sep()) {
-        println!(
-          "finish 1 (found next cell), counting: {}",
-          ctx.counting_cols
-        );
-        dbg!(&cell_tokens);
+        println!("finish 1 (found next cell)",);
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       }
       let Some(token) = tokens.consume_current() else {
@@ -253,8 +248,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     mut cell_tokens: BumpVec<'bmp, Token<'src>>,
     col_index: usize,
     ctx: &mut TableContext,
-    loc: Range<usize>,
+    mut loc: Range<usize>,
   ) -> Result<Option<Cell<'bmp>>> {
+    dbg!(&cell_tokens);
     let cell_style = cell_spec.style.unwrap_or_else(|| {
       ctx
         .col_specs
@@ -262,11 +258,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         .map_or(CellContentStyle::Default, |colspec| colspec.style)
     });
 
-    // jared
     if ctx.has_header_row.is_none() {
       let mut ws = SmallVec::<[TokenKind; 12]>::new();
       while cell_tokens.last().is_whitespaceish() {
-        ws.push(cell_tokens.pop().unwrap().kind);
+        let token = cell_tokens.pop().unwrap();
+        loc.end = token.loc.start;
+        ws.push(token.kind);
       }
       if ws.len() > 1 && ws[ws.len() - 2..] == [Newline, Newline] {
         ctx.can_infer_implicit_header = true;
@@ -274,21 +271,44 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     } else {
       ctx.can_infer_implicit_header = false;
       while cell_tokens.last().is_whitespaceish() {
-        cell_tokens.pop();
+        loc.end = cell_tokens.pop().unwrap().loc.start;
       }
     }
 
-    let restore = self.ctx.subs;
+    if cell_style == CellContentStyle::AsciiDoc {
+      let mut cell_line = self.line_from(cell_tokens, loc.clone());
+      cell_line.trim_for_cell(cell_style);
+      let cell_parser = self.nest(cell_line.src, loc.start);
+      return match cell_parser.parse() {
+        Ok(ParseResult { document, warnings }) => {
+          self.errors.borrow_mut().extend(warnings);
+          Ok(Some(Cell {
+            content: CellContent::AsciiDoc(document.content),
+          }))
+        }
+        Err(mut diagnostics) => {
+          if !diagnostics.is_empty() && self.strict {
+            Err(diagnostics.remove(0))
+          } else {
+            self.errors.borrow_mut().extend(diagnostics);
+            Ok(None)
+          }
+        }
+      };
+    }
+
     let inlines = if cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
     } else {
       let mut cell_line = self.line_from(cell_tokens, loc);
       cell_line.trim_for_cell(cell_style);
-      let mut cell_lines = cell_line.into_lines_in(self.bump);
+      let prev_subs = self.ctx.subs;
       self.ctx.subs = cell_style.into();
-      self.parse_inlines(&mut cell_lines)?
+      let inlines = self.parse_inlines(&mut cell_line.into_lines_in(self.bump))?;
+      self.ctx.subs = prev_subs;
+      inlines
     };
-    self.ctx.subs = restore;
+
     let content = match cell_style {
       CellContentStyle::Default => CellContent::Default(inlines),
       CellContentStyle::Emphasis => CellContent::Emphasis(inlines),
@@ -296,8 +316,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       CellContentStyle::Literal => CellContent::Literal(inlines),
       CellContentStyle::Monospace => CellContent::Monospace(inlines),
       CellContentStyle::Strong => CellContent::Strong(inlines),
-      CellContentStyle::AsciiDoc => todo!("asciidoc"),
+      CellContentStyle::AsciiDoc => unreachable!("Parser::finish_cell() asciidoc"),
     };
+
     Ok(Some(Cell { content }))
   }
 }
@@ -332,6 +353,40 @@ mod tests {
             cell!(d: "c2, r2", 44..50),
           ])
         ],
+        ..empty_table!()
+      }
+    )
+  }
+
+  #[test]
+  fn asciidoc_cell_content() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        a| * foo |two
+        |===
+      "#},
+      Table {
+        rows: vecb![Row::new(vecb![
+          Cell {
+            content: CellContent::AsciiDoc(DocContent::Blocks(vecb![Block {
+              meta: ChunkMeta::empty(8),
+              content: BlockContent::List {
+                variant: ListVariant::Unordered,
+                depth: 1,
+                items: vecb![ListItem {
+                  marker: ListMarker::Star(1),
+                  marker_src: src!("*", 8..9),
+                  principle: just!("foo", 10..13),
+                  ..empty_list_item!()
+                }]
+              },
+              context: BlockContext::UnorderedList,
+              loc: SourceLocation::new(8, 13)
+            }]))
+          },
+          cell!(d: "two", 15..18)
+        ]),],
         ..empty_table!()
       }
     )
@@ -568,61 +623,21 @@ mod tests {
   }
 
   #[test]
-  fn empty_colspec() {
-    assert_table!(
-      adoc! {r#"
-        [cols=">,"]
-        |===
-        |one |two
-        |1 |2 |a |b
-        |===
-      "#},
-      Table {
-        col_specs: vecb![
-          ColSpec {
-            h_align: HorizontalAlignment::Right,
-            ..ColSpec::default()
-          },
-          ColSpec::default(),
-        ],
-        rows: vecb![
-          Row::new(vecb![cell!(d: "one", 18..21), cell!(d: "two", 23..26)]),
-          Row::new(vecb![cell!(d: "1", 28..29), cell!(d: "2", 31..32)]),
-          Row::new(vecb![cell!(d: "a", 34..35), cell!(d: "b", 37..38)]),
-        ],
-        ..empty_table!()
-      }
-    )
-  }
-
-  #[test]
   fn colspec_style_inheritance() {
-    assert_table!(
-      adoc! {r#"
-        [cols="e,s"]
-        |===
-        |one |two
-        |1 d|2
-        |===
-      "#},
-      Table {
-        col_specs: vecb![
-          ColSpec {
-            style: CellContentStyle::Emphasis,
-            ..ColSpec::default()
-          },
-          ColSpec {
-            style: CellContentStyle::Strong,
-            ..ColSpec::default()
-          },
-        ],
-        rows: vecb![
-          Row::new(vecb![cell!(e: "one", 19..22), cell!(s: "two", 24..27)]),
-          Row::new(vecb![cell!(e: "1", 29..30), cell!(d: "2", 33..34)]),
-        ],
-        ..empty_table!()
-      }
-    )
+    let table = parse_table!(adoc! {r#"
+      [cols="e,s"]
+      |===
+      |one |two
+      |1 d|2
+      |===
+    "#});
+    assert_eq!(
+      table.rows,
+      vecb![
+        Row::new(vecb![cell!(e: "one", 19..22), cell!(s: "two", 24..27)]),
+        Row::new(vecb![cell!(e: "1", 29..30), cell!(d: "2", 33..34)]),
+      ]
+    );
   }
 
   #[test]

@@ -22,7 +22,7 @@ pub enum VerticalAlignment {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CellContent<'bmp> {
-  AsciiDoc(BumpVec<'bmp, Block<'bmp>>),
+  AsciiDoc(DocContent<'bmp>),
   Default(InlineNodes<'bmp>),
   Emphasis(InlineNodes<'bmp>),
   Header(InlineNodes<'bmp>),
