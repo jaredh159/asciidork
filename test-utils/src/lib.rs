@@ -44,13 +44,20 @@ macro_rules! assert_block {
 }
 
 #[macro_export]
-macro_rules! assert_table {
-  ($input:expr, $expected:expr$(,)?) => {{
+macro_rules! parse_table {
+  ($input:expr) => {{
     let block = parse_single_block!($input);
-    let table = match block.content {
+    match block.content {
       BlockContent::Table(table) => table,
       _ => panic!("expected table block content"),
-    };
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! assert_table {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let table = parse_table!($input);
     assert_eq!(table, $expected);
   }};
 }
@@ -177,6 +184,18 @@ macro_rules! empty_block {
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
       loc: SourceLocation::new($range.start, $range.end),
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! empty_table {
+  () => {
+    Table {
+      col_specs: vecb![],
+      header_row: None,
+      rows: vecb![],
+      footer_row: None,
     }
   };
 }

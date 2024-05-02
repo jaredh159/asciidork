@@ -2,6 +2,7 @@ use std::ops::Range;
 
 use super::{DataFormat, TableContext, TableTokens};
 use crate::internal::*;
+use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn parse_table(
@@ -32,21 +33,56 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       num_cols: col_specs.len(),
       counting_cols: col_specs.is_empty(),
       col_specs,
+      has_header_row: None,
+      can_infer_implicit_header: false,
     };
+
+    if meta.has_attr_option("header") {
+      ctx.has_header_row = Some(true);
+    } else if meta.has_attr_option("noheader") || lines.num_lines() != 1 {
+      ctx.has_header_row = Some(false);
+    }
 
     let (mut tokens, end) = self.table_content(lines, &delim_line)?;
     let mut rows = bvec![in self.bump];
+    let mut header_row = None;
 
+    // jared
+    dbg!(&tokens);
     if ctx.counting_cols {
       self.parse_implicit_first_row(&mut tokens, &mut rows, &mut ctx)?;
+      if rows.first().is_some()
+        && (ctx.has_header_row == Some(true) || ctx.can_infer_implicit_header)
+      {
+        ctx.has_header_row = Some(true);
+        header_row = rows.pop();
+      } else if ctx.has_header_row.is_none() {
+        ctx.has_header_row = Some(false);
+      }
     }
 
     while let Some(row) = self.parse_table_row(&mut tokens, &mut ctx)? {
-      rows.push(row);
+      if rows.is_empty()
+        && header_row.is_none()
+        && (ctx.has_header_row == Some(true) || ctx.can_infer_implicit_header)
+      {
+        header_row = Some(row);
+        ctx.has_header_row = Some(true);
+      } else {
+        rows.push(row);
+        if ctx.has_header_row.is_none() {
+          ctx.has_header_row = Some(false);
+        }
+      }
     }
 
     Ok(Block {
-      content: BlockContent::Table(Table { col_specs: ctx.col_specs, rows }),
+      content: BlockContent::Table(Table {
+        col_specs: ctx.col_specs,
+        header_row,
+        rows,
+        footer_row: None,
+      }),
       context: BlockContext::Table,
       loc: SourceLocation::new(meta.start, end),
       meta,
@@ -108,7 +144,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     loop {
       if self.starts_cell(tokens, ctx.format.sep()) {
-        println!("finish 1 (found next cell)");
+        println!(
+          "finish 1 (found next cell), counting: {}",
+          ctx.counting_cols
+        );
+        dbg!(&cell_tokens);
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       }
       let Some(token) = tokens.consume_current() else {
@@ -183,12 +223,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
     }
     while let Some(next_line) = self.read_line() {
-      if next_line.src == start_delim.src {
-        return Ok((
-          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
-          next_line.loc().unwrap().end,
-        ));
-      }
       if !tokens.is_empty() {
         tokens.push(Token {
           kind: TokenKind::Newline,
@@ -196,6 +230,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           loc: SourceLocation::new(end, end + 1),
         });
         end += 1;
+      }
+      if next_line.src == start_delim.src {
+        return Ok((
+          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
+          next_line.loc().unwrap().end,
+        ));
       }
       if let Some(loc) = next_line.last_loc() {
         end = loc.end;
@@ -212,7 +252,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     cell_spec: CellSpec,
     mut cell_tokens: BumpVec<'bmp, Token<'src>>,
     col_index: usize,
-    ctx: &TableContext,
+    ctx: &mut TableContext,
     loc: Range<usize>,
   ) -> Result<Option<Cell<'bmp>>> {
     let cell_style = cell_spec.style.unwrap_or_else(|| {
@@ -221,9 +261,23 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         .get(col_index)
         .map_or(CellContentStyle::Default, |colspec| colspec.style)
     });
-    while cell_tokens.last().is_whitespaceish() {
-      cell_tokens.pop();
+
+    // jared
+    if ctx.has_header_row.is_none() {
+      let mut ws = SmallVec::<[TokenKind; 12]>::new();
+      while cell_tokens.last().is_whitespaceish() {
+        ws.push(cell_tokens.pop().unwrap().kind);
+      }
+      if ws.len() > 1 && ws[ws.len() - 2..] == [Newline, Newline] {
+        ctx.can_infer_implicit_header = true;
+      }
+    } else {
+      ctx.can_infer_implicit_header = false;
+      while cell_tokens.last().is_whitespaceish() {
+        cell_tokens.pop();
+      }
     }
+
     let restore = self.ctx.subs;
     let inlines = if cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
@@ -246,13 +300,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
     Ok(Some(Cell { content }))
   }
-}
-
-fn ends_table(line: &Line, conf: &TableContext) -> bool {
-  line.src.len() == 4
-    && line.num_tokens() == 2
-    && line.nth_token(1).is_len(TokenKind::EqualSigns, 3)
-    && line.src.as_bytes().first() == Some(&conf.delim_ch)
 }
 
 #[cfg(test)]
@@ -285,6 +332,7 @@ mod tests {
             cell!(d: "c2, r2", 44..50),
           ])
         ],
+        ..empty_table!()
       }
     )
   }
@@ -298,11 +346,11 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![],
         rows: vecb![Row::new(vecb![
           cell!(d: "a | b", 6..12),
           cell!(d: "c | d |", 14..23),
         ])],
+        ..empty_table!()
       }
     )
   }
@@ -317,7 +365,6 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![],
         rows: vecb![
           Row::new(vecb![
             cell!(d: "a", 6..7),
@@ -327,6 +374,7 @@ mod tests {
           ]),
           Row::new(vecb![cell!(d: "c", 11..12), cell!(d: "d", 15..16)])
         ],
+        ..empty_table!()
       }
     )
   }
@@ -341,12 +389,12 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![],
         rows: vecb![Row::new(vecb![
           cell!(d: "a", 20..21),
           cell!(d: "b", 24..25),
           cell!(d: "c", 29..30),
-        ]),],
+        ])],
+        ..empty_table!()
       }
     )
   }
@@ -360,12 +408,12 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![],
         rows: vecb![Row::new(vecb![
           cell!(d: "a", 5..6),
           cell!(d: "b", 9..10),
           cell!(d: "c", 13..14),
-        ]),],
+        ])],
+        ..empty_table!()
       }
     )
   }
@@ -382,14 +430,15 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![],
-        rows: vecb![
-          Row::new(vecb![cell!(d: "c1, r1", 6..12), cell!(d: "c2, r1", 13..19)]),
-          Row::new(vecb![
-            cell!(d: "c1, r2", 22..28),
-            cell!(d: "c2, r2", 30..36),
-          ])
-        ],
+        header_row: Some(Row::new(vecb![
+          cell!(d: "c1, r1", 6..12),
+          cell!(d: "c2, r1", 13..19)
+        ]),),
+        rows: vecb![Row::new(vecb![
+          cell!(d: "c1, r2", 22..28),
+          cell!(d: "c2, r2", 30..36),
+        ])],
+        ..empty_table!()
       }
     )
   }
@@ -406,7 +455,6 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![],
         rows: vecb![
           Row::new(vecb![
             cell!(d: "c1, r1", 6..12),
@@ -423,6 +471,7 @@ mod tests {
             cell!(d: "c2, r2", 29..35),
           ])
         ],
+        ..empty_table!()
       }
     )
   }
@@ -439,7 +488,6 @@ mod tests {
         |===
       "#},
       Table {
-        col_specs: vecb![],
         rows: vecb![Row::new(vecb![Cell {
           content: CellContent::Literal(nodes![
             node!("one"; 7..10),
@@ -453,6 +501,7 @@ mod tests {
             node!(Inline::SpecialChar(SpecialCharKind::GreaterThan), 28..29),
           ])
         }])],
+        ..empty_table!()
       }
     )
   }
@@ -485,6 +534,7 @@ mod tests {
           },
           cell!(d: "normal", 44..50),
         ])],
+        ..empty_table!()
       }
     )
   }
@@ -512,6 +562,7 @@ mod tests {
             cell!(d: "c", 33..34),
           ]),
         ],
+        ..empty_table!()
       }
     )
   }
@@ -539,6 +590,7 @@ mod tests {
           Row::new(vecb![cell!(d: "1", 28..29), cell!(d: "2", 31..32)]),
           Row::new(vecb![cell!(d: "a", 34..35), cell!(d: "b", 37..38)]),
         ],
+        ..empty_table!()
       }
     )
   }
@@ -568,8 +620,96 @@ mod tests {
           Row::new(vecb![cell!(e: "one", 19..22), cell!(s: "two", 24..27)]),
           Row::new(vecb![cell!(e: "1", 29..30), cell!(d: "2", 33..34)]),
         ],
+        ..empty_table!()
       }
     )
+  }
+
+  #[test]
+  fn implicit_header_row() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        |one |two
+
+        |1 |2
+        |===
+      "#},
+      Table {
+        header_row: Some(Row::new(vecb![
+          cell!(d: "one", 6..9),
+          cell!(d: "two", 11..14),
+        ])),
+        rows: vecb![Row::new(vecb![
+          cell!(d: "1", 17..18),
+          cell!(d: "2", 20..21),
+        ])],
+        ..empty_table!()
+      }
+    )
+  }
+
+  #[test]
+  fn supress_implicit_header_row() {
+    let table = parse_table!(adoc! {r#"
+      [%noheader]
+      |===
+      |one |two
+
+      |1 |2
+      |===
+    "#});
+    assert!(table.header_row.is_none());
+    assert_eq!(table.rows.len(), 2);
+  }
+
+  #[test]
+  fn explicit_header_row() {
+    assert_table!(
+      adoc! {r#"
+        [%header]
+        |===
+        |one |two
+        |1 |2
+        |===
+      "#},
+      Table {
+        header_row: Some(Row::new(vecb![
+          cell!(d: "one", 16..19),
+          cell!(d: "two", 21..24),
+        ])),
+        rows: vecb![Row::new(vecb![
+          cell!(d: "1", 26..27),
+          cell!(d: "2", 29..30),
+        ])],
+        ..empty_table!()
+      }
+    )
+  }
+
+  #[test]
+  fn implicit_header_row_only() {
+    let table = parse_table!(adoc! {r#"
+      |===
+      |one |two
+
+      |===
+    "#});
+    assert!(table.header_row.is_some());
+    assert!(table.rows.is_empty());
+  }
+
+  #[test]
+  fn no_implicit_header_row_for_multiline_first_cell() {
+    let table = parse_table!(adoc! {r#"
+      [cols="2*"]
+      |===
+      |first cell
+
+      first cell continued |second cell
+      |===
+    "#});
+    assert!(table.header_row.is_none());
   }
 
   #[test]
@@ -590,7 +730,6 @@ mod tests {
           start: 0
         },
         content: BlockContent::Table(Table {
-          col_specs: vecb![],
           rows: vecb![
             Row::new(vecb![
               cell!(d: "A", 24..25),
@@ -608,6 +747,7 @@ mod tests {
               cell!(d: "3", 48..49),
             ]),
           ],
+          ..empty_table!()
         }),
         context: BlockContext::Table,
         loc: SourceLocation::new(0, 51),

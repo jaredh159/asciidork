@@ -45,9 +45,10 @@ pub enum CellContentStyle {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Table<'bmp> {
-  // pub num_cols: u8,
-  pub col_specs: BumpVec<'bmp, ColSpec>,
+  pub col_specs: BumpVec<'bmp, ColSpec>, // do i actually need this?
+  pub header_row: Option<Row<'bmp>>,
   pub rows: BumpVec<'bmp, Row<'bmp>>,
+  pub footer_row: Option<Row<'bmp>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

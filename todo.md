@@ -1,5 +1,9 @@
 ## todo
 
+- [ ] think about this statement from header row section of tables docs: "Values assigned
+      using the shorthand syntax must be entered before the cols attribute (or any other
+      named attributes) in a table’s attribute list, otherwise the processor will ignore
+      them."
 - [ ] xref to discrete heading
 - [ ] attr list `options` longhand (maybe role too?), i.e. `[options="a,b"]` == `[%a%b]`
 - [ ] finish eval-ing all inline types, try to eval `kitchen-sink.adoc` to find missing

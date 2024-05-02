@@ -10,6 +10,8 @@ struct TableContext<'bmp> {
   col_specs: BumpVec<'bmp, ColSpec>,
   num_cols: usize,
   counting_cols: bool,
+  has_header_row: Option<bool>,
+  can_infer_implicit_header: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
