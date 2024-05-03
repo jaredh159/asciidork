@@ -246,6 +246,11 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
       backend.exit_simple_block_content(children, block);
       backend.exit_passthrough_block(block, &block.content);
     }
+    (Context::Table, Content::Table(table)) => {
+      backend.enter_table(table);
+      //
+      backend.exit_table(table);
+    }
     (
       Context::DiscreteHeading,
       Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),

@@ -16,7 +16,7 @@ struct CellStart {
 lazy_static! {
   // multiplier(1), horiz(2), vert(3), width(4), style(5)
   pub static ref COLSPEC_RE: Regex =
-    Regex::new(r"^\s*(?:(\d+)\*)?([<^>])?(?:\.([<^>]))?(\d+%?)?(a|d|e|h|l|m|s)?\s*$").unwrap();
+    Regex::new(r"^\s*(?:(\d+)\*)?([<^>])?(?:\.([<^>]))?((?:\d+%?)|~)?(a|d|e|h|l|m|s)?\s*$").unwrap();
 }
 
 fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
@@ -41,7 +41,9 @@ fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
   }
 
   if let Some(width) = captures.get(4).map(|m| m.as_str()) {
-    if let Some(digits) = width.strip_suffix('%') {
+    if width == "~" {
+      spec.width = ColWidth::Auto;
+    } else if let Some(digits) = width.strip_suffix('%') {
       spec.width = ColWidth::Percentage(digits.parse().unwrap_or(1));
     } else {
       spec.width = ColWidth::Proportional(width.parse().unwrap_or(1));
@@ -332,6 +334,7 @@ mod tests {
         &[ColSpec::default(), ColSpec::default(), ColSpec::default()],
       ),
       ("1", &[ColSpec::default()]),
+      ("~", &[ColSpec { width: Auto, ..ColSpec::default() }]),
       (
         ">",
         &[ColSpec {
@@ -374,9 +377,8 @@ mod tests {
           ColSpec::default(),
         ],
       ),
-      // ignore empty colspec
+      // ignore empty colspecs
       ("", &[]),
-      // ignore empty colspec
       (" ", &[]),
       (
         "2*>.>3e,,15%",

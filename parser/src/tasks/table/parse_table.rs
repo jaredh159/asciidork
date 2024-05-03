@@ -123,14 +123,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     col_index: usize,
   ) -> Result<Option<(Cell<'bmp>, u8)>> {
     if tokens.is_empty() {
-      println!("finish 6 (empty tokens)");
       return Ok(None);
     }
 
     let (spec, mut start) = match self.consume_cell_start(tokens, ctx.format.sep()) {
       Some((spec, start)) => (spec, start),
       None => {
-        println!("finish 4 (no cell start)");
         let sep = char::from(ctx.format.sep());
         self.err(format!("Expected cell separator `{}`", sep), tokens.nth(0))?;
         (CellSpec::default(), tokens.current().unwrap().loc.start)
@@ -148,11 +146,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     loop {
       if self.starts_cell(tokens, ctx.format.sep()) {
-        println!("finish 1 (found next cell)",);
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       }
       let Some(token) = tokens.consume_current() else {
-        println!("finish 3 (out of tokens)");
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       };
 

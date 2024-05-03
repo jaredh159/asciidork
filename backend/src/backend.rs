@@ -89,6 +89,10 @@ pub trait Backend {
   fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem, variant: ListVariant);
   fn exit_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem, variant: ListVariant);
 
+  // tables
+  fn enter_table(&mut self, table: &Table);
+  fn exit_table(&mut self, table: &Table);
+
   // block content
   fn enter_block_title(&mut self, title: &[InlineNode], block: &Block);
   fn exit_block_title(&mut self, title: &[InlineNode], block: &Block);

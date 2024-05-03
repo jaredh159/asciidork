@@ -561,6 +561,14 @@ impl Backend for AsciidoctorHtml {
     self.state.remove(&VisitingSimpleTermDescription);
   }
 
+  fn enter_table(&mut self, _table: &Table) {
+    self.push_str("<table class=\"tableblock frame-all grid-all stretch\">");
+  }
+
+  fn exit_table(&mut self, _table: &Table) {
+    self.push_str("</table>");
+  }
+
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {
     self.push_str("<em>");
   }
