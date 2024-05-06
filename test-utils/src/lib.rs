@@ -153,25 +153,42 @@ macro_rules! just {
 }
 
 #[macro_export]
+macro_rules! empty_cell {
+  () => {
+    Cell {
+      content: CellContent::Default(nodes![]),
+      col_span: 1,
+      row_span: 1,
+      h_align: HorizontalAlignment::Left,
+      v_align: VerticalAlignment::Top,
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! cell {
   (d: $text:expr, $range:expr$(,)?) => {
     Cell {
       content: CellContent::Default(just!($text, $range)),
+      ..empty_cell!()
     }
   };
   (e: $text:expr, $range:expr$(,)?) => {
     Cell {
       content: CellContent::Emphasis(just!($text, $range)),
+      ..empty_cell!()
     }
   };
   (s: $text:expr, $range:expr$(,)?) => {
     Cell {
       content: CellContent::Strong(just!($text, $range)),
+      ..empty_cell!()
     }
   };
   (l: $text:expr, $range:expr$(,)?) => {
     Cell {
       content: CellContent::Literal(just!($text, $range)),
+      ..empty_cell!()
     }
   };
 }
@@ -192,7 +209,7 @@ macro_rules! empty_block {
 macro_rules! empty_table {
   () => {
     Table {
-      col_specs: vecb![],
+      col_widths: ColWidths::new(vecb![]),
       header_row: None,
       rows: vecb![],
       footer_row: None,

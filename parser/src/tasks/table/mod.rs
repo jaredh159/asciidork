@@ -11,6 +11,7 @@ struct TableContext<'bmp> {
   num_cols: usize,
   counting_cols: bool,
   has_header_row: Option<bool>,
+  autowidths: bool,
   can_infer_implicit_header: bool,
 }
 

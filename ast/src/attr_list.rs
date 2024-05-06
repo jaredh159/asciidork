@@ -62,7 +62,10 @@ impl<'bmp> AttrList<'bmp> {
   }
 
   pub fn named(&self, key: &str) -> Option<&str> {
-    self.named.get(key).and_then(|s| s.single_text())
+    self
+      .named
+      .get(key)
+      .and_then(|s| if s.is_empty() { Some("") } else { s.single_text() })
   }
 
   pub fn str_positional_at(&self, index: usize) -> Option<&str> {

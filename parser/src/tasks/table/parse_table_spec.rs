@@ -245,8 +245,8 @@ fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) 
     return;
   }
   match tokens.nth(*cursor + 1).map(|t| t.kind) {
-    Some(GreaterThan) => spec.v_align = Some(VerticalAlignment::Top),
-    Some(LessThan) => spec.v_align = Some(VerticalAlignment::Bottom),
+    Some(GreaterThan) => spec.v_align = Some(VerticalAlignment::Bottom),
+    Some(LessThan) => spec.v_align = Some(VerticalAlignment::Top),
     Some(Caret) => spec.v_align = Some(VerticalAlignment::Middle),
     _ => return,
   }
@@ -346,6 +346,13 @@ mod tests {
         ".^",
         &[ColSpec {
           v_align: VerticalAlignment::Middle,
+          ..ColSpec::default()
+        }],
+      ),
+      (
+        ".>",
+        &[ColSpec {
+          v_align: VerticalAlignment::Bottom,
           ..ColSpec::default()
         }],
       ),
