@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use std::ops::Range;
 
 use bumpalo::collections::CollectIn;
 
-use super::{DataFormat, TableContext, TableTokens};
+use super::{context::*, DataFormat, TableTokens};
 use crate::internal::*;
 use crate::variants::token::*;
 
@@ -43,6 +44,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       has_header_row: None,
       autowidths: meta.has_attr_option("autowidth"),
       can_infer_implicit_header: false,
+      phantom_cells: HashSet::new(),
+      effective_row_idx: 0,
     };
 
     let mut table = Table {
@@ -104,9 +107,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       };
       if dupe > 1 {
         for _ in 1..dupe {
+          ctx.add_phantom_cells(&cell, cells.len());
           cells.push(cell.clone());
         }
       }
+      ctx.add_phantom_cells(&cell, cells.len());
       cells.push(cell);
       if !ctx.counting_cols {
         break;
@@ -116,13 +121,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       tokens.consume_current();
     }
 
-    ctx.num_cols = cells.len();
     if cells.is_empty() {
       return Ok(());
     }
 
+    ctx.num_cols = cells.iter().map(|c| c.col_span as usize).sum::<usize>();
+    ctx.effective_row_idx += 1;
+
     let width = if ctx.autowidths { ColWidth::Auto } else { ColWidth::Proportional(1) };
-    table.col_widths = ColWidths::new(bvec![in self.bump; width; cells.len()]);
+    table.col_widths = ColWidths::new(bvec![in self.bump; width; ctx.num_cols]);
     if ctx.has_header_row == Some(true) || ctx.can_infer_implicit_header {
       ctx.has_header_row = Some(true);
       table.header_row = Some(Row::new(cells));
@@ -194,23 +201,29 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ctx: &mut TableContext,
   ) -> Result<Option<Row<'bmp>>> {
     let mut cells = bvec![in self.bump];
+    let mut num_effective_cells = ctx.row_phantom_cells();
     'outer: while let Some((cell, dupe)) = self.parse_table_cell(tokens, ctx, cells.len())? {
       if dupe > 1 {
         for _ in 1..dupe {
+          ctx.add_phantom_cells(&cell, num_effective_cells);
+          num_effective_cells += cell.col_span as usize;
           cells.push(cell.clone());
-          if cells.len() == ctx.num_cols {
+          if num_effective_cells >= ctx.num_cols {
             break 'outer;
           }
         }
       }
+      ctx.add_phantom_cells(&cell, num_effective_cells);
+      num_effective_cells += cell.col_span as usize;
       cells.push(cell);
-      if cells.len() == ctx.num_cols {
+      if num_effective_cells >= ctx.num_cols {
         break;
       }
     }
     if cells.is_empty() {
       Ok(None)
     } else {
+      ctx.effective_row_idx += 1;
       Ok(Some(Row::new(cells)))
     }
   }
@@ -270,7 +283,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Ok((TableTokens::new(tokens, loc), end))
   }
 
-  // jared
   fn finish_cell(
     &mut self,
     cell_spec: CellSpec,
@@ -589,6 +601,105 @@ mod tests {
         ..empty_table!()
       }
     )
+  }
+
+  #[test]
+  fn basic_col_span() {
+    let table = parse_table!(adoc! {r#"
+      |===
+      |1 | 2
+      2+|3
+      |4 | 5
+      |===
+    "#});
+    assert_eq!(table.rows.len(), 3);
+    assert_eq!(table.rows[0].cells.len(), 2);
+    assert_eq!(table.rows[1].cells.len(), 1);
+    assert_eq!(table.rows[2].cells.len(), 2);
+  }
+
+  #[test]
+  fn count_cols_col_span() {
+    let table = parse_table!(adoc! {r#"
+      |===
+      |1 2+| 2
+      |3 | 4 | 5
+      |===
+    "#});
+    assert_eq!(table.rows.len(), 2);
+    assert_eq!(table.rows[0].cells.len(), 2);
+    assert_eq!(table.rows[1].cells.len(), 3);
+    assert_eq!(table.col_widths, ColWidths::new(vecb![w(1), w(1), w(1)]));
+  }
+
+  #[test]
+  fn basic_row_span() {
+    let table = parse_table!(adoc! {r#"
+      [cols="1,1"]
+      |===
+      |1 .2+|2
+      |3
+      |4 |5
+      |===
+    "#});
+    assert_eq!(
+      table,
+      Table {
+        col_widths: ColWidths::new(vecb![w(1), w(1)]),
+        rows: vecb![
+          Row::new(vecb![
+            cell!(d: "1", 19..20),
+            Cell { row_span: 2, ..cell!(d: "2", 25..26) }
+          ]),
+          Row::new(vecb![cell!(d: "3", 28..29)]),
+          Row::new(vecb![cell!(d: "4", 31..32), cell!(d: "5", 34..35),]),
+        ],
+        ..empty_table!()
+      }
+    );
+  }
+
+  #[test]
+  fn complex_row_col_spans() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        |1 |2 |3 |4
+        |5 2.2+|6 .3+|7
+        |8
+        |9 2+|10
+        |===
+      "#},
+      Table {
+        col_widths: ColWidths::new(vecb![w(1), w(1), w(1), w(1)]),
+        rows: vecb![
+          Row::new(vecb![
+            cell!(d: "1", 6..7),
+            cell!(d: "2", 9..10),
+            cell!(d: "3", 12..13),
+            cell!(d: "4", 15..16),
+          ]),
+          Row::new(vecb![
+            cell!(d: "5", 18..19),
+            Cell {
+              col_span: 2,
+              row_span: 2,
+              ..cell!(d: "6", 25..26)
+            },
+            Cell { row_span: 3, ..cell!(d: "7", 31..32) },
+          ]),
+          Row::new(vecb![cell!(d: "8", 34..35)]),
+          Row::new(vecb![
+            cell!(d: "9", 37..38),
+            Cell {
+              col_span: 2,
+              ..cell!(d: "10", 42..44)
+            }
+          ]),
+        ],
+        ..empty_table!()
+      }
+    );
   }
 
   #[test]

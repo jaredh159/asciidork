@@ -596,43 +596,11 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    if matches!(section, TableSection::Header) || matches!(cell.content, CellContent::Header(_)) {
-      self.push_str("<th");
-    } else {
-      self.push_str("<td");
-    }
-    self.push([" class=\"tableblock halign-", cell.h_align.word()]);
-    self.push([" valign-", cell.v_align.word()]);
-    self.push_str("\">");
-    if !matches!(section, TableSection::Header) && !matches!(cell.content, CellContent::Literal(_))
-    {
-      self.push_str("<p class=\"tableblock\">");
-    }
-    match &cell.content {
-      CellContent::Default(_) | CellContent::Header(_) => {}
-      CellContent::Emphasis(_) => self.push_str("<em>"),
-      CellContent::Literal(_) => self.push_str("<div class=\"literal\"><pre>"),
-      CellContent::Monospace(_) => self.push_str("<code>"),
-      CellContent::Strong(_) => self.push_str("<strong>"),
-      CellContent::AsciiDoc(_) => {}
-    }
+    self.open_cell(cell, section);
   }
 
   fn exit_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    match &cell.content {
-      CellContent::Default(_) | CellContent::Header(_) => {}
-      CellContent::Emphasis(_) => self.push_str("</em>"),
-      CellContent::Literal(_) => self.push_str("</pre></div>"),
-      CellContent::Monospace(_) => self.push_str("</code>"),
-      CellContent::Strong(_) => self.push_str("</strong>"),
-      CellContent::AsciiDoc(_) => {}
-    }
-    match (section, &cell.content) {
-      (TableSection::Header, _) => self.push_str("</th>"),
-      (TableSection::Body, CellContent::Literal(_)) => self.push_str("</td>"),
-      (TableSection::Body, CellContent::Header(_)) => self.push_str("</p></th>"),
-      _ => self.push_str("</p></td>"),
-    }
+    self.close_cell(cell, section);
   }
 
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {

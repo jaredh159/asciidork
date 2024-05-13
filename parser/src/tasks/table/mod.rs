@@ -1,19 +1,8 @@
 use crate::internal::*;
 
+mod context;
 mod parse_table;
 mod parse_table_spec;
-
-#[derive(Debug, Clone)]
-struct TableContext<'bmp> {
-  delim_ch: u8,
-  format: DataFormat,
-  col_specs: BumpVec<'bmp, ColSpec>,
-  num_cols: usize,
-  counting_cols: bool,
-  has_header_row: Option<bool>,
-  autowidths: bool,
-  can_infer_implicit_header: bool,
-}
 
 #[derive(Debug, Clone, Copy)]
 enum DataFormat {

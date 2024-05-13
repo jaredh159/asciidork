@@ -53,7 +53,7 @@ test_eval!(
     |===
   "#},
   html! {r#"
-    <table class="tableblock frame-ends grid-all stretch" style="width: 50%;">
+    <table class="tableblock frame-ends grid-all" style="width: 50%;">
       <caption class="title">Table 1. Table Title</caption>
       <colgroup>
         <col style="width: 25%;">
@@ -108,12 +108,11 @@ test_eval!(
 test_eval!(
   formatting_in_header_row,
   adoc! {r#"
-    [cols="2*a"]
+    [cols="2*m"]
     |===
     | _foo_ | *bar*
 
-    | * list item
-    | paragraph
+    | a | b
     |===
   "#},
   html! {r#"
@@ -128,16 +127,108 @@ test_eval!(
       <tbody>
         <tr>
           <td class="tableblock halign-left valign-top">
-            <div class="content">
-              <div class="ulist">
-                <ul><li><p>list item</p></li></ul>
-              </div>
-            </div>
+            <p class="tableblock"><code>a</code></p>
           </td>
           <td class="tableblock halign-left valign-top">
-            <div class="content">
-              <div class="paragraph"><p>paragraph</p></div>
-            </div>
+            <p class="tableblock"><code>b</code></p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+test_eval!(
+  formatting_in_non_header_row,
+  adoc! {r#"
+    [cols="s,e"]
+    |===
+    | _strong_ | *emphasis*
+    | strong
+    | emphasis
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock"><strong><em>strong</em></strong></p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock"><em><strong>emphasis</strong></em></p>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock"><strong>strong</strong></p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock"><em>emphasis</em></p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+test_eval!(
+  spans_alignments_and_styles,
+  adoc! {r#"
+    [cols="e,m,^,>s",width="25%"]
+    |===
+    |1 >s|2 |3 |4
+    ^|5 2.2+^.^|6 .3+<.>m|7
+    ^|8
+    d|9 2+>|10
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all" style="width: 25%;">
+      <colgroup>
+        <col style="width: 25%;">
+        <col style="width: 25%;">
+        <col style="width: 25%;">
+        <col style="width: 25%;">
+      </colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock"><em>1</em></p>
+          </td>
+          <td class="tableblock halign-right valign-top">
+            <p class="tableblock"><strong>2</strong></p>
+          </td>
+          <td class="tableblock halign-center valign-top">
+            <p class="tableblock">3</p>
+          </td>
+          <td class="tableblock halign-right valign-top">
+            <p class="tableblock"><strong>4</strong></p>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-center valign-top">
+            <p class="tableblock"><em>5</em></p>
+          </td>
+          <td class="tableblock halign-center valign-middle" colspan="2" rowspan="2">
+            <p class="tableblock"><code>6</code></p>
+          </td>
+          <td class="tableblock halign-left valign-bottom" rowspan="3">
+            <p class="tableblock"><code>7</code></p>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-center valign-top">
+            <p class="tableblock"><em>8</em></p>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">9</p>
+          </td>
+          <td class="tableblock halign-right valign-top" colspan="2">
+            <p class="tableblock"><code>10</code></p>
           </td>
         </tr>
       </tbody>
@@ -154,6 +245,17 @@ test_eval!(
     |===
   "#},
   html_contains: r#"<table class="tableblock frame-all grid-all stretch left">"#
+);
+
+test_eval!(
+  width_100_to_stretch_class,
+  adoc! {r#"
+    [width=100%]
+    |===
+    |a | b
+    |===
+  "#},
+  html_contains: r#"<table class="tableblock frame-all grid-all stretch">"#
 );
 
 test_eval!(

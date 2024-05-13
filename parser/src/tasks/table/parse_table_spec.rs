@@ -123,7 +123,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       // otherwise, it would need to be one of these to start a spec
     } else if !matches!(
       first_token.kind,
-      Digits | Dots | LessThan | GreaterThan | Caret
+      Digits | Dots | LessThan | GreaterThan | Caret | CalloutNumber
     ) {
       return None;
     }
@@ -146,19 +146,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let Some(cursor_token) = tokens.nth(cursor) else {
       return None;
     };
-    let cursor_token_end = cursor_token.loc.end;
     match (style_within_word, cursor_token.lexeme.as_bytes()) {
       (false, bytes) if bytes == [sep] => Some(CellStart {
         spec,
         drop_tokens: cursor + 1,
         drop_bytes: 0,
-        resuming: cursor_token_end,
+        resuming: cursor_token.loc.end,
       }),
       (true, bytes) if bytes.len() == 2 && bytes.get(1) == Some(&sep) => Some(CellStart {
         spec,
         drop_tokens: cursor + 1,
         drop_bytes: 0,
-        resuming: cursor_token_end,
+        resuming: cursor_token.loc.end,
       }),
       (true, bytes) if bytes.len() > 2 && bytes.get(1) == Some(&sep) => {
         let joined = tokens.nth(cursor).unwrap();
@@ -231,10 +230,17 @@ fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usi
 }
 
 fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  match tokens.nth(*cursor).map(|t| t.kind) {
-    Some(LessThan) => spec.h_align = Some(HorizontalAlignment::Left),
-    Some(GreaterThan) => spec.h_align = Some(HorizontalAlignment::Right),
-    Some(Caret) => spec.h_align = Some(HorizontalAlignment::Center),
+  let Some(token) = tokens.nth(*cursor) else {
+    return;
+  };
+  match token.kind {
+    LessThan => spec.h_align = Some(HorizontalAlignment::Left),
+    GreaterThan => spec.h_align = Some(HorizontalAlignment::Right),
+    Caret => spec.h_align = Some(HorizontalAlignment::Center),
+    CalloutNumber if token.lexeme == "<.>" => {
+      spec.h_align = Some(HorizontalAlignment::Left);
+      spec.v_align = Some(VerticalAlignment::Bottom);
+    }
     _ => return,
   }
   *cursor += 1;
@@ -277,6 +283,18 @@ mod tests {
       ),
       (
         b'|',
+        "2+|3",
+        "3",
+        Some((
+          CellSpec {
+            col_span: Some(2),
+            ..CellSpec::default()
+          },
+          3,
+        )),
+      ),
+      (
+        b'|',
         "3*2.4+>.^s|foo",
         "foo",
         Some((
@@ -306,6 +324,22 @@ mod tests {
             style: Some(CellContentStyle::Strong),
           },
           11,
+        )),
+      ),
+      (
+        b'|',
+        ".3+<.>m|foo",
+        "foo",
+        Some((
+          CellSpec {
+            duplication: None,
+            col_span: None,
+            row_span: Some(3),
+            h_align: Some(HorizontalAlignment::Left),
+            v_align: Some(VerticalAlignment::Bottom),
+            style: Some(CellContentStyle::Monospace),
+          },
+          8,
         )),
       ),
     ];

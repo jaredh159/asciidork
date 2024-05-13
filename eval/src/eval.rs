@@ -421,7 +421,8 @@ fn eval_table_row(row: &Row, section: TableSection, doc: &Document, backend: &mu
       | CellContent::Strong(nodes) => {
         nodes.iter().for_each(|n| eval_inline(n, doc, backend));
       }
-      CellContent::AsciiDoc(content) => eval_doc_content(doc, content, backend),
+      // CellContent::AsciiDoc(content) => eval_doc_content(doc, content, backend),
+      CellContent::AsciiDoc(_content) => todo!(),
     }
     backend.exit_table_cell(cell, section);
   });
