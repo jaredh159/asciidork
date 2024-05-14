@@ -27,12 +27,6 @@ impl<'src> Lexer<'src> {
     lexer
   }
 
-  // pub fn new_adjusted(src: &'src str, offset_adjustment: usize) -> Lexer<'src> {
-  //   let mut lexer = Lexer::new(src);
-  //   lexer.offset_adjustment = offset_adjustment;
-  //   lexer
-  // }
-
   pub fn adjust_offset(&mut self, offset_adjustment: usize) {
     self.offset_adjustment = offset_adjustment;
   }

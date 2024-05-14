@@ -23,7 +23,6 @@ macro_rules! test_eval {
         document,
         ::asciidork_eval::Opts::embedded(),
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
-      // ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
       assert!(
         actual.contains($expected),
         "\n`{}` was NOT found when expected\n\n```adoc\n{}\n```\n\n```html\n{}\n```",

@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter, Result};
+use std::ops::Range;
 
 use crate::internal::*;
 
@@ -79,5 +80,3 @@ impl Json for SourceLocation {
     buf.push(']');
   }
 }
-
-use std::ops::Range;

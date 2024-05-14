@@ -123,7 +123,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
       Delimiter::Passthrough => self.lexer.at_delimiter_line() == Some((4, b'+')),
       Delimiter::Comment => self.lexer.at_delimiter_line() == Some((4, b'/')),
-      // Delimiter::Table(ch) => self.lexer.at_delimiter_line() == Some((4, ch)),
     }
   }
 

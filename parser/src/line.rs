@@ -381,13 +381,6 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.last_token().map(|t| t.loc)
   }
 
-  // pub fn first_byte(&self) -> Option<u8> {
-  //   self
-  //     .current_token()
-  //     .and_then(|t| t.lexeme.as_bytes().first())
-  //     .copied()
-  // }
-
   pub fn list_marker(&self) -> Option<ListMarker> {
     // PERF: checking for list markers seems sort of sad, wonder if the
     // Line could be created with some markers to speed these tests up

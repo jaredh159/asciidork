@@ -1,3 +1,5 @@
+use ast::CellContentStyle;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Subs {
   SpecialChars,
@@ -207,8 +209,6 @@ impl Subs {
     }
   }
 }
-
-use ast::CellContentStyle;
 
 impl From<CellContentStyle> for Substitutions {
   fn from(style: CellContentStyle) -> Self {

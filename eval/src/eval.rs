@@ -36,20 +36,6 @@ pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
     backend,
   );
   eval_doc_content(&doc, &doc.content, backend);
-  // match &doc.content {
-  //   DocContent::Blocks(blocks) => {
-  //     blocks.iter().for_each(|b| eval_block(b, &doc, backend));
-  //   }
-  //   DocContent::Sectioned { sections, preamble } => {
-  //     if let Some(blocks) = preamble {
-  //       backend.enter_preamble(blocks);
-  //       blocks.iter().for_each(|b| eval_block(b, &doc, backend));
-  //       backend.exit_preamble(blocks);
-  //       eval_toc_at(&doc, &[TocPosition::Preamble], backend);
-  //     }
-  //     sections.iter().for_each(|s| eval_section(s, &doc, backend));
-  //   }
-  // }
   backend.exit_document(&doc, doc_attrs);
 }
 
