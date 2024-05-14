@@ -9,6 +9,7 @@ pub struct Lexer<'src> {
   bytes: Bytes<'src>,
   peek: Option<u8>,
   at_line_start: bool,
+  offset_adjustment: usize,
   pattern_breaker: Option<TokenKind>,
 }
 
@@ -19,10 +20,15 @@ impl<'src> Lexer<'src> {
       bytes: src.bytes(),
       peek: None,
       at_line_start: true,
+      offset_adjustment: 0,
       pattern_breaker: None,
     };
     lexer.peek = lexer.bytes.next();
     lexer
+  }
+
+  pub fn adjust_offset(&mut self, offset_adjustment: usize) {
+    self.offset_adjustment = offset_adjustment;
   }
 
   pub fn consume_empty_lines(&mut self) {
@@ -47,7 +53,8 @@ impl<'src> Lexer<'src> {
     self.peek == Some(c)
   }
 
-  pub fn loc_src(&self, loc: SourceLocation) -> &'src str {
+  pub fn loc_src(&self, loc: impl Into<SourceLocation>) -> &'src str {
+    let loc = loc.into();
     &self.src[loc.start..loc.end]
   }
 
@@ -105,10 +112,10 @@ impl<'src> Lexer<'src> {
     }
     let start = self.offset();
     let mut end = start;
-    let mut tokens = BumpVec::new_in(bump);
+    let mut tokens = bvec![in bump];
     while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token();
-      end = token.loc.end;
+      end = token.loc.end - self.offset_adjustment;
       tokens.push(token);
     }
     if self.peek_is(b'\n') {
@@ -126,7 +133,7 @@ impl<'src> Lexer<'src> {
       || self.is_eof()
       || !matches!(
         self.peek,
-        Some(b'_') | Some(b'-') | Some(b'*') | Some(b'=') | Some(b'.') | Some(b'+') | Some(b'/')
+        Some(b'_' | b'-' | b'*' | b'=' | b'.' | b'+' | b'/')
       )
     {
       return None;
@@ -186,6 +193,7 @@ impl<'src> Lexer<'src> {
       Some(b'#') => self.single(Hash),
       Some(b'%') => self.single(Percent),
       Some(b'"') => self.single(DoubleQuote),
+      Some(b'|') => self.single(Pipe),
       Some(b'\'') => self.single(SingleQuote),
       Some(b'\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
@@ -196,7 +204,7 @@ impl<'src> Lexer<'src> {
   }
 
   fn offset(&self) -> usize {
-    self.src.len() - self.bytes.len() - self.peek.is_some() as usize // O(1) √
+    self.src.len() - self.bytes.len() - (self.peek.is_some() as usize)
   }
 
   fn advance(&mut self) -> Option<u8> {
@@ -274,6 +282,7 @@ impl<'src> Lexer<'src> {
       b'{',
       b'}',
       b'=',
+      b'|',
       b'"',
       b'\'',
       b'\\',
@@ -393,7 +402,7 @@ impl<'src> Lexer<'src> {
   fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'src> {
     Token {
       kind,
-      loc: SourceLocation::new(start, end),
+      loc: SourceLocation::new(start + self.offset_adjustment, end + self.offset_adjustment),
       lexeme: &self.src[start..end],
     }
   }
@@ -529,6 +538,7 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      ("|===", vec![(Pipe, "|"), (EqualSigns, "===")]),
       ("////", vec![(DelimiterLine, "////")]),
       ("<.>", vec![(CalloutNumber, "<.>")]),
       ("<1>", vec![(CalloutNumber, "<1>")]),

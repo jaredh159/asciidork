@@ -1,6 +1,6 @@
 use crate::internal::*;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum DocContent<'bmp> {
   Sectioned {
     preamble: Option<BumpVec<'bmp, Block<'bmp>>>,

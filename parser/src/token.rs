@@ -31,6 +31,7 @@ pub enum TokenKind {
   OpenBrace,
   OpenBracket,
   Percent,
+  Pipe,
   Plus,
   SemiColon,
   SingleQuote,
@@ -103,6 +104,9 @@ pub trait TokenIs {
   }
   fn is_not_len(&self, kind: TokenKind, len: usize) -> bool {
     !self.is_len(kind, len)
+  }
+  fn is_whitespaceish(&self) -> bool {
+    self.is(TokenKind::Whitespace) || self.is(TokenKind::Newline)
   }
 }
 

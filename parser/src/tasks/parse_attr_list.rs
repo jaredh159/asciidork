@@ -227,10 +227,8 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
 
   fn commit_prev(&mut self, parser: &mut Parser<'bmp, 'src>) -> Result<()> {
     use AttrKind::*;
-    if !self.attr.is_empty() {
+    if !self.attr.is_empty() || self.kind == Named {
       match &self.kind {
-        // could be optimized to not call parse_inlines more exhaustively by
-        // tracking every type of token that would indicate we need to parse
         Positional
           if (self.is_legacy_anchor
             || self.tokens.iter().all(|t| t.is(Word) || t.is(Whitespace))) =>
@@ -257,12 +255,19 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
           let name = self.name.take_src();
           if &name == "id" {
             self.attr_list.id = Some(self.attr.take_src());
-          } else {
+          // special case: empty string for named, `foo=""`
+          } else if self.tokens.len() == 1 {
+            self.tokens.remove(0); // remove name
+            self
+              .attr_list
+              .named
+              .insert(name, InlineNodes::new(self.bump));
+          } else if self.tokens.len() > 1 {
             self.tokens.remove(0); // remove name
             let tokens = std::mem::replace(&mut self.tokens, BumpVec::new_in(self.bump));
             let line = parser.line_from(tokens, self.attr.take_src().loc);
             let restore = parser.ctx.subs;
-            parser.ctx.subs = if &name.src == "subs" {
+            parser.ctx.subs = if matches!(name.src.as_str(), "subs" | "cols") {
               Substitutions::none()
             } else {
               Substitutions::attr_value()
@@ -550,6 +555,20 @@ mod tests {
         AttrList {
           named: Named::from(vecb![(src!("foo", 1..4), just!(".foo#id%opt", 6..17))]),
           ..attr_list!(0..19)
+        },
+      ),
+      (
+        "[foo=\"\"]",
+        AttrList {
+          named: Named::from(vecb![(src!("foo", 1..4), InlineNodes::new(leaked_bump()))]),
+          ..attr_list!(0..8)
+        },
+      ),
+      (
+        "[width=50%]",
+        AttrList {
+          named: Named::from(vecb![(src!("width", 1..6), just!("50%", 7..10))]),
+          ..attr_list!(0..11)
         },
       ),
     ];

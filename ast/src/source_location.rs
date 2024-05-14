@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter, Result};
+use std::ops::Range;
 
 use crate::internal::*;
 
@@ -55,6 +56,12 @@ impl SourceLocation {
 impl From<usize> for SourceLocation {
   fn from(offset: usize) -> Self {
     Self::new(offset, offset)
+  }
+}
+
+impl From<Range<usize>> for SourceLocation {
+  fn from(range: Range<usize>) -> Self {
+    Self::new(range.start, range.end)
   }
 }
 

@@ -45,6 +45,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     p
   }
 
+  pub fn nest(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {
+    let mut nested = Parser::new(self.bump, src);
+    nested.strict = self.strict;
+    nested.lexer.adjust_offset(offset);
+    nested
+  }
+
   pub(crate) fn debug_loc(&self, loc: SourceLocation) {
     println!("{:?}, {}", loc, self.lexer.loc_src(loc));
   }
@@ -60,12 +67,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn line_from(
     &self,
     tokens: BumpVec<'bmp, Token<'src>>,
-    loc: SourceLocation,
+    loc: impl Into<SourceLocation>,
   ) -> Line<'bmp, 'src> {
     Line::new(tokens, self.lexer.loc_src(loc))
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
+    debug_assert!(self.peeked_lines.is_none());
     self.lexer.consume_line(self.bump)
   }
 
@@ -96,11 +104,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if lines.any(|l| l.is_delimiter(delimiter)) {
       return Some(lines);
     }
+
+    let mut additional_lines = BumpVec::new_in(self.bump);
     while !self.lexer.is_eof() && !self.at_delimiter(delimiter) {
-      // PERF: pushing a bunch is bad, because this is actually
-      // vec.insert(0, line), probably better to accum and concat
-      lines.push(self.read_line().unwrap());
+      additional_lines.push(self.read_line().unwrap());
     }
+    lines.extend(additional_lines);
     Some(lines)
   }
 

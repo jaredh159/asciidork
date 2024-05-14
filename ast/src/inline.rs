@@ -23,7 +23,7 @@ pub enum Inline<'bmp> {
   Macro(MacroNode<'bmp>),
   Italic(InlineNodes<'bmp>),
   InlinePassthrough(InlineNodes<'bmp>),
-  JoiningNewline,
+  Newline,
   CalloutNum(Callout),
   CalloutTuck(BumpString<'bmp>),
   LineBreak,
@@ -123,7 +123,7 @@ impl<'bmp> Json for Inline<'bmp> {
         buf.push_str("InlinePassthrough\"");
         buf.add_member("children", nodes);
       }
-      Inline::JoiningNewline => buf.push_str("JoiningNewline\""),
+      Inline::Newline => buf.push_str("JoiningNewline\""),
       Inline::CalloutNum(callout) => {
         buf.push_str("CalloutNum\"");
         buf.add_member("callout", callout);

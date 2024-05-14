@@ -1,3 +1,5 @@
+use ast::CellContentStyle;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Subs {
   SpecialChars,
@@ -204,6 +206,20 @@ impl Subs {
       Subs::Macros => Self::MACROS,
       Subs::PostReplacement => Self::POST_REPLACEMENT,
       Subs::Callouts => Self::CALLOUTS,
+    }
+  }
+}
+
+impl From<CellContentStyle> for Substitutions {
+  fn from(style: CellContentStyle) -> Self {
+    match style {
+      CellContentStyle::AsciiDoc => Substitutions::normal(),
+      CellContentStyle::Default => Substitutions::normal(),
+      CellContentStyle::Emphasis => Substitutions::normal(),
+      CellContentStyle::Header => Substitutions::normal(),
+      CellContentStyle::Literal => Substitutions::verbatim(),
+      CellContentStyle::Monospace => Substitutions::normal(),
+      CellContentStyle::Strong => Substitutions::normal(),
     }
   }
 }

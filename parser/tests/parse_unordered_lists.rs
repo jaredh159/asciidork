@@ -117,7 +117,7 @@ fn test_indented_principle_continuation() {
       marker_src: src!("*", 0..1),
       principle: nodes![
         node!("foo bar"; 2..9),
-        node!(Inline::JoiningNewline, 9..10),
+        node!(Inline::Newline, 9..10),
         node!("baz"; 12..15),
       ],
       ..empty_list_item!()

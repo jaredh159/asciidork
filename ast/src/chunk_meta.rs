@@ -27,6 +27,10 @@ impl<'bmp> ChunkMeta<'bmp> {
       .map_or(false, |attrs| attrs.has_option(name))
   }
 
+  pub fn attr_named(&self, name: &str) -> Option<&str> {
+    self.attrs.as_ref().and_then(|attrs| attrs.named(name))
+  }
+
   pub const fn is_empty(&self) -> bool {
     self.attrs.is_none() && self.title.is_none()
   }

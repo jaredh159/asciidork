@@ -64,6 +64,21 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     })
   }
 
+  pub(crate) fn err_line(&self, message: impl Into<String>, line: &Line) -> Result<()> {
+    let start = line
+      .loc()
+      .expect("non empty line for `err_entire_line`")
+      .start;
+    let (line_num, offset) = self.lexer.line_number_with_offset(start);
+    self.handle_err(Diagnostic {
+      line_num,
+      line: line.src.to_string(),
+      message: message.into(),
+      underline_start: offset,
+      underline_width: line.src.len(),
+    })
+  }
+
   pub(crate) fn err_doc_attr(&self, key: &'static str, message: impl Into<String>) -> Result<()> {
     for (idx, line) in self
       .lexer

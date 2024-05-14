@@ -58,6 +58,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         let delimiter = first_token.to_delimeter().unwrap();
         return self.parse_delimited_block(delimiter, lines, meta);
       }
+      Pipe | Colon | Bang | Comma
+        if lines.nth_token(1).is_len(EqualSigns, 3) && lines.nth_token(2).is_none() =>
+      {
+        return Ok(Some(self.parse_table(lines, meta)?));
+      }
       Colon => {
         let mut attr_entries = AttrEntries::new(); // TODO: this is a little weird...
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines, &mut attr_entries)? {

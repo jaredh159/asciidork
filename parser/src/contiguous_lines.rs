@@ -17,6 +17,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.reversed_lines.len()
   }
 
+  pub fn num_tokens(&self) -> usize {
+    self.reversed_lines.iter().map(Line::num_tokens).sum()
+  }
+
   pub fn current(&self) -> Option<&Line<'bmp, 'src>> {
     self.reversed_lines.last()
   }
@@ -60,6 +64,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.current().and_then(|line| line.current_token())
   }
 
+  pub fn nth_token(&self, n: usize) -> Option<&Token<'src>> {
+    self.current().and_then(|line| line.nth_token(n))
+  }
+
   pub fn is_empty(&self) -> bool {
     self.reversed_lines.is_empty()
   }
@@ -74,8 +82,10 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
       .and_then(|mut line| line.consume_current())
   }
 
-  pub fn push(&mut self, line: Line<'bmp, 'src>) {
-    self.reversed_lines.insert(0, line);
+  pub fn extend(&mut self, mut other: BumpVec<'bmp, Line<'bmp, 'src>>) {
+    other.reverse();
+    other.extend(self.reversed_lines.drain(..));
+    self.reversed_lines = other;
   }
 
   pub fn restore_if_nonempty(&mut self, line: Line<'bmp, 'src>) {
@@ -244,11 +254,7 @@ impl<'bmp, 'src> Iterator for LinesIter<'bmp, 'src> {
       None
     } else {
       let item = self.lines.reversed_lines.get(self.pos);
-      self.pos = if self.pos == 0 {
-        usize::MAX
-      } else {
-        self.pos - 1
-      };
+      self.pos = if self.pos == 0 { usize::MAX } else { self.pos - 1 };
       item
     }
   }

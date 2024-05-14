@@ -35,21 +35,25 @@ pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
     &[TocPosition::Auto, TocPosition::Left, TocPosition::Right],
     backend,
   );
-  match &doc.content {
+  eval_doc_content(&doc, &doc.content, backend);
+  backend.exit_document(&doc, doc_attrs);
+}
+
+fn eval_doc_content(doc: &Document, content: &DocContent, backend: &mut impl Backend) {
+  match content {
     DocContent::Blocks(blocks) => {
-      blocks.iter().for_each(|b| eval_block(b, &doc, backend));
+      blocks.iter().for_each(|b| eval_block(b, doc, backend));
     }
     DocContent::Sectioned { sections, preamble } => {
       if let Some(blocks) = preamble {
         backend.enter_preamble(blocks);
-        blocks.iter().for_each(|b| eval_block(b, &doc, backend));
+        blocks.iter().for_each(|b| eval_block(b, doc, backend));
         backend.exit_preamble(blocks);
-        eval_toc_at(&doc, &[TocPosition::Preamble], backend);
+        eval_toc_at(doc, &[TocPosition::Preamble], backend);
       }
-      sections.iter().for_each(|s| eval_section(s, &doc, backend));
+      sections.iter().for_each(|s| eval_section(s, doc, backend));
     }
   }
-  backend.exit_document(&doc, doc_attrs);
 }
 
 fn eval_section(section: &Section, doc: &Document, backend: &mut impl Backend) {
@@ -246,6 +250,26 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
       backend.exit_simple_block_content(children, block);
       backend.exit_passthrough_block(block, &block.content);
     }
+    (Context::Table, Content::Table(table)) => {
+      backend.enter_table(table, block);
+      if let Some(header_row) = &table.header_row {
+        backend.enter_table_section(TableSection::Header);
+        eval_table_row(header_row, TableSection::Header, doc, backend);
+        backend.exit_table_section(TableSection::Header);
+      }
+      backend.enter_table_section(TableSection::Body);
+      table
+        .rows
+        .iter()
+        .for_each(|row| eval_table_row(row, TableSection::Body, doc, backend));
+      backend.exit_table_section(TableSection::Body);
+      if let Some(footer_row) = &table.footer_row {
+        backend.enter_table_section(TableSection::Footer);
+        eval_table_row(footer_row, TableSection::Footer, doc, backend);
+        backend.exit_table_section(TableSection::Footer);
+      }
+      backend.exit_table(table, block);
+    }
     (
       Context::DiscreteHeading,
       Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),
@@ -288,7 +312,7 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     }
     SpecialChar(char) => backend.visit_inline_specialchar(char),
     Text(text) => backend.visit_inline_text(text.as_str()),
-    JoiningNewline => backend.visit_joining_newline(),
+    Newline => backend.visit_joining_newline(),
     Italic(children) => {
       backend.enter_inline_italic(children);
       children.iter().for_each(|n| eval_inline(n, doc, backend));
@@ -368,6 +392,32 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       todo!();
     }
   }
+}
+
+fn eval_table_row(row: &Row, section: TableSection, doc: &Document, backend: &mut impl Backend) {
+  backend.enter_table_row(row, section);
+  row.cells.iter().for_each(|cell| {
+    backend.enter_table_cell(cell, section);
+    match &cell.content {
+      CellContent::Default(paragraphs)
+      | CellContent::Emphasis(paragraphs)
+      | CellContent::Header(paragraphs)
+      | CellContent::Monospace(paragraphs)
+      | CellContent::Strong(paragraphs) => {
+        paragraphs.iter().for_each(|paragraph| {
+          backend.enter_cell_paragraph(cell, section);
+          paragraph.iter().for_each(|n| eval_inline(n, doc, backend));
+          backend.exit_cell_paragraph(cell, section);
+        });
+      }
+      CellContent::Literal(nodes) => {
+        nodes.iter().for_each(|n| eval_inline(n, doc, backend));
+      }
+      CellContent::AsciiDoc(content) => eval_doc_content(doc, content, backend),
+    }
+    backend.exit_table_cell(cell, section);
+  });
+  backend.exit_table_row(row, section);
 }
 
 fn eval_toc_at(document: &Document, positions: &[TocPosition], backend: &mut impl Backend) {

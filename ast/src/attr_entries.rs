@@ -76,6 +76,42 @@ impl AttrEntries {
       _ => default,
     }
   }
+
+  // https://docs.asciidoctor.org/asciidoc/latest/attributes/character-replacement-ref/
+  pub fn builtin(&self, key: &str) -> Option<&'static str> {
+    match key {
+      "blank" | "empty" => Some(""),
+      "sp" => Some(" "),
+      "nbsp" => Some("&#160;"),
+      "zwsp" => Some("&#8203;"),
+      "wj" => Some("&#8288;"),
+      "apos" => Some("&#39;"),
+      "quot" => Some("&#34;"),
+      "lsquo" => Some("&#8216;"),
+      "rsquo" => Some("&#8217;"),
+      "ldquo" => Some("&#8220;"),
+      "rdquo" => Some("&#8221;"),
+      "deg" => Some("&#176;"),
+      "plus" => Some("&#43;"),
+      "brvbar" => Some("&#166;"),
+      "vbar" => Some("|"),
+      "amp" => Some("&"),
+      "lt" => Some("<"),
+      "gt" => Some(">"),
+      "startsb" => Some("["),
+      "endsb" => Some("]"),
+      "caret" => Some("^"),
+      "asterisk" => Some("*"),
+      "tilde" => Some("~"),
+      "backslash" => Some("\\"),
+      "backtick" => Some("`"),
+      "two-colons" => Some("::"),
+      "two-semicolons" => Some(";;"),
+      "cpp" => Some("C++"),
+      "pp" => Some("&#43;&#43;"),
+      _ => None,
+    }
+  }
 }
 
 impl Json for AttrEntry {

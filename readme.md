@@ -70,7 +70,7 @@ Be sure to pop the dev tools to see timing info.
 
 Known **unfinished or unimplemented** areas include:
 
-- [ ] Tables
+- [ ] CSV/TSV/DSV Tables
 - [ ] STEM
 - [ ] Source highlighting
 - [ ] Include directives

@@ -2,6 +2,7 @@ mod attr_entries;
 mod attr_list;
 mod block;
 mod chunk_meta;
+mod col_widths;
 mod doc_content;
 mod doc_header;
 mod inline;
@@ -12,6 +13,7 @@ mod r#macro;
 mod node;
 mod source_location;
 mod source_string;
+mod table;
 mod toc;
 
 pub use internal::types::*;
@@ -22,6 +24,7 @@ mod internal {
     pub use crate::attr_list::{AttrList, Named};
     pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
     pub use crate::chunk_meta::ChunkMeta;
+    pub use crate::col_widths::*;
     pub use crate::doc_content::DocContent;
     pub use crate::doc_header::{Author, DocHeader, DocTitle, Revision};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
@@ -33,6 +36,7 @@ mod internal {
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
+    pub use crate::table::*;
     pub use crate::toc::*;
     pub use smallvec::SmallVec;
   }
@@ -51,6 +55,7 @@ pub mod prelude {
   pub use crate::attr_list::{AttrList, Named};
   pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
   pub use crate::chunk_meta::ChunkMeta;
+  pub use crate::col_widths::*;
   pub use crate::doc_content::DocContent;
   pub use crate::doc_header::{Author, DocHeader, DocTitle};
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
@@ -60,6 +65,7 @@ pub mod prelude {
   pub use crate::r#macro::UrlScheme;
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
+  pub use crate::table::*;
   pub use crate::toc::*;
 }
 

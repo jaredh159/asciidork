@@ -44,6 +44,37 @@ macro_rules! assert_block {
 }
 
 #[macro_export]
+macro_rules! parse_table {
+  ($input:expr) => {{
+    let block = parse_single_block!($input);
+    match block.content {
+      BlockContent::Table(table) => table,
+      _ => panic!("expected table block content"),
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! assert_table {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let table = parse_table!($input);
+    assert_eq!(table, $expected);
+  }};
+}
+
+#[macro_export]
+macro_rules! assert_table_loose {
+  ($input:expr, $expected:expr$(,)?) => {{
+    let block = parse_single_block_loose!($input);
+    let table = match block.content {
+      BlockContent::Table(table) => table,
+      _ => panic!("expected table block content"),
+    };
+    assert_eq!(table, $expected);
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_inlines {
   ($input:expr, $expected:expr$(,)?) => {{
     let inlines = parse_inline_nodes!($input);
@@ -122,6 +153,47 @@ macro_rules! just {
 }
 
 #[macro_export]
+macro_rules! empty_cell {
+  () => {
+    Cell {
+      content: CellContent::Default(vecb![]),
+      col_span: 1,
+      row_span: 1,
+      h_align: HorizontalAlignment::Left,
+      v_align: VerticalAlignment::Top,
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! cell {
+  (d: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Default(vecb![just!($text, $range)]),
+      ..empty_cell!()
+    }
+  };
+  (e: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Emphasis(vecb![just!($text, $range)]),
+      ..empty_cell!()
+    }
+  };
+  (s: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Strong(vecb![just!($text, $range)]),
+      ..empty_cell!()
+    }
+  };
+  (l: $text:expr, $range:expr$(,)?) => {
+    Cell {
+      content: CellContent::Literal(just!($text, $range)),
+      ..empty_cell!()
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! empty_block {
   ($range:expr) => {
     Block {
@@ -129,6 +201,18 @@ macro_rules! empty_block {
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
       loc: SourceLocation::new($range.start, $range.end),
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! empty_table {
+  () => {
+    Table {
+      col_widths: ColWidths::new(vecb![]),
+      header_row: None,
+      rows: vecb![],
+      footer_row: None,
     }
   };
 }
@@ -327,6 +411,16 @@ macro_rules! parse_blocks {
 }
 
 #[macro_export]
+macro_rules! parse_blocks_loose {
+  ($input:expr) => {
+    parse_doc_content_loose!($input)
+      .blocks()
+      .expect("expected blocks")
+      .clone()
+  };
+}
+
+#[macro_export]
 macro_rules! parse_single_block {
   ($input:expr) => {{
     let blocks = parse_blocks!($input);
@@ -338,9 +432,30 @@ macro_rules! parse_single_block {
 }
 
 #[macro_export]
+macro_rules! parse_single_block_loose {
+  ($input:expr) => {{
+    let blocks = parse_blocks_loose!($input);
+    if blocks.len() != 1 {
+      panic!("expected one block, found {}", blocks.len());
+    }
+    blocks[0].clone()
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_doc_content {
   ($input:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().unwrap().document.content
+  }};
+}
+
+#[macro_export]
+macro_rules! parse_doc_content_loose {
+  ($input:expr) => {{
+    let mut opts = ::asciidork_opts::Opts::embedded();
+    opts.strict = false;
+    let parser = Parser::new_opts(leaked_bump(), $input, opts);
     parser.parse().unwrap().document.content
   }};
 }

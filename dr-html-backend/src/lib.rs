@@ -6,6 +6,7 @@ extern crate asciidork_eval as eval;
 
 mod asciidoctor_html;
 pub mod section;
+mod table;
 
 pub use asciidoctor_html::AsciidoctorHtml;
 

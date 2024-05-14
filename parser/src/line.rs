@@ -16,8 +16,16 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Line { all_tokens: tokens, src, pos: 0 }
   }
 
+  pub fn drain_into(mut self, tokens: &mut BumpVec<'bmp, Token<'src>>) {
+    tokens.extend(self.all_tokens.drain(self.pos..));
+  }
+
   pub fn current_token(&self) -> Option<&Token<'src>> {
     self.all_tokens.get(self.pos)
+  }
+
+  pub fn current_token_mut(&mut self) -> Option<&mut Token<'src>> {
+    self.all_tokens.get_mut(self.pos)
   }
 
   pub fn peek_token(&self) -> Option<&Token<'src>> {
@@ -307,8 +315,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   #[must_use]
   pub fn consume_macro_target(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
     let target = self.consume_to_string_until(OpenBracket, bump);
-    debug_assert!(self.current_is(OpenBracket));
-    self.discard(1); // `[`
+    self.discard_assert(OpenBracket);
     target
   }
 
@@ -318,8 +325,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       true => None,
       false => Some(self.consume_to_string_until(OpenBracket, bump)),
     };
-    debug_assert!(self.current_is(OpenBracket));
-    self.discard(1); // `[`
+    self.discard_assert(OpenBracket);
     target
   }
 
@@ -504,6 +510,18 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub const fn is_fully_unconsumed(&self) -> bool {
     self.pos == 0
+  }
+
+  pub fn trim_for_cell(&mut self, style: CellContentStyle) {
+    // literal cell should preserve only leading spaces
+    if matches!(style, CellContentStyle::Literal) {
+      while self.current_is(Newline) {
+        self.discard(1);
+      }
+    }
+    while self.last_token().is_whitespaceish() {
+      self.discard_last();
+    }
   }
 }
 

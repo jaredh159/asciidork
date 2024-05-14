@@ -29,7 +29,7 @@ pub enum BlockContent<'bmp> {
   Verbatim,
   Raw,
   Empty(EmptyMetadata<'bmp>),
-  Table,
+  Table(Table<'bmp>),
   Section(Section<'bmp>),
   DocumentAttribute(String, AttrEntry),
   QuotedParagraph {
@@ -109,7 +109,7 @@ impl<'bmp> BlockContent<'bmp> {
       BlockContent::Verbatim => todo!(),
       BlockContent::Raw => todo!(),
       BlockContent::Empty(_) => None,
-      BlockContent::Table => todo!(),
+      BlockContent::Table(_) => todo!(),
       BlockContent::DocumentAttribute(_, _) => None,
       BlockContent::QuotedParagraph { attr, cite, .. } => {
         cite.as_ref().map(|c| c.loc).or(Some(attr.loc))
@@ -216,7 +216,7 @@ impl Json for BlockContent<'_> {
           buf.add_member("meta", meta);
         }
       }
-      BlockContent::Table => todo!(),
+      BlockContent::Table(_) => todo!(),
       BlockContent::Section(section) => {
         buf.push_str("Section\"");
         buf.add_member("section", section);

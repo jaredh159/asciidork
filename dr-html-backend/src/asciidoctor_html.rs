@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt::Write;
 
 use crate::internal::*;
 use EphemeralState::*;
@@ -10,6 +11,7 @@ pub struct AsciidoctorHtml {
   pub(crate) footnotes: Vec<(String, String)>,
   pub(crate) doc_attrs: AttrEntries,
   pub(crate) fig_caption_num: usize,
+  pub(crate) table_caption_num: usize,
   pub(crate) opts: Opts,
   pub(crate) list_stack: Vec<bool>,
   pub(crate) default_newlines: Newlines,
@@ -416,11 +418,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_callout_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.autogen_conum = 1;
     self.open_element("div", &["colist arabic"], block.meta.attrs.as_ref());
-    self.push_str(if self.doc_attrs.get("icons").is_some() {
-      "<table>"
-    } else {
-      "<ol>"
-    });
+    self.push_str(if self.doc_attrs.get("icons").is_some() { "<table>" } else { "<ol>" });
   }
 
   fn exit_callout_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
@@ -529,13 +527,7 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
-  fn enter_list_item_blocks(
-    &mut self,
-    _blocks: &[Block],
-    _items: &ListItem,
-    _variant: ListVariant,
-  ) {
-  }
+  fn enter_list_item_blocks(&mut self, _: &[Block], _: &ListItem, _: ListVariant) {}
 
   fn exit_list_item_blocks(&mut self, _blocks: &[Block], _items: &ListItem, variant: ListVariant) {
     if variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
@@ -559,6 +551,64 @@ impl Backend for AsciidoctorHtml {
       self.push_str("</div>");
     }
     self.state.remove(&VisitingSimpleTermDescription);
+  }
+
+  fn enter_table(&mut self, table: &Table, block: &Block) {
+    self.open_table_element(block);
+    self.table_caption(block);
+    self.push_str("<colgroup>");
+    for width in table.col_widths.distribute() {
+      self.push_str("<col");
+      if let DistributedColWidth::Percentage(width) = width {
+        write!(self.html, r#" style="width: {}%;""#, width).unwrap();
+      }
+      self.push_ch('>');
+    }
+    self.push_str("</colgroup>");
+  }
+
+  fn exit_table(&mut self, _table: &Table, _block: &Block) {
+    self.push_str("</table>");
+  }
+
+  fn enter_table_section(&mut self, section: TableSection) {
+    match section {
+      TableSection::Header => self.push_str("<thead>"),
+      TableSection::Body => self.push_str("<tbody>"),
+      TableSection::Footer => self.push_str("<tfoot>"),
+    }
+  }
+
+  fn exit_table_section(&mut self, section: TableSection) {
+    match section {
+      TableSection::Header => self.push_str("</thead>"),
+      TableSection::Body => self.push_str("</tbody>"),
+      TableSection::Footer => self.push_str("</tfoot>"),
+    }
+  }
+
+  fn enter_table_row(&mut self, _row: &Row, _section: TableSection) {
+    self.push_str("<tr>");
+  }
+
+  fn exit_table_row(&mut self, _row: &Row, _section: TableSection) {
+    self.push_str("</tr>");
+  }
+
+  fn enter_table_cell(&mut self, cell: &Cell, section: TableSection) {
+    self.open_cell(cell, section);
+  }
+
+  fn exit_table_cell(&mut self, cell: &Cell, section: TableSection) {
+    self.close_cell(cell, section);
+  }
+
+  fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
+    self.open_cell_paragraph(cell, section);
+  }
+
+  fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
+    self.close_cell_paragraph(cell, section);
   }
 
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {
@@ -640,8 +690,8 @@ impl Backend for AsciidoctorHtml {
     if let Some(val) = val {
       self.push_str(&val);
       return;
-    }
-    if name == "empty" {
+    } else if let Some(builtin) = self.doc_attrs.builtin(name) {
+      self.push_str(builtin);
       return;
     }
     match self.opts.attribute_missing {
@@ -913,21 +963,21 @@ impl AsciidoctorHtml {
     self.html
   }
 
-  fn push_str(&mut self, s: &str) {
+  pub(crate) fn push_str(&mut self, s: &str) {
     self.html.push_str(s);
   }
 
-  fn push_buffered(&mut self) {
+  pub(crate) fn push_buffered(&mut self) {
     let mut buffer = String::new();
     mem::swap(&mut buffer, &mut self.alt_html);
     self.push_str(&buffer);
   }
 
-  fn push_ch(&mut self, c: char) {
+  pub(crate) fn push_ch(&mut self, c: char) {
     self.html.push(c);
   }
 
-  fn push<const N: usize>(&mut self, strs: [&str; N]) {
+  pub(crate) fn push<const N: usize>(&mut self, strs: [&str; N]) {
     for s in strs {
       self.push_str(s);
     }
@@ -968,7 +1018,7 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn open_element(&mut self, element: &str, classes: &[&str], attrs: Option<&AttrList>) {
+  pub(crate) fn open_element(&mut self, element: &str, classes: &[&str], attrs: Option<&AttrList>) {
     self.push_ch('<');
     self.push_str(element);
     if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {

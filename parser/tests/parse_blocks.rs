@@ -17,7 +17,7 @@ fn test_parse_simple_block() {
       context: Context::Paragraph,
       content: Content::Simple(nodes![
         node!("hello mamma,"; 0..12),
-        node!(JoiningNewline, 12..13),
+        node!(Newline, 12..13),
         node!("hello papa"; 13..23),
       ]),
       ..empty_block!(0..23)
@@ -131,7 +131,7 @@ fn test_parse_delimited_passthrough_block() {
     context: Context::Passthrough,
     content: Content::Simple(nodes![
       node!("foo <bar>"; 5..14),
-      node!(JoiningNewline, 14..15),
+      node!(Newline, 14..15),
       node!("baz"; 15..18),
     ]),
     ..empty_block!(0..23)
@@ -166,7 +166,7 @@ fn test_parse_delimited_passthrough_block_subs_normal() {
         ]),
         25..32,
       ),
-      node!(JoiningNewline, 32..33),
+      node!(Newline, 32..33),
       node!("baz"; 33..36),
     ]),
     ..empty_block!(0..41)
