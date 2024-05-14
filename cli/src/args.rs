@@ -42,11 +42,7 @@ impl From<Args> for Opts {
   fn from(args: Args) -> Self {
     Opts {
       // TODO: this might not be correct...
-      doc_type: if args.embedded {
-        DocType::Inline
-      } else {
-        args.doc_type
-      },
+      doc_type: if args.embedded { DocType::Inline } else { args.doc_type },
       ..Opts::default()
     }
   }

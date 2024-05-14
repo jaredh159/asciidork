@@ -113,6 +113,13 @@ test_eval!(
     wraps
 
     then after newlines
+    |joined by blank
+    {blank}
+    attribute
+
+    strips trailing newlines
+
+    when splitting paragraphs
     |===
   "#},
   html! {r#"
@@ -123,6 +130,13 @@ test_eval!(
           <td class="tableblock halign-left valign-top">
             <p class="tableblock">para wraps</p>
             <p class="tableblock">then after newlines</p>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">joined by blank  attribute</p>
+            <p class="tableblock">strips trailing newlines</p>
+            <p class="tableblock">when splitting paragraphs</p>
           </td>
         </tr>
       </tbody>

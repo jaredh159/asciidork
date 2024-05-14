@@ -690,8 +690,8 @@ impl Backend for AsciidoctorHtml {
     if let Some(val) = val {
       self.push_str(&val);
       return;
-    }
-    if name == "empty" {
+    } else if let Some(builtin) = self.doc_attrs.builtin(name) {
+      self.push_str(builtin);
       return;
     }
     match self.opts.attribute_missing {

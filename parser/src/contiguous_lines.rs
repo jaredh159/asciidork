@@ -254,11 +254,7 @@ impl<'bmp, 'src> Iterator for LinesIter<'bmp, 'src> {
       None
     } else {
       let item = self.lines.reversed_lines.get(self.pos);
-      self.pos = if self.pos == 0 {
-        usize::MAX
-      } else {
-        self.pos - 1
-      };
+      self.pos = if self.pos == 0 { usize::MAX } else { self.pos - 1 };
       item
     }
   }
