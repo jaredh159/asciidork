@@ -213,6 +213,57 @@ test_eval!(
 );
 
 test_eval!(
+  basic_asciidoc_content,
+  adoc! {r#"
+    |===
+    a|AsciiDoc table cell
+    a|--
+    NOTE: content
+
+    content
+    --
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <div class="paragraph">
+                <p>AsciiDoc table cell</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <div class="openblock">
+                <div class="content">
+                  <div class="admonitionblock note">
+                    <table>
+                      <tr>
+                        <td class="icon"><div class="title">Note</div></td>
+                        <td class="content">content</td>
+                      </tr>
+                    </table>
+                  </div>
+                  <div class="paragraph">
+                    <p>content</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+test_eval!(
   spans_alignments_and_styles,
   adoc! {r#"
     [cols="e,m,^,>s",width="25%"]

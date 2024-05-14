@@ -77,8 +77,10 @@ impl AsciidoctorHtml {
     }
     self.push_str("\">");
 
-    if matches!(&cell.content, CellContent::Literal(_)) {
-      self.push_str("<div class=\"literal\"><pre>");
+    match &cell.content {
+      CellContent::AsciiDoc(_) => self.push_str("<div class=\"content\">"),
+      CellContent::Literal(_) => self.push_str("<div class=\"literal\"><pre>"),
+      _ => {}
     }
   }
 
@@ -87,7 +89,7 @@ impl AsciidoctorHtml {
       (TableSection::Header, _) => self.push_str("</th>"),
       (TableSection::Body, CellContent::Header(_)) => self.push_str("</th>"),
       (_, CellContent::Literal(_)) => self.push_str("</pre></div></td>"),
-      (_, CellContent::AsciiDoc(_)) => {}
+      (_, CellContent::AsciiDoc(_)) => self.push_str("</div></td>"),
       _ => self.push_str("</td>"),
     }
   }
