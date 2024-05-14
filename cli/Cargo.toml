@@ -1,6 +1,6 @@
 [package]
 name = "asciidork-cli"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Asciidork CLI"
 license = "MIT"
@@ -10,10 +10,10 @@ name = "asciidork"
 path = "src/main.rs"
 
 [dependencies]
-asciidork-eval = { path = "../eval", version = "0.4.0" }
+asciidork-eval = { path = "../eval", version = "0.5.0" }
 asciidork-opts = { path = "../opts", version = "0.3.0" }
-asciidork-parser = { path = "../parser", version = "0.4.0" }
-asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.4.0" }
+asciidork-parser = { path = "../parser", version = "0.5.0" }
+asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.5.0" }
 colored = "2.0.4"
 bumpalo = { version = "3.15.4", features = ["collections"] }
 clap = { version = "4.5.4", features = ["derive"] }
