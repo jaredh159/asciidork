@@ -603,6 +603,14 @@ impl Backend for AsciidoctorHtml {
     self.close_cell(cell, section);
   }
 
+  fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
+    self.open_cell_paragraph(cell, section);
+  }
+
+  fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
+    self.close_cell_paragraph(cell, section);
+  }
+
   fn enter_inline_italic(&mut self, _children: &[InlineNode]) {
     self.push_str("<em>");
   }

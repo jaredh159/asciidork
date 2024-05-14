@@ -152,6 +152,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     }
 
+    let spec_start = tokens.current().unwrap().loc.start;
     let (spec, mut start) = match self.consume_cell_start(tokens, ctx.format.sep()) {
       Some((spec, start)) => (spec, start),
       None => {
@@ -160,6 +161,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         (CellSpec::default(), tokens.current().unwrap().loc.start)
       }
     };
+
+    if !ctx.counting_cols && spec.col_span.unwrap_or(0) > ctx.num_cols as u8 {
+      self.err_at(
+        format!(
+          "Cell column span ({}) exceeds number of columns ({})",
+          spec.col_span.unwrap(),
+          ctx.num_cols
+        ),
+        spec_start,
+        start - 1,
+      )?;
+    }
 
     let mut end = start;
     let mut cell_tokens = bvec![in self.bump];
@@ -250,21 +263,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
       line.drain_into(&mut tokens);
       if !lines.is_empty() {
-        tokens.push(Token {
-          kind: TokenKind::Newline,
-          lexeme: "\n",
-          loc: SourceLocation::new(end, end + 1),
-        });
+        tokens.push(newline_token(end));
         end += 1;
       }
     }
     while let Some(next_line) = self.read_line() {
       if !tokens.is_empty() {
-        tokens.push(Token {
-          kind: TokenKind::Newline,
-          lexeme: "\n",
-          loc: SourceLocation::new(end, end + 1),
-        });
+        tokens.push(newline_token(end));
         end += 1;
       }
       if next_line.src == start_delim.src {
@@ -335,7 +340,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       };
     }
 
-    let inlines = if cell_tokens.is_empty() {
+    let nodes = if cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
     } else {
       let mut cell_line = self.line_from(cell_tokens, loc);
@@ -348,16 +353,47 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
 
     let content = match cell_style {
-      CellContentStyle::Default => CellContent::Default(inlines),
-      CellContentStyle::Emphasis => CellContent::Emphasis(inlines),
-      CellContentStyle::Header => CellContent::Header(inlines),
-      CellContentStyle::Literal => CellContent::Literal(inlines),
-      CellContentStyle::Monospace => CellContent::Monospace(inlines),
-      CellContentStyle::Strong => CellContent::Strong(inlines),
+      CellContentStyle::Default => CellContent::Default(self.split_paragraphs(nodes)),
+      CellContentStyle::Emphasis => CellContent::Emphasis(self.split_paragraphs(nodes)),
+      CellContentStyle::Header => CellContent::Header(self.split_paragraphs(nodes)),
+      CellContentStyle::Monospace => CellContent::Monospace(self.split_paragraphs(nodes)),
+      CellContentStyle::Strong => CellContent::Strong(self.split_paragraphs(nodes)),
+      CellContentStyle::Literal => CellContent::Literal(nodes),
       CellContentStyle::AsciiDoc => unreachable!("Parser::finish_cell() asciidoc"),
     };
 
     Ok(Some((Cell::new(content, cell_spec, col_spec), repeat)))
+  }
+
+  fn split_paragraphs(&self, nodes: InlineNodes<'bmp>) -> BumpVec<'bmp, InlineNodes<'bmp>> {
+    let mut paras = bvec![in self.bump];
+    if nodes.is_empty() {
+      return paras;
+    }
+    let mut index = 0;
+    paras.push(InlineNodes::new(self.bump));
+    for node in nodes.into_vec() {
+      if matches!(node.content, Inline::Newline)
+        && paras[index]
+          .last()
+          .map_or(false, |n| n.content == Inline::Newline)
+      {
+        paras[index].pop();
+        index += 1;
+        paras.push(InlineNodes::new(self.bump));
+      } else {
+        paras[index].push(node);
+      }
+    }
+    paras
+  }
+}
+
+fn newline_token(start: usize) -> Token<'static> {
+  Token {
+    kind: TokenKind::Newline,
+    lexeme: "\n",
+    loc: SourceLocation::new(start, start + 1),
   }
 }
 
@@ -585,11 +621,11 @@ mod tests {
           Row::new(vecb![
             cell!(d: "c1, r1", 6..12),
             Cell {
-              content: CellContent::Default(nodes![
+              content: CellContent::Default(vecb![nodes![
                 node!("c2,"; 13..16),
                 node!(Inline::Newline, 16..17),
                 node!("r1"; 17..19),
-              ]),
+              ]]),
               ..empty_cell!()
             }
           ]),
@@ -630,6 +666,16 @@ mod tests {
     assert_eq!(table.rows[0].cells.len(), 2);
     assert_eq!(table.rows[1].cells.len(), 3);
     assert_eq!(table.col_widths, ColWidths::new(vecb![w(1), w(1), w(1)]));
+    let table = parse_table!(adoc! {r#"
+      |===
+      2+^|AAA |CCC
+      |AAA |BBB |CCC
+      |===
+    "#});
+    assert_eq!(table.rows.len(), 2);
+    assert_eq!(table.col_widths.len(), 3);
+    assert_eq!(table.rows[0].cells.len(), 2);
+    assert_eq!(table.rows[1].cells.len(), 3);
   }
 
   #[test]
@@ -1041,6 +1087,20 @@ mod tests {
     error! {r"
       2: foo
          ^ Expected cell separator `|`
+    "}
+  );
+
+  test_error!(
+    cell_span_overflow,
+    adoc! {r#"
+      [cols="1,1"]
+      |===
+      3+|foo
+      |===
+    "#},
+    error! {r"
+      3: 3+|foo
+         ^^ Cell column span (3) exceeds number of columns (2)
     "}
   );
 }

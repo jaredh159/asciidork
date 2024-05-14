@@ -413,16 +413,21 @@ fn eval_table_row(row: &Row, section: TableSection, doc: &Document, backend: &mu
   row.cells.iter().for_each(|cell| {
     backend.enter_table_cell(cell, section);
     match &cell.content {
-      CellContent::Default(nodes)
-      | CellContent::Emphasis(nodes)
-      | CellContent::Header(nodes)
-      | CellContent::Literal(nodes)
-      | CellContent::Monospace(nodes)
-      | CellContent::Strong(nodes) => {
+      CellContent::Default(paragraphs)
+      | CellContent::Emphasis(paragraphs)
+      | CellContent::Header(paragraphs)
+      | CellContent::Monospace(paragraphs)
+      | CellContent::Strong(paragraphs) => {
+        paragraphs.iter().for_each(|paragraph| {
+          backend.enter_cell_paragraph(cell, section);
+          paragraph.iter().for_each(|n| eval_inline(n, doc, backend));
+          backend.exit_cell_paragraph(cell, section);
+        });
+      }
+      CellContent::Literal(nodes) => {
         nodes.iter().for_each(|n| eval_inline(n, doc, backend));
       }
-      // CellContent::AsciiDoc(content) => eval_doc_content(doc, content, backend),
-      CellContent::AsciiDoc(_content) => todo!(),
+      CellContent::AsciiDoc(content) => eval_doc_content(doc, content, backend),
     }
     backend.exit_table_cell(cell, section);
   });

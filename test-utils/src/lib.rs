@@ -156,7 +156,7 @@ macro_rules! just {
 macro_rules! empty_cell {
   () => {
     Cell {
-      content: CellContent::Default(nodes![]),
+      content: CellContent::Default(vecb![]),
       col_span: 1,
       row_span: 1,
       h_align: HorizontalAlignment::Left,
@@ -169,19 +169,19 @@ macro_rules! empty_cell {
 macro_rules! cell {
   (d: $text:expr, $range:expr$(,)?) => {
     Cell {
-      content: CellContent::Default(just!($text, $range)),
+      content: CellContent::Default(vecb![just!($text, $range)]),
       ..empty_cell!()
     }
   };
   (e: $text:expr, $range:expr$(,)?) => {
     Cell {
-      content: CellContent::Emphasis(just!($text, $range)),
+      content: CellContent::Emphasis(vecb![just!($text, $range)]),
       ..empty_cell!()
     }
   };
   (s: $text:expr, $range:expr$(,)?) => {
     Cell {
-      content: CellContent::Strong(just!($text, $range)),
+      content: CellContent::Strong(vecb![just!($text, $range)]),
       ..empty_cell!()
     }
   };

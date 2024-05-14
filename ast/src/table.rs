@@ -21,12 +21,12 @@ pub enum VerticalAlignment {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CellContent<'bmp> {
   AsciiDoc(DocContent<'bmp>),
-  Default(InlineNodes<'bmp>),
-  Emphasis(InlineNodes<'bmp>),
-  Header(InlineNodes<'bmp>),
+  Default(BumpVec<'bmp, InlineNodes<'bmp>>),
+  Emphasis(BumpVec<'bmp, InlineNodes<'bmp>>),
+  Header(BumpVec<'bmp, InlineNodes<'bmp>>),
   Literal(InlineNodes<'bmp>),
-  Monospace(InlineNodes<'bmp>),
-  Strong(InlineNodes<'bmp>),
+  Monospace(BumpVec<'bmp, InlineNodes<'bmp>>),
+  Strong(BumpVec<'bmp, InlineNodes<'bmp>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]

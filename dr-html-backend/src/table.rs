@@ -77,29 +77,38 @@ impl AsciidoctorHtml {
     }
     self.push_str("\">");
 
-    match (section, &cell.content) {
-      (TableSection::Header, _) => {}
-      (_, CellContent::Default(_) | CellContent::Header(_)) => {
-        self.push_str("<p class=\"tableblock\">")
-      }
-      (_, CellContent::Emphasis(_)) => self.push_str("<p class=\"tableblock\"><em>"),
-      (_, CellContent::Literal(_)) => self.push_str("<div class=\"literal\"><pre>"),
-      (_, CellContent::Monospace(_)) => self.push_str("<p class=\"tableblock\"><code>"),
-      (_, CellContent::Strong(_)) => self.push_str("<p class=\"tableblock\"><strong>"),
-      (_, CellContent::AsciiDoc(_)) => {}
+    if matches!(&cell.content, CellContent::Literal(_)) {
+      self.push_str("<div class=\"literal\"><pre>");
     }
   }
 
   pub(super) fn close_cell(&mut self, cell: &Cell, section: TableSection) {
     match (section, &cell.content) {
       (TableSection::Header, _) => self.push_str("</th>"),
-      (TableSection::Body, CellContent::Header(_)) => self.push_str("</p></th>"),
-      (_, CellContent::Emphasis(_)) => self.push_str("</em></p></td>"),
+      (TableSection::Body, CellContent::Header(_)) => self.push_str("</th>"),
       (_, CellContent::Literal(_)) => self.push_str("</pre></div></td>"),
-      (_, CellContent::Monospace(_)) => self.push_str("</code></p></td>"),
-      (_, CellContent::Strong(_)) => self.push_str("</strong></p></td>"),
       (_, CellContent::AsciiDoc(_)) => {}
-      _ => self.push_str("</p></td>"),
+      _ => self.push_str("</td>"),
+    }
+  }
+
+  pub(super) fn open_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
+    match (section, &cell.content) {
+      (TableSection::Header, _) => {}
+      (_, CellContent::Emphasis(_)) => self.push_str("<p class=\"tableblock\"><em>"),
+      (_, CellContent::Monospace(_)) => self.push_str("<p class=\"tableblock\"><code>"),
+      (_, CellContent::Strong(_)) => self.push_str("<p class=\"tableblock\"><strong>"),
+      _ => self.push_str("<p class=\"tableblock\">"),
+    }
+  }
+
+  pub(super) fn close_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
+    match (section, &cell.content) {
+      (TableSection::Header, _) => {}
+      (_, CellContent::Emphasis(_)) => self.push_str("</em></p>"),
+      (_, CellContent::Monospace(_)) => self.push_str("</code></p>"),
+      (_, CellContent::Strong(_)) => self.push_str("</strong></p>"),
+      _ => self.push_str("</p>"),
     }
   }
 }

@@ -70,6 +70,10 @@ impl<'bmp> InlineNodes<'bmp> {
       None
     }
   }
+
+  pub fn into_vec(self) -> BumpVec<'bmp, InlineNode<'bmp>> {
+    self.0
+  }
 }
 
 impl<'bmp> Deref for InlineNodes<'bmp> {

@@ -98,6 +98,8 @@ pub trait Backend {
   fn exit_table_row(&mut self, row: &Row, section: TableSection);
   fn enter_table_cell(&mut self, cell: &Cell, section: TableSection);
   fn exit_table_cell(&mut self, cell: &Cell, section: TableSection);
+  fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection);
+  fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection);
 
   // block content
   fn enter_block_title(&mut self, title: &[InlineNode], block: &Block);

@@ -106,6 +106,31 @@ test_eval!(
 );
 
 test_eval!(
+  cell_content_paragraphs,
+  adoc! {r#"
+    |===
+    |para
+    wraps
+
+    then after newlines
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">para wraps</p>
+            <p class="tableblock">then after newlines</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+test_eval!(
   formatting_in_header_row,
   adoc! {r#"
     [cols="2*m"]
