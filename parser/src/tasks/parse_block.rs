@@ -345,4 +345,25 @@ mod tests {
     };
     assert_eq!(block, expected);
   }
+
+  #[test]
+  fn test_inline_only_parses_single_paragraph() {
+    let input = adoc! {"
+      first para
+
+      second para (ignored)
+    "};
+    let parser = Parser::new_opts(leaked_bump(), input, opts::Opts::embedded());
+    let result = parser.parse().unwrap();
+    let blocks = result.document.content.blocks().unwrap();
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(
+      blocks[0],
+      Block {
+        context: Context::Paragraph,
+        content: Content::Simple(just!("first para", 0..10)),
+        ..empty_block!(0..10)
+      }
+    );
+  }
 }

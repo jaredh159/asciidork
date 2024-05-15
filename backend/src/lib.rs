@@ -11,5 +11,6 @@ pub use backend::Backend;
 pub mod prelude {
   pub use super::AdmonitionKind;
   pub use super::Backend;
-  pub use opts::{AttributeMissing, DocType, Opts};
+  pub use ast::DocType;
+  pub use opts::{AttributeMissing, Opts};
 }

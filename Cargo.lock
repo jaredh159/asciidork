@@ -83,6 +83,7 @@ dependencies = [
 name = "asciidork-cli"
 version = "0.5.0"
 dependencies = [
+ "asciidork-ast",
  "asciidork-dr-html-backend",
  "asciidork-eval",
  "asciidork-opts",
@@ -120,6 +121,9 @@ dependencies = [
 [[package]]
 name = "asciidork-opts"
 version = "0.3.3"
+dependencies = [
+ "asciidork-ast",
+]
 
 [[package]]
 name = "asciidork-parser"

@@ -42,6 +42,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn new_opts(bump: &'bmp Bump, src: &'src str, opts: opts::Opts) -> Parser<'bmp, 'src> {
     let mut p = Parser::new(bump, src);
     p.strict = opts.strict;
+    p.document.kind = opts.doc_type;
     p
   }
 
@@ -149,6 +150,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
     self.document.header = self.parse_document_header()?;
+
+    // ensure we only read a single "paragraph" for `inline` doc_type
+    // https://docs.asciidoctor.org/asciidoc/latest/document/doctype/#inline-doctype-rules
+    if self.document.kind == DocType::Inline {
+      if self.peeked_lines.is_none() {
+        self.peeked_lines = self.read_lines();
+      }
+      self.lexer.truncate();
+    }
 
     while let Some(chunk) = self.parse_chunk()? {
       match chunk {

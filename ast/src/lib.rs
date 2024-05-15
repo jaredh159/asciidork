@@ -5,6 +5,7 @@ mod chunk_meta;
 mod col_widths;
 mod doc_content;
 mod doc_header;
+mod doc_type;
 mod inline;
 mod inline_nodes;
 mod json;
@@ -27,6 +28,7 @@ mod internal {
     pub use crate::col_widths::*;
     pub use crate::doc_content::DocContent;
     pub use crate::doc_header::{Author, DocHeader, DocTitle, Revision};
+    pub use crate::doc_type::DocType;
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
     pub use crate::inline::{CurlyKind::*, QuoteKind::*};
     pub use crate::inline_nodes::InlineNodes;

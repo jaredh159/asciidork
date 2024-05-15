@@ -39,6 +39,19 @@ test_eval!(
 );
 
 test_eval!(
+  table_cell_doctype,
+  adoc! {r#"
+    |===
+    a|
+    :doctype: inline
+
+    content
+    |===
+  "#},
+  html_contains: r#"<div class="content">content</div>"#
+);
+
+test_eval!(
   complex_table,
   adoc! {r#"
     .Table Title

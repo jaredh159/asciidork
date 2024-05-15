@@ -39,7 +39,7 @@ macro_rules! test_eval_loose {
   ($name:ident, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      let mut opts = ::asciidork_eval::Opts::embedded();
+      let mut opts = ::asciidork_eval::Opts::default();
       opts.strict = false;
       let bump = &::asciidork_parser::prelude::Bump::new();
       let parser = ::asciidork_parser::Parser::new_opts(bump, $input, opts);
@@ -48,7 +48,9 @@ macro_rules! test_eval_loose {
         &document,
         opts,
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
-      ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
+      let mut body = actual.splitn(2, "<body class=\"article\">").nth(1).unwrap();
+      body = body.splitn(2, "</body>").nth(0).unwrap();
+      ::test_utils::assert_eq!(body, $expected.to_string(), from: $input);
     }
   };
 }

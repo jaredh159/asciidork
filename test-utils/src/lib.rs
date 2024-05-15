@@ -221,6 +221,7 @@ macro_rules! empty_table {
 macro_rules! empty_document {
   () => {
     Document {
+      kind: DocType::default(),
       content: DocContent::Blocks(vecb![]),
       header: None,
       toc: None,
@@ -466,7 +467,7 @@ macro_rules! parse_doc_content {
 #[macro_export]
 macro_rules! parse_doc_content_loose {
   ($input:expr) => {{
-    let mut opts = ::asciidork_opts::Opts::embedded();
+    let mut opts = ::asciidork_opts::Opts::default();
     opts.strict = false;
     let parser = Parser::new_opts(leaked_bump(), $input, opts);
     parser.parse().unwrap().document.content

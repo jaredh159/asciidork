@@ -517,6 +517,13 @@ impl<'src> Lexer<'src> {
     }
     self.single(LessThan)
   }
+
+  pub fn truncate(&mut self) {
+    self.src = &self.src[..self.offset()];
+    self.bytes = self.src.bytes();
+    while self.bytes.next().is_some() {}
+    self.peek = None;
+  }
 }
 
 #[cfg(test)]

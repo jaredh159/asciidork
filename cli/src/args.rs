@@ -1,4 +1,5 @@
-use asciidork_opts::{DocType, Opts};
+use asciidork_ast::DocType;
+use asciidork_opts::Opts;
 use clap::Parser;
 use std::str::FromStr;
 

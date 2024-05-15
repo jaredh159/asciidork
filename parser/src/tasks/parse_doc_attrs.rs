@@ -8,6 +8,16 @@ use crate::internal::*;
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'bmp, 'src>) -> Result<()> {
     while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
+      if key == "doctype" {
+        if let AttrEntry::String(s) = &value {
+          match s.as_str().parse::<DocType>() {
+            Ok(doc_type) => self.document.kind = doc_type,
+            Err(err) => self.err_doc_attr(":doctype:", err)?,
+          }
+        } else {
+          self.err_doc_attr(":!doctype:", "".parse::<DocType>().err().unwrap())?;
+        }
+      }
       self.document.attrs.insert(key, value);
     }
     Ok(())
@@ -113,6 +123,7 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::{assert_eq, *};
 
   #[test]
   fn test_parse_doc_attr() {
@@ -159,4 +170,30 @@ mod tests {
       assert_eq!(value, expected_val);
     }
   }
+
+  test_error!(
+    test_parse_doc_attr_error_str,
+    adoc! {"
+      :doctype: bad
+
+      para
+    "},
+    error! {"
+      1: :doctype: bad
+         ^^^^^^^^^^^^^ Invalid doc type: expected `article`, `book`, `manpage`, or `inline`
+    "}
+  );
+
+  test_error!(
+    test_parse_doc_attr_error_unset,
+    adoc! {"
+      :!doctype:
+
+      para
+    "},
+    error! {"
+      1: :!doctype:
+         ^^^^^^^^^^ Invalid doc type: expected `article`, `book`, `manpage`, or `inline`
+    "}
+  );
 }

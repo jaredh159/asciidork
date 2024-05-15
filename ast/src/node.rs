@@ -6,6 +6,7 @@ use crate::internal::*;
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#document
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Document<'bmp> {
+  pub kind: DocType,
   pub header: Option<DocHeader<'bmp>>,
   pub content: DocContent<'bmp>,
   pub toc: Option<TableOfContents<'bmp>>,
@@ -22,6 +23,7 @@ pub struct Anchor<'bmp> {
 impl<'bmp> Document<'bmp> {
   pub fn new(bump: &'bmp Bump) -> Self {
     Self {
+      kind: DocType::default(),
       header: None,
       content: DocContent::Blocks(bvec![in bump]),
       toc: None,

@@ -10,6 +10,7 @@ pub struct AsciidoctorHtml {
   pub(crate) alt_html: String,
   pub(crate) footnotes: Vec<(String, String)>,
   pub(crate) doc_attrs: AttrEntries,
+  pub(crate) doc_type: DocType,
   pub(crate) fig_caption_num: usize,
   pub(crate) table_caption_num: usize,
   pub(crate) opts: Opts,
@@ -31,6 +32,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_document(&mut self, document: &Document, opts: Opts) {
     self.opts = opts;
     self.doc_attrs = document.attrs.clone();
+    self.doc_type = document.kind;
     self.section_num_levels = document.attrs.isize("sectnumlevels").unwrap_or(3);
     if document.attrs.is_set("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
@@ -539,19 +541,23 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_paragraph_block(&mut self, block: &Block) {
-    if !self.state.contains(&VisitingSimpleTermDescription) {
-      self.open_element("div", &["paragraph"], block.meta.attrs.as_ref());
-      self.render_block_title(&block.meta);
+    if self.doc_type != DocType::Inline {
+      if !self.state.contains(&VisitingSimpleTermDescription) {
+        self.open_element("div", &["paragraph"], block.meta.attrs.as_ref());
+        self.render_block_title(&block.meta);
+      }
+      self.push_str("<p>");
     }
-    self.push_str("<p>");
   }
 
   fn exit_paragraph_block(&mut self, _block: &Block) {
-    self.push_str("</p>");
-    if !self.state.contains(&VisitingSimpleTermDescription) {
-      self.push_str("</div>");
+    if self.doc_type != DocType::Inline {
+      self.push_str("</p>");
+      if !self.state.contains(&VisitingSimpleTermDescription) {
+        self.push_str("</div>");
+      }
+      self.state.remove(&VisitingSimpleTermDescription);
     }
-    self.state.remove(&VisitingSimpleTermDescription);
   }
 
   fn enter_table(&mut self, table: &Table, block: &Block) {
