@@ -1,36 +1,11 @@
-use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result};
 
 use crate::internal::*;
-
-// https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#document
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Document<'bmp> {
-  pub kind: DocType,
-  pub header: Option<DocHeader<'bmp>>,
-  pub content: DocContent<'bmp>,
-  pub toc: Option<TableOfContents<'bmp>>,
-  pub anchors: HashMap<BumpString<'bmp>, Anchor<'bmp>>,
-  pub attrs: AttrEntries,
-}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Anchor<'bmp> {
   pub reftext: Option<InlineNodes<'bmp>>,
   pub title: InlineNodes<'bmp>,
-}
-
-impl<'bmp> Document<'bmp> {
-  pub fn new(bump: &'bmp Bump) -> Self {
-    Self {
-      kind: DocType::default(),
-      header: None,
-      content: DocContent::Blocks(bvec![in bump]),
-      toc: None,
-      anchors: HashMap::new(),
-      attrs: AttrEntries::new(),
-    }
-  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

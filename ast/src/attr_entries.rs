@@ -26,12 +26,16 @@ impl AttrEntries {
     Self(HashMap::new())
   }
 
-  pub fn insert(&mut self, key: String, value: AttrEntry) {
-    self.0.insert(key, value);
+  pub fn insert(&mut self, key: impl Into<String>, value: AttrEntry) {
+    self.0.insert(key.into(), value);
   }
 
   pub fn get(&self, key: &str) -> Option<&AttrEntry> {
     self.0.get(key)
+  }
+
+  pub fn remove(&mut self, key: &str) -> Option<AttrEntry> {
+    self.0.remove(key)
   }
 
   pub fn is_set(&self, key: &str) -> bool {

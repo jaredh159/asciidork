@@ -322,7 +322,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if cell_style == CellContentStyle::AsciiDoc {
       let mut cell_line = self.line_from(cell_tokens, loc.clone());
       cell_line.trim_for_cell(cell_style);
-      let cell_parser = self.nest(cell_line.src, loc.start);
+      let cell_parser = self.cell_parser(cell_line.src, loc.start);
       return match cell_parser.parse() {
         Ok(ParseResult { document, warnings }) => {
           if !warnings.is_empty() {
@@ -451,8 +451,8 @@ mod tests {
         col_widths: ColWidths::new(vecb![w(1), w(1)]),
         rows: vecb![Row::new(vecb![
           Cell {
-            content: CellContent::AsciiDoc(Document {
-              content: DocContent::Blocks(vecb![Block {
+            content: CellContent::AsciiDoc(Document::from_content(DocContent::Blocks(vecb![
+              Block {
                 meta: ChunkMeta::empty(8),
                 content: BlockContent::List {
                   variant: ListVariant::Unordered,
@@ -466,9 +466,8 @@ mod tests {
                 },
                 context: BlockContext::UnorderedList,
                 loc: SourceLocation::new(8, 13)
-              }]),
-              ..empty_document!()
-            }),
+              }
+            ]))),
             ..empty_cell!()
           },
           cell!(d: "two", 15..18)
@@ -491,14 +490,11 @@ mod tests {
     assert_eq!(
       parse_table!(input).rows[0].cells[0],
       Cell {
-        content: CellContent::AsciiDoc(Document {
-          content: DocContent::Blocks(vecb![Block {
-            context: BlockContext::Literal,
-            content: BlockContent::Simple(just!("literal", 23..30)),
-            ..empty_block!(21..30)
-          }]),
-          ..empty_document!()
-        }),
+        content: CellContent::AsciiDoc(Document::from_content(DocContent::Blocks(vecb![Block {
+          context: BlockContext::Literal,
+          content: BlockContent::Simple(just!("literal", 23..30)),
+          ..empty_block!(21..30)
+        }])),),
         ..empty_cell!()
       }
     );

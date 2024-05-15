@@ -52,6 +52,19 @@ test_eval!(
 );
 
 test_eval!(
+  table_cell_resets_doctype_preserves_other_attrs,
+  adoc! {r#"
+    :doctype: book
+    :foo: bar
+
+    |===
+    a| doctype={doctype} foo={foo}
+    |===
+  "#},
+  html_contains: "doctype=article foo=bar"
+);
+
+test_eval!(
   complex_table,
   adoc! {r#"
     .Table Title

@@ -42,15 +42,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn new_opts(bump: &'bmp Bump, src: &'src str, opts: opts::Opts) -> Parser<'bmp, 'src> {
     let mut p = Parser::new(bump, src);
     p.strict = opts.strict;
-    p.document.kind = opts.doc_type;
+    p.document.set_type(opts.doc_type);
     p
   }
 
-  pub fn nest(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {
-    let mut nested = Parser::new(self.bump, src);
-    nested.strict = self.strict;
-    nested.lexer.adjust_offset(offset);
-    nested
+  pub fn cell_parser(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {
+    let mut cell_parser = Parser::new(self.bump, src);
+    cell_parser.strict = self.strict;
+    cell_parser.lexer.adjust_offset(offset);
+    cell_parser.document.attrs = self.document.attrs.clone();
+    cell_parser.document.set_type(DocType::Article);
+    cell_parser
   }
 
   pub(crate) fn debug_loc(&self, loc: SourceLocation) {
@@ -153,7 +155,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     // ensure we only read a single "paragraph" for `inline` doc_type
     // https://docs.asciidoctor.org/asciidoc/latest/document/doctype/#inline-doctype-rules
-    if self.document.kind == DocType::Inline {
+    if self.document.get_type() == DocType::Inline {
       if self.peeked_lines.is_none() {
         self.peeked_lines = self.read_lines();
       }

@@ -11,7 +11,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       if key == "doctype" {
         if let AttrEntry::String(s) = &value {
           match s.as_str().parse::<DocType>() {
-            Ok(doc_type) => self.document.kind = doc_type,
+            Ok(doc_type) => self.document.set_type(doc_type),
             Err(err) => self.err_doc_attr(":doctype:", err)?,
           }
         } else {

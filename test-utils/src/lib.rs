@@ -220,14 +220,7 @@ macro_rules! empty_table {
 #[macro_export]
 macro_rules! empty_document {
   () => {
-    Document {
-      kind: DocType::default(),
-      content: DocContent::Blocks(vecb![]),
-      header: None,
-      toc: None,
-      anchors: std::collections::HashMap::new(),
-      attrs: AttrEntries::new(),
-    }
+    Document::new(leaked_bump())
   };
 }
 

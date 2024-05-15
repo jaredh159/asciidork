@@ -32,7 +32,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_document(&mut self, document: &Document, opts: Opts) {
     self.opts = opts;
     self.doc_attrs = document.attrs.clone();
-    self.doc_type = document.kind;
+    self.doc_type = document.get_type();
     self.section_num_levels = document.attrs.isize("sectnumlevels").unwrap_or(3);
     if document.attrs.is_set("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
