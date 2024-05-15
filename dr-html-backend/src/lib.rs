@@ -11,7 +11,7 @@ mod table;
 pub use asciidoctor_html::AsciidoctorHtml;
 
 pub fn convert(document: ast::Document, opts: eval::Opts) -> Result<String, Box<dyn Error>> {
-  Ok(eval::eval(document, opts, AsciidoctorHtml::new())?)
+  Ok(eval::eval(&document, opts, AsciidoctorHtml::new())?)
 }
 
 pub fn convert_embedded_article(document: ast::Document) -> Result<String, Box<dyn Error>> {

@@ -7,7 +7,7 @@ macro_rules! test_eval {
       let parser = ::asciidork_parser::Parser::new(bump, $input);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
-        document,
+        &document,
         ::asciidork_eval::Opts::embedded(),
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
       ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
@@ -20,7 +20,7 @@ macro_rules! test_eval {
       let parser = ::asciidork_parser::Parser::new(bump, $input);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
-        document,
+        &document,
         ::asciidork_eval::Opts::embedded(),
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
       assert!(
@@ -45,7 +45,7 @@ macro_rules! test_eval_loose {
       let parser = ::asciidork_parser::Parser::new_opts(bump, $input, opts);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
-        document,
+        &document,
         opts,
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
       ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
@@ -62,7 +62,7 @@ macro_rules! test_non_embedded_contains {
       let parser = ::asciidork_parser::Parser::new(bump, $input);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
-        document,
+        &document,
         ::asciidork_eval::Opts::default(),
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
       for needle in &$needles {

@@ -1,20 +1,20 @@
 use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/document/header/
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DocHeader<'bmp> {
   pub title: Option<DocTitle<'bmp>>,
   pub authors: BumpVec<'bmp, Author<'bmp>>,
   pub revision: Option<Revision<'bmp>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DocTitle<'bmp> {
   pub heading: InlineNodes<'bmp>,
   pub subtitle: Option<InlineNodes<'bmp>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Revision<'bmp> {
   pub version: BumpString<'bmp>,
   pub date: Option<BumpString<'bmp>>,

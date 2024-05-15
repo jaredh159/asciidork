@@ -100,6 +100,8 @@ pub trait Backend {
   fn exit_table_cell(&mut self, cell: &Cell, section: TableSection);
   fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection);
   fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection);
+  fn asciidoc_table_cell_backend(&mut self) -> Self;
+  fn visit_asciidoc_table_cell_result(&mut self, result: Result<Self::Output, Self::Error>);
 
   // block content
   fn enter_block_title(&mut self, title: &[InlineNode], block: &Block);

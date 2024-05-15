@@ -19,6 +19,7 @@ pub struct AsciidoctorHtml {
   pub(crate) state: HashSet<EphemeralState>,
   pub(crate) autogen_conum: u8,
   pub(crate) render_doc_header: bool,
+  pub(crate) in_asciidoc_table_cell: bool,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
 }
@@ -34,7 +35,7 @@ impl Backend for AsciidoctorHtml {
     if document.attrs.is_set("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
     }
-    if opts.doc_type == DocType::Inline {
+    if opts.doc_type == DocType::Inline || self.in_asciidoc_table_cell {
       self.render_doc_header = document.attrs.is_set("showtitle");
       return;
     }
@@ -79,7 +80,7 @@ impl Backend for AsciidoctorHtml {
     if !self.footnotes.is_empty() {
       self.render_footnotes();
     }
-    if self.opts.doc_type != DocType::Inline {
+    if self.opts.doc_type != DocType::Inline && !self.in_asciidoc_table_cell {
       self.push_str("</body></html>");
     }
   }
@@ -569,6 +570,17 @@ impl Backend for AsciidoctorHtml {
 
   fn exit_table(&mut self, _table: &Table, _block: &Block) {
     self.push_str("</table>");
+  }
+
+  fn asciidoc_table_cell_backend(&mut self) -> Self {
+    Self {
+      in_asciidoc_table_cell: true,
+      ..Self::default()
+    }
+  }
+
+  fn visit_asciidoc_table_cell_result(&mut self, result: Result<Self::Output, Self::Error>) {
+    self.html.push_str(&result.unwrap());
   }
 
   fn enter_table_section(&mut self, section: TableSection) {

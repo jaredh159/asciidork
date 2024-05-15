@@ -1,7 +1,7 @@
 use crate::internal::*;
 
 pub fn eval<B: Backend>(
-  document: Document,
+  document: &Document,
   opts: Opts,
   mut backend: B,
 ) -> Result<B::Output, B::Error> {
@@ -9,8 +9,8 @@ pub fn eval<B: Backend>(
   backend.into_result()
 }
 
-pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
-  backend.enter_document(&doc, opts);
+pub fn visit<B: Backend>(doc: &Document, opts: Opts, backend: &mut B) {
+  backend.enter_document(doc, opts);
   if let Some(header) = &doc.header {
     backend.enter_document_header(header);
     if let Some(title) = &header.title {
@@ -18,19 +18,19 @@ pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
       title
         .heading
         .iter()
-        .for_each(|node| eval_inline(node, &doc, backend));
+        .for_each(|node| eval_inline(node, doc, backend));
       backend.exit_document_title(title);
     }
     backend.visit_document_authors(&header.authors);
     backend.exit_document_header(header);
   }
   eval_toc_at(
-    &doc,
+    doc,
     &[TocPosition::Auto, TocPosition::Left, TocPosition::Right],
     backend,
   );
-  eval_doc_content(&doc, &doc.content, backend);
-  backend.exit_document(&doc);
+  eval_doc_content(doc, &doc.content, backend);
+  backend.exit_document(doc);
 }
 
 fn eval_doc_content(doc: &Document, content: &DocContent, backend: &mut impl Backend) {
@@ -407,7 +407,11 @@ fn eval_table_row(row: &Row, section: TableSection, doc: &Document, backend: &mu
       CellContent::Literal(nodes) => {
         nodes.iter().for_each(|n| eval_inline(n, doc, backend));
       }
-      CellContent::AsciiDoc(content) => eval_doc_content(doc, content, backend),
+      CellContent::AsciiDoc(document) => {
+        let mut cell_backend = backend.asciidoc_table_cell_backend();
+        visit(document, Opts::default(), &mut cell_backend);
+        backend.visit_asciidoc_table_cell_result(cell_backend.into_result());
+      }
     }
     backend.exit_table_cell(cell, section);
   });

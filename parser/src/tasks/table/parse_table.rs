@@ -325,8 +325,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       let cell_parser = self.nest(cell_line.src, loc.start);
       return match cell_parser.parse() {
         Ok(ParseResult { document, warnings }) => {
-          self.errors.borrow_mut().extend(warnings);
-          let content = CellContent::AsciiDoc(document.content);
+          if !warnings.is_empty() {
+            self.errors.borrow_mut().extend(warnings);
+          }
+          let content = CellContent::AsciiDoc(document);
           Ok(Some((Cell::new(content, cell_spec, col_spec), repeat)))
         }
         Err(mut diagnostics) => {
@@ -449,21 +451,24 @@ mod tests {
         col_widths: ColWidths::new(vecb![w(1), w(1)]),
         rows: vecb![Row::new(vecb![
           Cell {
-            content: CellContent::AsciiDoc(DocContent::Blocks(vecb![Block {
-              meta: ChunkMeta::empty(8),
-              content: BlockContent::List {
-                variant: ListVariant::Unordered,
-                depth: 1,
-                items: vecb![ListItem {
-                  marker: ListMarker::Star(1),
-                  marker_src: src!("*", 8..9),
-                  principle: just!("foo", 10..13),
-                  ..empty_list_item!()
-                }]
-              },
-              context: BlockContext::UnorderedList,
-              loc: SourceLocation::new(8, 13)
-            }])),
+            content: CellContent::AsciiDoc(Document {
+              content: DocContent::Blocks(vecb![Block {
+                meta: ChunkMeta::empty(8),
+                content: BlockContent::List {
+                  variant: ListVariant::Unordered,
+                  depth: 1,
+                  items: vecb![ListItem {
+                    marker: ListMarker::Star(1),
+                    marker_src: src!("*", 8..9),
+                    principle: just!("foo", 10..13),
+                    ..empty_list_item!()
+                  }]
+                },
+                context: BlockContext::UnorderedList,
+                loc: SourceLocation::new(8, 13)
+              }]),
+              ..empty_document!()
+            }),
             ..empty_cell!()
           },
           cell!(d: "two", 15..18)
@@ -486,11 +491,14 @@ mod tests {
     assert_eq!(
       parse_table!(input).rows[0].cells[0],
       Cell {
-        content: CellContent::AsciiDoc(DocContent::Blocks(vecb![Block {
-          context: BlockContext::Literal,
-          content: BlockContent::Simple(just!("literal", 23..30)),
-          ..empty_block!(21..30)
-        }])),
+        content: CellContent::AsciiDoc(Document {
+          content: DocContent::Blocks(vecb![Block {
+            context: BlockContext::Literal,
+            content: BlockContent::Simple(just!("literal", 23..30)),
+            ..empty_block!(21..30)
+          }]),
+          ..empty_document!()
+        }),
         ..empty_cell!()
       }
     );

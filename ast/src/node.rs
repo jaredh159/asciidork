@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter, Result};
 use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#document
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Document<'bmp> {
   pub header: Option<DocHeader<'bmp>>,
   pub content: DocContent<'bmp>,
@@ -13,7 +13,7 @@ pub struct Document<'bmp> {
   pub attrs: AttrEntries,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Anchor<'bmp> {
   pub reftext: Option<InlineNodes<'bmp>>,
   pub title: InlineNodes<'bmp>,

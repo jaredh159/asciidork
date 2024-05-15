@@ -218,6 +218,19 @@ macro_rules! empty_table {
 }
 
 #[macro_export]
+macro_rules! empty_document {
+  () => {
+    Document {
+      content: DocContent::Blocks(vecb![]),
+      header: None,
+      toc: None,
+      anchors: std::collections::HashMap::new(),
+      attrs: AttrEntries::new(),
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! assert_list {
   ($input:expr, $expected_ctx:expr, $expected_items:expr) => {
     let (context, items, ..) = parse_list!($input);
