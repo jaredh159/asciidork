@@ -16,8 +16,8 @@ pub trait Backend {
   type Error;
 
   // document
-  fn enter_document(&mut self, document: &Document, header_attrs: &AttrEntries, opts: Opts);
-  fn exit_document(&mut self, document: &Document, header_attrs: &AttrEntries);
+  fn enter_document(&mut self, document: &Document, opts: Opts);
+  fn exit_document(&mut self, document: &Document);
   fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry);
   fn enter_preamble(&mut self, blocks: &[Block]);
   fn exit_preamble(&mut self, blocks: &[Block]);

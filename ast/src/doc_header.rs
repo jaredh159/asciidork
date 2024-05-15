@@ -6,7 +6,6 @@ pub struct DocHeader<'bmp> {
   pub title: Option<DocTitle<'bmp>>,
   pub authors: BumpVec<'bmp, Author<'bmp>>,
   pub revision: Option<Revision<'bmp>>,
-  pub attrs: AttrEntries,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -55,7 +54,6 @@ impl Json for DocHeader<'_> {
     buf.add_option_member("title", self.title.as_ref());
     buf.add_member("authors", &self.authors);
     buf.add_option_member("revision", self.revision.as_ref());
-    buf.add_member("attrs", &self.attrs);
     buf.finish_obj();
   }
 }

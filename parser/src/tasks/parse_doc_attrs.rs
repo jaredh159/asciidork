@@ -6,13 +6,9 @@ use regex::Regex;
 use crate::internal::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(super) fn parse_doc_attrs(
-    &self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
-    attrs: &mut AttrEntries,
-  ) -> Result<()> {
-    while let Some((key, value, _)) = self.parse_doc_attr(lines, attrs)? {
-      attrs.insert(key, value);
+  pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'bmp, 'src>) -> Result<()> {
+    while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
+      self.document.attrs.insert(key, value);
     }
     Ok(())
   }
@@ -20,7 +16,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attr(
     &self,
     lines: &mut ContiguousLines,
-    attrs: &mut AttrEntries,
   ) -> Result<Option<(String, AttrEntry, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
@@ -55,7 +50,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
       let value = SUBS_RE.replace_all(&joined, |caps: &regex::Captures| {
-        if let Some(AttrEntry::String(replace)) = attrs.get(caps.get(1).unwrap().as_str()) {
+        if let Some(AttrEntry::String(replace)) =
+          self.document.attrs.get(caps.get(1).unwrap().as_str())
+        {
           replace
         } else {
           ""
@@ -155,11 +152,9 @@ mod tests {
       existing.insert("custom".to_string(), AttrEntry::String("value".to_string()));
       existing.insert("baz".to_string(), AttrEntry::String("qux".to_string()));
       let mut parser = crate::Parser::new(b, input);
+      parser.document.attrs = existing;
       let mut block = parser.read_lines().unwrap();
-      let (key, value, _) = parser
-        .parse_doc_attr(&mut block, &mut existing)
-        .unwrap()
-        .unwrap();
+      let (key, value, _) = parser.parse_doc_attr(&mut block).unwrap().unwrap();
       assert_eq!(&key, expected_key);
       assert_eq!(value, expected_val);
     }

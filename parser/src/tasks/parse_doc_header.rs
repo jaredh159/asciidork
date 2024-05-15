@@ -17,17 +17,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       title: None,
       authors: bvec![in self.bump],
       revision: None,
-      attrs: AttrEntries::new(),
     };
 
     self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;
-    self.parse_doc_attrs(&mut block, &mut doc_header.attrs)?;
-    self.setup_toc(&doc_header);
+    self.parse_doc_attrs(&mut block)?;
+    self.ctx.attrs = self.document.attrs.clone();
+    self.setup_toc();
     Ok(Some(doc_header))
   }
 
-  fn setup_toc(&mut self, doc_header: &DocHeader<'bmp>) {
-    let Some(toc_attr) = doc_header.attrs.get("toc") else {
+  fn setup_toc(&mut self) {
+    let Some(toc_attr) = self.document.attrs.get("toc") else {
       return;
     };
 
@@ -43,7 +43,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         _ => return, // err?
       },
     };
-    let title = doc_header.attrs.str_or("toc-title", "Table of Contents");
+    let title = self.document.attrs.str_or("toc-title", "Table of Contents");
     let title = BumpString::from_str_in(title, self.bump);
     let nodes = BumpVec::new_in(self.bump);
     self.document.toc = Some(TableOfContents { title, nodes, position })

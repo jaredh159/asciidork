@@ -27,44 +27,44 @@ impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
 
-  fn enter_document(&mut self, document: &Document, attrs: &AttrEntries, opts: Opts) {
+  fn enter_document(&mut self, document: &Document, opts: Opts) {
     self.opts = opts;
-    self.doc_attrs = attrs.clone();
-    self.section_num_levels = attrs.isize("sectnumlevels").unwrap_or(3);
-    if attrs.is_set("hardbreaks-option") {
+    self.doc_attrs = document.attrs.clone();
+    self.section_num_levels = document.attrs.isize("sectnumlevels").unwrap_or(3);
+    if document.attrs.is_set("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
     }
     if opts.doc_type == DocType::Inline {
-      self.render_doc_header = attrs.is_set("showtitle");
+      self.render_doc_header = document.attrs.is_set("showtitle");
       return;
     }
-    self.render_doc_header = !attrs.is_unset("showtitle");
+    self.render_doc_header = !document.attrs.is_unset("showtitle");
     self.push_str(r#"<!DOCTYPE html><html"#);
-    if !attrs.is_set("nolang") {
-      self.push([r#" lang=""#, attrs.str_or("lang", "en"), "\""]);
+    if !document.attrs.is_set("nolang") {
+      self.push([r#" lang=""#, document.attrs.str_or("lang", "en"), "\""]);
     }
-    let encoding = attrs.str_or("encoding", "UTF-8");
+    let encoding = document.attrs.str_or("encoding", "UTF-8");
     self.push([r#"><head><meta charset=""#, encoding, r#"">"#]);
     self.push_str(r#"<meta http-equiv="X-UA-Compatible" content="IE=edge">"#);
     self.push_str(r#"<meta name="viewport" content="width=device-width, initial-scale=1.0">"#);
-    if !attrs.is_set("reproducible") {
+    if !document.attrs.is_set("reproducible") {
       self.push_str(r#"<meta name="generator" content="Asciidork">"#);
     }
-    if let Some(appname) = attrs.str("app-name") {
+    if let Some(appname) = document.attrs.str("app-name") {
       self.push([r#"<meta name="application-name" content=""#, appname, "\">"]);
     }
-    if let Some(desc) = attrs.str("description") {
+    if let Some(desc) = document.attrs.str("description") {
       self.push([r#"<meta name="description" content=""#, desc, "\">"]);
     }
-    if let Some(keywords) = attrs.str("keywords") {
+    if let Some(keywords) = document.attrs.str("keywords") {
       self.push([r#"<meta name="keywords" content=""#, keywords, "\">"]);
     }
-    if let Some(copyright) = attrs.str("copyright") {
+    if let Some(copyright) = document.attrs.str("copyright") {
       self.push([r#"<meta name="copyright" content=""#, copyright, "\">"]);
     }
-    self.render_favicon(attrs);
+    self.render_favicon(&document.attrs);
     self.render_authors(&document.header);
-    self.render_title(document, attrs);
+    self.render_title(document, &document.attrs);
     // TODO: stylesheets
     self.push([r#"</head><body class=""#, opts.doc_type.to_str()]);
     match document.toc.as_ref().map(|toc| &toc.position) {
@@ -75,7 +75,7 @@ impl Backend for AsciidoctorHtml {
     self.push_str("\">");
   }
 
-  fn exit_document(&mut self, _document: &Document, _header_attrs: &AttrEntries) {
+  fn exit_document(&mut self, _document: &Document) {
     if !self.footnotes.is_empty() {
       self.render_footnotes();
     }

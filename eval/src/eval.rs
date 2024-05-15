@@ -10,13 +10,7 @@ pub fn eval<B: Backend>(
 }
 
 pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
-  let empty_attrs = AttrEntries::new();
-  let doc_attrs = doc
-    .header
-    .as_ref()
-    .map(|h| &h.attrs)
-    .unwrap_or(&empty_attrs);
-  backend.enter_document(&doc, doc_attrs, opts);
+  backend.enter_document(&doc, opts);
   if let Some(header) = &doc.header {
     backend.enter_document_header(header);
     if let Some(title) = &header.title {
@@ -36,7 +30,7 @@ pub fn visit<B: Backend>(doc: Document, opts: Opts, backend: &mut B) {
     backend,
   );
   eval_doc_content(&doc, &doc.content, backend);
-  backend.exit_document(&doc, doc_attrs);
+  backend.exit_document(&doc);
 }
 
 fn eval_doc_content(doc: &Document, content: &DocContent, backend: &mut impl Backend) {

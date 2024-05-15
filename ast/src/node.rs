@@ -10,6 +10,7 @@ pub struct Document<'bmp> {
   pub content: DocContent<'bmp>,
   pub toc: Option<TableOfContents<'bmp>>,
   pub anchors: HashMap<BumpString<'bmp>, Anchor<'bmp>>,
+  pub attrs: AttrEntries,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -25,6 +26,7 @@ impl<'bmp> Document<'bmp> {
       content: DocContent::Blocks(bvec![in bump]),
       toc: None,
       anchors: HashMap::new(),
+      attrs: AttrEntries::new(),
     }
   }
 }

@@ -64,8 +64,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         return Ok(Some(self.parse_table(lines, meta)?));
       }
       Colon => {
-        let mut attr_entries = AttrEntries::new(); // TODO: this is a little weird...
-        if let Some((key, value, end)) = self.parse_doc_attr(&mut lines, &mut attr_entries)? {
+        if let Some((key, value, end)) = self.parse_doc_attr(&mut lines)? {
           self.restore_lines(lines);
           self.ctx.attrs.insert(key.clone(), value.clone());
           return Ok(Some(Block {
