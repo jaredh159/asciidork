@@ -13,6 +13,7 @@ path = "src/main.rs"
 asciidork-eval = { path = "../eval", version = "0.5.0" }
 asciidork-opts = { path = "../opts", version = "0.3.0" }
 asciidork-ast = { path = "../ast", version = "0.5.0" }
+asciidork-meta = { path = "../meta", version = "0.5.0" }
 asciidork-parser = { path = "../parser", version = "0.5.0" }
 asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.5.0" }
 colored = "2.0.4"

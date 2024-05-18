@@ -31,7 +31,7 @@ pub enum BlockContent<'bmp> {
   Empty(EmptyMetadata<'bmp>),
   Table(Table<'bmp>),
   Section(Section<'bmp>),
-  DocumentAttribute(String, AttrEntry),
+  DocumentAttribute(String, AttrValue),
   QuotedParagraph {
     quote: InlineNodes<'bmp>,
     attr: SourceString<'bmp>,
@@ -224,7 +224,7 @@ impl Json for BlockContent<'_> {
       BlockContent::DocumentAttribute(key, value) => {
         buf.push_str("DocumentAttribute\"");
         buf.add_member("key", &key.as_str());
-        buf.add_member("value", value);
+        buf.add_member("value", &value.str());
       }
       BlockContent::QuotedParagraph { quote, attr, cite } => {
         buf.push_str("QuotedParagraph\"");

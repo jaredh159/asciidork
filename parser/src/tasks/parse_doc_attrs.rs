@@ -9,16 +9,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'bmp, 'src>) -> Result<()> {
     while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
       if key == "doctype" {
-        if let AttrEntry::String(s) = &value {
+        if let AttrValue::String(s) = &value {
           match s.as_str().parse::<DocType>() {
-            Ok(doc_type) => self.document.set_type(doc_type),
+            Ok(doc_type) => self.document.meta.set_doctype(doc_type),
             Err(err) => self.err_doc_attr(":doctype:", err)?,
           }
         } else {
           self.err_doc_attr(":!doctype:", "".parse::<DocType>().err().unwrap())?;
         }
+      } else if let Err(err) = self.document.meta.insert_header_attr(&key, value) {
+        self.err_doc_attr(format!(":{}:", key), err)?;
       }
-      self.document.attrs.insert(key, value);
     }
     Ok(())
   }
@@ -26,7 +27,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attr(
     &self,
     lines: &mut ContiguousLines,
-  ) -> Result<Option<(String, AttrEntry, usize)>> {
+  ) -> Result<Option<(String, AttrValue, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
     };
@@ -60,17 +61,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
       let value = SUBS_RE.replace_all(&joined, |caps: &regex::Captures| {
-        if let Some(AttrEntry::String(replace)) =
-          self.document.attrs.get(caps.get(1).unwrap().as_str())
+        if let Some(AttrValue::String(replace)) =
+          self.document.meta.get(caps.get(1).unwrap().as_str())
         {
           replace
         } else {
           ""
         }
       });
-      AttrEntry::String(value.to_string())
+      AttrValue::String(value.to_string())
     } else {
-      AttrEntry::Bool(!is_negated)
+      AttrValue::Bool(!is_negated)
     };
 
     Ok(Some((
@@ -129,41 +130,31 @@ mod tests {
   fn test_parse_doc_attr() {
     let b = &bumpalo::Bump::new();
     let cases = vec![
-      (":foo: bar", ("foo", AttrEntry::String("bar".to_string()))),
-      (":foo:", ("foo", AttrEntry::Bool(true))),
-      (":!foo:", ("foo", AttrEntry::Bool(false))),
-      (":foo!:", ("foo", AttrEntry::Bool(false))),
-      (
-        ":foo: {custom}-bar",
-        ("foo", AttrEntry::String("value-bar".to_string())),
-      ),
-      (
-        ":foo: {custom}-bar-{baz}",
-        ("foo", AttrEntry::String("value-bar-qux".to_string())),
-      ),
+      (":foo: bar", ("foo", "bar".into())),
+      (":foo:", ("foo", true.into())),
+      (":!foo:", ("foo", false.into())),
+      (":foo!:", ("foo", false.into())),
+      (":foo: {custom}-bar", ("foo", "value-bar".into())),
+      (":foo: {custom}-bar-{baz}", ("foo", "value-bar-qux".into())),
       (
         ":foo-bar: baz, rofl, lol",
-        ("foo-bar", AttrEntry::String("baz, rofl, lol".to_string())),
+        ("foo-bar", "baz, rofl, lol".into()),
       ),
-      (
-        ":foo: bar \\\nand baz",
-        ("foo", AttrEntry::String("bar and baz".to_string())),
-      ),
+      (":foo: bar \\\nand baz", ("foo", "bar and baz".into())),
       (
         ":foo: bar \\\nand baz \\\nand qux",
-        ("foo", AttrEntry::String("bar and baz and qux".to_string())),
+        ("foo", "bar and baz and qux".into()),
       ),
-      (
-        ":foo: bar \\\n",
-        ("foo", AttrEntry::String("bar".to_string())),
-      ),
+      (":foo: bar \\\n", ("foo", "bar".into())),
     ];
     for (input, (expected_key, expected_val)) in cases {
-      let mut existing = AttrEntries::new();
-      existing.insert("custom".to_string(), AttrEntry::String("value".to_string()));
-      existing.insert("baz".to_string(), AttrEntry::String("qux".to_string()));
       let mut parser = crate::Parser::new(b, input);
-      parser.document.attrs = existing;
+      parser
+        .document
+        .meta
+        .insert_doc_attr("custom", "value")
+        .unwrap();
+      parser.document.meta.insert_doc_attr("baz", "qux").unwrap();
       let mut block = parser.read_lines().unwrap();
       let (key, value, _) = parser.parse_doc_attr(&mut block).unwrap().unwrap();
       assert_eq!(&key, expected_key);
@@ -180,7 +171,7 @@ mod tests {
     "},
     error! {"
       1: :doctype: bad
-         ^^^^^^^^^^^^^ Invalid doc type: expected `article`, `book`, `manpage`, or `inline`
+         ^^^^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
     "}
   );
 
@@ -193,7 +184,21 @@ mod tests {
     "},
     error! {"
       1: :!doctype:
-         ^^^^^^^^^^ Invalid doc type: expected `article`, `book`, `manpage`, or `inline`
+         ^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
+    "}
+  );
+
+  test_error!(
+    doc_attr_error_invalid,
+    adoc! {"
+      :doctype: article
+      :chapter-refsig: Capitulo
+
+      para
+    "},
+    error! {"
+      2: :chapter-refsig: Capitulo
+         ^^^^^^^^^^^^^^^^^^^^^^^^^ Attribute `chapter-refsig` may only be set when doctype is `book`
     "}
   );
 }

@@ -5,12 +5,12 @@ use crate::internal::*;
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#document
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Document<'bmp> {
-  _type: DocType,
-  pub header: Option<DocHeader<'bmp>>,
+  pub meta: DocumentMeta,
+  pub title: Option<InlineNodes<'bmp>>,
+  pub subtitle: Option<InlineNodes<'bmp>>,
   pub content: DocContent<'bmp>,
   pub toc: Option<TableOfContents<'bmp>>,
   pub anchors: HashMap<BumpString<'bmp>, Anchor<'bmp>>,
-  pub attrs: AttrEntries,
 }
 
 impl<'bmp> Document<'bmp> {
@@ -19,29 +19,13 @@ impl<'bmp> Document<'bmp> {
   }
 
   pub fn from_content(content: DocContent<'bmp>) -> Self {
-    let mut document = Self {
-      _type: DocType::default(),
-      header: None,
+    Self {
+      title: None,
+      subtitle: None,
       content,
       toc: None,
       anchors: HashMap::new(),
-      attrs: AttrEntries::new(),
-    };
-    document.attrs.insert(
-      "doctype",
-      AttrEntry::String(DocType::default().to_str().to_string()),
-    );
-    document
-  }
-
-  pub const fn get_type(&self) -> DocType {
-    self._type
-  }
-
-  pub fn set_type(&mut self, kind: DocType) {
-    self._type = kind;
-    self
-      .attrs
-      .insert("doctype", AttrEntry::String(kind.to_str().to_string()));
+      meta: DocumentMeta::default(),
+    }
   }
 }

@@ -1,11 +1,8 @@
-mod attr_entries;
 mod attr_list;
 mod block;
 mod chunk_meta;
 mod col_widths;
 mod doc_content;
-mod doc_header;
-mod doc_type;
 mod document;
 mod inline;
 mod inline_nodes;
@@ -22,14 +19,11 @@ pub use internal::types::*;
 
 mod internal {
   pub(crate) mod types {
-    pub use crate::attr_entries::{AttrEntries, AttrEntry};
     pub use crate::attr_list::{AttrList, Named};
     pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
     pub use crate::chunk_meta::ChunkMeta;
     pub use crate::col_widths::*;
     pub use crate::doc_content::DocContent;
-    pub use crate::doc_header::{Author, DocHeader, DocTitle, Revision};
-    pub use crate::doc_type::DocType;
     pub use crate::document::Document;
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
     pub use crate::inline::{CurlyKind::*, QuoteKind::*};
@@ -42,6 +36,7 @@ mod internal {
     pub use crate::source_string::SourceString;
     pub use crate::table::*;
     pub use crate::toc::*;
+    pub use asciidork_meta::{AttrValue, DocumentMeta};
     pub use smallvec::SmallVec;
   }
 
@@ -55,13 +50,11 @@ mod internal {
 }
 
 pub mod prelude {
-  pub use crate::attr_entries::{AttrEntries, AttrEntry};
   pub use crate::attr_list::{AttrList, Named};
   pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::col_widths::*;
   pub use crate::doc_content::DocContent;
-  pub use crate::doc_header::{Author, DocHeader, DocTitle};
   pub use crate::document::Document;
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
   pub use crate::json::*;

@@ -1,4 +1,4 @@
-use asciidork_ast::DocType;
+use asciidork_meta::DocType;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Opts {

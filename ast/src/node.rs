@@ -69,10 +69,21 @@ impl Json for Section<'_> {
   }
 }
 
+impl Json for Anchor<'_> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("Anchor");
+    buf.add_option_member("reftext", self.reftext.as_ref());
+    buf.add_member("title", &self.title);
+    buf.finish_obj();
+  }
+}
+
 impl Json for Document<'_> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     buf.begin_obj("Document");
-    buf.add_option_member("header", self.header.as_ref());
+    buf.add_member("title", &self.title);
+    buf.add_member("subtitle", &self.subtitle);
+    buf.add_member("anchors", &self.anchors);
     buf.add_member("content", &self.content);
     buf.add_option_member("toc", self.toc.as_ref());
     buf.finish_obj();

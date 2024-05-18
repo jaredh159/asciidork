@@ -248,6 +248,27 @@ test_eval!(
 );
 
 test_eval!(
+  inferred_doc_title_attr,
+  adoc! {r#"
+    = Doc _Title_
+
+    foo {doctitle}
+  "#},
+   html_contains: "foo Doc _Title_"
+);
+
+test_eval!(
+  explicit_doc_title_attr,
+  adoc! {r#"
+    = Doc _Title_
+    :doctitle: Custom Title
+
+    foo {doctitle}
+  "#},
+   html_contains: "foo Custom Title"
+);
+
+test_eval!(
   note_w_title,
   adoc! {r#"
     .Title

@@ -163,12 +163,17 @@ impl Json for String {
     self.as_str().to_json_in(buf);
   }
 }
-
 impl<K: Json, V: Json> Json for HashMap<K, V> {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    (&self).to_json_in(buf);
+  }
+}
+
+impl<K: Json, V: Json> Json for &HashMap<K, V> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     buf.push('{');
     let mut first = true;
-    for (key, value) in self {
+    for (key, value) in *self {
       if first {
         first = false;
       } else {

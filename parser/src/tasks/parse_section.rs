@@ -77,7 +77,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let Some(toc) = self.document.toc.as_mut() else {
       return;
     };
-    if level > self.ctx.attrs.u8_or("toclevels", 2) {
+    if level > self.document.meta.u8_or("toclevels", 2) {
       return;
     }
     let mut depth = level;

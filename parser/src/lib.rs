@@ -15,6 +15,7 @@ mod token;
 mod utils;
 
 extern crate asciidork_ast as ast;
+extern crate asciidork_meta as meta;
 extern crate asciidork_opts as opts;
 
 pub mod prelude {
@@ -43,6 +44,7 @@ mod internal {
   pub use crate::token::*;
   pub use crate::utils::bump::*;
   pub use ast::*;
+  pub use meta::{Author, DocType, ReadAttr};
   pub use smallvec::SmallVec;
   pub type Result<T> = std::result::Result<T, Diagnostic>;
 }

@@ -3,6 +3,7 @@ use std::error::Error;
 extern crate asciidork_ast as ast;
 extern crate asciidork_backend as backend;
 extern crate asciidork_eval as eval;
+extern crate asciidork_meta as meta;
 
 mod asciidoctor_html;
 pub mod section;
@@ -30,7 +31,7 @@ mod internal {
   pub use crate::section;
   pub use crate::AsciidoctorHtml;
   pub use ast::prelude::*;
-  pub use ast::DocHeader;
   pub use backend::prelude::*;
   pub use eval::helpers;
+  pub use meta::{AttrValue, Author, DocumentMeta, ReadAttr};
 }

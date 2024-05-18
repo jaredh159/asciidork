@@ -1,16 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-#[allow(unused)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
-pub enum AttributeMissing {
-  Warn,
-  Drop,
-  #[default]
-  Skip,
-  // dr. also has "drop-line", i'd rather not support it
-}
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 pub enum DocType {
   #[default]
@@ -45,7 +35,7 @@ impl FromStr for DocType {
       "book" => Self::Book,
       "manpage" => Self::Manpage,
       "inline" => Self::Inline,
-      _ => return Err("Invalid doc type: expected `article`, `book`, `manpage`, or `inline`"),
+      _ => return Err("Invalid doctype: expected `article`, `book`, `manpage`, or `inline`"),
     })
   }
 }

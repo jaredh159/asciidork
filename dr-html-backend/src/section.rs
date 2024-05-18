@@ -34,15 +34,15 @@ pub fn class(section: &Section) -> &'static str {
 
 impl AsciidoctorHtml {
   pub(super) fn should_number_section(&self, section: &Section) -> bool {
-    let Some(sectnums) = self.doc_attrs.get("sectnums") else {
+    let Some(sectnums) = self.doc_meta.get("sectnums") else {
       return false;
     };
     if self.section_num_levels < section.level as isize {
       return false;
     }
     match sectnums {
-      AttrEntry::String(val) if val == "all" => true,
-      AttrEntry::Bool(true) => {
+      AttrValue::String(val) if val == "all" => true,
+      AttrValue::Bool(true) => {
         if let Some(special) = section
           .meta
           .attrs

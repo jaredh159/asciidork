@@ -10,11 +10,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   /// - we are considering the line _directly_ below the doc title
   ///
   /// Therefore, it would be an error for this line to not be an author line
-  pub(super) fn parse_author_line(
-    &self,
-    line: Line<'bmp, 'src>,
-    authors: &mut BumpVec<'bmp, Author<'bmp>>,
-  ) -> Result<()> {
+  pub(super) fn parse_author_line(&mut self, line: Line<'bmp, 'src>) -> Result<()> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
 
@@ -32,7 +28,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         }
         last_end = m.end();
       }
-      authors.push(self.author_from(captures));
+      self.document.meta.add_author(self.author_from(captures));
     }
 
     let num_bytes = line.src.bytes().len();
@@ -49,17 +45,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  pub(crate) fn author_from(&self, captures: regex::Captures<'bmp>) -> Author<'bmp> {
-    let first_name = captures.get(1).unwrap().as_str();
-    let middle_name = captures.get(3).map(|m| m.as_str().trim_end());
-    let last_name = captures.get(5).unwrap().as_str();
-    let email = captures.get(6).map(|m| m.as_str());
-    return Author {
-      first_name: BumpString::from_str_in(first_name, self.bump),
-      middle_name: middle_name.map(|m| BumpString::from_str_in(m, self.bump)),
-      last_name: BumpString::from_str_in(last_name, self.bump),
-      email: email.map(|e| BumpString::from_str_in(e, self.bump)),
-    };
+  fn author_from(&self, captures: regex::Captures<'bmp>) -> Author {
+    let first_name = captures.get(1).unwrap().as_str().to_string();
+    let middle_name = captures.get(3).map(|m| m.as_str().trim_end().to_string());
+    let last_name = captures.get(5).unwrap().as_str().to_string();
+    let email = captures.get(6).map(|m| m.as_str().to_string());
+    Author {
+      first_name,
+      middle_name,
+      last_name,
+      email,
+    }
   }
 }
 
@@ -99,23 +95,21 @@ mod tests {
       ),
     ];
 
-    let b = &Bump::new();
     for (input, authors) in cases {
-      let mut parser = crate::Parser::new(b, input);
+      let mut parser = crate::Parser::new(leaked_bump(), input);
       let line = parser.read_line().unwrap();
 
       let expected_authors = authors
         .iter()
         .map(|(first, middle, last, email)| Author {
-          first_name: s!(in b; first),
-          middle_name: middle.map(|m| s!(in b; m)),
-          last_name: s!(in b; last),
-          email: email.map(|e| s!(in b; e)),
+          first_name: first.to_string(),
+          middle_name: middle.map(|m| m.to_string()),
+          last_name: last.to_string(),
+          email: email.map(|e| e.to_string()),
         })
         .collect::<Vec<Author>>();
-      let mut authors = bumpalo::collections::Vec::new_in(b);
-      parser.parse_author_line(line, &mut authors).unwrap();
-      assert_eq!(authors.to_vec(), expected_authors);
+      parser.parse_author_line(line).unwrap();
+      assert_eq!(parser.document.meta.authors(), expected_authors);
     }
   }
 }

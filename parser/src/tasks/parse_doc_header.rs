@@ -2,39 +2,33 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(crate) fn parse_document_header(&mut self) -> Result<Option<DocHeader<'bmp>>> {
+  pub(crate) fn parse_document_header(&mut self) -> Result<()> {
     let Some(mut block) = self.read_lines() else {
-      return Ok(None);
+      return Ok(());
     };
 
     if !is_doc_header(&block) {
       self.peeked_lines = Some(block);
-      return Ok(None);
+      return Ok(());
     }
 
     block.discard_leading_comment_lines();
-    let mut doc_header = DocHeader {
-      title: None,
-      authors: bvec![in self.bump],
-      revision: None,
-    };
 
-    self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;
+    self.parse_doc_title_author_revision(&mut block)?;
     self.parse_doc_attrs(&mut block)?;
-    self.ctx.attrs = self.document.attrs.clone();
     self.setup_toc();
-    Ok(Some(doc_header))
+    Ok(())
   }
 
   fn setup_toc(&mut self) {
-    let Some(toc_attr) = self.document.attrs.get("toc") else {
+    let Some(toc_attr) = self.document.meta.get("toc") else {
       return;
     };
 
     let position = match toc_attr {
-      AttrEntry::Bool(false) => return,
-      AttrEntry::Bool(true) => TocPosition::Auto,
-      AttrEntry::String(s) => match s.as_str() {
+      AttrValue::Bool(false) => return,
+      AttrValue::Bool(true) => TocPosition::Auto,
+      AttrValue::String(s) => match s.as_str() {
         "left" => TocPosition::Left,
         "right" => TocPosition::Right,
         "preamble" => TocPosition::Preamble,
@@ -43,7 +37,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         _ => return, // err?
       },
     };
-    let title = self.document.attrs.str_or("toc-title", "Table of Contents");
+    let title = self.document.meta.str_or("toc-title", "Table of Contents");
     let title = BumpString::from_str_in(title, self.bump);
     let nodes = BumpVec::new_in(self.bump);
     self.document.toc = Some(TableOfContents { title, nodes, position })
@@ -52,7 +46,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_doc_title_author_revision(
     &mut self,
     lines: &mut ContiguousLines<'bmp, 'src>,
-    doc_header: &mut DocHeader<'bmp>,
   ) -> Result<()> {
     let first_line = lines.current().expect("non-empty doc header");
     if !first_line.is_heading_level(0) {
@@ -63,17 +56,20 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut header_line = lines.consume_current().unwrap();
     debug_assert!(header_line.starts_with_seq(&[EqualSigns, Whitespace]));
     header_line.discard(2);
+    self
+      .document
+      .meta
+      .insert_header_attr("doctitle", header_line.src)
+      .unwrap();
 
-    doc_header.title = Some(DocTitle {
-      heading: self.parse_inlines(&mut header_line.into_lines_in(self.bump))?,
-      subtitle: None, // todo
-    });
+    self.document.title = Some(self.parse_inlines(&mut header_line.into_lines_in(self.bump))?);
+    // TODO: subtitle
 
     if lines.starts(Word) {
-      self.parse_author_line(lines.consume_current().unwrap(), &mut doc_header.authors)?;
+      self.parse_author_line(lines.consume_current().unwrap())?;
       // revision line can only follow an author line (and requires a doc header)
-      if !doc_header.authors.is_empty() {
-        self.parse_revision_line(lines, &mut doc_header.revision);
+      if self.document.meta.is_set("author") {
+        self.parse_revision_line(lines);
       }
     }
 
