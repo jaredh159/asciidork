@@ -72,6 +72,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "asciidork-attr"
+version = "0.5.0"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
 name = "asciidork-backend"
 version = "0.5.0"
 dependencies = [

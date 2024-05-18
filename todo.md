@@ -1,5 +1,12 @@
 ## todo
 
+- https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence/#default-attribute-value-precedence
+- https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#intrinsic-attributes
+
+- [ ] resolving the {email} attr is example of "multiple passes", as it gets turned into
+      an autolink in asciidoctor html5, test `{email}` vs `[subs=-macros]\n{email}`
+- [ ] syntax for undefining an attribute: `{set:foo!}`, see
+      https://docs.asciidoctor.org/asciidoc/latest/attributes/unresolved-references/#undefined
 - [ ] think about this statement from header row section of tables docs: "Values assigned
       using the shorthand syntax must be entered before the cols attribute (or any other
       named attributes) in a table’s attribute list, otherwise the processor will ignore

@@ -9,7 +9,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     line: &str,
     attrs: Option<&AttrList<'bmp>>,
   ) -> Option<BumpString<'bmp>> {
-    if self.ctx.attrs.is_unset("sectids") {
+    if self.ctx.attrs.is_false("sectids") {
       return None;
     }
     if let Some(id) = attrs.and_then(|a| a.id.as_ref()) {
@@ -18,13 +18,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Some(custom_id);
     }
     let id_sep = match self.ctx.attrs.get("idseparator") {
-      Some(AttrEntry::Bool(true)) => None,
-      Some(AttrEntry::String(s)) => s.chars().next(),
+      Some(AttrValue::Bool(true)) => None,
+      Some(AttrValue::String(s)) => s.chars().next(),
       _ => Some('_'),
     };
     let id_prefix = match self.ctx.attrs.get("idprefix") {
-      Some(AttrEntry::Bool(true)) => "",
-      Some(AttrEntry::String(s)) => s,
+      Some(AttrValue::Bool(true)) => "",
+      Some(AttrValue::String(s)) => s,
       _ => "_",
     };
     let auto_gen_id = self.autogen_sect_id(line, id_prefix, id_sep, false);

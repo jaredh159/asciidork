@@ -34,23 +34,23 @@ impl Backend for AsciidoctorHtml {
     self.doc_attrs = document.attrs.clone();
     self.doc_type = document.get_type();
     self.section_num_levels = document.attrs.isize("sectnumlevels").unwrap_or(3);
-    if document.attrs.is_set("hardbreaks-option") {
+    if document.attrs.is_true("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
     }
     if opts.doc_type == DocType::Inline || self.in_asciidoc_table_cell {
-      self.render_doc_header = document.attrs.is_set("showtitle");
+      self.render_doc_header = document.attrs.is_true("showtitle");
       return;
     }
-    self.render_doc_header = !document.attrs.is_unset("showtitle");
+    self.render_doc_header = !document.attrs.is_false("showtitle");
     self.push_str(r#"<!DOCTYPE html><html"#);
-    if !document.attrs.is_set("nolang") {
+    if !document.attrs.is_true("nolang") {
       self.push([r#" lang=""#, document.attrs.str_or("lang", "en"), "\""]);
     }
     let encoding = document.attrs.str_or("encoding", "UTF-8");
     self.push([r#"><head><meta charset=""#, encoding, r#"">"#]);
     self.push_str(r#"<meta http-equiv="X-UA-Compatible" content="IE=edge">"#);
     self.push_str(r#"<meta name="viewport" content="width=device-width, initial-scale=1.0">"#);
-    if !document.attrs.is_set("reproducible") {
+    if !document.attrs.is_true("reproducible") {
       self.push_str(r#"<meta name="generator" content="Asciidork">"#);
     }
     if let Some(appname) = document.attrs.str("app-name") {
@@ -683,8 +683,8 @@ impl Backend for AsciidoctorHtml {
     }
     let icons = self.doc_attrs.get("icons");
     match icons {
-      Some(AttrEntry::Bool(true)) => self.push_callout_number_img(callout.number),
-      Some(AttrEntry::String(icons)) if icons == "font" => {
+      Some(AttrValue::Bool(true)) => self.push_callout_number_img(callout.number),
+      Some(AttrValue::String(icons)) if icons == "font" => {
         self.push_callout_number_font(callout.number);
       }
       // TODO: asciidoctor also handles special `guard` case
@@ -922,7 +922,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_image_block(&mut self, block: &Block) {
-    let prefix = if self.doc_attrs.is_unset("figure-caption") {
+    let prefix = if self.doc_attrs.is_false("figure-caption") {
       None
     } else {
       self.fig_caption_num += 1;
@@ -932,9 +932,9 @@ impl Backend for AsciidoctorHtml {
     self.push_str(r#"</div>"#);
   }
 
-  fn visit_document_attribute_decl(&mut self, name: &str, entry: &AttrEntry) {
+  fn visit_document_attribute_decl(&mut self, name: &str, value: &AttrValue) {
     if name == "hardbreaks-option" {
-      if entry.is_set() {
+      if value.is_true() {
         self.default_newlines = Newlines::JoinWithBreak;
         self.newlines = Newlines::JoinWithBreak;
       } else {
@@ -942,7 +942,9 @@ impl Backend for AsciidoctorHtml {
         self.newlines = Newlines::default();
       }
     }
-    self.doc_attrs.insert(name.to_string(), entry.clone());
+    self
+      .doc_attrs
+      .insert(name.to_string(), AttrEntry::new(value.clone()));
   }
 
   fn enter_footnote(&mut self, _id: Option<&str>, _content: &[InlineNode]) {
@@ -1077,12 +1079,12 @@ impl AsciidoctorHtml {
 
   fn render_favicon(&mut self, attrs: &AttrEntries) {
     match attrs.get("favicon") {
-      Some(AttrEntry::String(path)) => {
+      Some(AttrValue::String(path)) => {
         let ext = helpers::file_ext(path).unwrap_or("ico");
         self.push_str(r#"<link rel="icon" type="image/"#);
         self.push([ext, r#"" href=""#, path, "\">"]);
       }
-      Some(AttrEntry::Bool(true)) => {
+      Some(AttrValue::Bool(true)) => {
         self.push_str(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#);
       }
       _ => {}

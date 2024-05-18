@@ -66,7 +66,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Colon => {
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines)? {
           self.restore_lines(lines);
-          self.ctx.attrs.insert(key.clone(), value.clone());
+          self
+            .ctx
+            .attrs
+            .insert(key.clone(), AttrEntry::new(value.clone()));
           return Ok(Some(Block {
             loc: SourceLocation::new(meta.start, end),
             meta,
@@ -340,7 +343,7 @@ mod tests {
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
       context: Context::DocumentAttributeDecl,
-      content: Content::DocumentAttribute("figure-caption".to_string(), AttrEntry::Bool(false)),
+      content: Content::DocumentAttribute("figure-caption".to_string(), AttrValue::Bool(false)),
       ..empty_block!(0..17)
     };
     assert_eq!(block, expected);

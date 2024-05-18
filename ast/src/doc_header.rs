@@ -6,6 +6,7 @@ pub struct DocHeader<'bmp> {
   pub title: Option<DocTitle<'bmp>>,
   pub authors: BumpVec<'bmp, Author<'bmp>>,
   pub revision: Option<Revision<'bmp>>,
+  pub attrs: BumpVec<'bmp, (String, AttrValue)>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

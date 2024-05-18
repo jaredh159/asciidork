@@ -3,18 +3,30 @@ use std::collections::HashMap;
 use crate::internal::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AttrEntry {
+pub enum AttrValue {
   String(String),
   Bool(bool),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AttrEntry {
+  pub readonly: bool,
+  pub value: AttrValue,
+}
+
 impl AttrEntry {
-  pub const fn is_set(&self) -> bool {
-    matches!(self, AttrEntry::Bool(true))
+  pub const fn new(value: AttrValue) -> Self {
+    AttrEntry { readonly: false, value }
+  }
+}
+
+impl AttrValue {
+  pub const fn is_true(&self) -> bool {
+    matches!(self, AttrValue::Bool(true))
   }
 
-  pub const fn is_unset(&self) -> bool {
-    matches!(self, AttrEntry::Bool(false))
+  pub const fn is_false(&self) -> bool {
+    matches!(self, AttrValue::Bool(false))
   }
 }
 
@@ -22,61 +34,61 @@ impl AttrEntry {
 pub struct AttrEntries(HashMap<String, AttrEntry>);
 
 impl AttrEntries {
-  pub fn new() -> Self {
-    Self(HashMap::new())
-  }
-
   pub fn insert(&mut self, key: impl Into<String>, value: AttrEntry) {
     self.0.insert(key.into(), value);
   }
 
-  pub fn get(&self, key: &str) -> Option<&AttrEntry> {
-    self.0.get(key)
+  pub fn remove(&mut self, key: &str) -> Option<AttrValue> {
+    self.0.remove(key).map(|entry| entry.value)
   }
 
-  pub fn remove(&mut self, key: &str) -> Option<AttrEntry> {
-    self.0.remove(key)
+  pub fn get(&self, key: &str) -> Option<&AttrValue> {
+    self.0.get(key).map(|entry| &entry.value)
+  }
+
+  pub fn is_true(&self, key: &str) -> bool {
+    self.get(key).map_or(false, |entry| entry.is_true())
+  }
+
+  pub fn is_false(&self, key: &str) -> bool {
+    self.get(key).map_or(false, |entry| entry.is_false())
   }
 
   pub fn is_set(&self, key: &str) -> bool {
-    self.get(key).map_or(false, |entry| entry.is_set())
-  }
-
-  pub fn is_unset(&self, key: &str) -> bool {
-    self.get(key).map_or(false, |entry| entry.is_unset())
+    self.0.contains_key(key)
   }
 
   pub fn str(&self, key: &str) -> Option<&str> {
     match self.get(key) {
-      Some(AttrEntry::String(s)) => Some(s),
+      Some(AttrValue::String(s)) => Some(s),
       _ => None,
     }
   }
 
   pub fn u8(&self, key: &str) -> Option<u8> {
     match self.get(key) {
-      Some(AttrEntry::String(s)) => s.parse().ok(),
+      Some(AttrValue::String(s)) => s.parse().ok(),
       _ => None,
     }
   }
 
   pub fn isize(&self, key: &str) -> Option<isize> {
     match self.get(key) {
-      Some(AttrEntry::String(s)) => s.parse().ok(),
+      Some(AttrValue::String(s)) => s.parse().ok(),
       _ => None,
     }
   }
 
   pub fn str_or(&self, key: &str, default: &'static str) -> &str {
     match self.get(key) {
-      Some(AttrEntry::String(s)) => s,
+      Some(AttrValue::String(s)) => s,
       _ => default,
     }
   }
 
   pub fn u8_or(&self, key: &str, default: u8) -> u8 {
     match self.get(key) {
-      Some(AttrEntry::String(s)) => s.parse().unwrap_or(default),
+      Some(AttrValue::String(s)) => s.parse().unwrap_or(default),
       _ => default,
     }
   }
@@ -118,12 +130,21 @@ impl AttrEntries {
   }
 }
 
-impl Json for AttrEntry {
+impl Json for AttrValue {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     match self {
-      AttrEntry::String(s) => s.to_json_in(buf),
-      AttrEntry::Bool(b) => b.to_json_in(buf),
+      AttrValue::String(s) => s.to_json_in(buf),
+      AttrValue::Bool(b) => b.to_json_in(buf),
     }
+  }
+}
+
+impl Json for AttrEntry {
+  fn to_json_in(&self, buf: &mut JsonBuf) {
+    buf.begin_obj("AttrEntry");
+    buf.add_member("readonly", &self.readonly);
+    buf.add_member("value", &self.value);
+    buf.finish_obj();
   }
 }
 

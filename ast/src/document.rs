@@ -25,12 +25,9 @@ impl<'bmp> Document<'bmp> {
       content,
       toc: None,
       anchors: HashMap::new(),
-      attrs: AttrEntries::new(),
+      attrs: AttrEntries::default(),
     };
-    document.attrs.insert(
-      "doctype",
-      AttrEntry::String(DocType::default().to_str().to_string()),
-    );
+    document.set_type(DocType::default());
     document
   }
 
@@ -40,8 +37,12 @@ impl<'bmp> Document<'bmp> {
 
   pub fn set_type(&mut self, kind: DocType) {
     self._type = kind;
-    self
-      .attrs
-      .insert("doctype", AttrEntry::String(kind.to_str().to_string()));
+    self.attrs.insert(
+      "doctype",
+      AttrEntry {
+        readonly: false,
+        value: AttrValue::String(kind.to_str().to_string()),
+      },
+    )
   }
 }

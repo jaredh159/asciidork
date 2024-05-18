@@ -31,7 +31,7 @@ pub enum BlockContent<'bmp> {
   Empty(EmptyMetadata<'bmp>),
   Table(Table<'bmp>),
   Section(Section<'bmp>),
-  DocumentAttribute(String, AttrEntry),
+  DocumentAttribute(String, AttrValue),
   QuotedParagraph {
     quote: InlineNodes<'bmp>,
     attr: SourceString<'bmp>,

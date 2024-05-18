@@ -2,10 +2,11 @@
 
 members = [
   "ast",
+  "attr",
   "backend",
+  "cli",
   "dr-html-backend",
   "dr-html-wasm",
-  "cli",
   "eval",
   "parser",
   "opts",

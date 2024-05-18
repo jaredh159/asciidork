@@ -41,8 +41,8 @@ impl AsciidoctorHtml {
       return false;
     }
     match sectnums {
-      AttrEntry::String(val) if val == "all" => true,
-      AttrEntry::Bool(true) => {
+      AttrValue::String(val) if val == "all" => true,
+      AttrValue::Bool(true) => {
         if let Some(special) = section
           .meta
           .attrs

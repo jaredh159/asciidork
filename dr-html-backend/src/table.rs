@@ -52,7 +52,7 @@ impl AsciidoctorHtml {
       self.push_str(r#"<caption class="title">"#);
       if let Some(caption) = block.meta.attr_named("caption") {
         self.push_str(caption);
-      } else if !self.doc_attrs.is_unset("table-caption") {
+      } else if !self.doc_attrs.is_false("table-caption") {
         self.table_caption_num += 1;
         self.push(["Table ", &num_str!(self.table_caption_num), ". "]);
       }

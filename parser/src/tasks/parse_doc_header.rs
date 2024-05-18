@@ -17,6 +17,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       title: None,
       authors: bvec![in self.bump],
       revision: None,
+      attrs: bvec![in self.bump],
     };
 
     self.parse_doc_title_author_revision(&mut block, &mut doc_header)?;
@@ -32,9 +33,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
 
     let position = match toc_attr {
-      AttrEntry::Bool(false) => return,
-      AttrEntry::Bool(true) => TocPosition::Auto,
-      AttrEntry::String(s) => match s.as_str() {
+      AttrValue::Bool(false) => return,
+      AttrValue::Bool(true) => TocPosition::Auto,
+      AttrValue::String(s) => match s.as_str() {
         "left" => TocPosition::Left,
         "right" => TocPosition::Right,
         "preamble" => TocPosition::Preamble,
@@ -63,6 +64,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut header_line = lines.consume_current().unwrap();
     debug_assert!(header_line.starts_with_seq(&[EqualSigns, Whitespace]));
     header_line.discard(2);
+
+    self.document.attrs.insert(
+      "doctitle",
+      AttrEntry {
+        readonly: true,
+        value: AttrValue::String(header_line.src.into()),
+      },
+    );
 
     doc_header.title = Some(DocTitle {
       heading: self.parse_inlines(&mut header_line.into_lines_in(self.bump))?,

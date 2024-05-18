@@ -1,0 +1,16 @@
+[package]
+name = "asciidork-attr"
+version = "0.5.0"
+edition = "2021"
+description = "Asciidork configuration"
+license = "MIT"
+
+[dependencies]
+lazy_static = "1.4.0"
+# asciidork-ast = { path = "../ast", version = "0.5.0" }
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false

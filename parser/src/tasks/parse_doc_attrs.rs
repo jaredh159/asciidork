@@ -9,7 +9,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'bmp, 'src>) -> Result<()> {
     while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
       if key == "doctype" {
-        if let AttrEntry::String(s) = &value {
+        if let AttrValue::String(s) = &value {
           match s.as_str().parse::<DocType>() {
             Ok(doc_type) => self.document.set_type(doc_type),
             Err(err) => self.err_doc_attr(":doctype:", err)?,
@@ -18,7 +18,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           self.err_doc_attr(":!doctype:", "".parse::<DocType>().err().unwrap())?;
         }
       }
-      self.document.attrs.insert(key, value);
+      self.document.attrs.insert(key, AttrEntry::new(value));
     }
     Ok(())
   }
@@ -26,7 +26,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_doc_attr(
     &self,
     lines: &mut ContiguousLines,
-  ) -> Result<Option<(String, AttrEntry, usize)>> {
+  ) -> Result<Option<(String, AttrValue, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
     };
@@ -60,7 +60,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
       let value = SUBS_RE.replace_all(&joined, |caps: &regex::Captures| {
-        if let Some(AttrEntry::String(replace)) =
+        if let Some(AttrValue::String(replace)) =
           self.document.attrs.get(caps.get(1).unwrap().as_str())
         {
           replace
@@ -68,9 +68,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           ""
         }
       });
-      AttrEntry::String(value.to_string())
+      AttrValue::String(value.to_string())
     } else {
-      AttrEntry::Bool(!is_negated)
+      AttrValue::Bool(!is_negated)
     };
 
     Ok(Some((
@@ -129,39 +129,45 @@ mod tests {
   fn test_parse_doc_attr() {
     let b = &bumpalo::Bump::new();
     let cases = vec![
-      (":foo: bar", ("foo", AttrEntry::String("bar".to_string()))),
-      (":foo:", ("foo", AttrEntry::Bool(true))),
-      (":!foo:", ("foo", AttrEntry::Bool(false))),
-      (":foo!:", ("foo", AttrEntry::Bool(false))),
+      (":foo: bar", ("foo", AttrValue::String("bar".to_string()))),
+      (":foo:", ("foo", AttrValue::Bool(true))),
+      (":!foo:", ("foo", AttrValue::Bool(false))),
+      (":foo!:", ("foo", AttrValue::Bool(false))),
       (
         ":foo: {custom}-bar",
-        ("foo", AttrEntry::String("value-bar".to_string())),
+        ("foo", AttrValue::String("value-bar".to_string())),
       ),
       (
         ":foo: {custom}-bar-{baz}",
-        ("foo", AttrEntry::String("value-bar-qux".to_string())),
+        ("foo", AttrValue::String("value-bar-qux".to_string())),
       ),
       (
         ":foo-bar: baz, rofl, lol",
-        ("foo-bar", AttrEntry::String("baz, rofl, lol".to_string())),
+        ("foo-bar", AttrValue::String("baz, rofl, lol".to_string())),
       ),
       (
         ":foo: bar \\\nand baz",
-        ("foo", AttrEntry::String("bar and baz".to_string())),
+        ("foo", AttrValue::String("bar and baz".to_string())),
       ),
       (
         ":foo: bar \\\nand baz \\\nand qux",
-        ("foo", AttrEntry::String("bar and baz and qux".to_string())),
+        ("foo", AttrValue::String("bar and baz and qux".to_string())),
       ),
       (
         ":foo: bar \\\n",
-        ("foo", AttrEntry::String("bar".to_string())),
+        ("foo", AttrValue::String("bar".to_string())),
       ),
     ];
     for (input, (expected_key, expected_val)) in cases {
-      let mut existing = AttrEntries::new();
-      existing.insert("custom".to_string(), AttrEntry::String("value".to_string()));
-      existing.insert("baz".to_string(), AttrEntry::String("qux".to_string()));
+      let mut existing = AttrEntries::default();
+      existing.insert(
+        "custom".to_string(),
+        AttrEntry::new(AttrValue::String("value".to_string())),
+      );
+      existing.insert(
+        "baz".to_string(),
+        AttrEntry::new(AttrValue::String("qux".to_string())),
+      );
       let mut parser = crate::Parser::new(b, input);
       parser.document.attrs = existing;
       let mut block = parser.read_lines().unwrap();

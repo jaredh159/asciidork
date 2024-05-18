@@ -20,7 +20,7 @@ pub struct ParseContext<'bmp> {
 impl<'bmp> ParseContext<'bmp> {
   pub fn new(bump: &'bmp Bump) -> Self {
     ParseContext {
-      attrs: AttrEntries::new(),
+      attrs: AttrEntries::default(),
       subs: Substitutions::default(),
       delimiter: None,
       list: ListContext::default(),
