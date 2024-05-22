@@ -66,10 +66,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Colon => {
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines)? {
           self.restore_lines(lines);
-          self
-            .ctx
-            .attrs
-            .insert(key.clone(), AttrEntry::new(value.clone()));
+          // TODO: test error
+          _ = self.document.meta.insert_doc_attr(&key, value.clone());
           return Ok(Some(Block {
             loc: SourceLocation::new(meta.start, end),
             meta,

@@ -42,7 +42,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn new_opts(bump: &'bmp Bump, src: &'src str, opts: opts::Opts) -> Parser<'bmp, 'src> {
     let mut p = Parser::new(bump, src);
     p.strict = opts.strict;
-    p.document.set_type(opts.doc_type);
+    p.document.meta.set_doctype(opts.doc_type);
     p
   }
 
@@ -50,8 +50,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut cell_parser = Parser::new(self.bump, src);
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
-    cell_parser.document.attrs = self.document.attrs.clone();
-    cell_parser.document.set_type(DocType::Article);
+    cell_parser.document.meta = self.document.meta.clone();
+    cell_parser.document.meta.set_doctype(DocType::Article);
     cell_parser
   }
 
@@ -151,11 +151,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
-    self.document.header = self.parse_document_header()?;
+    self.parse_document_header()?;
 
     // ensure we only read a single "paragraph" for `inline` doc_type
     // https://docs.asciidoctor.org/asciidoc/latest/document/doctype/#inline-doctype-rules
-    if self.document.get_type() == DocType::Inline {
+    if self.document.meta.get_doctype() == DocType::Inline {
       if self.peeked_lines.is_none() {
         self.peeked_lines = self.read_lines();
       }
@@ -168,6 +168,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         Chunk::Section(section) => self.document.content.push_section(section, self.bump),
       }
     }
+
+    // clear the doc attrs so the backend can see them replayed in decl order
+    self.document.meta.clear_doc_attrs();
 
     self.diagnose_document()?;
 

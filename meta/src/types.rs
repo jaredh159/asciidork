@@ -1,17 +1,10 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SafeMode {
-  #[default] // TODO: consider breaking from dr. here
   Unsafe,
   Safe,
   Server,
+  #[default]
   Secure,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Revision {
-  pub version: String,
-  pub date: Option<String>,
-  pub remark: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

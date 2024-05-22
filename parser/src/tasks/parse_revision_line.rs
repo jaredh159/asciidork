@@ -7,73 +7,63 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(super) fn parse_revision_line(
     &self,
     lines: &mut ContiguousLines,
-    revision: &mut Option<Revision<'bmp>>,
-  ) {
+  ) -> Option<(String, Option<String>, Option<String>)> {
     let Some(line) = lines.current() else {
-      return;
+      return None;
     };
 
     if !line.current_is(Word) && !line.current_is(Digits) {
-      return;
+      return None;
     }
 
     // https://regexr.com/7mbsk
     let pattern = r"^([^\s,:]+)(?:,\s*([^\s:]+))?(?::\s*(.+))?$";
     let re = Regex::new(pattern).unwrap();
     let Some(captures) = re.captures(line.src) else {
-      return;
+      return None;
     };
 
     let raw_version = captures.get(1).unwrap().as_str();
     if !raw_version.chars().any(|c| c.is_ascii_digit()) {
-      return;
+      return None;
     }
 
     let vre = Regex::new(r"\d.*$").unwrap();
-    let version = vre.captures(raw_version).unwrap().get(0).unwrap().as_str();
-    let version = BumpString::from_str_in(version, self.bump);
+    let version = vre
+      .captures(raw_version)
+      .unwrap()
+      .get(0)
+      .unwrap()
+      .as_str()
+      .to_string();
 
     // only revision, must start with `v` then digit
     if captures.get(2).is_none() && captures.get(3).is_none() {
       if Regex::new(r"^v(\d[^\s]+)$").unwrap().is_match(raw_version) {
-        *revision = Some(Revision { version, date: None, remark: None });
         lines.consume_current();
+        return Some((version, None, None));
       }
-      return;
+      return None;
     }
 
     // version and remark
     if captures.get(2).is_none() && captures.get(3).is_some() {
-      let remark = captures.get(3).unwrap().as_str();
-      *revision = Some(Revision {
-        version,
-        date: None,
-        remark: Some(BumpString::from_str_in(remark, self.bump)),
-      });
+      let remark = captures.get(3).unwrap().as_str().to_string();
       lines.consume_current();
-      return;
+      return Some((version, None, Some(remark)));
     }
 
     // version and only date
     if captures.get(2).is_some() && captures.get(3).is_none() {
-      let date = captures.get(2).unwrap().as_str();
-      *revision = Some(Revision {
-        version,
-        date: Some(BumpString::from_str_in(date, self.bump)),
-        remark: None,
-      });
+      let date = captures.get(2).unwrap().as_str().to_string();
       lines.consume_current();
-      return;
+      return Some((version, Some(date), None));
     }
 
-    let date = captures.get(2).unwrap().as_str();
-    let remark = captures.get(3).unwrap().as_str();
-    *revision = Some(Revision {
-      version,
-      date: Some(BumpString::from_str_in(date, self.bump)),
-      remark: Some(BumpString::from_str_in(remark, self.bump)),
-    });
+    let date = captures.get(2).unwrap().as_str().to_string();
+    let remark = captures.get(3).unwrap().as_str().to_string();
     lines.consume_current();
+    Some((version, Some(date), Some(remark)))
   }
 }
 
@@ -81,75 +71,44 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-
-  macro_rules! s {
-    (in $bump:expr;$s:expr) => {
-      bumpalo::collections::String::from_str_in($s, $bump)
-    };
-  }
 
   #[test]
   fn test_parse_revision_lines() {
-    let b = &bumpalo::Bump::new();
     let cases = vec![
       ("foobar", None),
-      (
-        "v7.5",
-        Some(Revision {
-          version: s!(in b; "7.5"),
-          date: None,
-          remark: None,
-        }),
-      ),
+      ("v7.5", Some(("7.5".to_string(), None, None))),
       (
         "v7.5, 1-29-2020",
-        Some(Revision {
-          version: s!(in b; "7.5"),
-          date: Some(s!(in b; "1-29-2020")),
-          remark: None,
-        }),
+        Some(("7.5".to_string(), Some("1-29-2020".to_string()), None)),
       ),
       (
         "LPR55, 1-29-2020",
-        Some(Revision {
-          version: s!(in b; "55"),
-          date: Some(s!(in b; "1-29-2020")),
-          remark: None,
-        }),
+        Some(("55".to_string(), Some("1-29-2020".to_string()), None)),
       ),
       (
         "7.5, 1-29-2020",
-        Some(Revision {
-          version: s!(in b; "7.5"),
-          date: Some(s!(in b; "1-29-2020")),
-          remark: None,
-        }),
+        Some(("7.5".to_string(), Some("1-29-2020".to_string()), None)),
       ),
       (
         "7.5: A new analysis",
-        Some(Revision {
-          version: s!(in b; "7.5"),
-          date: None,
-          remark: Some(s!(in b; "A new analysis")),
-        }),
+        Some(("7.5".to_string(), None, Some("A new analysis".to_string()))),
       ),
       (
         "v7.5, 1-29-2020: A new analysis",
-        Some(Revision {
-          version: s!(in b; "7.5"),
-          date: Some(s!(in b; "1-29-2020")),
-          remark: Some(s!(in b; "A new analysis")),
-        }),
+        Some((
+          "7.5".to_string(),
+          Some("1-29-2020".to_string()),
+          Some("A new analysis".to_string()),
+        )),
       ),
       ("v7.5 1-29-2020 A new analysis", None),
     ];
 
     for (input, expected) in cases {
+      let b = &bumpalo::Bump::new();
       let mut parser = crate::Parser::new(b, input);
       let mut block = parser.read_lines().unwrap();
-      let mut revision = None;
-      parser.parse_revision_line(&mut block, &mut revision);
+      let revision = parser.parse_revision_line(&mut block);
       assert_eq!(revision, expected);
     }
   }

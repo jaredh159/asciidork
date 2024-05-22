@@ -1,8 +1,8 @@
 [package]
-name = "asciidork-attr"
+name = "asciidork-meta"
 version = "0.5.0"
 edition = "2021"
-description = "Asciidork configuration"
+description = "Asciidork document meta"
 license = "MIT"
 
 [dependencies]

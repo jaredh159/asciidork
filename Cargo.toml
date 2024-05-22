@@ -2,12 +2,13 @@
 
 members = [
   "ast",
-  "attr",
+  "meta",
   "backend",
   "cli",
   "dr-html-backend",
   "dr-html-wasm",
   "eval",
+  "meta",
   "parser",
   "opts",
   "test-utils",

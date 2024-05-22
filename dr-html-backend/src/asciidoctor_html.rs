@@ -9,8 +9,7 @@ pub struct AsciidoctorHtml {
   pub(crate) html: String,
   pub(crate) alt_html: String,
   pub(crate) footnotes: Vec<(String, String)>,
-  pub(crate) doc_attrs: AttrEntries,
-  pub(crate) doc_type: DocType,
+  pub(crate) doc_meta: DocumentMeta,
   pub(crate) fig_caption_num: usize,
   pub(crate) table_caption_num: usize,
   pub(crate) opts: Opts,
@@ -31,43 +30,42 @@ impl Backend for AsciidoctorHtml {
 
   fn enter_document(&mut self, document: &Document, opts: Opts) {
     self.opts = opts;
-    self.doc_attrs = document.attrs.clone();
-    self.doc_type = document.get_type();
-    self.section_num_levels = document.attrs.isize("sectnumlevels").unwrap_or(3);
-    if document.attrs.is_true("hardbreaks-option") {
+    self.doc_meta = document.meta.clone();
+    self.section_num_levels = document.meta.isize("sectnumlevels").unwrap_or(3);
+    if document.meta.is_true("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
     }
     if opts.doc_type == DocType::Inline || self.in_asciidoc_table_cell {
-      self.render_doc_header = document.attrs.is_true("showtitle");
+      self.render_doc_header = document.meta.is_true("showtitle");
       return;
     }
-    self.render_doc_header = !document.attrs.is_false("showtitle");
+    self.render_doc_header = !document.meta.is_false("showtitle");
     self.push_str(r#"<!DOCTYPE html><html"#);
-    if !document.attrs.is_true("nolang") {
-      self.push([r#" lang=""#, document.attrs.str_or("lang", "en"), "\""]);
+    if !document.meta.is_true("nolang") {
+      self.push([r#" lang=""#, document.meta.str_or("lang", "en"), "\""]);
     }
-    let encoding = document.attrs.str_or("encoding", "UTF-8");
+    let encoding = document.meta.str_or("encoding", "UTF-8");
     self.push([r#"><head><meta charset=""#, encoding, r#"">"#]);
     self.push_str(r#"<meta http-equiv="X-UA-Compatible" content="IE=edge">"#);
     self.push_str(r#"<meta name="viewport" content="width=device-width, initial-scale=1.0">"#);
-    if !document.attrs.is_true("reproducible") {
+    if !document.meta.is_true("reproducible") {
       self.push_str(r#"<meta name="generator" content="Asciidork">"#);
     }
-    if let Some(appname) = document.attrs.str("app-name") {
+    if let Some(appname) = document.meta.str("app-name") {
       self.push([r#"<meta name="application-name" content=""#, appname, "\">"]);
     }
-    if let Some(desc) = document.attrs.str("description") {
+    if let Some(desc) = document.meta.str("description") {
       self.push([r#"<meta name="description" content=""#, desc, "\">"]);
     }
-    if let Some(keywords) = document.attrs.str("keywords") {
+    if let Some(keywords) = document.meta.str("keywords") {
       self.push([r#"<meta name="keywords" content=""#, keywords, "\">"]);
     }
-    if let Some(copyright) = document.attrs.str("copyright") {
+    if let Some(copyright) = document.meta.str("copyright") {
       self.push([r#"<meta name="copyright" content=""#, copyright, "\">"]);
     }
-    self.render_favicon(&document.attrs);
-    self.render_authors(&document.header);
-    self.render_title(document, &document.attrs);
+    self.render_favicon(&document.meta);
+    self.render_authors(document.meta.authors());
+    self.render_title(document, &document.meta);
     // TODO: stylesheets
     self.push([r#"</head><body class=""#, opts.doc_type.to_str()]);
     match document.toc.as_ref().map(|toc| &toc.position) {
@@ -87,57 +85,21 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
-  fn enter_document_header(&mut self, _doc_header: &DocHeader) {
+  fn enter_document_title(&mut self, _nodes: &[InlineNode]) {
     if self.render_doc_header {
-      self.push_str(r#"<div id="header">"#)
-    }
-  }
-
-  fn exit_document_header(&mut self, _doc_header: &DocHeader) {
-    if self.render_doc_header {
-      self.push_str("</div>");
-    }
-  }
-
-  fn enter_document_title(&mut self, _doc_title: &DocTitle) {
-    if self.render_doc_header {
-      self.push_str("<h1>")
+      self.push_str(r#"<div id="header"><h1>"#)
     } else {
       self.start_buffering();
     }
   }
 
-  fn exit_document_title(&mut self, _doc_title: &DocTitle) {
+  fn exit_document_title(&mut self, _nodes: &[InlineNode]) {
     if self.render_doc_header {
       self.push_str("</h1>");
+      self.render_document_authors();
+      self.push_str("</div>");
     } else {
       self.take_buffer(); // discard
-    }
-  }
-
-  fn visit_document_authors(&mut self, authors: &[Author]) {
-    if self.render_doc_header && !authors.is_empty() {
-      self.push_str(r#"<div class="details">"#);
-      for (idx, author) in authors.iter().enumerate() {
-        self.push_str(r#"<span id="author"#);
-        if idx > 0 {
-          self.push_str(&num_str!(idx + 1));
-        }
-        self.push([r#"" class="author">"#, &author.first_name]);
-        if let Some(middle_name) = &author.middle_name {
-          self.push([" ", middle_name]);
-        }
-        self.push([" ", &author.last_name, r#"</span><br>"#]);
-        if let Some(email) = &author.email {
-          self.push_str(r#"<span id="email"#);
-          if idx > 0 {
-            self.push_str(&num_str!(idx + 1));
-          }
-          self.push([r#"" class="email"><a href="mailto:"#, &email]);
-          self.push([r#"">"#, &email, "</a></span><br>"]);
-        }
-      }
-      self.push_str("</div>");
     }
   }
 
@@ -421,15 +383,11 @@ impl Backend for AsciidoctorHtml {
   fn enter_callout_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.autogen_conum = 1;
     self.open_element("div", &["colist arabic"], block.meta.attrs.as_ref());
-    self.push_str(if self.doc_attrs.get("icons").is_some() { "<table>" } else { "<ol>" });
+    self.push_str(if self.doc_meta.is_set("icons") { "<table>" } else { "<ol>" });
   }
 
   fn exit_callout_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
-    self.push_str(if self.doc_attrs.get("icons").is_some() {
-      "</table></div>"
-    } else {
-      "</ol></div>"
-    });
+    self.push_str(if self.doc_meta.is_set("icons") { "</table></div>" } else { "</ol></div>" });
   }
 
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
@@ -506,14 +464,14 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_list_item_principal(&mut self, item: &ListItem, list_variant: ListVariant) {
-    if list_variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
+    if list_variant != ListVariant::Callout || self.doc_meta.is_unset("icons") {
       self.push_str("<li><p>");
       self.render_checklist_item(item);
     } else {
       self.push_str("<tr><td>");
       let n = item.marker.callout_num().unwrap_or(self.autogen_conum);
       self.autogen_conum = n + 1;
-      if self.doc_attrs.str("icons") == Some("font") {
+      if self.doc_meta.str("icons") == Some("font") {
         self.push_callout_number_font(n);
       } else {
         self.push_callout_number_img(n);
@@ -523,7 +481,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_list_item_principal(&mut self, _item: &ListItem, list_variant: ListVariant) {
-    if list_variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
+    if list_variant != ListVariant::Callout || self.doc_meta.is_unset("icons") {
       self.push_str("</p>");
     } else {
       self.push_str("</td>");
@@ -533,7 +491,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_list_item_blocks(&mut self, _: &[Block], _: &ListItem, _: ListVariant) {}
 
   fn exit_list_item_blocks(&mut self, _blocks: &[Block], _items: &ListItem, variant: ListVariant) {
-    if variant != ListVariant::Callout || self.doc_attrs.get("icons").is_none() {
+    if variant != ListVariant::Callout || self.doc_meta.is_unset("icons") {
       self.push_str("</li>");
     } else {
       self.push_str("</tr>");
@@ -541,7 +499,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_paragraph_block(&mut self, block: &Block) {
-    if self.doc_type != DocType::Inline {
+    if self.doc_meta.get_doctype() != DocType::Inline {
       if !self.state.contains(&VisitingSimpleTermDescription) {
         self.open_element("div", &["paragraph"], block.meta.attrs.as_ref());
         self.render_block_title(&block.meta);
@@ -551,7 +509,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_paragraph_block(&mut self, _block: &Block) {
-    if self.doc_type != DocType::Inline {
+    if self.doc_meta.get_doctype() != DocType::Inline {
       self.push_str("</p>");
       if !self.state.contains(&VisitingSimpleTermDescription) {
         self.push_str("</div>");
@@ -681,10 +639,9 @@ impl Backend for AsciidoctorHtml {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
-    let icons = self.doc_attrs.get("icons");
-    match icons {
+    match self.doc_meta.get("icons") {
       Some(AttrValue::Bool(true)) => self.push_callout_number_img(callout.number),
-      Some(AttrValue::String(icons)) if icons == "font" => {
+      Some(AttrValue::String(value)) if value == "font" => {
         self.push_callout_number_font(callout.number);
       }
       // TODO: asciidoctor also handles special `guard` case
@@ -698,18 +655,14 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn visit_callout_tuck(&mut self, comment: &str) {
-    if self.doc_attrs.str("icons") != Some("font") {
+    if self.doc_meta.str("icons") != Some("font") {
       self.push_str(comment);
     }
   }
 
   fn visit_attribute_reference(&mut self, name: &str) {
-    let val = self.doc_attrs.str(name).map(|s| s.to_string());
-    if let Some(val) = val {
+    if let Some(val) = self.doc_meta.string(name) {
       self.push_str(&val);
-      return;
-    } else if let Some(builtin) = self.doc_attrs.builtin(name) {
-      self.push_str(builtin);
       return;
     }
     match self.opts.attribute_missing {
@@ -922,7 +875,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_image_block(&mut self, block: &Block) {
-    let prefix = if self.doc_attrs.is_false("figure-caption") {
+    let prefix = if self.doc_meta.is_false("figure-caption") {
       None
     } else {
       self.fig_caption_num += 1;
@@ -942,9 +895,8 @@ impl Backend for AsciidoctorHtml {
         self.newlines = Newlines::default();
       }
     }
-    self
-      .doc_attrs
-      .insert(name.to_string(), AttrEntry::new(value.clone()));
+    // TODO: consider warning?
+    _ = self.doc_meta.insert_doc_attr(name, value.clone());
   }
 
   fn enter_footnote(&mut self, _id: Option<&str>, _content: &[InlineNode]) {
@@ -1013,7 +965,7 @@ impl AsciidoctorHtml {
     {
       (None | Some("source"), Some(lang)) => Some(Cow::Borrowed(lang)),
       _ => self
-        .doc_attrs
+        .doc_meta
         .str("source-language")
         .map(|s| Cow::Owned(s.to_string())),
     }
@@ -1077,12 +1029,12 @@ impl AsciidoctorHtml {
     self.footnotes = footnotes;
   }
 
-  fn render_favicon(&mut self, attrs: &AttrEntries) {
-    match attrs.get("favicon") {
+  fn render_favicon(&mut self, meta: &DocumentMeta) {
+    match meta.get("favicon") {
       Some(AttrValue::String(path)) => {
         let ext = helpers::file_ext(path).unwrap_or("ico");
         self.push_str(r#"<link rel="icon" type="image/"#);
-        self.push([ext, r#"" href=""#, path, "\">"]);
+        self.push([ext, r#"" href=""#, &path, "\">"]);
       }
       Some(AttrValue::Bool(true)) => {
         self.push_str(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#);
@@ -1091,10 +1043,7 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn render_authors(&mut self, header: &Option<DocHeader>) {
-    let Some(DocHeader { authors, .. }) = header else {
-      return;
-    };
+  fn render_authors(&mut self, authors: &[Author]) {
     if authors.is_empty() {
       return;
     }
@@ -1109,16 +1058,12 @@ impl AsciidoctorHtml {
     self.push_str(r#"">"#);
   }
 
-  fn render_title(&mut self, document: &Document, attrs: &AttrEntries) {
+  fn render_title(&mut self, document: &Document, attrs: &DocumentMeta) {
     self.push_str(r#"<title>"#);
     if let Some(title) = attrs.str("title") {
       self.push_str(title);
-    } else if let Some(title) = document
-      .header
-      .as_ref()
-      .and_then(|header| header.title.as_ref())
-    {
-      for s in title.heading.plain_text() {
+    } else if let Some(title) = document.title.as_ref() {
+      for s in title.plain_text() {
         self.push_str(s);
       }
     } else {
@@ -1196,11 +1141,8 @@ impl AsciidoctorHtml {
   fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
     // PERF: we could work to prevent all these allocations w/ some caching
     // these might get rendered many times in a given document
-    let icondir = self
-      .doc_attrs
-      .str_or("iconsdir", "./images/icons")
-      .to_string();
-    let ext = self.doc_attrs.str_or("icontype", "png").to_string();
+    let icondir = self.doc_meta.string_or("iconsdir", "./images/icons");
+    let ext = self.doc_meta.string_or("icontype", "png");
     self.push([&icondir, "/", prefix.unwrap_or(""), name, ".", &ext]);
   }
 
@@ -1215,6 +1157,36 @@ impl AsciidoctorHtml {
     self.push_str(r#"<img src=""#);
     self.push_icon_uri(n_str, Some("callouts/"));
     self.push([r#"" alt=""#, n_str, r#"">"#]);
+  }
+
+  fn render_document_authors(&mut self) {
+    let authors = self.doc_meta.authors();
+    if !self.render_doc_header || authors.is_empty() {
+      return;
+    }
+    let mut buffer = String::with_capacity(authors.len() * 100);
+    buffer.push_str(r#"<div class="details">"#);
+    for (idx, author) in authors.iter().enumerate() {
+      buffer.push_str(r#"<span id="author"#);
+      if idx > 0 {
+        buffer.push_str(&num_str!(idx + 1));
+      }
+      buffer.push_str(r#"" class="author">"#);
+      buffer.push_str(&author.fullname());
+      buffer.push_str(r#"</span><br>"#);
+      if let Some(email) = &author.email {
+        buffer.push_str(r#"<span id="email"#);
+        if idx > 0 {
+          buffer.push_str(&num_str!(idx + 1));
+        }
+        buffer.push_str(r#"" class="email"><a href="mailto:"#);
+        buffer.push_str(email);
+        buffer.push_str(r#"">"#);
+        buffer.push_str(email);
+        buffer.push_str(r#"</a></span><br>"#);
+      }
+    }
+    self.push([&buffer, "</div>"]);
   }
 }
 

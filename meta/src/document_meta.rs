@@ -2,31 +2,72 @@ use std::collections::HashSet;
 
 use crate::internal::*;
 
-#[derive(Debug, Clone, Default)]
-pub struct DocumentAttrs {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DocumentMeta {
   authors: Vec<Author>,
   safe_mode: SafeMode,
   doctype: DocType,
-  task_attrs: TaskAttrs, // naming?
+  job_attrs: JobAttrs,
+  header_attrs: Attrs,
   doc_attrs: Attrs,
-  // remove vvvvv
-  finished_header: bool, // this is weird
+  default_attrs: Attrs,
 }
 
-impl DocumentAttrs {
-  pub fn new(safe_mode: SafeMode, task_attrs: TaskAttrs) -> Self {
+impl Default for DocumentMeta {
+  fn default() -> Self {
+    Self {
+      safe_mode: SafeMode::default(),
+      doctype: DocType::default(),
+      job_attrs: JobAttrs::empty(),
+      header_attrs: Attrs::empty(),
+      doc_attrs: Attrs::empty(),
+      default_attrs: Attrs::defaults(),
+      authors: Vec::new(),
+    }
+  }
+}
+
+impl DocumentMeta {
+  pub fn new(safe_mode: SafeMode, mut job_attrs: JobAttrs) -> Self {
+    match safe_mode {
+      SafeMode::Unsafe => {
+        job_attrs.insert("safe-mode-unsafe", JobAttr::readonly(true));
+        job_attrs.insert("safe-mode-level", JobAttr::readonly("0"));
+        job_attrs.insert("safe-mode-name", JobAttr::readonly("UNSAFE"));
+      }
+      SafeMode::Safe => {
+        job_attrs.insert("safe-mode-safe", JobAttr::readonly(true));
+        job_attrs.insert("safe-mode-level", JobAttr::readonly("1"));
+        job_attrs.insert("safe-mode-name", JobAttr::readonly("SAFE"));
+      }
+      SafeMode::Server => {
+        job_attrs.insert("safe-mode-server", JobAttr::readonly(true));
+        job_attrs.insert("safe-mode-level", JobAttr::readonly("10"));
+        job_attrs.insert("safe-mode-name", JobAttr::readonly("SERVER"));
+      }
+      SafeMode::Secure => {
+        job_attrs.insert("safe-mode-secure", JobAttr::readonly(true));
+        job_attrs.insert("safe-mode-level", JobAttr::readonly("20"));
+        job_attrs.insert("safe-mode-name", JobAttr::readonly("SECURE"));
+      }
+    }
     Self {
       safe_mode,
       doctype: DocType::Article,
-      task_attrs,
-      doc_attrs: Attrs::default(),
+      job_attrs,
+      header_attrs: Attrs::empty(),
+      doc_attrs: Attrs::empty(),
+      default_attrs: Attrs::defaults(),
       authors: Vec::new(),
-      finished_header: false,
     }
   }
 
+  pub fn authors(&self) -> &[Author] {
+    &self.authors
+  }
+
   fn insert_string_attr(&mut self, key: &str, value: String) {
-    self.doc_attrs.insert(key, AttrValue::String(value));
+    self.header_attrs.insert(key, AttrValue::String(value));
   }
 
   pub fn add_author(&mut self, author: Author) {
@@ -55,7 +96,7 @@ impl DocumentAttrs {
     self.insert_string_attr(&format!("firstname_{}", n), author.first_name.clone());
     self.insert_string_attr(&format!("authorinitials_{}", n), author.initials());
 
-    if let Some(AttrValue::String(authors)) = self.doc_attrs.get("authors") {
+    if let Some(AttrValue::String(authors)) = self.header_attrs.get("authors") {
       self.insert_string_attr("authors", format!("{}, {}", authors, author.fullname()));
     } else {
       self.insert_string_attr("authors", author.fullname());
@@ -64,18 +105,11 @@ impl DocumentAttrs {
     self.authors.push(author);
   }
 
-  pub fn set(&mut self, key: &str, value: AttrValue) -> Result<(), String> {
-    if self.finished_header && HEADER_ONLY.contains(key) {
-      return Err(format!(
-        "Attribute `{}` may only be set in the document header",
-        key
-      ));
-    }
+  pub fn insert_header_attr(&mut self, key: &str, value: AttrValue) -> Result<(), String> {
     match key {
       "doctype" => {
         if let Some(doctype) = value.str().and_then(|s| s.parse::<DocType>().ok()) {
-          self.doctype = doctype;
-          self.doc_attrs.insert(key, value);
+          self.set_doctype(doctype);
         } else {
           return Err("Invalid doctype: expected `article`, `book`, `manpage`, or `inline`".into());
         }
@@ -88,86 +122,65 @@ impl DocumentAttrs {
           key
         ));
       }
-      _ => self.doc_attrs.insert(key, value),
+      _ => self.header_attrs.insert(key, value),
     }
     Ok(())
   }
+
+  pub fn insert_doc_attr(&mut self, key: &str, value: AttrValue) -> Result<(), String> {
+    if HEADER_ONLY.contains(key) {
+      return Err(format!(
+        "Attribute `{}` may only be set in the document header",
+        key
+      ));
+    }
+    self.doc_attrs.insert(key, value);
+    Ok(())
+  }
+
+  pub fn clear_doc_attrs(&mut self) {
+    self.doc_attrs = Attrs::empty();
+  }
+
+  pub fn set_doctype(&mut self, doctype: DocType) {
+    self.doctype = doctype;
+    self
+      .header_attrs
+      .insert("doctype", self.doctype.to_str().into());
+  }
+
+  pub const fn get_doctype(&self) -> DocType {
+    self.doctype
+  }
+
+  fn resolve_attr(&self, key: &str) -> Option<&AttrValue> {
+    match self.doc_attrs.get(key) {
+      Some(value) => Some(value),
+      None => match self.header_attrs.get(key) {
+        Some(value) => Some(value),
+        None => self.default_attrs.get(key),
+      },
+    }
+  }
 }
 
-impl ReadAttr for DocumentAttrs {
+impl ReadAttr for DocumentMeta {
   fn get(&self, key: &str) -> Option<&AttrValue> {
     match key {
-      // doctype
       "doctype-article" => self.true_if(self.doctype == DocType::Article),
       "doctype-book" => self.true_if(self.doctype == DocType::Book),
       "doctype-inline" => self.true_if(self.doctype == DocType::Inline),
       "doctype-manpage" => self.true_if(self.doctype == DocType::Manpage),
 
-      // safe mode
-      "safe-mode-unsafe" => self.true_if(self.safe_mode == SafeMode::Unsafe),
-      "safe-mode-safe" => self.true_if(self.safe_mode == SafeMode::Safe),
-      "safe-mode-server" => self.true_if(self.safe_mode == SafeMode::Server),
-      "safe-mode-secure" => self.true_if(self.safe_mode == SafeMode::Secure),
-      "safe-mode-level" => match self.safe_mode {
-        SafeMode::Unsafe => Some(&AttrValue::Str("0")),
-        SafeMode::Safe => Some(&AttrValue::Str("1")),
-        SafeMode::Server => Some(&AttrValue::Str("10")),
-        SafeMode::Secure => Some(&AttrValue::Str("20")),
+      key => match self.job_attrs.get(key) {
+        Some(JobAttr { readonly: true, value }) => Some(value),
+        Some(JobAttr { readonly: false, value }) => self.resolve_attr(key).or(Some(value)),
+        _ => self.resolve_attr(key),
       },
-      "safe-mode-name" => match self.safe_mode {
-        SafeMode::Unsafe => Some(&AttrValue::Str("UNSAFE")),
-        SafeMode::Safe => Some(&AttrValue::Str("SAFE")),
-        SafeMode::Server => Some(&AttrValue::Str("SERVER")),
-        SafeMode::Secure => Some(&AttrValue::Str("SECURE")),
-      },
-
-      // // author
-      // "author" if !self.authors.is_empty() => {
-      //   let authors = self
-      //     .authors
-      //     .iter()
-      //     .map(|a| a.fullname())
-      //     .collect::<Vec<_>>()
-      //     .join(", ");
-      //   Some(&AttrValue::String(authors))
-      // }
-      key => match self.task_attrs.get(key) {
-        Some(TaskAttr { readonly: true, value }) => Some(value),
-        Some(TaskAttr { readonly: false, value }) => self.doc_attrs.get(key).or(Some(value)),
-        _ => match self.doc_attrs.get(key) {
-          Some(value) => Some(value),
-          None => match key {
-            // TODO: maybe static? even perfect hash?
-            "attribute-missing" => Some(&AttrValue::Str("skip")),
-            "attribute-undefined" => Some(&AttrValue::Str("drop-line")),
-            "appendix-caption" => Some(&AttrValue::Str("Appendix")),
-            "appendix-refsig" => Some(&AttrValue::Str("Appendix")),
-            "caution-caption" => Some(&AttrValue::Str("Caution")),
-            "chapter-refsig" => Some(&AttrValue::Str("Chapter")),
-            "example-caption" => Some(&AttrValue::Str("Example")),
-            "figure-caption" => Some(&AttrValue::Str("Figure")),
-            "important-caption" => Some(&AttrValue::Str("Important")),
-            "last-update-label" => Some(&AttrValue::Str("Last updated")),
-            "note-caption" => Some(&AttrValue::Str("Note")),
-            "part-refsig" => Some(&AttrValue::Str("Part")),
-            "section-refsig" => Some(&AttrValue::Str("Section")),
-            "table-caption" => Some(&AttrValue::Str("Table")),
-            "tip-caption" => Some(&AttrValue::Str("Tip")),
-            "toc-title" => Some(&AttrValue::Str("Table of Contents")),
-            "untitled-label" => Some(&AttrValue::Str("Untitled")),
-            "version-label" => Some(&AttrValue::Str("Version")),
-            "warning-caption" => Some(&AttrValue::Str("Warning")),
-            // defaults
-            _ => None,
-          },
-        },
-      },
-      // jared
     }
   }
 }
 
-// this should be moved into a test when encountering a decl
 lazy_static::lazy_static! {
   static ref HEADER_ONLY: HashSet<&'static str> = {
     HashSet::from_iter(vec![
@@ -208,59 +221,60 @@ mod tests {
 
   #[test]
   fn attr_merging() {
-    let mut attrs = DocumentAttrs::default();
-    attrs.task_attrs.insert(
-      "task_readonly",
-      TaskAttr {
+    let mut attrs = DocumentMeta::default();
+    attrs.job_attrs.insert(
+      "job_readonly",
+      JobAttr {
         readonly: true,
         value: AttrValue::Bool(true),
       },
     );
-    attrs.task_attrs.insert(
-      "task_modifiable",
-      TaskAttr {
+    attrs.job_attrs.insert(
+      "job_modifiable",
+      JobAttr {
         readonly: false,
         value: AttrValue::Bool(true),
       },
     );
 
     attrs
-      .doc_attrs
-      .insert("task_readonly", AttrValue::Bool(false));
+      .header_attrs
+      .insert("job_readonly", AttrValue::Bool(false));
     attrs
-      .doc_attrs
-      .insert("task_modifiable", AttrValue::Bool(false));
+      .header_attrs
+      .insert("job_modifiable", AttrValue::Bool(false));
     attrs
-      .doc_attrs
+      .header_attrs
       .insert("only_doc_set", AttrValue::Bool(false));
 
-    assert!(attrs.is_true("task_readonly"));
-    assert!(attrs.is_false("task_modifiable"));
+    assert!(attrs.is_true("job_readonly"));
+    assert!(attrs.is_false("job_modifiable"));
     assert!(attrs.is_false("only_doc_set"));
+
+    // doc attrs trump header_attrs
+    attrs.header_attrs.insert("sectids", AttrValue::Bool(true));
+    attrs.doc_attrs.insert("sectids", AttrValue::Bool(false));
+    assert!(attrs.is_false("sectids"));
   }
 
   #[test]
   fn defaults() {
-    let mut attrs = DocumentAttrs::default();
-    attrs.task_attrs.insert(
-      "doctype",
-      TaskAttr {
-        readonly: false,
-        value: AttrValue::String("article".into()),
-      },
-    );
+    let mut attrs = DocumentMeta::default();
+    attrs
+      .job_attrs
+      .insert("doctype", JobAttr::readonly("article"));
     assert!(attrs.is_true("doctype-article"));
     assert_eq!(attrs.str("attribute-missing").unwrap(), "skip");
   }
 
   #[test]
   fn safe_mode() {
-    let mut attrs = DocumentAttrs::default();
+    let attrs = DocumentMeta::new(SafeMode::Unsafe, JobAttrs::default());
     assert!(attrs.is_true("safe-mode-unsafe"));
     assert!(attrs.get("safe-mode-safe").is_none());
     assert_eq!(attrs.u8("safe-mode-level"), Some(0));
     assert_eq!(attrs.str("safe-mode-name"), Some("UNSAFE"));
-    attrs.safe_mode = SafeMode::Server;
+    let attrs = DocumentMeta::new(SafeMode::Server, JobAttrs::default());
     assert!(attrs.is_true("safe-mode-server"));
     assert_eq!(attrs.u8("safe-mode-level"), Some(10));
     assert!(attrs.get("safe-mode-unsafe").is_none());
@@ -269,9 +283,11 @@ mod tests {
 
   #[test]
   fn doctype() {
-    let mut attrs = DocumentAttrs::default();
+    let mut attrs = DocumentMeta::default();
     assert!(attrs.is_true("doctype-article"));
-    attrs.set("doctype", AttrValue::Str("book")).unwrap();
+    attrs
+      .insert_header_attr("doctype", AttrValue::String("book".into()))
+      .unwrap();
     assert!(attrs.get("doctype-article").is_none());
     assert!(attrs.is_true("doctype-book"));
   }
@@ -279,7 +295,7 @@ mod tests {
   #[test]
   fn authors() {
     // single author from author line
-    let mut attrs = DocumentAttrs::default();
+    let mut attrs = DocumentMeta::default();
     attrs.add_author(Author {
       first_name: "John".into(),
       middle_name: Some("M".into()),

@@ -224,7 +224,7 @@ impl Json for BlockContent<'_> {
       BlockContent::DocumentAttribute(key, value) => {
         buf.push_str("DocumentAttribute\"");
         buf.add_member("key", &key.as_str());
-        buf.add_member("value", value);
+        buf.add_member("value", &value.str());
       }
       BlockContent::QuotedParagraph { quote, attr, cite } => {
         buf.push_str("QuotedParagraph\"");

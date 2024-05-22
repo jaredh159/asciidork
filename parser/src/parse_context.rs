@@ -4,7 +4,6 @@ use crate::internal::*;
 
 #[derive(Debug)]
 pub struct ParseContext<'bmp> {
-  pub attrs: AttrEntries,
   pub subs: Substitutions,
   pub delimiter: Option<Delimiter>,
   pub list: ListContext,
@@ -20,7 +19,6 @@ pub struct ParseContext<'bmp> {
 impl<'bmp> ParseContext<'bmp> {
   pub fn new(bump: &'bmp Bump) -> Self {
     ParseContext {
-      attrs: AttrEntries::default(),
       subs: Substitutions::default(),
       delimiter: None,
       list: ListContext::default(),

@@ -1,4 +1,5 @@
 use super::admonition::AdmonitionKind;
+use crate::prelude::*;
 use ast::prelude::*;
 use opts::Opts;
 
@@ -21,11 +22,8 @@ pub trait Backend {
   fn visit_document_attribute_decl(&mut self, name: &str, value: &AttrValue);
   fn enter_preamble(&mut self, blocks: &[Block]);
   fn exit_preamble(&mut self, blocks: &[Block]);
-  fn enter_document_header(&mut self, doc_header: &DocHeader);
-  fn exit_document_header(&mut self, doc_header: &DocHeader);
-  fn enter_document_title(&mut self, doc_title: &DocTitle);
-  fn exit_document_title(&mut self, doc_title: &DocTitle);
-  fn visit_document_authors(&mut self, authors: &[Author]);
+  fn enter_document_title(&mut self, nodes: &[InlineNode]);
+  fn exit_document_title(&mut self, nodes: &[InlineNode]);
 
   // table of contents
   fn enter_toc(&mut self, _toc: &TableOfContents) {}

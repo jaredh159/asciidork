@@ -11,14 +11,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       if key == "doctype" {
         if let AttrValue::String(s) = &value {
           match s.as_str().parse::<DocType>() {
-            Ok(doc_type) => self.document.set_type(doc_type),
+            Ok(doc_type) => self.document.meta.set_doctype(doc_type),
             Err(err) => self.err_doc_attr(":doctype:", err)?,
           }
         } else {
           self.err_doc_attr(":!doctype:", "".parse::<DocType>().err().unwrap())?;
         }
+      } else {
+        // TODO: map/handle error
+        _ = self.document.meta.insert_header_attr(&key, value);
       }
-      self.document.attrs.insert(key, AttrEntry::new(value));
     }
     Ok(())
   }
@@ -61,7 +63,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
       let value = SUBS_RE.replace_all(&joined, |caps: &regex::Captures| {
         if let Some(AttrValue::String(replace)) =
-          self.document.attrs.get(caps.get(1).unwrap().as_str())
+          self.document.meta.get(caps.get(1).unwrap().as_str())
         {
           replace
         } else {
@@ -159,17 +161,17 @@ mod tests {
       ),
     ];
     for (input, (expected_key, expected_val)) in cases {
-      let mut existing = AttrEntries::default();
-      existing.insert(
-        "custom".to_string(),
-        AttrEntry::new(AttrValue::String("value".to_string())),
-      );
-      existing.insert(
-        "baz".to_string(),
-        AttrEntry::new(AttrValue::String("qux".to_string())),
-      );
       let mut parser = crate::Parser::new(b, input);
-      parser.document.attrs = existing;
+      parser
+        .document
+        .meta
+        .insert_doc_attr("custom", "value".into())
+        .unwrap();
+      parser
+        .document
+        .meta
+        .insert_doc_attr("baz", "qux".into())
+        .unwrap();
       let mut block = parser.read_lines().unwrap();
       let (key, value, _) = parser.parse_doc_attr(&mut block).unwrap().unwrap();
       assert_eq!(&key, expected_key);
