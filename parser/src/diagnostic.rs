@@ -79,7 +79,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     })
   }
 
-  pub(crate) fn err_doc_attr(&self, key: &'static str, message: impl Into<String>) -> Result<()> {
+  pub(crate) fn err_doc_attr(
+    &self,
+    key: impl Into<String>,
+    message: impl Into<String>,
+  ) -> Result<()> {
+    let key = &key.into();
     for (idx, line) in self
       .lexer
       .raw_lines()

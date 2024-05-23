@@ -132,14 +132,14 @@ impl DocumentMeta {
     Ok(())
   }
 
-  pub fn insert_doc_attr(&mut self, key: &str, value: AttrValue) -> Result<(), String> {
+  pub fn insert_doc_attr(&mut self, key: &str, value: impl Into<AttrValue>) -> Result<(), String> {
     if HEADER_ONLY.contains(key) {
       return Err(format!(
         "Attribute `{}` may only be set in the document header",
         key
       ));
     }
-    self.doc_attrs.insert(key, value);
+    self.doc_attrs.insert(key, value.into());
     Ok(())
   }
 
@@ -205,6 +205,7 @@ lazy_static::lazy_static! {
       "authors",
       "copyright",
       "doctitle",
+      "doctype",
       "description",
       "email",
       "firstname",
@@ -226,40 +227,30 @@ mod tests {
 
   #[test]
   fn attr_merging() {
-    let mut attrs = DocumentMeta::default();
-    attrs.job_attrs.insert(
-      "job_readonly",
-      JobAttr {
-        readonly: true,
-        value: AttrValue::Bool(true),
-      },
-    );
-    attrs.job_attrs.insert(
-      "job_modifiable",
-      JobAttr {
-        readonly: false,
-        value: AttrValue::Bool(true),
-      },
-    );
+    let mut job_attrs = JobAttrs::default();
+    job_attrs.insert("job_readonly", JobAttr::readonly(true));
+    job_attrs.insert("job_modifiable", JobAttr::modifiable(true));
+    let mut attrs = DocumentMeta::new(SafeMode::Secure, job_attrs);
 
-    attrs
-      .header_attrs
-      .insert("job_readonly", AttrValue::Bool(false));
-    attrs
-      .header_attrs
-      .insert("job_modifiable", AttrValue::Bool(false));
-    attrs
-      .header_attrs
-      .insert("only_doc_set", AttrValue::Bool(false));
+    assert!(attrs.is_true("job_readonly"));
+    assert!(attrs.is_true("job_modifiable"));
+
+    attrs.insert_header_attr("job_readonly", false).unwrap();
+    attrs.insert_header_attr("job_modifiable", false).unwrap();
+    attrs.insert_header_attr("only_doc_set", false).unwrap();
 
     assert!(attrs.is_true("job_readonly"));
     assert!(attrs.is_false("job_modifiable"));
     assert!(attrs.is_false("only_doc_set"));
 
     // doc attrs trump header_attrs
-    attrs.header_attrs.insert("sectids", AttrValue::Bool(true));
-    attrs.doc_attrs.insert("sectids", AttrValue::Bool(false));
+    attrs.insert_header_attr("sectids", true).unwrap();
+    attrs.insert_doc_attr("sectids", false).unwrap();
     assert!(attrs.is_false("sectids"));
+
+    // attempting to set read-only job attr has no effect
+    attrs.insert_doc_attr("safe-mode-name", "UNSAFE").unwrap();
+    assert_eq!(attrs.str("safe-mode-name"), Some("SECURE"));
   }
 
   #[test]

@@ -17,9 +17,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         } else {
           self.err_doc_attr(":!doctype:", "".parse::<DocType>().err().unwrap())?;
         }
-      } else {
-        // TODO: map/handle error
-        _ = self.document.meta.insert_header_attr(&key, value);
+      } else if let Err(err) = self.document.meta.insert_header_attr(&key, value) {
+        self.err_doc_attr(format!(":{}:", key), err)?;
       }
     }
     Ok(())
@@ -131,47 +130,31 @@ mod tests {
   fn test_parse_doc_attr() {
     let b = &bumpalo::Bump::new();
     let cases = vec![
-      (":foo: bar", ("foo", AttrValue::String("bar".to_string()))),
-      (":foo:", ("foo", AttrValue::Bool(true))),
-      (":!foo:", ("foo", AttrValue::Bool(false))),
-      (":foo!:", ("foo", AttrValue::Bool(false))),
-      (
-        ":foo: {custom}-bar",
-        ("foo", AttrValue::String("value-bar".to_string())),
-      ),
-      (
-        ":foo: {custom}-bar-{baz}",
-        ("foo", AttrValue::String("value-bar-qux".to_string())),
-      ),
+      (":foo: bar", ("foo", "bar".into())),
+      (":foo:", ("foo", true.into())),
+      (":!foo:", ("foo", false.into())),
+      (":foo!:", ("foo", false.into())),
+      (":foo: {custom}-bar", ("foo", "value-bar".into())),
+      (":foo: {custom}-bar-{baz}", ("foo", "value-bar-qux".into())),
       (
         ":foo-bar: baz, rofl, lol",
-        ("foo-bar", AttrValue::String("baz, rofl, lol".to_string())),
+        ("foo-bar", "baz, rofl, lol".into()),
       ),
-      (
-        ":foo: bar \\\nand baz",
-        ("foo", AttrValue::String("bar and baz".to_string())),
-      ),
+      (":foo: bar \\\nand baz", ("foo", "bar and baz".into())),
       (
         ":foo: bar \\\nand baz \\\nand qux",
-        ("foo", AttrValue::String("bar and baz and qux".to_string())),
+        ("foo", "bar and baz and qux".into()),
       ),
-      (
-        ":foo: bar \\\n",
-        ("foo", AttrValue::String("bar".to_string())),
-      ),
+      (":foo: bar \\\n", ("foo", "bar".into())),
     ];
     for (input, (expected_key, expected_val)) in cases {
       let mut parser = crate::Parser::new(b, input);
       parser
         .document
         .meta
-        .insert_doc_attr("custom", "value".into())
+        .insert_doc_attr("custom", "value")
         .unwrap();
-      parser
-        .document
-        .meta
-        .insert_doc_attr("baz", "qux".into())
-        .unwrap();
+      parser.document.meta.insert_doc_attr("baz", "qux").unwrap();
       let mut block = parser.read_lines().unwrap();
       let (key, value, _) = parser.parse_doc_attr(&mut block).unwrap().unwrap();
       assert_eq!(&key, expected_key);
@@ -188,7 +171,7 @@ mod tests {
     "},
     error! {"
       1: :doctype: bad
-         ^^^^^^^^^^^^^ Invalid doc type: expected `article`, `book`, `manpage`, or `inline`
+         ^^^^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
     "}
   );
 
@@ -201,7 +184,21 @@ mod tests {
     "},
     error! {"
       1: :!doctype:
-         ^^^^^^^^^^ Invalid doc type: expected `article`, `book`, `manpage`, or `inline`
+         ^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
+    "}
+  );
+
+  test_error!(
+    doc_attr_error_invalid,
+    adoc! {"
+      :doctype: article
+      :chapter-refsig: Capitulo
+
+      para
+    "},
+    error! {"
+      2: :chapter-refsig: Capitulo
+         ^^^^^^^^^^^^^^^^^^^^^^^^^ Attribute `chapter-refsig` may only be set when doctype is `book`
     "}
   );
 }

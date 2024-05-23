@@ -7,7 +7,6 @@ license = "MIT"
 
 [dependencies]
 lazy_static = "1.4.0"
-# asciidork-ast = { path = "../ast", version = "0.5.0" }
 
 [lints]
 workspace = true

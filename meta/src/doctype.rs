@@ -35,7 +35,7 @@ impl FromStr for DocType {
       "book" => Self::Book,
       "manpage" => Self::Manpage,
       "inline" => Self::Inline,
-      _ => return Err("Invalid doc type: expected `article`, `book`, `manpage`, or `inline`"),
+      _ => return Err("Invalid doctype: expected `article`, `book`, `manpage`, or `inline`"),
     })
   }
 }
