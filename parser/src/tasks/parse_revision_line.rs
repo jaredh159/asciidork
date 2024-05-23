@@ -4,28 +4,25 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(super) fn parse_revision_line(
-    &self,
-    lines: &mut ContiguousLines,
-  ) -> Option<(String, Option<String>, Option<String>)> {
+  pub(super) fn parse_revision_line(&mut self, lines: &mut ContiguousLines) {
     let Some(line) = lines.current() else {
-      return None;
+      return;
     };
 
     if !line.current_is(Word) && !line.current_is(Digits) {
-      return None;
+      return;
     }
 
     // https://regexr.com/7mbsk
     let pattern = r"^([^\s,:]+)(?:,\s*([^\s:]+))?(?::\s*(.+))?$";
     let re = Regex::new(pattern).unwrap();
     let Some(captures) = re.captures(line.src) else {
-      return None;
+      return;
     };
 
     let raw_version = captures.get(1).unwrap().as_str();
     if !raw_version.chars().any(|c| c.is_ascii_digit()) {
-      return None;
+      return;
     }
 
     let vre = Regex::new(r"\d.*$").unwrap();
@@ -41,29 +38,57 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if captures.get(2).is_none() && captures.get(3).is_none() {
       if Regex::new(r"^v(\d[^\s]+)$").unwrap().is_match(raw_version) {
         lines.consume_current();
-        return Some((version, None, None));
+        self
+          .document
+          .meta
+          .insert_header_attr("revnumber", version)
+          .unwrap();
       }
-      return None;
+      return;
     }
+    self
+      .document
+      .meta
+      .insert_header_attr("revnumber", version)
+      .unwrap();
 
     // version and remark
     if captures.get(2).is_none() && captures.get(3).is_some() {
       let remark = captures.get(3).unwrap().as_str().to_string();
       lines.consume_current();
-      return Some((version, None, Some(remark)));
+      self
+        .document
+        .meta
+        .insert_header_attr("revremark", remark)
+        .unwrap();
+      return;
     }
 
     // version and only date
     if captures.get(2).is_some() && captures.get(3).is_none() {
       let date = captures.get(2).unwrap().as_str().to_string();
       lines.consume_current();
-      return Some((version, Some(date), None));
+      self
+        .document
+        .meta
+        .insert_header_attr("revdate", date)
+        .unwrap();
+      return;
     }
 
     let date = captures.get(2).unwrap().as_str().to_string();
     let remark = captures.get(3).unwrap().as_str().to_string();
     lines.consume_current();
-    Some((version, Some(date), Some(remark)))
+    self
+      .document
+      .meta
+      .insert_header_attr("revdate", date)
+      .unwrap();
+    self
+      .document
+      .meta
+      .insert_header_attr("revremark", remark)
+      .unwrap();
   }
 }
 
@@ -71,45 +96,48 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
 #[cfg(test)]
 mod tests {
+  use super::*;
 
   #[test]
   fn test_parse_revision_lines() {
     let cases = vec![
-      ("foobar", None),
-      ("v7.5", Some(("7.5".to_string(), None, None))),
-      (
-        "v7.5, 1-29-2020",
-        Some(("7.5".to_string(), Some("1-29-2020".to_string()), None)),
-      ),
-      (
-        "LPR55, 1-29-2020",
-        Some(("55".to_string(), Some("1-29-2020".to_string()), None)),
-      ),
-      (
-        "7.5, 1-29-2020",
-        Some(("7.5".to_string(), Some("1-29-2020".to_string()), None)),
-      ),
+      ("foobar", None, None, None),
+      ("v7.5", Some("7.5"), None, None),
+      ("v7.5, 1-29-2020", Some("7.5"), Some("1-29-2020"), None),
+      ("LPR55, 1-29-2020", Some("55"), Some("1-29-2020"), None),
+      ("7.5, 1-29-2020", Some("7.5"), Some("1-29-2020"), None),
       (
         "7.5: A new analysis",
-        Some(("7.5".to_string(), None, Some("A new analysis".to_string()))),
+        Some("7.5"),
+        None,
+        Some("A new analysis"),
       ),
       (
         "v7.5, 1-29-2020: A new analysis",
-        Some((
-          "7.5".to_string(),
-          Some("1-29-2020".to_string()),
-          Some("A new analysis".to_string()),
-        )),
+        Some("7.5"),
+        Some("1-29-2020"),
+        Some("A new analysis"),
       ),
-      ("v7.5 1-29-2020 A new analysis", None),
+      ("v7.5 1-29-2020 A new analysis", None, None, None),
     ];
 
-    for (input, expected) in cases {
+    for (input, rev, date, remark) in cases {
       let b = &bumpalo::Bump::new();
       let mut parser = crate::Parser::new(b, input);
       let mut block = parser.read_lines().unwrap();
-      let revision = parser.parse_revision_line(&mut block);
-      assert_eq!(revision, expected);
+      parser.parse_revision_line(&mut block);
+      assert_eq!(
+        parser.document.meta.get("revnumber"),
+        rev.map(|s| s.into()).as_ref()
+      );
+      assert_eq!(
+        parser.document.meta.get("revdate"),
+        date.map(|s| s.into()).as_ref()
+      );
+      assert_eq!(
+        parser.document.meta.get("revremark"),
+        remark.map(|s| s.into()).as_ref()
+      );
     }
   }
 }

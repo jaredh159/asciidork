@@ -105,7 +105,12 @@ impl DocumentMeta {
     self.authors.push(author);
   }
 
-  pub fn insert_header_attr(&mut self, key: &str, value: AttrValue) -> Result<(), String> {
+  pub fn insert_header_attr(
+    &mut self,
+    key: &str,
+    value: impl Into<AttrValue>,
+  ) -> Result<(), String> {
+    let value = value.into();
     match key {
       "doctype" => {
         if let Some(doctype) = value.str().and_then(|s| s.parse::<DocType>().ok()) {

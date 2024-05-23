@@ -59,7 +59,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self
       .document
       .meta
-      .insert_header_attr("doctitle", header_line.src.into())
+      .insert_header_attr("doctitle", header_line.src)
       .unwrap();
 
     self.document.title = Some(self.parse_inlines(&mut header_line.into_lines_in(self.bump))?);
@@ -68,18 +68,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if lines.starts(Word) {
       self.parse_author_line(lines.consume_current().unwrap())?;
       // revision line can only follow an author line (and requires a doc header)
-      if self.document.meta.get("author").is_some() {
-        // TODO: this is awkward, maybe just insert the items when parsing?
-        // TODO: and handle errors?
-        if let Some((r, date, remark)) = self.parse_revision_line(lines) {
-          _ = self.document.meta.insert_header_attr("revnumber", r.into());
-          if let Some(d) = date {
-            _ = self.document.meta.insert_header_attr("revdate", d.into());
-          }
-          if let Some(r) = remark {
-            _ = self.document.meta.insert_header_attr("revremark", r.into());
-          }
-        }
+      if self.document.meta.is_set("author") {
+        self.parse_revision_line(lines);
       }
     }
 
