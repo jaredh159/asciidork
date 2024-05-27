@@ -1,7 +1,6 @@
 mod eval;
 pub mod helpers;
 
-pub use asciidork_opts::Opts;
 pub use eval::*;
 
 mod internal {

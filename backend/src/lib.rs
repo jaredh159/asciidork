@@ -1,6 +1,5 @@
 extern crate asciidork_ast as ast;
 extern crate asciidork_meta as meta;
-extern crate asciidork_opts as opts;
 
 mod admonition;
 mod backend;
@@ -14,5 +13,4 @@ pub mod prelude {
   pub use super::AdmonitionKind;
   pub use super::Backend;
   pub use meta::{AttrValue, DocType};
-  pub use opts::Opts;
 }

@@ -10,7 +10,6 @@ members = [
   "eval",
   "meta",
   "parser",
-  "opts",
   "test-utils",
 ]
 

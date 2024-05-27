@@ -16,7 +16,6 @@ mod utils;
 
 extern crate asciidork_ast as ast;
 extern crate asciidork_meta as meta;
-extern crate asciidork_opts as opts;
 
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
