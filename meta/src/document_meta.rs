@@ -161,6 +161,18 @@ impl DocumentMeta {
     self.doctype
   }
 
+  pub fn icon_mode(&self) -> IconMode {
+    match self.get("icons") {
+      Some(AttrValue::String(icon)) => match icon.as_str() {
+        "font" => IconMode::Font,
+        "image" | "" => IconMode::Image,
+        _ => IconMode::Text,
+      },
+      Some(AttrValue::Bool(true)) => IconMode::Image,
+      _ => IconMode::Text,
+    }
+  }
+
   fn resolve_attr(&self, key: &str) -> Option<&AttrValue> {
     match self.doc_attrs.get(key) {
       Some(value) => Some(value),

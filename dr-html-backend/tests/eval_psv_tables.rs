@@ -1,3 +1,4 @@
+use asciidork_meta::{JobAttr, JobAttrs};
 use test_utils::*;
 
 mod helpers;
@@ -473,4 +474,33 @@ test_eval!(
     |===
   "#},
   html_contains: r#"<table class="tableblock frame-all grid-all fit-content">"#
+);
+
+test_eval!(
+  adoc_cell_can_turn_on_new_attr,
+  adoc! {r#"
+    |===
+    a|
+    :icons: font
+
+    NOTE: This admonition does not have a font-based icon.
+    |===
+  "#},
+  html_contains: r#"<i class="fa icon-note" title="Note"></i>"#
+);
+
+test_eval!(
+  adoc_cell_cant_unset_readonly_jobattr,
+  |job: &mut JobAttrs| {
+    job.insert_unchecked("icons", JobAttr::readonly(false));
+  },
+  adoc! {r#"
+    |===
+    a|
+    :icons: font
+
+    NOTE: This admonition does not have a font-based icon.
+    |===
+  "#},
+  html_contains: r#"<td class="icon"><div class="title">Note</div></td>"#
 );

@@ -1,10 +1,33 @@
 #[macro_export]
-macro_rules! test_eval {
+macro_rules! test_eval_inline {
   ($name:ident, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
       let bump = &::asciidork_parser::prelude::Bump::new();
-      let settings = ::asciidork_meta::JobSettings::embedded();
+      let mut settings = ::asciidork_meta::JobSettings::embedded();
+      settings.doctype = Some(::asciidork_meta::DocType::Inline);
+      let parser = ::asciidork_parser::Parser::new_settings(bump, $input, settings);
+      let document = parser.parse().unwrap().document;
+      let actual = ::asciidork_eval::eval(
+        &document,
+        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+      ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! test_eval {
+  ($name:ident, $input:expr, $expected:expr) => {
+    test_eval!($name, |_| {}, $input, $expected);
+  };
+  ($name:ident, $mod_settings:expr, $input:expr, $expected:expr) => {
+    #[test]
+    fn $name() {
+      let bump = &::asciidork_parser::prelude::Bump::new();
+      let mut settings = ::asciidork_meta::JobSettings::embedded();
+      #[allow(clippy::redundant_closure_call)]
+      $mod_settings(&mut settings.job_attrs);
       let parser = ::asciidork_parser::Parser::new_settings(bump, $input, settings);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
@@ -14,10 +37,15 @@ macro_rules! test_eval {
     }
   };
   ($name:ident, $input:expr, html_contains: $expected:expr) => {
+    test_eval!($name, |_| {}, $input, html_contains: $expected);
+  };
+  ($name:ident, $mod_settings:expr, $input:expr, html_contains: $expected:expr) => {
     #[test]
     fn $name() {
       let bump = &::asciidork_parser::prelude::Bump::new();
-      let settings = ::asciidork_meta::JobSettings::embedded();
+      let mut settings = ::asciidork_meta::JobSettings::embedded();
+      #[allow(clippy::redundant_closure_call)]
+      $mod_settings(&mut settings.job_attrs);
       let parser = ::asciidork_parser::Parser::new_settings(bump, $input, settings);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(

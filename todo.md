@@ -1,7 +1,7 @@
 ## todo
 
-- https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence/#default-attribute-value-precedence
-- https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#intrinsic-attributes
+- https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence
+- https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref
 
 - [ ] resolving the {email} attr is example of "multiple passes", as it gets turned into
       an autolink in asciidoctor html5, test `{email}` vs `[subs=-macros]\n{email}`

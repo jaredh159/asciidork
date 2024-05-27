@@ -7,117 +7,52 @@ mod helpers;
 
 use regex::Regex;
 
-test_eval!(
+test_eval_inline!(
   simple_inline_w_newline,
   adoc! {r#"
     _foo_
     bar
   "#},
-  r#"<div class="paragraph"><p><em>foo</em> bar</p></div>"#
+  r#"<em>foo</em> bar"#
 );
 
-test_eval!(
+test_eval_inline!(
   nested_inlines,
   "`*_foo_*`",
-  r#"<div class="paragraph"><p><code><strong><em>foo</em></strong></code></p></div>"#
+  r#"<code><strong><em>foo</em></strong></code>"#
 );
 
-test_eval!(
-  passthrough,
-  "+_<foo>&_+",
-  r#"<div class="paragraph"><p>_&lt;foo&gt;&amp;_</p></div>"#
-);
+test_eval_inline!(passthrough, "+_<foo>&_+", r#"_&lt;foo&gt;&amp;_"#);
+test_eval_inline!(text_span, "[.foo]#bar#", r#"<span class="foo">bar</span>"#);
+test_eval_inline!(passthrough_block, "[pass]\n_<foo>&_", "_<foo>&_");
+test_eval_inline!(highlight, "foo #bar#", r#"foo <mark>bar</mark>"#);
+test_eval_inline!(mono, "foo `bar`", r#"foo <code>bar</code>"#);
+test_eval_inline!(passthrough_2, "rofl +_foo_+ lol", r#"rofl _foo_ lol"#);
+test_eval_inline!(inline_passthrough, "+++_<foo>&_+++ bar", r#"_<foo>&_ bar"#);
+test_eval_inline!(subscript, "foo ~bar~ baz", r#"foo <sub>bar</sub> baz"#);
+test_eval_inline!(superscript, "foo ^bar^ baz", r#"foo <sup>bar</sup> baz"#);
+test_eval_inline!(not_quotes, "foo `'bar'`", r#"foo <code>'bar'</code>"#);
+test_eval_inline!(curly_quotes, "foo \"`bar`\"", r#"foo &#8220;bar&#8221;"#);
+test_eval_inline!(implicit_apos, "Olaf's wrench", r#"Olaf&#8217;s wrench"#);
+test_eval_inline!(multichar_whitespace, "foo   bar", r#"foo bar"#);
+test_eval_inline!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 
-test_eval!(
-  text_span,
-  "[.foo]#bar#",
-  r#"<div class="paragraph"><p><span class="foo">bar</span></p></div>"#
-);
-
-test_eval!(passthrough_block, "[pass]\n_<foo>&_", "_<foo>&_");
-
-test_eval!(
+test_eval_inline!(
   minus_subs,
   "[subs=-specialchars]\nfoo & _bar_",
-  r#"<div class="paragraph"><p>foo & <em>bar</em></p></div>"#
+  r#"foo & <em>bar</em>"#
 );
 
-test_eval!(
-  highlight,
-  "foo #bar#",
-  r#"<div class="paragraph"><p>foo <mark>bar</mark></p></div>"#
-);
-
-test_eval!(
-  mono,
-  "foo `bar`",
-  r#"<div class="paragraph"><p>foo <code>bar</code></p></div>"#
-);
-
-test_eval!(
-  passthrough_2,
-  "rofl +_foo_+ lol",
-  r#"<div class="paragraph"><p>rofl _foo_ lol</p></div>"#
-);
-
-test_eval!(
-  inline_passthrough,
-  "+++_<foo>&_+++ bar",
-  r#"<div class="paragraph"><p>_<foo>&_ bar</p></div>"#
-);
-
-test_eval!(
-  subscript,
-  "foo ~bar~ baz",
-  r#"<div class="paragraph"><p>foo <sub>bar</sub> baz</p></div>"#
-);
-
-test_eval!(
-  superscript,
-  "foo ^bar^ baz",
-  r#"<div class="paragraph"><p>foo <sup>bar</sup> baz</p></div>"#
-);
-
-test_eval!(
-  not_quotes,
-  "foo `'bar'`",
-  r#"<div class="paragraph"><p>foo <code>'bar'</code></p></div>"#
-);
-
-test_eval!(
-  curly_quotes,
-  "foo \"`bar`\"",
-  r#"<div class="paragraph"><p>foo &#8220;bar&#8221;</p></div>"#
-);
-
-test_eval!(
-  implicit_apos,
-  "Olaf's wrench",
-  r#"<div class="paragraph"><p>Olaf&#8217;s wrench</p></div>"#
-);
-
-test_eval!(
-  multichar_whitespace,
-  "foo   bar",
-  r#"<div class="paragraph"><p>foo bar</p></div>"#
-);
-
-test_eval!(
-  litmono_attr_ref,
-  "`+{name}+`",
-  r#"<div class="paragraph"><p><code>{name}</code></p></div>"#
-);
-
-test_eval!(
+test_eval_inline!(
   special_chars,
   "foo <bar> & lol",
-  r#"<div class="paragraph"><p>foo &lt;bar&gt; &amp; lol</p></div>"#
+  r#"foo &lt;bar&gt; &amp; lol"#
 );
 
-test_eval!(
+test_eval_inline!(
   btn_macro,
   "press the btn:[OK] button",
-  r#"<div class="paragraph"><p>press the <b class="button">OK</b> button</p></div>"#
+  r#"press the <b class="button">OK</b> button"#
 );
 
 test_eval!(
@@ -648,6 +583,47 @@ test_eval!(
           <p>baz</p>
         </div>
       </div>
+    </div>
+  "#}
+);
+
+test_eval!(
+  admonition_icons,
+  adoc! {r#"
+    NOTE: Tip #1
+
+    :icons:
+
+    NOTE: Tip #2
+
+    :icons: font
+
+    NOTE: Tip #3
+  "#},
+  html! {r#"
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><div class="title">Note</div></td>
+          <td class="content">Tip #1</td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><img src="./images/icons/note.png" alt="Note"></td>
+          <td class="content">Tip #2</td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><i class="fa icon-note" title="Note"></i></td>
+          <td class="content">Tip #3</td>
+        </tr>
+      </table>
     </div>
   "#}
 );

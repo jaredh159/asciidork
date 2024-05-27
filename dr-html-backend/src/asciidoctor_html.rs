@@ -385,11 +385,15 @@ impl Backend for AsciidoctorHtml {
   fn enter_callout_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.autogen_conum = 1;
     self.open_element("div", &["colist arabic"], block.meta.attrs.as_ref());
-    self.push_str(if self.doc_meta.is_set("icons") { "<table>" } else { "<ol>" });
+    self.push_str(if self.doc_meta.icon_mode() != IconMode::Text { "<table>" } else { "<ol>" });
   }
 
   fn exit_callout_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
-    self.push_str(if self.doc_meta.is_set("icons") { "</table></div>" } else { "</ol></div>" });
+    self.push_str(if self.doc_meta.icon_mode() != IconMode::Text {
+      "</table></div>"
+    } else {
+      "</ol></div>"
+    });
   }
 
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
@@ -466,14 +470,14 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_list_item_principal(&mut self, item: &ListItem, list_variant: ListVariant) {
-    if list_variant != ListVariant::Callout || self.doc_meta.is_unset("icons") {
+    if list_variant != ListVariant::Callout || self.doc_meta.icon_mode() == IconMode::Text {
       self.push_str("<li><p>");
       self.render_checklist_item(item);
     } else {
       self.push_str("<tr><td>");
       let n = item.marker.callout_num().unwrap_or(self.autogen_conum);
       self.autogen_conum = n + 1;
-      if self.doc_meta.str("icons") == Some("font") {
+      if self.doc_meta.icon_mode() == IconMode::Font {
         self.push_callout_number_font(n);
       } else {
         self.push_callout_number_img(n);
@@ -483,7 +487,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn exit_list_item_principal(&mut self, _item: &ListItem, list_variant: ListVariant) {
-    if list_variant != ListVariant::Callout || self.doc_meta.is_unset("icons") {
+    if list_variant != ListVariant::Callout || self.doc_meta.icon_mode() == IconMode::Text {
       self.push_str("</p>");
     } else {
       self.push_str("</td>");
@@ -493,7 +497,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_list_item_blocks(&mut self, _: &[Block], _: &ListItem, _: ListVariant) {}
 
   fn exit_list_item_blocks(&mut self, _blocks: &[Block], _items: &ListItem, variant: ListVariant) {
-    if variant != ListVariant::Callout || self.doc_meta.is_unset("icons") {
+    if variant != ListVariant::Callout || self.doc_meta.icon_mode() == IconMode::Text {
       self.push_str("</li>");
     } else {
       self.push_str("</tr>");
@@ -641,23 +645,19 @@ impl Backend for AsciidoctorHtml {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
-    match self.doc_meta.get("icons") {
-      Some(AttrValue::Bool(true)) => self.push_callout_number_img(callout.number),
-      Some(AttrValue::String(value)) if value == "font" => {
-        self.push_callout_number_font(callout.number);
-      }
+    match self.doc_meta.icon_mode() {
+      IconMode::Image => self.push_callout_number_img(callout.number),
+      IconMode::Font => self.push_callout_number_font(callout.number),
       // TODO: asciidoctor also handles special `guard` case
       //   elsif ::Array === (guard = node.attributes['guard'])
       //     %(&lt;!--<b class="conum">(#{node.text})</b>--&gt;)
       // @see https://github.com/asciidoctor/asciidoctor/issues/3319
-      _ => {
-        self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]);
-      }
+      IconMode::Text => self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]),
     }
   }
 
   fn visit_callout_tuck(&mut self, comment: &str) {
-    if self.doc_meta.str("icons") != Some("font") {
+    if self.doc_meta.icon_mode() != IconMode::Font {
       self.push_str(comment);
     }
   }
@@ -837,9 +837,21 @@ impl Backend for AsciidoctorHtml {
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
     let classes = &["admonitionblock", kind.lowercase_str()];
     self.open_element("div", classes, block.meta.attrs.as_ref());
-    self.push_str(r#"<table><tr><td class="icon"><div class="title">"#);
-    self.push_str(kind.str());
-    self.push_str(r#"</div></td><td class="content">"#);
+    self.push_str(r#"<table><tr><td class="icon">"#);
+    match self.doc_meta.icon_mode() {
+      IconMode::Text => {
+        self.push([r#"<div class="title">"#, kind.str()]);
+        self.push_str(r#"</div></td><td class="content">"#);
+      }
+      IconMode::Image => {
+        self.push_admonition_img(kind);
+        self.push_str(r#"</td><td class="content">"#);
+      }
+      IconMode::Font => {
+        self.push([r#"<i class="fa icon-"#, kind.lowercase_str(), "\" title=\""]);
+        self.push([kind.str(), r#""></i></td><td class="content">"#]);
+      }
+    }
     self.render_block_title(&block.meta);
   }
 
@@ -1148,10 +1160,10 @@ impl AsciidoctorHtml {
     self.push([&icondir, "/", prefix.unwrap_or(""), name, ".", &ext]);
   }
 
-  fn push_callout_number_font(&mut self, num: u8) {
-    let n_str = &num_str!(num);
-    self.push([r#"<i class="conum" data-value=""#, n_str, r#""></i>"#]);
-    self.push([r#"<b>("#, n_str, ")</b>"]);
+  fn push_admonition_img(&mut self, kind: AdmonitionKind) {
+    self.push_str(r#"<img src=""#);
+    self.push_icon_uri(kind.lowercase_str(), None);
+    self.push([r#"" alt=""#, kind.str(), r#"">"#]);
   }
 
   fn push_callout_number_img(&mut self, num: u8) {
@@ -1159,6 +1171,12 @@ impl AsciidoctorHtml {
     self.push_str(r#"<img src=""#);
     self.push_icon_uri(n_str, Some("callouts/"));
     self.push([r#"" alt=""#, n_str, r#"">"#]);
+  }
+
+  fn push_callout_number_font(&mut self, num: u8) {
+    let n_str = &num_str!(num);
+    self.push([r#"<i class="conum" data-value=""#, n_str, r#""></i>"#]);
+    self.push([r#"<b>("#, n_str, ")</b>"]);
   }
 
   fn render_document_authors(&mut self) {

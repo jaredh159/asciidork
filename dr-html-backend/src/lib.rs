@@ -29,5 +29,5 @@ mod internal {
   pub use ast::prelude::*;
   pub use backend::prelude::*;
   pub use eval::helpers;
-  pub use meta::{AttrValue, Author, DocumentMeta, ReadAttr};
+  pub use meta::*;
 }

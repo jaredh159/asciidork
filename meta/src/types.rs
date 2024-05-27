@@ -22,6 +22,14 @@ impl FromStr for SafeMode {
   }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IconMode {
+  #[default]
+  Text,
+  Image,
+  Font,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Author {
   pub first_name: String,
