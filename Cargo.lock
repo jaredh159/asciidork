@@ -243,6 +243,7 @@ version = "0.0.0"
 dependencies = [
  "asciidork-dr-html-backend",
  "asciidork-eval",
+ "asciidork-meta",
  "asciidork-parser",
  "console_error_panic_hook",
  "wasm-bindgen",

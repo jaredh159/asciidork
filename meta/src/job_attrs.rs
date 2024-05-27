@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::internal::*;
+use crate::validate;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JobAttr {
@@ -26,8 +27,16 @@ impl JobAttrs {
     Self(HashMap::new())
   }
 
-  pub fn insert(&mut self, key: impl Into<String>, value: JobAttr) {
-    self.0.insert(key.into(), value);
+  pub fn insert(&mut self, key: impl Into<String>, job_attr: JobAttr) -> Result<(), String> {
+    let key: String = key.into();
+    validate::attr(&key, &job_attr.value)?;
+    self.0.insert(key, job_attr);
+    Ok(())
+  }
+
+  pub fn insert_unchecked(&mut self, key: impl Into<String>, job_attr: JobAttr) {
+    let key: String = key.into();
+    self.0.insert(key, job_attr);
   }
 
   pub fn get(&self, key: &str) -> Option<&JobAttr> {

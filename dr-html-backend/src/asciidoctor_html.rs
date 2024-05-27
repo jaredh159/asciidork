@@ -12,7 +12,6 @@ pub struct AsciidoctorHtml {
   pub(crate) doc_meta: DocumentMeta,
   pub(crate) fig_caption_num: usize,
   pub(crate) table_caption_num: usize,
-  pub(crate) opts: Opts,
   pub(crate) list_stack: Vec<bool>,
   pub(crate) default_newlines: Newlines,
   pub(crate) newlines: Newlines,
@@ -28,14 +27,14 @@ impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
 
-  fn enter_document(&mut self, document: &Document, opts: Opts) {
-    self.opts = opts;
+  fn enter_document(&mut self, document: &Document) {
     self.doc_meta = document.meta.clone();
     self.section_num_levels = document.meta.isize("sectnumlevels").unwrap_or(3);
     if document.meta.is_true("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
     }
-    if opts.doc_type == DocType::Inline || self.in_asciidoc_table_cell {
+
+    if !self.standalone() {
       self.render_doc_header = document.meta.is_true("showtitle");
       return;
     }
@@ -67,7 +66,10 @@ impl Backend for AsciidoctorHtml {
     self.render_authors(document.meta.authors());
     self.render_title(document, &document.meta);
     // TODO: stylesheets
-    self.push([r#"</head><body class=""#, opts.doc_type.to_str()]);
+    self.push([
+      r#"</head><body class=""#,
+      document.meta.get_doctype().to_str(),
+    ]);
     match document.toc.as_ref().map(|toc| &toc.position) {
       Some(TocPosition::Left) => self.push_str(" toc2 toc-left"),
       Some(TocPosition::Right) => self.push_str(" toc2 toc-right"),
@@ -80,7 +82,7 @@ impl Backend for AsciidoctorHtml {
     if !self.footnotes.is_empty() {
       self.render_footnotes();
     }
-    if self.opts.doc_type != DocType::Inline && !self.in_asciidoc_table_cell {
+    if self.standalone() {
       self.push_str("</body></html>");
     }
   }
@@ -665,15 +667,15 @@ impl Backend for AsciidoctorHtml {
       self.push_str(&val);
       return;
     }
-    match self.opts.attribute_missing {
-      AttributeMissing::Drop => {}
-      AttributeMissing::Skip => {
+    match self.doc_meta.str("attribute-missing") {
+      Some("drop") => {}
+      Some("warn") => { /* TODO: warning */ }
+      Some("drop-line") => { /* TODO: not supported */ }
+      _ => {
+        // `skip` is default
         self.push_str("{");
         self.push_str(name);
         self.push_ch('}');
-      }
-      AttributeMissing::Warn => {
-        // TODO: warning
       }
     }
   }
@@ -1187,6 +1189,12 @@ impl AsciidoctorHtml {
       }
     }
     self.push([&buffer, "</div>"]);
+  }
+
+  fn standalone(&self) -> bool {
+    self.doc_meta.get_doctype() != DocType::Inline
+      && !self.in_asciidoc_table_cell
+      && !self.doc_meta.embedded
   }
 }
 

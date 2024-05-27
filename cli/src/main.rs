@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len());
-  let parser = Parser::new(bump, &src);
+  let parser = Parser::new_settings(bump, &src, args.clone().into());
   let result = parser.parse();
   let parse_time = parse_start.elapsed();
 
@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(parse_result) => match &args.format {
       Output::DrHtml | Output::DrHtmlPrettier => {
         let convert_start = Instant::now();
-        let mut html = convert(parse_result.document, args.clone().into())?;
+        let mut html = convert(parse_result.document)?;
         let convert_time = convert_start.elapsed();
         let prettify = args.format == Output::DrHtmlPrettier;
         if prettify {

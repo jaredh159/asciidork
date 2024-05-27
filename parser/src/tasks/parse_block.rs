@@ -355,7 +355,8 @@ mod tests {
 
       second para (ignored)
     "};
-    let parser = Parser::new_opts(leaked_bump(), input, opts::Opts::embedded());
+
+    let parser = Parser::new_settings(leaked_bump(), input, JobSettings::inline());
     let result = parser.parse().unwrap();
     let blocks = result.document.content.blocks().unwrap();
     assert_eq!(blocks.len(), 1);

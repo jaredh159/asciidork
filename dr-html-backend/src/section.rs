@@ -49,7 +49,10 @@ impl AsciidoctorHtml {
           .as_ref()
           .and_then(|a| a.str_positional_at(0))
         {
-          self.opts.doc_type.supports_special_section(special)
+          self
+            .doc_meta
+            .get_doctype()
+            .supports_special_section(special)
         } else {
           true
         }

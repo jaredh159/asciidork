@@ -1,5 +1,4 @@
-use asciidork_meta::DocType;
-use asciidork_opts::Opts;
+use asciidork_meta::{DocType, JobSettings, SafeMode};
 use clap::Parser;
 use std::str::FromStr;
 
@@ -18,7 +17,12 @@ pub struct Args {
   #[arg(value_parser = DocType::from_str)]
   #[clap(short, long, default_value = "article")]
   #[clap(help = "Document type to use when converting")]
-  pub doc_type: DocType,
+  pub doctype: DocType,
+
+  #[arg(value_parser = SafeMode::from_str)]
+  #[clap(short, long, default_value = "secure")]
+  #[clap(help = "Set safe mode explicitly")]
+  pub safe_mode: SafeMode,
 
   #[clap(short, long, help = "Output file path - omit to write to stdout")]
   pub output: Option<std::path::PathBuf>,
@@ -39,12 +43,14 @@ pub enum Output {
   Ast,
 }
 
-impl From<Args> for Opts {
+impl From<Args> for JobSettings {
   fn from(args: Args) -> Self {
-    Opts {
-      // TODO: this might not be correct...
-      doc_type: if args.embedded { DocType::Inline } else { args.doc_type },
-      ..Opts::default()
+    JobSettings {
+      safe_mode: args.safe_mode,
+      doctype: Some(args.doctype),
+      embedded: args.embedded,
+      strict: false,
+      ..JobSettings::default()
     }
   }
 }

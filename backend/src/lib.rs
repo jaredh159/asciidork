@@ -14,5 +14,5 @@ pub mod prelude {
   pub use super::AdmonitionKind;
   pub use super::Backend;
   pub use meta::{AttrValue, DocType};
-  pub use opts::{AttributeMissing, Opts};
+  pub use opts::Opts;
 }

@@ -5,12 +5,13 @@ use crate::internal::*;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DocumentMeta {
   authors: Vec<Author>,
-  safe_mode: SafeMode,
   doctype: DocType,
   job_attrs: JobAttrs,
   header_attrs: Attrs,
   doc_attrs: Attrs,
   default_attrs: Attrs,
+  pub safe_mode: SafeMode,
+  pub embedded: bool,
 }
 
 impl Default for DocumentMeta {
@@ -23,6 +24,7 @@ impl Default for DocumentMeta {
       doc_attrs: Attrs::empty(),
       default_attrs: Attrs::defaults(),
       authors: Vec::new(),
+      embedded: false,
     }
   }
 }
@@ -31,24 +33,24 @@ impl DocumentMeta {
   pub fn new(safe_mode: SafeMode, mut job_attrs: JobAttrs) -> Self {
     match safe_mode {
       SafeMode::Unsafe => {
-        job_attrs.insert("safe-mode-unsafe", JobAttr::readonly(true));
-        job_attrs.insert("safe-mode-level", JobAttr::readonly("0"));
-        job_attrs.insert("safe-mode-name", JobAttr::readonly("UNSAFE"));
+        job_attrs.insert_unchecked("safe-mode-unsafe", JobAttr::readonly(true));
+        job_attrs.insert_unchecked("safe-mode-level", JobAttr::readonly("0"));
+        job_attrs.insert_unchecked("safe-mode-name", JobAttr::readonly("UNSAFE"));
       }
       SafeMode::Safe => {
-        job_attrs.insert("safe-mode-safe", JobAttr::readonly(true));
-        job_attrs.insert("safe-mode-level", JobAttr::readonly("1"));
-        job_attrs.insert("safe-mode-name", JobAttr::readonly("SAFE"));
+        job_attrs.insert_unchecked("safe-mode-safe", JobAttr::readonly(true));
+        job_attrs.insert_unchecked("safe-mode-level", JobAttr::readonly("1"));
+        job_attrs.insert_unchecked("safe-mode-name", JobAttr::readonly("SAFE"));
       }
       SafeMode::Server => {
-        job_attrs.insert("safe-mode-server", JobAttr::readonly(true));
-        job_attrs.insert("safe-mode-level", JobAttr::readonly("10"));
-        job_attrs.insert("safe-mode-name", JobAttr::readonly("SERVER"));
+        job_attrs.insert_unchecked("safe-mode-server", JobAttr::readonly(true));
+        job_attrs.insert_unchecked("safe-mode-level", JobAttr::readonly("10"));
+        job_attrs.insert_unchecked("safe-mode-name", JobAttr::readonly("SERVER"));
       }
       SafeMode::Secure => {
-        job_attrs.insert("safe-mode-secure", JobAttr::readonly(true));
-        job_attrs.insert("safe-mode-level", JobAttr::readonly("20"));
-        job_attrs.insert("safe-mode-name", JobAttr::readonly("SECURE"));
+        job_attrs.insert_unchecked("safe-mode-secure", JobAttr::readonly(true));
+        job_attrs.insert_unchecked("safe-mode-level", JobAttr::readonly("20"));
+        job_attrs.insert_unchecked("safe-mode-name", JobAttr::readonly("SECURE"));
       }
     }
     Self {
@@ -59,6 +61,7 @@ impl DocumentMeta {
       doc_attrs: Attrs::empty(),
       default_attrs: Attrs::defaults(),
       authors: Vec::new(),
+      embedded: false,
     }
   }
 
@@ -67,7 +70,7 @@ impl DocumentMeta {
   }
 
   fn insert_string_attr(&mut self, key: &str, value: String) {
-    self.header_attrs.insert(key, AttrValue::String(value));
+    _ = self.header_attrs.insert(key, AttrValue::String(value));
   }
 
   pub fn add_author(&mut self, author: Author) {
@@ -110,7 +113,7 @@ impl DocumentMeta {
     key: &str,
     value: impl Into<AttrValue>,
   ) -> Result<(), String> {
-    let value = value.into();
+    let value: AttrValue = value.into();
     match key {
       "doctype" => {
         if let Some(doctype) = value.str().and_then(|s| s.parse::<DocType>().ok()) {
@@ -127,7 +130,7 @@ impl DocumentMeta {
           key
         ));
       }
-      _ => self.header_attrs.insert(key, value),
+      _ => self.header_attrs.insert(key, value)?,
     }
     Ok(())
   }
@@ -139,8 +142,7 @@ impl DocumentMeta {
         key
       ));
     }
-    self.doc_attrs.insert(key, value.into());
-    Ok(())
+    self.doc_attrs.insert(key, value.into())
   }
 
   pub fn clear_doc_attrs(&mut self) {
@@ -151,7 +153,8 @@ impl DocumentMeta {
     self.doctype = doctype;
     self
       .header_attrs
-      .insert("doctype", self.doctype.to_str().into());
+      .insert("doctype", self.doctype.to_str().into())
+      .unwrap();
   }
 
   pub const fn get_doctype(&self) -> DocType {
@@ -228,8 +231,8 @@ mod tests {
   #[test]
   fn attr_merging() {
     let mut job_attrs = JobAttrs::default();
-    job_attrs.insert("job_readonly", JobAttr::readonly(true));
-    job_attrs.insert("job_modifiable", JobAttr::modifiable(true));
+    job_attrs.insert_unchecked("job_readonly", JobAttr::readonly(true));
+    job_attrs.insert_unchecked("job_modifiable", JobAttr::modifiable(true));
     let mut attrs = DocumentMeta::new(SafeMode::Secure, job_attrs);
 
     assert!(attrs.is_true("job_readonly"));
@@ -258,7 +261,7 @@ mod tests {
     let mut attrs = DocumentMeta::default();
     attrs
       .job_attrs
-      .insert("doctype", JobAttr::readonly("article"));
+      .insert_unchecked("doctype", JobAttr::readonly("article"));
     assert!(attrs.is_true("doctype-article"));
     assert_eq!(attrs.str("attribute-missing").unwrap(), "skip");
   }

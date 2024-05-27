@@ -39,10 +39,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  pub fn new_opts(bump: &'bmp Bump, src: &'src str, opts: opts::Opts) -> Parser<'bmp, 'src> {
+  pub fn new_settings(
+    bump: &'bmp Bump,
+    src: &'src str,
+    settings: JobSettings,
+  ) -> Parser<'bmp, 'src> {
     let mut p = Parser::new(bump, src);
-    p.strict = opts.strict;
-    p.document.meta.set_doctype(opts.doc_type);
+    p.strict = settings.strict;
+    p.document.meta = settings.into();
     p
   }
 

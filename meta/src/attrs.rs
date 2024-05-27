@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::validate;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttrValue {
   String(String),
@@ -168,8 +170,11 @@ impl Attrs {
     attrs
   }
 
-  pub fn insert(&mut self, key: impl Into<String>, value: AttrValue) {
-    self.0.insert(key.into(), value);
+  pub fn insert(&mut self, key: impl Into<String>, value: AttrValue) -> Result<(), String> {
+    let key: String = key.into();
+    validate::attr(&key, &value)?;
+    self.0.insert(key, value);
+    Ok(())
   }
 }
 

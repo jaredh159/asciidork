@@ -44,7 +44,7 @@ mod internal {
   pub use crate::token::*;
   pub use crate::utils::bump::*;
   pub use ast::*;
-  pub use meta::{Author, DocType, ReadAttr};
+  pub use meta::{Author, DocType, JobSettings, ReadAttr};
   pub use smallvec::SmallVec;
   pub type Result<T> = std::result::Result<T, Diagnostic>;
 }

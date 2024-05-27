@@ -21,8 +21,6 @@
       (if?) this is naive/problematic, and fix
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
-- [ ] should `--embedded` be passed to Parser? so it doesn't try to parse a doc header?
-      (pretty confident: yes)
 - [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
       tests
 - [ ] asciidoctor html backend _stylesheets,_ @see
@@ -89,7 +87,6 @@ bump-allocated version
 - thematic break doesn't seem to support an attr list for adding classes to it? oddly,
   there's a test in asciidoctor showing its supported, but i can't seem to get it to work
   with the latest ruby cli
-- is there a difference between DocType::Inline and `--embedded` flag in asciidoctor cli?
 
 ## weirdnesses...
 

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SafeMode {
   Unsafe,
@@ -5,6 +7,19 @@ pub enum SafeMode {
   Server,
   #[default]
   Secure,
+}
+
+impl FromStr for SafeMode {
+  type Err = &'static str;
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s {
+      "unsafe" => Ok(SafeMode::Unsafe),
+      "safe" => Ok(SafeMode::Safe),
+      "server" => Ok(SafeMode::Server),
+      "secure" => Ok(SafeMode::Secure),
+      _ => Err("Invalid safe mode: expected `unsafe`, `safe`, `server`, or `secure`"),
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

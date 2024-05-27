@@ -1,7 +1,6 @@
 use super::admonition::AdmonitionKind;
 use crate::prelude::*;
 use ast::prelude::*;
-use opts::Opts;
 
 macro_rules! warn_unimplemented {
   ($x:ident) => {
@@ -17,7 +16,7 @@ pub trait Backend {
   type Error;
 
   // document
-  fn enter_document(&mut self, document: &Document, opts: Opts);
+  fn enter_document(&mut self, document: &Document);
   fn exit_document(&mut self, document: &Document);
   fn visit_document_attribute_decl(&mut self, name: &str, value: &AttrValue);
   fn enter_preamble(&mut self, blocks: &[Block]);

@@ -1,16 +1,12 @@
 use crate::internal::*;
 
-pub fn eval<B: Backend>(
-  document: &Document,
-  opts: Opts,
-  mut backend: B,
-) -> Result<B::Output, B::Error> {
-  visit(document, opts, &mut backend);
+pub fn eval<B: Backend>(document: &Document, mut backend: B) -> Result<B::Output, B::Error> {
+  visit(document, &mut backend);
   backend.into_result()
 }
 
-pub fn visit<B: Backend>(doc: &Document, opts: Opts, backend: &mut B) {
-  backend.enter_document(doc, opts);
+pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
+  backend.enter_document(doc);
   if let Some(title) = &doc.title {
     backend.enter_document_title(title);
     title
@@ -403,7 +399,7 @@ fn eval_table_row(row: &Row, section: TableSection, doc: &Document, backend: &mu
       }
       CellContent::AsciiDoc(document) => {
         let mut cell_backend = backend.asciidoc_table_cell_backend();
-        visit(document, Opts::default(), &mut cell_backend);
+        visit(document, &mut cell_backend);
         backend.visit_asciidoc_table_cell_result(cell_backend.into_result());
       }
     }

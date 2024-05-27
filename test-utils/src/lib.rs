@@ -359,9 +359,9 @@ macro_rules! test_inlines_loose {
   ($name:ident, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      let mut opts = ::asciidork_opts::Opts::embedded();
-      opts.strict = false;
-      let parser = Parser::new_opts(leaked_bump(), $input, opts);
+      let mut settings = ::asciidork_meta::JobSettings::embedded();
+      settings.strict = false;
+      let parser = Parser::new_settings(leaked_bump(), $input, settings);
       let content = parser.parse().unwrap().document.content;
       let blocks = content.blocks().expect("expected blocks").clone();
       if blocks.len() != 1 {
@@ -460,9 +460,9 @@ macro_rules! parse_doc_content {
 #[macro_export]
 macro_rules! parse_doc_content_loose {
   ($input:expr) => {{
-    let mut opts = ::asciidork_opts::Opts::default();
-    opts.strict = false;
-    let parser = Parser::new_opts(leaked_bump(), $input, opts);
+    let mut settings = ::asciidork_meta::JobSettings::embedded();
+    settings.strict = false;
+    let parser = Parser::new_settings(leaked_bump(), $input, settings);
     parser.parse().unwrap().document.content
   }};
 }

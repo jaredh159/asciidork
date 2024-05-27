@@ -523,6 +523,8 @@ test_eval!(
 test_eval!(
   special_sections_not_numbered,
   adoc! {r#"
+    = Doc Title
+    :doctype: manpage
     :sectnums:
 
     == sect 1
