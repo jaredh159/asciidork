@@ -7,6 +7,7 @@ pub fn eval<B: Backend>(document: &Document, mut backend: B) -> Result<B::Output
 
 pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
   backend.enter_document(doc);
+  backend.enter_header();
   if let Some(title) = &doc.title {
     backend.enter_document_title(title);
     title
@@ -14,16 +15,20 @@ pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
       .for_each(|node| eval_inline(node, doc, backend));
     backend.exit_document_title(title);
   }
+  backend.exit_header();
   eval_toc_at(
     doc,
     &[TocPosition::Auto, TocPosition::Left, TocPosition::Right],
     backend,
   );
   eval_doc_content(doc, &doc.content, backend);
+  backend.enter_footer();
+  backend.exit_footer();
   backend.exit_document(doc);
 }
 
 fn eval_doc_content(doc: &Document, content: &DocContent, backend: &mut impl Backend) {
+  backend.enter_content();
   match content {
     DocContent::Blocks(blocks) => {
       blocks.iter().for_each(|b| eval_block(b, doc, backend));
@@ -38,6 +43,7 @@ fn eval_doc_content(doc: &Document, content: &DocContent, backend: &mut impl Bac
       sections.iter().for_each(|s| eval_section(s, doc, backend));
     }
   }
+  backend.exit_content();
 }
 
 fn eval_section(section: &Section, doc: &Document, backend: &mut impl Backend) {

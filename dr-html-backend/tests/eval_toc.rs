@@ -18,9 +18,7 @@ test_eval!(
     bar
   "},
   html! {r##"
-    <div id="header">
-      <h1>Doc Title</h1>
-    </div>
+    <h1>Doc Title</h1>
     <div id="toc" class="toc">
       <div id="toctitle">Table of Contents</div>
       <ul class="sectlevel1">
@@ -128,9 +126,7 @@ test_eval!(
     === sect 2.1
   "},
   html! {r##"
-    <div id="header">
-      <h1>Doc Title</h1>
-    </div>
+    <h1>Doc Title</h1>
     <div id="toc" class="toc">
       <div id="toctitle">Ham Sandwich</div>
       <ul class="sectlevel1">

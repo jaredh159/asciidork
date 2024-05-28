@@ -1,3 +1,4 @@
+use asciidork_meta::JobSettings;
 use test_utils::{adoc, html};
 mod helpers;
 
@@ -95,8 +96,9 @@ test_eval!(
   "#}
 );
 
-test_eval_loose!(
+test_eval!(
   bad_sequence,
+  |s: &mut JobSettings| s.strict = false,
   adoc! {r#"
     == Section 1
 

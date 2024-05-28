@@ -1,9 +1,11 @@
+use asciidork_meta::JobSettings;
 use test_utils::*;
 
 mod helpers;
 
-test_eval_loose!(
+test_eval!(
   xrefs,
+  |s: &mut JobSettings| s.strict = false,
   adoc! {r#"
     == Tigers
 

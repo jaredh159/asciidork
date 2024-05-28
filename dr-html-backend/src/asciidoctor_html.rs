@@ -17,7 +17,6 @@ pub struct AsciidoctorHtml {
   pub(crate) newlines: Newlines,
   pub(crate) state: HashSet<EphemeralState>,
   pub(crate) autogen_conum: u8,
-  pub(crate) render_doc_header: bool,
   pub(crate) in_asciidoc_table_cell: bool,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
@@ -35,10 +34,8 @@ impl Backend for AsciidoctorHtml {
     }
 
     if !self.standalone() {
-      self.render_doc_header = document.meta.is_true("showtitle");
       return;
     }
-    self.render_doc_header = !document.meta.is_false("showtitle");
     self.push_str(r#"<!DOCTYPE html><html"#);
     if !document.meta.is_true("nolang") {
       self.push([r#" lang=""#, document.meta.str_or("lang", "en"), "\""]);
@@ -87,22 +84,57 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
+  fn enter_header(&mut self) {
+    if !self.doc_meta.embedded && !self.doc_meta.is_true("noheader") {
+      self.push_str(r#"<div id="header">"#)
+    }
+  }
+
+  fn exit_header(&mut self) {
+    if !self.doc_meta.embedded && !self.doc_meta.is_true("noheader") {
+      self.push_str("</div>")
+    }
+  }
+
+  fn enter_content(&mut self) {
+    if !self.doc_meta.embedded {
+      self.push_str(r#"<div id="content">"#)
+    }
+  }
+
+  fn exit_content(&mut self) {
+    if !self.doc_meta.embedded {
+      self.push_str("</div>")
+    }
+  }
+
+  fn enter_footer(&mut self) {
+    if !self.doc_meta.embedded && !self.doc_meta.is_true("nofooter") {
+      self.push_str(r#"<div id="footer">"#)
+    }
+  }
+
+  fn exit_footer(&mut self) {
+    if !self.doc_meta.embedded && !self.doc_meta.is_true("nofooter") {
+      self.push_str("</div>")
+    }
+  }
+
   fn enter_document_title(&mut self, _nodes: &[InlineNode]) {
-    if self.render_doc_header {
-      self.push_str(r#"<div id="header"><h1>"#)
+    if self.render_doc_title() {
+      self.push_str("<h1>")
     } else {
       self.start_buffering();
     }
   }
 
   fn exit_document_title(&mut self, _nodes: &[InlineNode]) {
-    if self.render_doc_header {
+    if self.render_doc_title() {
       self.push_str("</h1>");
-      self.render_document_authors();
-      self.push_str("</div>");
     } else {
       self.take_buffer(); // discard
     }
+    self.render_document_authors();
   }
 
   fn enter_toc(&mut self, toc: &TableOfContents) {
@@ -1181,7 +1213,7 @@ impl AsciidoctorHtml {
 
   fn render_document_authors(&mut self) {
     let authors = self.doc_meta.authors();
-    if !self.render_doc_header || authors.is_empty() {
+    if self.doc_meta.embedded || authors.is_empty() {
       return;
     }
     let mut buffer = String::with_capacity(authors.len() * 100);
@@ -1213,6 +1245,17 @@ impl AsciidoctorHtml {
     self.doc_meta.get_doctype() != DocType::Inline
       && !self.in_asciidoc_table_cell
       && !self.doc_meta.embedded
+  }
+
+  fn render_doc_title(&self) -> bool {
+    if self.doc_meta.is_true("noheader")
+      || self.doc_meta.is_true("notitle")
+      || self.doc_meta.is_false("showtitle")
+      || (self.doc_meta.embedded && !self.doc_meta.is_true("showtitle"))
+    {
+      return false;
+    }
+    true
   }
 }
 

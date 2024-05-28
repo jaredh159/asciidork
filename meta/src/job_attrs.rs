@@ -29,7 +29,7 @@ impl JobAttrs {
 
   pub fn insert(&mut self, key: impl Into<String>, job_attr: JobAttr) -> Result<(), String> {
     let key: String = key.into();
-    validate::attr(&key, &job_attr.value)?;
+    validate::attr(self, &key, &job_attr.value)?;
     self.0.insert(key, job_attr);
     Ok(())
   }
@@ -41,6 +41,12 @@ impl JobAttrs {
 
   pub fn get(&self, key: &str) -> Option<&JobAttr> {
     self.0.get(key)
+  }
+}
+
+impl RemoveAttr for JobAttrs {
+  fn remove(&mut self, key: &str) {
+    self.0.remove(key);
   }
 }
 

@@ -172,9 +172,19 @@ impl Attrs {
 
   pub fn insert(&mut self, key: impl Into<String>, value: AttrValue) -> Result<(), String> {
     let key: String = key.into();
-    validate::attr(&key, &value)?;
+    validate::attr(self, &key, &value)?;
     self.0.insert(key, value);
     Ok(())
+  }
+}
+
+pub(crate) trait RemoveAttr {
+  fn remove(&mut self, key: &str);
+}
+
+impl RemoveAttr for Attrs {
+  fn remove(&mut self, key: &str) {
+    self.0.remove(key);
   }
 }
 
@@ -194,4 +204,18 @@ impl From<String> for AttrValue {
   fn from(s: String) -> Self {
     AttrValue::String(s)
   }
+}
+
+#[test]
+fn test_notitle_show_title_linked() {
+  let mut attrs = Attrs::empty();
+  attrs.insert("showtitle", true.into()).unwrap();
+  assert!(attrs.is_true("showtitle"));
+  assert!(!attrs.is_set("notitle"));
+  attrs.insert("notitle", true.into()).unwrap();
+  assert!(attrs.is_true("notitle"));
+  assert!(!attrs.is_set("showtitle"));
+  attrs.insert("showtitle", true.into()).unwrap();
+  assert!(attrs.is_true("showtitle"));
+  assert!(!attrs.is_set("notitle"));
 }

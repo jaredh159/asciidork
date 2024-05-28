@@ -744,9 +744,10 @@ fn test_non_embedded() {
             </span><br>
           </div>
         </div>
-        <div class="paragraph">
-          <p>foo</p>
+        <div id="content">
+          <div class="paragraph"><p>foo</p></div>
         </div>
+        <div id="footer"></div>
       </body>
     </html>
   "#};
