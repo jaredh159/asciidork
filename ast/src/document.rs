@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::internal::*;
 
@@ -10,7 +11,7 @@ pub struct Document<'bmp> {
   pub subtitle: Option<InlineNodes<'bmp>>,
   pub content: DocContent<'bmp>,
   pub toc: Option<TableOfContents<'bmp>>,
-  pub anchors: HashMap<BumpString<'bmp>, Anchor<'bmp>>,
+  pub anchors: Rc<RefCell<HashMap<BumpString<'bmp>, Anchor<'bmp>>>>,
 }
 
 impl<'bmp> Document<'bmp> {
@@ -24,7 +25,7 @@ impl<'bmp> Document<'bmp> {
       subtitle: None,
       content,
       toc: None,
-      anchors: HashMap::new(),
+      anchors: Rc::new(RefCell::new(HashMap::new())),
       meta: DocumentMeta::default(),
     }
   }

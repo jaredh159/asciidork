@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::internal::*;
 
@@ -40,12 +40,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   pub fn new_settings(
-    // pub fn new_opts(bump: &'bmp Bump, src: &'src str, opts: opts::Opts) -> Parser<'bmp, 'src> {
-    //   let mut p = Parser::new(bump, src);
-    //   p.strict = opts.strict;
-    //   p.document.meta.set_doctype(opts.doc_type);
-    //   p
-    // }
     bump: &'bmp Bump,
     src: &'src str,
     settings: JobSettings,
@@ -60,8 +54,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut cell_parser = Parser::new(self.bump, src);
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
+    cell_parser.ctx.in_asciidoc_table_cell = true;
+    cell_parser.ctx.xrefs = Rc::clone(&self.ctx.xrefs);
     cell_parser.document.meta = self.document.meta.clone();
     cell_parser.document.meta.set_doctype(DocType::Article);
+    cell_parser.document.anchors = Rc::clone(&self.document.anchors);
     cell_parser
   }
 
@@ -226,12 +223,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   fn diagnose_document(&self) -> Result<()> {
-    for (ref_id, ref_loc) in &self.ctx.xrefs {
-      if !self.document.anchors.contains_key(ref_id) {
-        self.err_at_loc(
-          format!("Invalid cross reference, no anchor found for `{ref_id}`"),
-          *ref_loc,
-        )?;
+    if !self.ctx.in_asciidoc_table_cell {
+      for (ref_id, ref_loc) in self.ctx.xrefs.borrow().iter() {
+        if !self.document.anchors.borrow().contains_key(ref_id) {
+          self.err_at_loc(
+            format!("Invalid cross reference, no anchor found for `{ref_id}`"),
+            *ref_loc,
+          )?;
+        }
       }
     }
     let toc_pos = self.document.toc.as_ref().map(|toc| toc.position);

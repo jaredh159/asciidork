@@ -95,6 +95,7 @@ macro_rules! assert_section {
   ($input:expr, reftext: $reftext:expr, $expected:expr$(,)?) => {
     let (section, refs) = parse_section!($input);
     assert_eq!(section, $expected);
+    let refs = refs.borrow();
     let xref = refs
       .get(&section.id.clone().expect("section id"))
       .expect("expected parsed section to have xref");

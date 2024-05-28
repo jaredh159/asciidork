@@ -54,7 +54,7 @@ impl<'src> Lexer<'src> {
   }
 
   pub fn loc_src(&self, loc: impl Into<SourceLocation>) -> &'src str {
-    let loc = loc.into();
+    let loc: SourceLocation = loc.into();
     &self.src[loc.start..loc.end]
   }
 
@@ -65,6 +65,7 @@ impl<'src> Lexer<'src> {
   }
 
   pub fn line_of(&self, location: usize) -> &'src str {
+    let location = location - self.offset_adjustment;
     let mut start = location;
     let mut end = location;
 

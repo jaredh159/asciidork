@@ -120,7 +120,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 if id.src.starts_with('#') {
                   id.drop_first();
                 }
-                self.ctx.xrefs.insert(id.src.clone(), id.loc);
+                self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
                 lines.restore_if_nonempty(line);
                 let nodes = self.parse_inlines_until(lines, &[CloseBracket])?;
                 let linktext = if nodes.is_empty() {
@@ -257,7 +257,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             }
             let mut inner = line.extract_line_before(&[GreaterThan, GreaterThan], self.bump);
             let id = inner.consume_to_string_until(Comma, self.bump);
-            self.ctx.xrefs.insert(id.src.clone(), id.loc);
+            self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
             let mut linktext = None;
             if !inner.is_empty() {
               inner.discard_assert(Comma);
@@ -337,7 +337,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             };
             if let Some(InlineNode { content: TextSpan(attrs, nodes), .. }) = acc.inlines.last() {
               if let Some(id) = &attrs.id {
-                self.document.anchors.insert(
+                self.document.anchors.borrow_mut().insert(
                   id.src.clone(),
                   Anchor { reftext: None, title: nodes.clone() },
                 );

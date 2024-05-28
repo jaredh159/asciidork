@@ -55,6 +55,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       self
         .document
         .anchors
+        .borrow_mut()
         .insert(id.clone(), Anchor { reftext, title: heading.clone() });
     }
 

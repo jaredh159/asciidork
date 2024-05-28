@@ -26,7 +26,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(super) fn parse_doc_attr(
     &self,
-    lines: &mut ContiguousLines,
+    lines: &mut ContiguousLines<'bmp, 'src>,
   ) -> Result<Option<(String, AttrValue, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);

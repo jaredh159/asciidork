@@ -83,7 +83,7 @@ impl Json for Document<'_> {
     buf.begin_obj("Document");
     buf.add_member("title", &self.title);
     buf.add_member("subtitle", &self.subtitle);
-    buf.add_member("anchors", &self.anchors);
+    // buf.add_member("anchors", &self.anchors);
     buf.add_member("content", &self.content);
     buf.add_option_member("toc", self.toc.as_ref());
     buf.finish_obj();

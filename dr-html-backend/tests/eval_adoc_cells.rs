@@ -1,5 +1,6 @@
 use asciidork_meta::{JobAttr, JobSettings};
-use test_utils::*;
+use asciidork_parser::Parser;
+use test_utils::{assert_eq, *};
 
 mod helpers;
 
@@ -97,6 +98,147 @@ test_eval!(
       </div>
     </div>
   "#}
+);
+
+test_eval!(
+  override_unset_showtitle_from_parent,
+  adoc! {r#"
+    = Document Title
+    :!showtitle:
+
+    |===
+    a|
+    = Nested Document Title
+    :showtitle:
+
+    content
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <h1>Nested Document Title</h1>
+              <div class="paragraph"><p>content</p></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+test_eval!(
+  override_set_showtitle_from_parent,
+  adoc! {r#"
+    = Document Title
+    :showtitle:
+
+    |===
+    a|
+    = Nested Document Title
+    :!showtitle:
+
+    content
+    |===
+  "#},
+  html_contains: r#"<div class="content"><div class="paragraph"><p>content"#
+);
+
+test_eval!(
+  preserves_newlines_if_cell_starts_newline,
+  adoc! {r#"
+    |===
+    a|
+     $ command
+    a| paragraph
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <div class="literalblock">
+                <div class="content"><pre>$ command</pre></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <div class="paragraph"><p>paragraph</p></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+test_eval!(
+  xref_from_adoc_cell_to_parent,
+  adoc! {r#"
+    == Some
+
+    |===
+    a|See <<_more>>
+    |===
+
+    == More
+
+    content
+  "#},
+  html_contains: r##"<p>See <a href="#_more">More</a></p>"##
+);
+
+test_eval!(
+  xref_from_parent_to_adoc_cell,
+  adoc! {r#"
+    And a <<tigers>> link.
+
+    |===
+    a|Here is [#tigers]#a text span#.
+    |===
+  "#},
+  html! { r##"
+    <div class="paragraph">
+      <p>And a <a href="#tigers">a text span</a> link.</p>
+    </div>
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <div class="paragraph">
+                <p>Here is <span id="tigers">a text span</span>.</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "##}
+);
+
+test_error!(
+  xref_unknown_anchor_in_adoc_cell,
+  adoc! {r#"
+    |===
+    a|<<foo>>
+    |===
+  "#},
+  error! {r"
+    2: a|<<foo>>
+           ^^^ Invalid cross reference, no anchor found for `foo`
+  "}
 );
 
 test_eval!(
