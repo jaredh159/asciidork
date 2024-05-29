@@ -355,17 +355,25 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     }
     Macro(Xref { id, linktext }) => {
       backend.enter_xref(id, linktext.as_ref().map(|t| t.as_slice()));
-      if let Some(anchor) = doc.anchors.borrow().get(&id.src) {
-        let text = anchor
-          .reftext
-          .as_ref()
-          .unwrap_or(linktext.as_ref().unwrap_or(&anchor.title));
+      if let Some(text) = doc
+        .anchors
+        .borrow()
+        .get(&id.src)
+        .map(|anchor| {
+          anchor
+            .reftext
+            .as_ref()
+            .unwrap_or(linktext.as_ref().unwrap_or(&anchor.title))
+        })
+        .filter(|text| !text.is_empty())
+      {
         text.iter().for_each(|node| eval_inline(node, doc, backend));
       } else {
         backend.visit_missing_xref(id);
       }
       backend.exit_xref(id, linktext.as_ref().map(|t| t.as_slice()));
     }
+    LegacyInlineAnchor(id) => backend.visit_legacy_inline_anchor(id),
     LineBreak => backend.visit_linebreak(),
     AttributeReference(name) => backend.visit_attribute_reference(name),
     CalloutNum(callout) => backend.visit_callout(*callout),

@@ -567,10 +567,3 @@ macro_rules! parse_section {
     }
   }};
 }
-
-#[macro_export]
-macro_rules! s {
-  (in $bump:expr; $s:expr) => {
-    bumpalo::collections::String::from_str_in($s, $bump)
-  };
-}

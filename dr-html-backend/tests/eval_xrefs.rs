@@ -204,3 +204,30 @@ test_eval!(
     </div>
   "##}
 );
+
+test_eval!(
+  legacy_inline_anchor_xrefs,
+  adoc! {r#"
+    [[step-1]]Download the software
+
+    Refer to <<step-1>>.
+
+    [[step-2,be sure to]]Lather, rinse, repeat
+
+    Also, <<step-2>> do step 2.
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p><a id="step-1"></a>Download the software</p>
+    </div>
+    <div class="paragraph">
+      <p>Refer to <a href="#step-1">[step-1]</a>.</p>
+    </div>
+    <div class="paragraph">
+      <p><a id="step-2"></a>Lather, rinse, repeat</p>
+    </div>
+    <div class="paragraph">
+      <p>Also, <a href="#step-2">be sure to</a> do step 2.</p>
+    </div>
+  "##}
+);

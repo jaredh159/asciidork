@@ -346,6 +346,24 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             break;
           }
 
+          OpenBracket
+            if line.current_is(OpenBracket) && line.contains_seq(&[CloseBracket, CloseBracket]) =>
+          {
+            let attrs = self.parse_attr_list(&mut line)?;
+            let id = attrs.id.clone().expect("malformed legacy attrs").src;
+            self.document.anchors.borrow_mut().insert(
+              id.clone(),
+              Anchor {
+                title: InlineNodes::new(self.bump),
+                reftext: match attrs.positional.first() {
+                  Some(Some(reftext)) => Some(reftext.clone()),
+                  _ => None,
+                },
+              },
+            );
+            acc.push_node(LegacyInlineAnchor(id), attrs.loc);
+          }
+
           Backtick
             if subs.inline_formatting()
               && line.current_is(Plus)
@@ -873,6 +891,28 @@ mod tests {
           node!("foo+"; 0..4),
           node!(Inline::Newline, 4..5),
           node!("bar"; 5..8),
+        ],
+      ),
+    ];
+
+    run(cases);
+  }
+
+  #[test]
+  fn test_legacy_inline_anchors() {
+    let cases = vec![
+      (
+        "[[foo]]bar",
+        nodes![
+          node!(LegacyInlineAnchor(bstr!("foo")), 0..7),
+          node!("bar"; 7..10),
+        ],
+      ),
+      (
+        "bar[[foo]]",
+        nodes![
+          node!("bar"; 0..3),
+          node!(LegacyInlineAnchor(bstr!("foo")), 3..10),
         ],
       ),
     ];

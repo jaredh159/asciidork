@@ -26,6 +26,7 @@ pub enum Inline<'bmp> {
   Newline,
   CalloutNum(Callout),
   CalloutTuck(BumpString<'bmp>),
+  LegacyInlineAnchor(BumpString<'bmp>),
   LineBreak,
   LineComment(BumpString<'bmp>),
   LitMono(SourceString<'bmp>),
@@ -114,6 +115,10 @@ impl<'bmp> Json for Inline<'bmp> {
       Inline::Macro(m) => {
         buf.push_str("Macro\"");
         buf.add_member("macro", m);
+      }
+      Inline::LegacyInlineAnchor(attrs) => {
+        buf.push_str("LegacyInlineAnchor\"");
+        buf.add_member("attrs", attrs);
       }
       Inline::Italic(nodes) => {
         buf.push_str("Italic\"");

@@ -75,7 +75,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if line.current_is(CloseBracket) {
       let mut close = line.consume_current().unwrap(); // `]`
       if state.is_legacy_anchor {
-        close = line.consume_current().unwrap(); // second
+        close = line.consume_current().unwrap(); // second `]`
       }
       return Ok(AttrList::new(
         SourceLocation::new(parse_start - 1, close.loc.end),
@@ -87,6 +87,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       let kind = token.kind;
       match kind {
         CloseBracket if state.quotes == Default && !state.escaping => {
+          if state.is_legacy_anchor {
+            line.consume_current().unwrap(); // second `]`
+          }
           state.commit_prev(self)?;
           break;
         }
