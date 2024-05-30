@@ -41,53 +41,58 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       num_cols: col_specs.len(),
       counting_cols: col_specs.is_empty(),
       col_specs,
-      has_header_row: None,
+      header_row: HeaderRow::Unknown,
+      header_reparse_cells: bvec![in self.bump],
       autowidths: meta.has_attr_option("autowidth"),
       can_infer_implicit_header: false,
       phantom_cells: HashSet::new(),
       effective_row_idx: 0,
-    };
-
-    let mut table = Table {
-      col_widths: col_widths.into(),
-      header_row: None,
-      rows: bvec![in self.bump],
-      footer_row: None,
+      table: Table {
+        col_widths: col_widths.into(),
+        header_row: None,
+        rows: bvec![in self.bump],
+        footer_row: None,
+      },
     };
 
     if meta.has_attr_option("header") {
-      ctx.has_header_row = Some(true);
-    } else if meta.has_attr_option("noheader") || lines.num_lines() != 1 {
-      ctx.has_header_row = Some(false);
+      ctx.header_row = HeaderRow::ExplicitlySet;
+    } else if meta.has_attr_option("noheader") {
+      ctx.header_row = HeaderRow::ExplicitlyUnset;
+    } else if lines.num_lines() != 1 {
+      ctx.header_row = HeaderRow::FoundNone;
     }
 
     let (mut tokens, end) = self.table_content(lines, &delim_line)?;
 
     if ctx.counting_cols {
-      self.parse_implicit_first_row(&mut tokens, &mut table, &mut ctx)?;
+      self.parse_implicit_first_row(&mut tokens, &mut ctx)?;
     }
 
-    while let Some(row) = self.parse_table_row(&mut tokens, &mut ctx)? {
-      if table.rows.is_empty()
-        && table.header_row.is_none()
-        && (ctx.has_header_row == Some(true) || ctx.can_infer_implicit_header)
+    while let Some(mut row) = self.parse_table_row(&mut tokens, &mut ctx)? {
+      if ctx.table.rows.is_empty()
+        && ctx.table.header_row.is_none()
+        && (ctx.header_row.known_to_exist() || ctx.can_infer_implicit_header)
       {
-        table.header_row = Some(row);
-        ctx.has_header_row = Some(true);
+        if ctx.header_row.is_unknown() {
+          ctx.header_row = HeaderRow::FoundImplicit;
+          self.reparse_header_cells(&mut row, &mut ctx)?;
+        }
+        ctx.table.header_row = Some(row);
       } else {
-        table.rows.push(row);
-        if ctx.has_header_row.is_none() {
-          ctx.has_header_row = Some(false);
+        ctx.table.rows.push(row);
+        if ctx.header_row.is_unknown() {
+          ctx.header_row = HeaderRow::FoundNone;
         }
       }
     }
 
-    if meta.has_attr_option("footer") && !table.rows.is_empty() {
-      table.footer_row = Some(table.rows.pop().unwrap());
+    if meta.has_attr_option("footer") && !ctx.table.rows.is_empty() {
+      ctx.table.footer_row = Some(ctx.table.rows.pop().unwrap());
     }
 
     Ok(Block {
-      content: BlockContent::Table(table),
+      content: BlockContent::Table(ctx.table),
       context: BlockContext::Table,
       loc: SourceLocation::new(meta.start, end),
       meta,
@@ -97,8 +102,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_implicit_first_row(
     &mut self,
     tokens: &mut TableTokens<'bmp, 'src>,
-    table: &mut Table<'bmp>,
-    ctx: &mut TableContext,
+    ctx: &mut TableContext<'bmp, 'src>,
   ) -> Result<()> {
     let mut cells = bvec![in self.bump];
     loop {
@@ -129,14 +133,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ctx.effective_row_idx += 1;
 
     let width = if ctx.autowidths { ColWidth::Auto } else { ColWidth::Proportional(1) };
-    table.col_widths = ColWidths::new(bvec![in self.bump; width; ctx.num_cols]);
-    if ctx.has_header_row == Some(true) || ctx.can_infer_implicit_header {
-      ctx.has_header_row = Some(true);
-      table.header_row = Some(Row::new(cells));
+    ctx.table.col_widths = ColWidths::new(bvec![in self.bump; width; ctx.num_cols]);
+    if ctx.header_row.known_to_exist() || ctx.can_infer_implicit_header {
+      let mut row = Row::new(cells);
+      if ctx.header_row.is_unknown() {
+        ctx.header_row = HeaderRow::FoundImplicit;
+        self.reparse_header_cells(&mut row, ctx)?;
+      }
+      ctx.table.header_row = Some(row);
     } else {
-      table.rows.push(Row::new(cells));
-      if ctx.has_header_row.is_none() {
-        ctx.has_header_row = Some(false);
+      ctx.table.rows.push(Row::new(cells));
+      if ctx.header_row.is_unknown() {
+        ctx.header_row = HeaderRow::FoundNone;
       }
     }
     Ok(())
@@ -145,7 +153,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_table_cell(
     &mut self,
     tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext,
+    ctx: &mut TableContext<'bmp, 'src>,
     col_index: usize,
   ) -> Result<Option<(Cell<'bmp>, u8)>> {
     if tokens.is_empty() {
@@ -211,7 +219,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_table_row(
     &mut self,
     tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext,
+    ctx: &mut TableContext<'bmp, 'src>,
   ) -> Result<Option<Row<'bmp>>> {
     let mut cells = bvec![in self.bump];
     let mut num_effective_cells = ctx.row_phantom_cells();
@@ -239,6 +247,37 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       ctx.effective_row_idx += 1;
       Ok(Some(Row::new(cells)))
     }
+  }
+
+  // header cells don't have a style, but we don't always know
+  // we have an implicit header until we've parsed too far, so
+  // we come back and modify the cells after we discover an implicit
+  // header - for asciidoc and literal this means reparsing the tokens
+  // but for other styles we can just re-wrap the nodes
+  // asciidoctor does a reparse of header cells for this reason as well,
+  // see: https://github.com/asciidoctor/asciidoctor/commit/ca2ca428
+  fn reparse_header_cells(
+    &mut self,
+    row: &mut Row<'bmp>,
+    ctx: &mut TableContext<'bmp, 'src>,
+  ) -> Result<()> {
+    for idx in 0..row.cells.len() {
+      let mut content = CellContent::Literal(InlineNodes::new(self.bump));
+      std::mem::swap(&mut row.cells[idx].content, &mut content);
+      row.cells[idx].content = match content {
+        CellContent::AsciiDoc(_) | CellContent::Literal(_) => {
+          let data = ctx.header_reparse_cells.remove(0);
+          let cell = self.parse_non_asciidoc_cell(data, CellContentStyle::Default)?;
+          cell.content
+        }
+        CellContent::Emphasis(paras) => CellContent::Default(paras),
+        CellContent::Header(paras) => CellContent::Default(paras),
+        CellContent::Monospace(paras) => CellContent::Default(paras),
+        CellContent::Strong(paras) => CellContent::Default(paras),
+        content => content,
+      }
+    }
+    Ok(())
   }
 
   fn table_content(
@@ -293,15 +332,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     cell_spec: CellSpec,
     mut cell_tokens: BumpVec<'bmp, Token<'src>>,
     col_index: usize,
-    ctx: &mut TableContext,
+    ctx: &mut TableContext<'bmp, 'src>,
     mut loc: Range<usize>,
   ) -> Result<Option<(Cell<'bmp>, u8)>> {
     let col_spec = ctx.col_specs.get(col_index);
-    let cell_style = cell_spec
+    let mut cell_style = cell_spec
       .style
       .unwrap_or_else(|| col_spec.map_or(CellContentStyle::Default, |col| col.style));
 
-    if ctx.has_header_row.is_none() {
+    if ctx.header_row.known_to_exist() && ctx.table.header_row.is_none() {
+      cell_style = CellContentStyle::Default;
+    }
+
+    if ctx.header_row.is_unknown() {
       let mut ws = SmallVec::<[TokenKind; 12]>::new();
       while cell_tokens.last().is_whitespaceish() {
         let token = cell_tokens.pop().unwrap();
@@ -320,6 +363,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let repeat = cell_spec.duplication.unwrap_or(1);
     if cell_style == CellContentStyle::AsciiDoc {
+      if ctx.header_row.is_unknown() {
+        ctx.header_reparse_cells.push(ParseCellData {
+          cell_tokens: cell_tokens.clone(),
+          loc: loc.clone().into(),
+          cell_spec: cell_spec.clone(),
+          col_spec: col_spec.cloned(),
+        });
+      }
       let mut cell_line = self.line_from(cell_tokens, loc.clone());
       cell_line.trim_for_cell(cell_style);
       let cell_parser = self.cell_parser(cell_line.src, loc.start);
@@ -329,7 +380,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             self.errors.borrow_mut().extend(warnings);
           }
           let content = CellContent::AsciiDoc(document);
-          Ok(Some((Cell::new(content, cell_spec, col_spec), repeat)))
+          Ok(Some((
+            Cell::new(content, cell_spec, col_spec.cloned()),
+            repeat,
+          )))
         }
         Err(mut diagnostics) => {
           if !diagnostics.is_empty() && self.strict {
@@ -342,10 +396,28 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       };
     }
 
-    let nodes = if cell_tokens.is_empty() {
+    let cell_data = ParseCellData {
+      cell_tokens,
+      loc: loc.into(),
+      cell_spec,
+      col_spec: col_spec.cloned(),
+    };
+    if ctx.header_row.is_unknown() && cell_style == CellContentStyle::Literal {
+      ctx.header_reparse_cells.push(cell_data.clone());
+    }
+    let cell = self.parse_non_asciidoc_cell(cell_data, cell_style)?;
+    Ok(Some((cell, repeat)))
+  }
+
+  fn parse_non_asciidoc_cell(
+    &mut self,
+    data: ParseCellData<'bmp, 'src>,
+    cell_style: CellContentStyle,
+  ) -> Result<Cell<'bmp>> {
+    let nodes = if data.cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
     } else {
-      let mut cell_line = self.line_from(cell_tokens, loc);
+      let mut cell_line = self.line_from(data.cell_tokens, data.loc);
       cell_line.trim_for_cell(cell_style);
       let prev_subs = self.ctx.subs;
       self.ctx.subs = cell_style.into();
@@ -363,8 +435,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       CellContentStyle::Literal => CellContent::Literal(nodes),
       CellContentStyle::AsciiDoc => unreachable!("Parser::finish_cell() asciidoc"),
     };
-
-    Ok(Some((Cell::new(content, cell_spec, col_spec), repeat)))
+    Ok(Cell::new(content, data.cell_spec, data.col_spec))
   }
 
   fn split_paragraphs(&self, nodes: InlineNodes<'bmp>) -> BumpVec<'bmp, InlineNodes<'bmp>> {
@@ -1017,6 +1088,66 @@ mod tests {
       |===
     "#});
     assert!(table.header_row.is_none());
+  }
+
+  #[test]
+  fn implicit_header_row_has_no_content_style() {
+    let table = parse_table!(adoc! {r#"
+      [cols="1a,2l"]
+      |===
+      |1|2
+
+      |3|4
+      |===
+    "#});
+    assert!(matches!(
+      table.header_row.clone().unwrap().cells[0].content,
+      CellContent::Default(_)
+    ));
+    assert!(matches!(
+      table.header_row.clone().unwrap().cells[1].content,
+      CellContent::Default(_)
+    ));
+  }
+
+  #[test]
+  fn explicit_header_row_has_no_content_style() {
+    let table = parse_table!(adoc! {r#"
+      [%header,cols="1a,2l"]
+      |===
+      |1|2
+      |3|4
+      |===
+    "#});
+    assert!(matches!(
+      table.header_row.clone().unwrap().cells[0].content,
+      CellContent::Default(_)
+    ));
+    assert!(matches!(
+      table.header_row.clone().unwrap().cells[1].content,
+      CellContent::Default(_)
+    ));
+  }
+
+  #[test]
+  fn explicit_noheader_row_has_content_style() {
+    let table = parse_table!(adoc! {r#"
+      [%noheader,cols="1a,2l"]
+      |===
+      |1|2
+
+      |3|4
+      |===
+    "#});
+    assert!(table.header_row.is_none());
+    assert!(matches!(
+      table.rows[0].cells[0].content,
+      CellContent::AsciiDoc(_)
+    ));
+    assert!(matches!(
+      table.rows[0].cells[1].content,
+      CellContent::Literal(_)
+    ));
   }
 
   #[test]

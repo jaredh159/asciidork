@@ -231,3 +231,46 @@ test_eval!(
     </div>
   "##}
 );
+
+test_eval!(
+  legacy_inline_anchor_starting_cell,
+  adoc! {r#"
+    The highest peak in the Front Range is <<grays-peak>>, which tops <<mount-evans>> by just a few feet.
+
+    [cols="1s,1"]
+    |===
+    |[[mount-evans,Mount Evans]]Mount Evans
+    |14,271 feet
+
+    h|[[grays-peak,Grays Peak]]
+    Grays Peak
+    |14,278 feet
+    |===
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>The highest peak in the Front Range is <a href="#grays-peak">Grays Peak</a>, which tops <a href="#mount-evans">Mount Evans</a> by just a few feet.</p>
+    </div>
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock"><strong><a id="mount-evans"></a>Mount Evans</strong></p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">14,271 feet</p>
+          </td>
+        </tr>
+        <tr>
+          <th class="tableblock halign-left valign-top">
+            <p class="tableblock"><a id="grays-peak"></a> Grays Peak</p>
+          </th>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">14,278 feet</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "##}
+);

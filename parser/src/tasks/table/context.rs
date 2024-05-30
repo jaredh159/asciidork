@@ -4,20 +4,49 @@ use super::DataFormat;
 use crate::internal::*;
 
 #[derive(Debug, Clone)]
-pub struct TableContext<'bmp> {
+pub struct TableContext<'bmp, 'src> {
   pub delim_ch: u8,
   pub format: DataFormat,
   pub col_specs: BumpVec<'bmp, ColSpec>,
   pub num_cols: usize,
   pub counting_cols: bool,
-  pub has_header_row: Option<bool>,
+  pub header_row: HeaderRow,
+  pub header_reparse_cells: BumpVec<'bmp, ParseCellData<'bmp, 'src>>,
   pub autowidths: bool,
   pub can_infer_implicit_header: bool,
   pub phantom_cells: HashSet<(usize, usize)>,
   pub effective_row_idx: usize,
+  pub table: Table<'bmp>,
 }
 
-impl<'bmp> TableContext<'bmp> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HeaderRow {
+  Unknown,
+  FoundImplicit,
+  FoundNone,
+  ExplicitlySet,
+  ExplicitlyUnset,
+}
+
+impl HeaderRow {
+  pub const fn known_to_exist(&self) -> bool {
+    matches!(self, HeaderRow::FoundImplicit | HeaderRow::ExplicitlySet)
+  }
+
+  pub const fn is_unknown(&self) -> bool {
+    matches!(self, HeaderRow::Unknown)
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct ParseCellData<'bmp, 'src> {
+  pub cell_tokens: BumpVec<'bmp, Token<'src>>,
+  pub loc: SourceLocation,
+  pub cell_spec: CellSpec,
+  pub col_spec: Option<ColSpec>,
+}
+
+impl<'bmp, 'src> TableContext<'bmp, 'src> {
   pub fn add_phantom_cells(&mut self, cell: &Cell, col: usize) {
     if cell.row_span == 0 && cell.col_span == 0 {
       return;
@@ -67,11 +96,18 @@ mod tests {
       col_specs: vecb![],
       num_cols: 3,
       counting_cols: false,
-      has_header_row: None,
+      header_row: HeaderRow::Unknown,
+      header_reparse_cells: vecb![],
       autowidths: false,
       can_infer_implicit_header: false,
       phantom_cells: HashSet::new(),
       effective_row_idx: 0,
+      table: Table {
+        col_widths: ColWidths::new(vecb![]),
+        header_row: None,
+        rows: vecb![],
+        footer_row: None,
+      },
     };
 
     assert_eq!(ctx.effective_row_cols(), 3);

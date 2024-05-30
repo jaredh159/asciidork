@@ -183,6 +183,44 @@ test_eval!(
 );
 
 test_eval!(
+  anchor_starting_implicit_reparsed_header_cell,
+  adoc! {r#"
+    [cols=1a]
+    |===
+    |[[foo,Foo]]* not AsciiDoc
+
+    | AsciiDoc
+    |===
+
+    See <<foo>>.
+  "#},
+  html! { r##"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <thead>
+        <tr>
+          <th class="tableblock halign-left valign-top">
+            <a id="foo"></a>* not AsciiDoc
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <div class="paragraph"><p>AsciiDoc</p></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="paragraph">
+      <p>See <a href="#foo">Foo</a>.</p>
+    </div>
+  "##}
+);
+
+test_eval!(
   xref_from_adoc_cell_to_parent,
   adoc! {r#"
     == Some

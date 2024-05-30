@@ -95,14 +95,16 @@ pub struct Cell<'bmp> {
 }
 
 impl<'bmp> Cell<'bmp> {
-  pub fn new(content: CellContent<'bmp>, cell_spec: CellSpec, col_spec: Option<&ColSpec>) -> Self {
+  pub fn new(content: CellContent<'bmp>, cell_spec: CellSpec, col_spec: Option<ColSpec>) -> Self {
     Self {
       content,
       col_span: cell_spec.col_span.unwrap_or(1),
       row_span: cell_spec.row_span.unwrap_or(1),
-      h_align: cell_spec
-        .h_align
-        .unwrap_or(col_spec.map_or(HorizontalAlignment::Left, |cs| cs.h_align)),
+      h_align: cell_spec.h_align.unwrap_or(
+        col_spec
+          .as_ref()
+          .map_or(HorizontalAlignment::Left, |cs| cs.h_align),
+      ),
       v_align: cell_spec
         .v_align
         .unwrap_or(col_spec.map_or(VerticalAlignment::Top, |cs| cs.v_align)),
