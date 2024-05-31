@@ -2,7 +2,7 @@ use test_utils::*;
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   collapsible_delimited,
   adoc! {r#"
     [%collapsible]
@@ -20,7 +20,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   collapsible_paragraph,
   adoc! {r#"
     [example%collapsible]
@@ -36,7 +36,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   collapsible_custom_title_an_open,
   adoc! {r#"
     .Custom Title

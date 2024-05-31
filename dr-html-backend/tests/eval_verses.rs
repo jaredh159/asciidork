@@ -2,7 +2,7 @@ use test_utils::*;
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   delimited_verse_block,
   adoc! {r#"
     [verse,Carl Sandburg,Fog]
@@ -38,7 +38,7 @@ test_eval!(
   }
 );
 
-test_eval!(
+assert_html!(
   verse_paragraph,
   adoc! {r#"
     [verse,Carl Sandburg, two lines from the poem Fog]
@@ -62,7 +62,7 @@ test_eval!(
   }
 );
 
-test_eval!(
+assert_html!(
   verses_have_normal_subs_and_no_callouts,
   adoc! {r#"
     [verse]
@@ -75,7 +75,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   verse_blocks_cant_contain_blocks,
   adoc! {r#"
     [verse]

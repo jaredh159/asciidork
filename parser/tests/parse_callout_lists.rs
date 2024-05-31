@@ -231,7 +231,7 @@ fn test_finish_parsing_colist_advances() {
   );
 }
 
-test_error!(
+assert_error!(
   skipped_first_conum_in_list,
   adoc! {r#"
     ----
@@ -246,7 +246,7 @@ test_error!(
   "}
 );
 
-test_error!(
+assert_error!(
   skipped_conum_in_list,
   adoc! {r#"
     ----
@@ -263,7 +263,7 @@ test_error!(
   "}
 );
 
-test_error!(
+assert_error!(
   unexpected_conum,
   adoc! {r#"
     ----

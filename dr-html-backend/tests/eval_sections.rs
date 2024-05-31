@@ -2,7 +2,7 @@ use asciidork_meta::JobSettings;
 use test_utils::{adoc, html};
 mod helpers;
 
-test_eval!(
+assert_html!(
   single_simple_section,
   adoc! {r#"
     == Section 1
@@ -21,7 +21,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   preamble_then_section,
   adoc! {r#"
     Preamble
@@ -49,7 +49,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   customized_id_and_prefix,
   adoc! {r#"
     :idprefix: foo_
@@ -65,7 +65,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   single_2_simple_sections,
   adoc! {r#"
     == Section 1
@@ -96,7 +96,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   bad_sequence,
   |s: &mut JobSettings| s.strict = false,
   adoc! {r#"
@@ -126,7 +126,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   discrete_heading,
   adoc! {r#"
     == Section 1
@@ -154,7 +154,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   discrete_heading_w_attrs,
   adoc! {r#"
     == Section 1
@@ -182,7 +182,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   sect_ids_disabled,
   adoc! {r#"
     = Doc Title
@@ -204,7 +204,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   flip_flop_sectids,
   adoc! {r#"
     == ID generation on
@@ -231,7 +231,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   explicit_ids,
   adoc! {r#"
     [#tigers-subspecies]
@@ -259,7 +259,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   explicit_id_sequenced,
   adoc! {r#"
     :idseparator: -
@@ -282,7 +282,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   nested_sections,
   adoc! {r#"
     == sect 1
@@ -304,7 +304,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   section_numbers,
   adoc! {r#"
     :sectnums:
@@ -325,7 +325,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   section_numbers_w_level_1,
   adoc! {r#"
     :sectnums:
@@ -347,7 +347,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   section_numbers_w_level_0,
   adoc! {r#"
     :sectnums:
@@ -369,7 +369,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   section_numbers_default,
   adoc! {r#"
     :sectnums:
@@ -405,7 +405,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   section_nums_level_3,
   adoc! {r#"
     :sectnums:
@@ -442,7 +442,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   section_nums_level_5,
   adoc! {r#"
     :sectnums:
@@ -479,7 +479,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   section_nums_flipflop,
   adoc! {r#"
     :sectnums:
@@ -522,7 +522,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   special_sections_not_numbered,
   adoc! {r#"
     = Doc Title
@@ -546,7 +546,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   special_sections_numbered_w_all,
   adoc! {r#"
     :sectnums: all
@@ -568,7 +568,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   custom_attrs,
   adoc! {r#"
     [#custom-id.custom-class]

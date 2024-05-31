@@ -62,7 +62,7 @@ fn test_sectioned_no_preamble() {
   )
 }
 
-test_error!(
+assert_error!(
   section_title_out_of_sequence,
   adoc! {"
     == ch 1

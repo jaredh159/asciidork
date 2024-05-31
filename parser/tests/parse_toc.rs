@@ -188,7 +188,7 @@ fn test_toc_depth() {
   );
 }
 
-test_error!(
+assert_error!(
   err_no_preamble,
   adoc! {"
     :toc: preamble
@@ -201,7 +201,7 @@ test_error!(
   "}
 );
 
-test_error!(
+assert_error!(
   err_no_macro,
   adoc! {"
     :toc: macro
@@ -214,7 +214,7 @@ test_error!(
   "}
 );
 
-test_error!(
+assert_error!(
   err_macro_no_toc,
   adoc! {"
     :!toc:

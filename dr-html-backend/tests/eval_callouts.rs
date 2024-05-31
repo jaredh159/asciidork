@@ -2,7 +2,7 @@ use test_utils::{adoc, raw_html};
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   basic_callouts,
   adoc! {r#"
     [source,ruby]
@@ -26,7 +26,7 @@ test_eval!(
   )
 );
 
-test_eval!(
+assert_html!(
   xml_callouts,
   adoc! {r#"
     [source,xml]
@@ -46,7 +46,7 @@ test_eval!(
   )
 );
 
-test_eval!(
+assert_html!(
   callouts_w_icons,
   adoc! {r#"
     :icons: font
@@ -66,7 +66,7 @@ test_eval!(
   )
 );
 
-test_eval!(
+assert_html!(
   callout_behind_comment,
   adoc! {r#"
     [source,ruby,line-comment=--]

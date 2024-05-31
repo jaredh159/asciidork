@@ -1,7 +1,7 @@
 use test_utils::{adoc, html};
 mod helpers;
 
-test_eval!(
+assert_html!(
   most_basic_unordered_list,
   adoc! {r#"
     * foo
@@ -17,7 +17,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   comment_separated_lists,
   adoc! {r#"
     * Apples
@@ -44,7 +44,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   multiline_list_principle_w_indent,
   adoc! {r#"
     * foo _bar_
@@ -61,7 +61,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   simple_nested_list,
   adoc! {r#"
     * foo
@@ -83,7 +83,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   dashed_list,
   adoc! {r#"
     - Edgar Allan Poe
@@ -101,7 +101,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_w_title,
   adoc! {r#"
     .Kizmets Favorite Authors
@@ -121,7 +121,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_custom_marker,
   adoc! {r#"
     [square]
@@ -146,7 +146,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   nested_list_example,
   adoc! {r#"
     .Possible DefOps manual locations
@@ -182,7 +182,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_marker_mid_override,
   adoc! {r#"
     [square]
@@ -224,7 +224,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_numbered,
   adoc! {r#"
     1. Protons
@@ -242,7 +242,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_numbered_manual_start,
   adoc! {r#"
     4. Protons
@@ -260,7 +260,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   numbered_list_attr_start,
   adoc! {r#"
     [start=4]
@@ -279,7 +279,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   reversed_ordered_list,
   adoc! {r#"
     [%reversed]
@@ -300,7 +300,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_nested_ordered,
   adoc! {r#"
     . Step 1
@@ -328,7 +328,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_unordered_within_ordered,
   adoc! {r#"
     . Linux
@@ -366,7 +366,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_unordered_within_ordered_spaced,
   adoc! {r#"
     . Linux
@@ -407,7 +407,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_ordered_marker_override,
   adoc! {r#"
     [lowerroman,start=5]
@@ -439,7 +439,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   checklist,
   adoc! {r#"
     [.custom-class]
@@ -460,7 +460,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_interactive_checklist,
   adoc! {r#"
     [%interactive]
@@ -479,7 +479,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   ordered_list_not_checklist,
   adoc! {r#"
     . [*] checked
@@ -495,7 +495,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_item_continuation,
   adoc! {r#"
     * principle
@@ -516,7 +516,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_item_2_continuations,
   adoc! {r#"
     * principle
@@ -542,7 +542,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_items_w_delimited_listing_blocks,
   adoc! {r#"
     * item 1
@@ -581,7 +581,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_items_w_delimited_blocks,
   adoc! {r#"
     * principle
@@ -626,7 +626,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_empty_principle,
   adoc! {r#"
      . {empty}
@@ -651,7 +651,7 @@ test_eval!(
    "#}
 );
 
-test_eval!(
+assert_html!(
   list_item_principle_from_attr_ref,
   adoc! {r#"
     para
@@ -670,7 +670,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_item_principle_from_multiline_attr_ref,
   adoc! {r#"
     para
@@ -691,7 +691,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   complex_continuation_example,
   adoc! {r#"
     * The header in AsciiDoc must start with a document title.
@@ -715,7 +715,7 @@ Doc Writer &lt;doc.writer@asciidoc.org&gt;
 v1.0, 2022-01-01</pre></div></div></li></ul></div>"#
 );
 
-test_eval!(
+assert_html!(
   list_items_separated_by_comment_block,
   adoc! {r#"
     * first item

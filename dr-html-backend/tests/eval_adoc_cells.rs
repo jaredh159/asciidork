@@ -4,7 +4,7 @@ use test_utils::{assert_eq, *};
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   basic_asciidoc_content,
   adoc! {r#"
     |===
@@ -55,7 +55,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   adoc_cell_can_set_attr_when_parent_has_unset,
   adoc! {r#"
     :!sectids:
@@ -100,7 +100,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   override_unset_showtitle_from_parent,
   adoc! {r#"
     = Document Title
@@ -131,7 +131,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   override_set_showtitle_from_parent,
   adoc! {r#"
     = Document Title
@@ -145,10 +145,10 @@ test_eval!(
     content
     |===
   "#},
-  html_contains: r#"<div class="content"><div class="paragraph"><p>content"#
+  contains: r#"<div class="content"><div class="paragraph"><p>content"#
 );
 
-test_eval!(
+assert_html!(
   preserves_newlines_if_cell_starts_newline,
   adoc! {r#"
     |===
@@ -182,7 +182,44 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
+  anchor_starting_explicit_header_cell,
+  adoc! {r#"
+    [%header,cols=1a]
+    |===
+    |[[foo,Foo]]* not AsciiDoc
+    | AsciiDoc
+    |===
+
+    See <<foo>>.
+  "#},
+  html! { r##"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <thead>
+        <tr>
+          <th class="tableblock halign-left valign-top">
+            <a id="foo"></a>* not AsciiDoc
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <div class="paragraph"><p>AsciiDoc</p></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="paragraph">
+      <p>See <a href="#foo">Foo</a>.</p>
+    </div>
+  "##}
+);
+
+assert_html!(
   anchor_starting_implicit_reparsed_header_cell,
   adoc! {r#"
     [cols=1a]
@@ -220,7 +257,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_from_adoc_cell_to_parent,
   adoc! {r#"
     == Some
@@ -233,10 +270,12 @@ test_eval!(
 
     content
   "#},
-  html_contains: r##"<p>See <a href="#_more">More</a></p>"##
+  contains:
+    r##"<p>See <a href="#_more">More</a></p>"##,
+    r##"<h2 id="_more">More</h2>"##,
 );
 
-test_eval!(
+assert_html!(
   xref_from_parent_to_adoc_cell,
   adoc! {r#"
     And a <<tigers>> link.
@@ -245,28 +284,12 @@ test_eval!(
     a|Here is [#tigers]#a text span#.
     |===
   "#},
-  html! { r##"
-    <div class="paragraph">
-      <p>And a <a href="#tigers">a text span</a> link.</p>
-    </div>
-    <table class="tableblock frame-all grid-all stretch">
-      <colgroup><col style="width: 100%;"></colgroup>
-      <tbody>
-        <tr>
-          <td class="tableblock halign-left valign-top">
-            <div class="content">
-              <div class="paragraph">
-                <p>Here is <span id="tigers">a text span</span>.</p>
-              </div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  "##}
+  contains:
+    r##"<p>And a <a href="#tigers">a text span</a> link.</p>"##,
+    r##"<p>Here is <span id="tigers">a text span</span>.</p>"##,
 );
 
-test_error!(
+assert_error!(
   xref_unknown_anchor_in_adoc_cell,
   adoc! {r#"
     |===
@@ -279,7 +302,7 @@ test_error!(
   "}
 );
 
-test_eval!(
+assert_html!(
   adoc_cell_can_turn_on_new_attr,
   adoc! {r#"
     |===
@@ -289,10 +312,10 @@ test_eval!(
     NOTE: This admonition does not have a font-based icon.
     |===
   "#},
-  html_contains: r#"<i class="fa icon-note" title="Note"></i>"#
+  contains: r#"<i class="fa icon-note" title="Note"></i>"#
 );
 
-test_eval!(
+assert_html!(
   adoc_cell_cant_unset_readonly_jobattr,
   |s: &mut JobSettings| {
     s.job_attrs.insert_unchecked("icons", JobAttr::readonly(false));
@@ -305,5 +328,5 @@ test_eval!(
     NOTE: This admonition does not have a font-based icon.
     |===
   "#},
-  html_contains: r#"<td class="icon"><div class="title">Note</div></td>"#
+  contains: r#"<td class="icon"><div class="title">Note</div></td>"#
 );

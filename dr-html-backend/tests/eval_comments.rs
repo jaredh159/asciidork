@@ -3,7 +3,7 @@ use test_utils::{assert_eq, *};
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   block_comment_inside_example,
   adoc! {r#"
     ====
@@ -30,7 +30,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   adjacent_comment_block_between_paragraphs,
   adoc! {r#"
     first paragraph
@@ -49,7 +49,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   skipping_paragraph_comment,
   adoc! {r#"
     [comment]
@@ -65,7 +65,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   skipping_inner_paragraph_comment,
   adoc! {r#"
     ====
@@ -87,7 +87,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   three_slash_comment_not_a_comment,
   adoc! {r#"
     foo
@@ -101,7 +101,7 @@ test_eval!(
   "#}
 );
 
-test_error!(
+assert_error!(
   unclosed_comment_block,
   adoc! {r#"
     foobar

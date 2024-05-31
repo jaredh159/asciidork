@@ -2,7 +2,7 @@ use test_utils::*;
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   keyboard_macro,
   adoc! {r#"
     Press kbd:[F11] to toggle.
@@ -19,7 +19,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   link_macros,
   adoc! {r#"
     Visit https://site.com for more.
@@ -57,7 +57,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   inline_pass_macro,
   adoc! {r#"
     The text pass:[<u>underline me</u>] is underlined.

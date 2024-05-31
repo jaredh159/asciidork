@@ -7,7 +7,7 @@ mod helpers;
 
 use regex::Regex;
 
-test_eval_inline!(
+assert_inline_html!(
   simple_inline_w_newline,
   adoc! {r#"
     _foo_
@@ -16,46 +16,46 @@ test_eval_inline!(
   r#"<em>foo</em> bar"#
 );
 
-test_eval_inline!(
+assert_inline_html!(
   nested_inlines,
   "`*_foo_*`",
   r#"<code><strong><em>foo</em></strong></code>"#
 );
 
-test_eval_inline!(passthrough, "+_<foo>&_+", r#"_&lt;foo&gt;&amp;_"#);
-test_eval_inline!(text_span, "[.foo]#bar#", r#"<span class="foo">bar</span>"#);
-test_eval_inline!(passthrough_block, "[pass]\n_<foo>&_", "_<foo>&_");
-test_eval_inline!(highlight, "foo #bar#", r#"foo <mark>bar</mark>"#);
-test_eval_inline!(mono, "foo `bar`", r#"foo <code>bar</code>"#);
-test_eval_inline!(passthrough_2, "rofl +_foo_+ lol", r#"rofl _foo_ lol"#);
-test_eval_inline!(inline_passthrough, "+++_<foo>&_+++ bar", r#"_<foo>&_ bar"#);
-test_eval_inline!(subscript, "foo ~bar~ baz", r#"foo <sub>bar</sub> baz"#);
-test_eval_inline!(superscript, "foo ^bar^ baz", r#"foo <sup>bar</sup> baz"#);
-test_eval_inline!(not_quotes, "foo `'bar'`", r#"foo <code>'bar'</code>"#);
-test_eval_inline!(curly_quotes, "foo \"`bar`\"", r#"foo &#8220;bar&#8221;"#);
-test_eval_inline!(implicit_apos, "Olaf's wrench", r#"Olaf&#8217;s wrench"#);
-test_eval_inline!(multichar_whitespace, "foo   bar", r#"foo bar"#);
-test_eval_inline!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
+assert_inline_html!(passthrough, "+_<foo>&_+", r#"_&lt;foo&gt;&amp;_"#);
+assert_inline_html!(text_span, "[.foo]#bar#", r#"<span class="foo">bar</span>"#);
+assert_inline_html!(passthrough_block, "[pass]\n_<foo>&_", "_<foo>&_");
+assert_inline_html!(highlight, "foo #bar#", r#"foo <mark>bar</mark>"#);
+assert_inline_html!(mono, "foo `bar`", r#"foo <code>bar</code>"#);
+assert_inline_html!(passthrough_2, "rofl +_foo_+ lol", r#"rofl _foo_ lol"#);
+assert_inline_html!(inline_passthrough, "+++_<foo>&_+++ bar", r#"_<foo>&_ bar"#);
+assert_inline_html!(subscript, "foo ~bar~ baz", r#"foo <sub>bar</sub> baz"#);
+assert_inline_html!(superscript, "foo ^bar^ baz", r#"foo <sup>bar</sup> baz"#);
+assert_inline_html!(not_quotes, "foo `'bar'`", r#"foo <code>'bar'</code>"#);
+assert_inline_html!(curly_quotes, "foo \"`bar`\"", r#"foo &#8220;bar&#8221;"#);
+assert_inline_html!(implicit_apos, "Olaf's wrench", r#"Olaf&#8217;s wrench"#);
+assert_inline_html!(multichar_whitespace, "foo   bar", r#"foo bar"#);
+assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 
-test_eval_inline!(
+assert_inline_html!(
   minus_subs,
   "[subs=-specialchars]\nfoo & _bar_",
   r#"foo & <em>bar</em>"#
 );
 
-test_eval_inline!(
+assert_inline_html!(
   special_chars,
   "foo <bar> & lol",
   r#"foo &lt;bar&gt; &amp; lol"#
 );
 
-test_eval_inline!(
+assert_inline_html!(
   btn_macro,
   "press the btn:[OK] button",
   r#"press the <b class="button">OK</b> button"#
 );
 
-test_eval!(
+assert_html!(
   comment_lines,
   adoc! {r#"
     // leading
@@ -98,7 +98,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   menu_macro,
   "select menu:File[Save].",
   html! {r#"
@@ -108,7 +108,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   menu_macro_2,
   "select menu:File[Save > Reset].",
   html! {r#"
@@ -124,7 +124,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   para_w_attrs,
   adoc! {r#"
     [#custom-id.custom-class]
@@ -137,7 +137,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   sidebar,
   "[sidebar]\nfoo bar",
   html! {r#"
@@ -149,7 +149,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   title,
   ".Title\nfoo",
   html! {r#"
@@ -160,7 +160,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   admonition_w_custom_attrs,
   adoc! {r#"
     [#my-id.some-class]
@@ -182,17 +182,17 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   inferred_doc_title_attr,
   adoc! {r#"
     = Doc _Title_
 
     foo {doctitle}
   "#},
-   html_contains: "foo Doc _Title_"
+   contains: "foo Doc _Title_"
 );
 
-test_eval!(
+assert_html!(
   explicit_doc_title_attr,
   adoc! {r#"
     = Doc _Title_
@@ -200,10 +200,10 @@ test_eval!(
 
     foo {doctitle}
   "#},
-   html_contains: "foo Custom Title"
+   contains: "foo Custom Title"
 );
 
-test_eval!(
+assert_html!(
   note_w_title,
   adoc! {r#"
     .Title
@@ -226,7 +226,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   image_macro,
   "image::name.png[]",
   html! {r#"
@@ -238,7 +238,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   image_w_title_and_attrs,
   adoc! {r#"
     .Title
@@ -255,7 +255,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   quote_cite,
   adoc! {r#"
     [quote,,cite]
@@ -269,7 +269,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   quote_source,
   adoc! {r#"
     [quote,source]
@@ -283,7 +283,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   quote_source_location,
   adoc! {r#"
     [quote,source,location]
@@ -300,7 +300,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   complex_quote_example,
   adoc! {r#"
     .After landing the cloaked Klingon bird of prey in Golden Gate park:
@@ -321,7 +321,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   quoted_paragraph,
   adoc! {r#"
     "I hold it that a little rebellion now and then is a good thing,
@@ -341,7 +341,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   multiple_image_blocks_w_title,
   adoc! {r#"
     .Cat
@@ -366,7 +366,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   fig_caption,
   adoc! {r#"
     = Doc Header
@@ -394,7 +394,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   complex_image_block,
   adoc! {r#"
     .A mountain sunset
@@ -413,7 +413,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   change_fig_cap,
   adoc! {r#"
     .Title
@@ -440,7 +440,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   footnote,
   "foo.footnote:[bar _baz_]",
   html! {r##"
@@ -460,7 +460,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   two_footnotes_w_cust,
   adoc! {r#"
     foo.footnote:[bar _baz_]
@@ -494,7 +494,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   quote_newlines,
   adoc! {r#"
     "`foo
@@ -508,7 +508,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   line_breaks,
   adoc! {r#"
     foo +
@@ -550,7 +550,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   simple_listing_block,
   adoc! {r#"
     [listing]
@@ -565,7 +565,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   delimited_unspaced_from_paragraph,
   adoc! {r#"
     foobar
@@ -587,7 +587,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   admonition_icons,
   adoc! {r#"
     NOTE: Tip #1

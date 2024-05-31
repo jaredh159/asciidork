@@ -2,7 +2,7 @@ use test_utils::*;
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   basic_thematic_break,
   adoc! {r#"
     foo
@@ -22,7 +22,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   thematic_break_w_attrs,
   adoc! {r#"
     foo
@@ -42,7 +42,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   basic_page_break,
   adoc! {r#"
     foo

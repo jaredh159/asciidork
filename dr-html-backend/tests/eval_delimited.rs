@@ -2,7 +2,7 @@ use test_utils::{adoc, html};
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   open_block,
   adoc! {r#"
     --
@@ -20,7 +20,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   listing_block,
   adoc! {r#"
     ....
@@ -36,7 +36,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   passthrough_block,
   adoc! {r#"
     ++++
@@ -48,7 +48,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   passthrough_block_w_subs_normal,
   adoc! {r#"
     [subs=normal]
@@ -62,7 +62,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   example_block,
   adoc! {r#"
     ====
@@ -80,7 +80,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   delimited_quote,
   adoc! {r#"
     [quote,Monty Python and the Holy Grail]
@@ -107,7 +107,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   nested_delimited_blocks,
   adoc! {r#"
     ****
@@ -131,7 +131,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   basic_block_example,
   adoc! {r#"
     ****

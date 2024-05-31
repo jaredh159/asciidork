@@ -117,7 +117,7 @@ test_inlines_loose!(
   ]
 );
 
-test_error!(
+assert_error!(
   xref_unknown_anchor,
   "<<foo>>",
   error! {r"

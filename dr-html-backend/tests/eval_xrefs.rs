@@ -3,7 +3,7 @@ use test_utils::*;
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   xrefs,
   |s: &mut JobSettings| s.strict = false,
   adoc! {r#"
@@ -28,7 +28,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_explicit_ids,
   adoc! {r#"
     [#custom]
@@ -58,7 +58,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_custom_reftext,
   adoc! {r#"
     [reftext=Big _cats!_]
@@ -78,7 +78,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_explicit_link_text_empty,
   adoc! {r#"
     == Tigers
@@ -97,7 +97,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_macro,
   adoc! {r#"
     [#tigers]
@@ -122,7 +122,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_complex_linktext,
   adoc! {r#"
     == Tigers
@@ -141,7 +141,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_quoted_linktext,
   adoc! {r#"
     == Tigers
@@ -165,7 +165,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_escraped_bracket_in_linktext,
   adoc! {r#"
     xref:tigers[[tigers\] are cats]
@@ -188,7 +188,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   xref_to_text_span,
   adoc! {r#"
     Here is [#tigers]#a text span#.
@@ -205,7 +205,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   legacy_inline_anchor_xrefs,
   adoc! {r#"
     [[step-1]]Download the software
@@ -232,7 +232,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   legacy_inline_anchor_starting_cell,
   adoc! {r#"
     The highest peak in the Front Range is <<grays-peak>>, which tops <<mount-evans>> by just a few feet.

@@ -162,7 +162,7 @@ mod tests {
     }
   }
 
-  test_error!(
+  assert_error!(
     test_parse_doc_attr_error_str,
     adoc! {"
       :doctype: bad
@@ -175,7 +175,7 @@ mod tests {
     "}
   );
 
-  test_error!(
+  assert_error!(
     test_parse_doc_attr_error_unset,
     adoc! {"
       :!doctype:
@@ -188,7 +188,7 @@ mod tests {
     "}
   );
 
-  test_error!(
+  assert_error!(
     doc_attr_error_invalid,
     adoc! {"
       :doctype: article

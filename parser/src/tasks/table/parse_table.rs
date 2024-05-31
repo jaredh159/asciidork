@@ -1214,7 +1214,7 @@ mod tests {
     )
   }
 
-  test_error!(
+  assert_error!(
     no_table_end_delim,
     adoc! {r"
       |===
@@ -1226,7 +1226,7 @@ mod tests {
     "}
   );
 
-  test_error!(
+  assert_error!(
     no_cell_sep,
     adoc! {r"
       |===
@@ -1239,7 +1239,7 @@ mod tests {
     "}
   );
 
-  test_error!(
+  assert_error!(
     cell_span_overflow,
     adoc! {r#"
       [cols="1,1"]

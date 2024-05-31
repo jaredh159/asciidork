@@ -1,7 +1,7 @@
 use test_utils::{adoc, html};
 mod helpers;
 
-test_eval!(
+assert_html!(
   simple_description_list,
   adoc! {r#"
     foo:: bar
@@ -16,7 +16,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   thematic_break_separates_desc_lists,
   adoc! {r#"
     foo:: bar
@@ -42,7 +42,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   simple_description_list_2,
   adoc! {r#"
     foo:: bar
@@ -60,7 +60,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   description_list_w_whitespace_para,
   adoc! {r#"
     foo::
@@ -82,7 +82,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_w_continuation,
   adoc! {r#"
     foo::
@@ -105,7 +105,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   list_w_double_continuation,
   adoc! {r#"
     foo::
@@ -133,7 +133,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   mixing_lists,
   adoc! {r#"
     Dairy::
@@ -167,7 +167,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   mixing_lists_w_space,
   adoc! {r#"
     Dairy::
@@ -204,7 +204,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   nested_description_list,
   adoc! {r#"
     Operating Systems::

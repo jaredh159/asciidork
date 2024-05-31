@@ -2,7 +2,7 @@ use test_utils::{adoc, html, raw_html};
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   indented_literal_block,
   " foo bar",
   html! {r#"
@@ -14,13 +14,13 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   indented_multiline_literal_block,
   " foo bar\n so baz",
   wrap_literal("<pre>foo bar\nso baz</pre>")
 );
 
-test_eval!(
+assert_html!(
   source_block_explicit,
   adoc! {r#"
     [source,ruby]
@@ -44,7 +44,7 @@ test_eval!(
   )
 );
 
-test_eval!(
+assert_html!(
   source_block_from_style_no_delims,
   adoc! {r#"
     [source,ruby]
@@ -64,7 +64,7 @@ test_eval!(
   )
 );
 
-test_eval!(
+assert_html!(
   source_block_lang_from_attr,
   adoc! {r#"
     :source-language: ruby
@@ -76,7 +76,7 @@ test_eval!(
   wrap_source("ruby", "require 'sinatra'")
 );
 
-test_eval!(
+assert_html!(
   source_block_lang_from_attr_override,
   adoc! {r#"
     :source-language: ruby
@@ -89,7 +89,7 @@ test_eval!(
   wrap_source("java", r#"System.out.println("Hello, world!");"#)
 );
 
-test_eval!(
+assert_html!(
   source_block_implicit,
   adoc! {r#"
     [,rust]
@@ -109,7 +109,7 @@ test_eval!(
   )
 );
 
-test_eval!(
+assert_html!(
   listing_block_newline_preservation,
   adoc! {r#"
     ----
@@ -123,7 +123,7 @@ test_eval!(
   "#})
 );
 
-test_eval!(
+assert_html!(
   masquerading_listing_block_newline_preservation,
   adoc! {r#"
     [listing]

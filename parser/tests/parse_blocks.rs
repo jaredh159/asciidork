@@ -487,7 +487,7 @@ fn test_unattached_attr_list() {
   assert!(parse!("[]\n\n").is_ok());
 }
 
-test_error!(
+assert_error!(
   unclosed_delimited_block_err,
   adoc! {"
     --

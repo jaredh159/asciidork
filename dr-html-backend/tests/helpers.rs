@@ -1,7 +1,7 @@
 #[macro_export]
-macro_rules! test_eval {
+macro_rules! assert_html {
   ($name:ident, $input:expr, $expected:expr) => {
-    test_eval!($name, |_| {}, $input, $expected);
+    assert_html!($name, |_| {}, $input, $expected);
   };
   ($name:ident, $mod_settings:expr, $input:expr, $expected:expr) => {
     #[test]
@@ -18,10 +18,10 @@ macro_rules! test_eval {
       ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
     }
   };
-  ($name:ident, $input:expr, html_contains: $expected:expr) => {
-    test_eval!($name, |_| {}, $input, html_contains: $expected);
+  ($name:ident, $input:expr, contains: $($expected:expr),+$(,)?) => {
+    assert_html!($name, |_| {}, $input, contains: $($expected),+);
   };
-  ($name:ident, $mod_settings:expr, $input:expr, html_contains: $expected:expr) => {
+  ($name:ident, $mod_settings:expr, $input:expr, contains: $($expected:expr),+$(,)?) => {
     #[test]
     fn $name() {
       let bump = &::asciidork_parser::prelude::Bump::new();
@@ -33,21 +33,21 @@ macro_rules! test_eval {
       let actual = ::asciidork_eval::eval(
         &document,
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
-      assert!(
+      $(assert!(
         actual.contains($expected),
         "\n`{}` was NOT found when expected\n\n```adoc\n{}\n```\n\n```html\n{}\n```",
         $expected,
         $input.trim(),
         actual.replace('>', ">\n").trim()
-      )
+      );)+
     }
   };
 }
 
 #[macro_export]
-macro_rules! test_eval_inline {
+macro_rules! assert_inline_html {
   ($name:ident, $input:expr, $expected:expr) => {
-    test_eval!(
+    assert_html!(
       $name,
       |settings: &mut ::asciidork_meta::JobSettings| {
         settings.embedded = true;

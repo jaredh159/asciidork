@@ -370,7 +370,7 @@ mod tests {
     );
   }
 
-  test_error!(
+  assert_error!(
     assign_to_header_attr,
     adoc! {"
       para 1

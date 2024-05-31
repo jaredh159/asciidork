@@ -2,7 +2,7 @@ use test_utils::*;
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   basic_table,
   adoc! {r#"
     |===
@@ -38,7 +38,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   table_cell_doctype,
   adoc! {r#"
     |===
@@ -48,10 +48,10 @@ test_eval!(
     content
     |===
   "#},
-  html_contains: r#"<div class="content">content</div>"#
+  contains: r#"<div class="content">content</div>"#
 );
 
-test_eval!(
+assert_html!(
   table_cell_resets_doctype_preserves_other_attrs,
   adoc! {r#"
     :doctype: book
@@ -61,10 +61,10 @@ test_eval!(
     a| doctype={doctype} foo={foo}
     |===
   "#},
-  html_contains: "doctype=article foo=bar"
+  contains: "doctype=article foo=bar"
 );
 
-test_eval!(
+assert_html!(
   complex_table,
   adoc! {r#"
     .Table Title
@@ -131,7 +131,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   cell_content_paragraphs,
   adoc! {r#"
     |===
@@ -170,7 +170,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   formatting_in_header_row,
   adoc! {r#"
     [cols="2*m"]
@@ -203,7 +203,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   formatting_in_non_header_row,
   adoc! {r#"
     [cols="s,e"]
@@ -238,7 +238,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   spans_alignments_and_styles,
   adoc! {r#"
     [cols="e,m,^,>s",width="25%"]
@@ -301,7 +301,7 @@ test_eval!(
   "#}
 );
 
-test_eval!(
+assert_html!(
   table_float_class,
   adoc! {r#"
     [float=left]
@@ -309,10 +309,10 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<table class="tableblock frame-all grid-all stretch left">"#
+  contains: r#"<table class="tableblock frame-all grid-all stretch left">"#
 );
 
-test_eval!(
+assert_html!(
   width_100_to_stretch_class,
   adoc! {r#"
     [width=100%]
@@ -320,10 +320,10 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<table class="tableblock frame-all grid-all stretch">"#
+  contains: r#"<table class="tableblock frame-all grid-all stretch">"#
 );
 
-test_eval!(
+assert_html!(
   table_stripes_class,
   adoc! {r#"
     [stripes=odd]
@@ -331,10 +331,10 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<table class="tableblock frame-all grid-all stretch stripes-odd">"#
+  contains: r#"<table class="tableblock frame-all grid-all stretch stripes-odd">"#
 );
 
-test_eval!(
+assert_html!(
   custom_table_class,
   adoc! {r#"
     [.so-custom]
@@ -342,10 +342,10 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<table class="tableblock frame-all grid-all stretch so-custom">"#
+  contains: r#"<table class="tableblock frame-all grid-all stretch so-custom">"#
 );
 
-test_eval!(
+assert_html!(
   only_numbers_titled_tables,
   adoc! {r#"
     .First
@@ -362,10 +362,10 @@ test_eval!(
     |7 |8 |9
     |===
   "#},
-  html_contains: r#"<caption class="title">Table 2. Second</caption>"#
+  contains: r#"<caption class="title">Table 2. Second</caption>"#
 );
 
-test_eval!(
+assert_html!(
   custom_table_caption,
   adoc! {r#"
     [caption="So wow: "]
@@ -374,10 +374,10 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<caption class="title">So wow: My Title</caption>"#
+  contains: r#"<caption class="title">So wow: My Title</caption>"#
 );
 
-test_eval!(
+assert_html!(
   empty_captions_disables_numbered,
   adoc! {r#"
     [caption=""]
@@ -386,10 +386,10 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<caption class="title">No caption</caption>"#
+  contains: r#"<caption class="title">No caption</caption>"#
 );
 
-test_eval!(
+assert_html!(
   doc_attr_disables_table_captions,
   adoc! {r#"
     :!table-caption:
@@ -399,10 +399,10 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<caption class="title">No caption</caption>"#
+  contains: r#"<caption class="title">No caption</caption>"#
 );
 
-test_eval!(
+assert_html!(
   subs_table_content,
   adoc! {r#"
     :show_title: Cool new show
@@ -410,10 +410,10 @@ test_eval!(
     |{show_title} |Coming soon...
     |===
   "#},
-  html_contains: r#"<p class="tableblock">Cool new show</p></td>"#
+  contains: r#"<p class="tableblock">Cool new show</p></td>"#
 );
 
-test_eval!(
+assert_html!(
   autowidth_class,
   adoc! {r#"
     [%autowidth]
@@ -421,5 +421,5 @@ test_eval!(
     |a | b
     |===
   "#},
-  html_contains: r#"<table class="tableblock frame-all grid-all fit-content">"#
+  contains: r#"<table class="tableblock frame-all grid-all fit-content">"#
 );

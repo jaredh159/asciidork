@@ -2,7 +2,7 @@ use test_utils::{adoc, html};
 
 mod helpers;
 
-test_eval!(
+assert_html!(
   basic_toc,
   adoc! {"
     = Doc Title
@@ -41,7 +41,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   toc_preamble,
   adoc! {"
     = Doc Title
@@ -77,7 +77,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   toc_macro,
   adoc! {"
     = Doc Title
@@ -109,7 +109,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   nested_toc,
   adoc! {"
     = Doc Title
@@ -163,7 +163,7 @@ test_eval!(
   "##}
 );
 
-test_eval!(
+assert_html!(
   dont_render_empty_toc,
   adoc! {"
     = Doc Title

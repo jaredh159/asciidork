@@ -329,18 +329,11 @@ macro_rules! error {
 
 #[macro_export]
 macro_rules! assert_error {
-  ($input:expr, $expected:expr) => {
-    let err = parse_error!($input);
-    assert_eq!(err.plain_text(), $expected, from: $input);
-  };
-}
-
-#[macro_export]
-macro_rules! test_error {
   ($name:ident, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      assert_error!($input, $expected);
+      let err = parse_error!($input);
+      assert_eq!(err.plain_text(), $expected, from: $input);
     }
   };
 }
