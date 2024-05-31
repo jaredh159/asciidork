@@ -65,6 +65,17 @@ impl DocumentMeta {
     }
   }
 
+  pub fn clone_for_cell(&self) -> Self {
+    let mut dm = self.clone();
+    dm.set_doctype(DocType::Article);
+    // toc in asciidoc cells are disconnected, see:
+    // https://github.com/asciidoctor/asciidoctor/issues/4017
+    dm.job_attrs.remove("toc");
+    dm.job_attrs.remove("toc-placement");
+    dm.job_attrs.remove("toc-position");
+    dm
+  }
+
   pub fn authors(&self) -> &[Author] {
     &self.authors
   }

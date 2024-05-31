@@ -42,6 +42,10 @@ impl JobAttrs {
   pub fn get(&self, key: &str) -> Option<&JobAttr> {
     self.0.get(key)
   }
+
+  pub fn remove(&mut self, key: &str) {
+    self.0.remove(key);
+  }
 }
 
 impl RemoveAttr for JobAttrs {

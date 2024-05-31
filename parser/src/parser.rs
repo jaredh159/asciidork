@@ -55,8 +55,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
     cell_parser.ctx = self.ctx.clone_for_cell();
-    cell_parser.document.meta = self.document.meta.clone();
-    cell_parser.document.meta.set_doctype(DocType::Article);
+    cell_parser.document.meta = self.document.meta.clone_for_cell();
     cell_parser.document.anchors = Rc::clone(&self.document.anchors);
     cell_parser
   }

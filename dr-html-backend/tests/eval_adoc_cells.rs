@@ -236,6 +236,51 @@ assert_html!(
 );
 
 assert_html!(
+  toc_in_adoc_cell,
+  adoc! {r#"
+    = Document Title
+
+    == Section A
+
+    |===
+    a|
+    = Subdocument Title
+    :toc:
+
+    == Subdocument Section A
+
+    content
+    |===
+  "#},
+  contains:
+    r#"<td class="tableblock halign-left valign-top"><div class="content"><div id="toc" class="toc">"#
+);
+
+assert_html!(
+  // https://github.com/asciidoctor/asciidoctor/issues/4017#issuecomment-821915135
+  toc_in_adoc_cell_even_if_parent_hard_unsets,
+  |s: &mut JobSettings| {
+    s.job_attrs.insert_unchecked("toc", JobAttr::readonly(false));
+  },
+  adoc! {r#"
+    = Document Title
+
+    == Section A
+
+    |===
+    a|
+    = Subdocument Title
+    :toc:
+
+    == Subdocument Section A
+
+    content
+    |===
+  "#},
+  contains: r#"<div id="toctitle">Table of Contents</div>"#
+);
+
+assert_html!(
   anchor_starting_explicit_header_cell,
   adoc! {r#"
     [%header,cols=1a]
