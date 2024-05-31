@@ -15,6 +15,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ) -> Result<Block<'bmp>> {
     let delim_line = lines.consume_current().unwrap();
     let first_token = delim_line.current_token().unwrap();
+    let delim_ch = first_token.lexeme.as_bytes()[0];
     debug_assert!(first_token.lexeme.len() == 1);
 
     let col_specs = meta
@@ -28,7 +29,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         1 => Some(DataFormat::Prefix(sep.as_bytes()[0])),
         _ => None, // err ??
       })
-      .unwrap_or(DataFormat::Prefix(b'|'));
+      .unwrap_or(DataFormat::Prefix(delim_ch));
 
     let col_widths = col_specs
       .iter()
@@ -36,7 +37,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .collect_in::<BumpVec<'_, _>>(self.bump);
 
     let mut ctx = TableContext {
-      delim_ch: first_token.lexeme.as_bytes()[0],
+      delim_ch,
       format,
       num_cols: col_specs.len(),
       counting_cols: col_specs.is_empty(),

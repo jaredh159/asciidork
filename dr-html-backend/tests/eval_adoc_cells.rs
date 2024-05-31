@@ -183,6 +183,59 @@ assert_html!(
 );
 
 assert_html!(
+  basic_table_nesting,
+  adoc! {r#"
+    |===
+    a|!===
+    !1 !2
+    !===
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup><col style="width: 100%;"></colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <div class="content">
+              <table class="tableblock frame-all grid-all stretch">
+                <colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
+                <tbody>
+                  <tr>
+                    <td class="tableblock halign-left valign-top">
+                      <p class="tableblock">1</p>
+                    </td>
+                    <td class="tableblock halign-left valign-top">
+                      <p class="tableblock">2</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+assert_html!(
+  nested_table_with_custom_separator,
+  adoc! {r#"
+    |===
+    a|
+    [separator=;]
+    !===
+    ;1 ;2
+    !===
+    |===
+  "#},
+  contains:
+   r#"<p class="tableblock">1</p></td>"#,
+   r#"<p class="tableblock">2</p></td>"#,
+);
+
+assert_html!(
   anchor_starting_explicit_header_cell,
   adoc! {r#"
     [%header,cols=1a]
