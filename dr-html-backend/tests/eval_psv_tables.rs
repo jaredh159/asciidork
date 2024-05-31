@@ -132,6 +132,37 @@ assert_html!(
 );
 
 assert_html!(
+  table_attrs,
+  adoc! {r#"
+    :table-frame: sides
+    :table-grid: cols
+    :table-stripes: hover
+
+    |===
+    |a | b
+    |===
+  "#},
+  contains:
+    r#"<table class="tableblock frame-sides grid-cols stretch stripes-hover">"#
+);
+
+assert_html!(
+  table_attrs_override,
+  adoc! {r#"
+    :table-frame: sides
+    :table-grid: cols
+    :table-stripes: hover
+
+    [.custom,frame=ends,grid=all,stripes=odd]
+    |===
+    |a | b
+    |===
+  "#},
+  contains:
+    r#"<table class="tableblock frame-ends grid-all stretch stripes-odd custom">"#
+);
+
+assert_html!(
   cell_content_paragraphs,
   adoc! {r#"
     |===

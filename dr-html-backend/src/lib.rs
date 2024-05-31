@@ -6,6 +6,7 @@ extern crate asciidork_eval as eval;
 extern crate asciidork_meta as meta;
 
 mod asciidoctor_html;
+mod open_tag;
 pub mod section;
 mod table;
 
@@ -24,6 +25,7 @@ mod internal {
   pub use regex::Regex;
   pub use smallvec::SmallVec;
 
+  pub use crate::open_tag::*;
   pub use crate::section;
   pub use crate::AsciidoctorHtml;
   pub use ast::prelude::*;

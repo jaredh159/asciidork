@@ -1005,6 +1005,10 @@ impl AsciidoctorHtml {
     }
   }
 
+  pub(crate) fn push_open_tag(&mut self, tag: OpenTag) {
+    self.push_str(&tag.finish());
+  }
+
   fn source_lang<'a>(&self, block: &'a Block) -> Option<Cow<'a, str>> {
     match block
       .meta

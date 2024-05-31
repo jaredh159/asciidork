@@ -3,13 +3,26 @@ use crate::internal::*;
 
 impl AsciidoctorHtml {
   pub(super) fn open_table_element(&mut self, block: &Block) {
-    let mut classes = SmallVec::<[&str; 6]>::from_slice(&["tableblock"]);
-    match block.meta.attr_named("frame") {
-      Some("ends") | Some("topbot") => classes.push("frame-ends"),
-      Some("none") => classes.push("frame-none"),
-      Some("sides") => classes.push("frame-sides"),
-      _ => classes.push("frame-all"),
-    }
+    let mut tag = OpenTag::new("table", block.meta.attrs.as_ref());
+    tag.push_class("tableblock", None);
+
+    tag.push_resolved_attr_class(
+      "frame",
+      Some("all"),
+      Some("table-frame"),
+      Some("frame-"),
+      &block.meta,
+      &self.doc_meta,
+    );
+
+    tag.push_resolved_attr_class(
+      "grid",
+      Some("all"),
+      Some("table-grid"),
+      Some("grid-"),
+      &block.meta,
+      &self.doc_meta,
+    );
 
     let explicit_width = block
       .meta
@@ -18,28 +31,26 @@ impl AsciidoctorHtml {
       .and_then(|width| width.parse::<u8>().ok())
       .filter(|width| *width != 100);
 
-    // temp
-    classes.push("grid-all");
-
     if block.meta.has_attr_option("autowidth") {
-      classes.push("fit-content");
+      tag.push_class("fit-content", None);
     } else if explicit_width.is_none() {
-      classes.push("stretch");
+      tag.push_class("stretch", None);
     }
+
     if let Some(float) = block.meta.attr_named("float") {
-      classes.push(float);
+      tag.push_class(float, None);
     }
-    if let Some(stripes) = block.meta.attr_named("stripes") {
-      match stripes {
-        "even" => classes.push("stripes-even"),
-        "odd" => classes.push("stripes-odd"),
-        "all" => classes.push("stripes-all"),
-        "hover" => classes.push("stripes-hover"),
-        "none" => classes.push("stripes-none"),
-        _ => {}
-      }
-    }
-    self.open_element("table", &classes, block.meta.attrs.as_ref());
+
+    tag.push_resolved_attr_class(
+      "stripes",
+      None,
+      Some("table-stripes"),
+      Some("stripes-"),
+      &block.meta,
+      &self.doc_meta,
+    );
+
+    self.push_open_tag(tag);
 
     if let Some(width) = explicit_width {
       self.html.pop();
