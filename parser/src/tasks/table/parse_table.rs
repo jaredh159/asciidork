@@ -380,10 +380,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             self.errors.borrow_mut().extend(warnings);
           }
           let content = CellContent::AsciiDoc(document);
-          Ok(Some((
-            Cell::new(content, cell_spec, col_spec.cloned()),
-            repeat,
-          )))
+          let cell = Cell::new(content, cell_spec, col_spec.cloned());
+          Ok(Some((cell, repeat)))
         }
         Err(mut diagnostics) => {
           if !diagnostics.is_empty() && self.strict {

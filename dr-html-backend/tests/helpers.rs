@@ -35,7 +35,7 @@ macro_rules! assert_html {
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
       $(assert!(
         actual.contains($expected),
-        "\n`{}` was NOT found when expected\n\n```adoc\n{}\n```\n\n```html\n{}\n```",
+        "\n`{}` was NOT found when expected\n\n\x1b[2m```adoc\x1b[0m\n{}\n\x1b[2m```\x1b[0m\n\n\x1b[2m```html\x1b[0m\n{}\n\x1b[2m```\x1b[0m",
         $expected,
         $input.trim(),
         actual.replace('>', ">\n").trim()

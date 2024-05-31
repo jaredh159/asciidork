@@ -54,8 +54,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut cell_parser = Parser::new(self.bump, src);
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
-    cell_parser.ctx.in_asciidoc_table_cell = true;
-    cell_parser.ctx.xrefs = Rc::clone(&self.ctx.xrefs);
+    cell_parser.ctx = self.ctx.clone_for_cell();
     cell_parser.document.meta = self.document.meta.clone();
     cell_parser.document.meta.set_doctype(DocType::Article);
     cell_parser.document.anchors = Rc::clone(&self.document.anchors);

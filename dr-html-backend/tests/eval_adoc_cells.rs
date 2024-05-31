@@ -303,6 +303,42 @@ assert_error!(
 );
 
 assert_html!(
+  adoc_cell_global_footnote_numbering,
+  adoc! {r#"
+    main footnote:[main note 1]
+
+    |===
+    a|AsciiDoc footnote:[cell note]
+    |===
+
+    main footnote:[main note 2]
+  "#},
+  contains:
+    r##"<a href="#_footnoteref_1">1</a>. main note 1"##,
+    r##"<a href="#_footnoteref_2">2</a>. cell note"##,
+    r##"<a href="#_footnoteref_3">3</a>. main note 2"##,
+);
+
+assert_html!(
+  adoc_cell_global_section_ids,
+  adoc! {r#"
+    == sect
+
+    |===
+    a|
+
+    == sect
+    |===
+
+    == sect
+  "#},
+  contains:
+    r##"<h2 id="_sect">sect</h2>"##,
+    r##"<h2 id="_sect_2">sect</h2>"##,
+    r##"<h2 id="_sect_3">sect</h2>"##,
+);
+
+assert_html!(
   adoc_cell_can_turn_on_new_attr,
   adoc! {r#"
     |===

@@ -112,7 +112,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
                 lines.restore_if_nonempty(line);
                 let note = self.parse_inlines_until(lines, &[CloseBracket])?;
                 extend(&mut macro_loc, &note, 1);
-                acc.push_node(Macro(Footnote { id, text: note }), macro_loc);
+                let number = {
+                  let mut num_footnotes = self.ctx.num_footnotes.borrow_mut();
+                  *num_footnotes += 1;
+                  *num_footnotes
+                };
+                acc.push_node(Macro(Footnote { number, id, text: note }), macro_loc);
                 break;
               }
               "xref:" => {
@@ -1185,6 +1190,7 @@ mod tests {
           node!("double"; 0..6),
           node!(
             Macro(Footnote {
+              number: 1,
               id: None,
               text: nodes![
                 node!("ymmv "; 16..21),

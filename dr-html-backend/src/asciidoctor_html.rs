@@ -8,7 +8,7 @@ use EphemeralState::*;
 pub struct AsciidoctorHtml {
   pub(crate) html: String,
   pub(crate) alt_html: String,
-  pub(crate) footnotes: Vec<(String, String)>,
+  pub(crate) footnotes: Vec<(u16, String, String)>,
   pub(crate) doc_meta: DocumentMeta,
   pub(crate) fig_caption_num: usize,
   pub(crate) table_caption_num: usize,
@@ -949,22 +949,22 @@ impl Backend for AsciidoctorHtml {
     _ = self.doc_meta.insert_doc_attr(name, value.clone());
   }
 
-  fn enter_footnote(&mut self, _id: Option<&str>, _content: &[InlineNode]) {
+  fn enter_footnote(&mut self, _num: u16, _id: Option<&str>, _content: &[InlineNode]) {
     self.start_buffering();
   }
 
-  fn exit_footnote(&mut self, id: Option<&str>, _content: &[InlineNode]) {
+  fn exit_footnote(&mut self, num: u16, id: Option<&str>, _content: &[InlineNode]) {
     let footnote = self.take_buffer();
-    let num = (self.footnotes.len() + 1).to_string();
+    let nums = num.to_string();
     self.push_str(r#"<sup class="footnote""#);
     if let Some(id) = id {
       self.push([r#" id="_footnote_"#, id, "\""]);
     }
     self.push_str(r#">[<a id="_footnoteref_"#);
-    self.push([&num, r##"" class="footnote" href="#_footnotedef_"##, &num]);
-    self.push([r#"" title="View footnote.">"#, &num, "</a>]</sup>"]);
-    let id = id.unwrap_or(&num);
-    self.footnotes.push((id.to_string(), footnote));
+    self.push([&nums, r##"" class="footnote" href="#_footnotedef_"##, &nums]);
+    self.push([r#"" title="View footnote.">"#, &nums, "</a>]</sup>"]);
+    let id = id.unwrap_or(&nums);
+    self.footnotes.push((num, id.to_string(), footnote));
   }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {
@@ -1069,11 +1069,11 @@ impl AsciidoctorHtml {
   fn render_footnotes(&mut self) {
     self.push_str(r#"<div id="footnotes"><hr>"#);
     let footnotes = mem::take(&mut self.footnotes);
-    for (index, (_id, footnote)) in footnotes.iter().enumerate() {
-      let num = &(index + 1).to_string();
+    for (num, _id, footnote) in &footnotes {
+      let num = num.to_string();
       self.push_str(r#"<div class="footnote" id="_footnotedef_"#);
-      self.push([num, r##""><a href="#_footnoteref_"##, num, "\">"]);
-      self.push([num, "</a>. ", footnote, "</div>"]);
+      self.push([&num, r##""><a href="#_footnoteref_"##, &num, "\">"]);
+      self.push([&num, "</a>. ", footnote, "</div>"]);
     }
     self.push_str(r#"</div>"#);
     self.footnotes = footnotes;

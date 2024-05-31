@@ -331,10 +331,10 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     LitMono(text) => backend.visit_inline_lit_mono(text),
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws.as_str()),
-    Macro(Footnote { id, text }) => {
-      backend.enter_footnote(id.as_deref(), text);
+    Macro(Footnote { number, id, text }) => {
+      backend.enter_footnote(*number, id.as_deref(), text);
       text.iter().for_each(|node| eval_inline(node, doc, backend));
-      backend.exit_footnote(id.as_deref(), text);
+      backend.exit_footnote(*number, id.as_deref(), text);
     }
     Macro(Button(text)) => backend.visit_button_macro(text),
     Macro(Link { target, attrs, scheme }) => {

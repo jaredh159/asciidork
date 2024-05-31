@@ -11,11 +11,12 @@ pub struct ParseContext<'bmp> {
   pub section_level: u8,
   pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
-  pub anchor_ids: HashSet<BumpString<'bmp>>,
+  pub anchor_ids: Rc<RefCell<HashSet<BumpString<'bmp>>>>,
   pub xrefs: Rc<RefCell<HashMap<BumpString<'bmp>, SourceLocation>>>,
+  pub num_footnotes: Rc<RefCell<u16>>,
   pub saw_toc_macro: bool,
   pub in_asciidoc_table_cell: bool,
-  callouts: BumpVec<'bmp, Callout>,
+  callouts: Rc<RefCell<BumpVec<'bmp, Callout>>>,
 }
 
 impl<'bmp> ParseContext<'bmp> {
@@ -26,48 +27,71 @@ impl<'bmp> ParseContext<'bmp> {
       list: ListContext::default(),
       section_level: 0,
       can_nest_blocks: true,
-      callouts: bvec![in bump],
+      callouts: Rc::new(RefCell::new(bvec![in bump])),
       custom_line_comment: None,
-      anchor_ids: HashSet::new(),
+      anchor_ids: Rc::new(RefCell::new(HashSet::new())),
       xrefs: Rc::new(RefCell::new(HashMap::new())),
+      num_footnotes: Rc::new(RefCell::new(0)),
       saw_toc_macro: false,
       in_asciidoc_table_cell: false,
     }
   }
 
+  pub fn clone_for_cell(&self) -> Self {
+    ParseContext {
+      subs: Substitutions::default(),
+      delimiter: None,
+      list: ListContext::default(),
+      section_level: 0,
+      can_nest_blocks: true,
+      callouts: Rc::clone(&self.callouts),
+      custom_line_comment: None,
+      anchor_ids: Rc::clone(&self.anchor_ids),
+      xrefs: Rc::clone(&self.xrefs),
+      num_footnotes: Rc::clone(&self.num_footnotes),
+      saw_toc_macro: false,
+      in_asciidoc_table_cell: true,
+    }
+  }
+
   pub fn push_callout(&mut self, num: Option<u8>) -> Callout {
-    if self.callouts.is_empty() {
-      self.callouts.push(Callout {
+    let mut callouts = self.callouts.borrow_mut();
+    if callouts.is_empty() {
+      callouts.push(Callout {
         list_idx: 0,
         callout_idx: 0,
         number: num.unwrap_or(1),
       });
     } else {
-      let last_callout_idx = self.callouts.len() - 1;
-      let last = self.callouts[last_callout_idx];
+      let last_callout_idx = callouts.len() - 1;
+      let last = callouts[last_callout_idx];
       // sentinel for moving to next list
       if last.number == 0 {
-        self.callouts[last_callout_idx].number = num.unwrap_or(1);
+        callouts[last_callout_idx].number = num.unwrap_or(1);
       } else {
-        self.callouts.push(Callout {
+        callouts.push(Callout {
           list_idx: last.list_idx,
           callout_idx: last.callout_idx + 1,
           number: num.unwrap_or(last.number + 1),
         });
       }
     }
-    *self.callouts.last().unwrap()
+    *callouts.last().unwrap()
   }
 
   pub fn advance_callout_list(&mut self, bump: &'bmp Bump) {
-    if let Some(last) = self.callouts.last() {
-      self.callouts = bvec![in bump; Callout::new(last.list_idx + 1, 0, 0 )];
+    let last = { self.callouts.borrow().last().copied() };
+    if let Some(last) = last {
+      self.callouts = Rc::new(RefCell::new(
+        bvec![in bump; Callout::new(last.list_idx + 1, 0, 0 )],
+      ));
     }
   }
 
   pub fn get_callouts(&self, number: u8) -> SmallVec<[Callout; 4]> {
     self
       .callouts
+      .borrow()
       .iter()
       .filter(|c| c.number == number)
       .copied()

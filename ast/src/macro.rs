@@ -3,6 +3,7 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MacroNode<'bmp> {
   Footnote {
+    number: u16,
     id: Option<SourceString<'bmp>>,
     text: InlineNodes<'bmp>,
   },
@@ -68,7 +69,7 @@ impl Json for MacroNode<'_> {
     buf.begin_obj("MacroNode");
     buf.push_str(r#","variant":""#);
     match self {
-      MacroNode::Footnote { id, text } => {
+      MacroNode::Footnote { id, text, .. } => {
         buf.push_str("Footnote\"");
         buf.add_option_member("id", id.as_ref());
         buf.add_member("text", text);
