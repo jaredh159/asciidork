@@ -184,11 +184,9 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_section(&mut self, section: &Section) {
-    let mut classes = SmallVec::<[&str; 5]>::from_slice(&[section::class(section)]);
-    if let Some(roles) = section.meta.attrs.as_ref().map(|a| &a.roles) {
-      roles.iter().for_each(|role| classes.push(role));
-    }
-    self.open_element("div", &classes, None);
+    let mut section_tag = OpenTag::without_id("div", section.meta.attrs.as_ref());
+    section_tag.push_class(section::class(section));
+    self.push_open_tag(section_tag);
   }
 
   fn exit_section(&mut self, section: &Section) {
@@ -392,21 +390,20 @@ impl Backend for AsciidoctorHtml {
     let custom = attrs.and_then(|a| a.unordered_list_custom_marker_style());
     let interactive = attrs.map(|a| a.has_option("interactive")).unwrap_or(false);
     self.list_stack.push(interactive);
-    let mut wrap_classes = SmallVec::<[&str; 3]>::from_slice(&["ulist"]);
-    let mut list_classes = SmallVec::<[&str; 2]>::new();
+    let mut div = OpenTag::new("div", attrs);
+    let mut ul = OpenTag::new("ul", None);
+    div.push_class("ulist");
     if let Some(custom) = custom {
-      wrap_classes.push(custom);
-      list_classes.push(custom);
+      div.push_class(custom);
+      ul.push_class(custom);
     }
     if items.iter().any(ListItem::is_checklist) {
-      wrap_classes.push("checklist");
-      list_classes.push("checklist");
+      div.push_class("checklist");
+      ul.push_class("checklist");
     }
-    self.open_element("div", &wrap_classes, block.meta.attrs.as_ref());
+    self.push_open_tag(div);
     self.render_block_title(&block.meta);
-    self.push_str("<ul");
-    self.add_classes(&list_classes);
-    self.push_ch('>');
+    self.push_open_tag(ul);
   }
 
   fn exit_unordered_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
@@ -1045,29 +1042,9 @@ impl AsciidoctorHtml {
   }
 
   pub(crate) fn open_element(&mut self, element: &str, classes: &[&str], attrs: Option<&AttrList>) {
-    self.push_ch('<');
-    self.push_str(element);
-    if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {
-      self.push_str(" id=\"");
-      self.push_str(id);
-      self.push_ch('"');
-    }
-    if !classes.is_empty() || attrs.as_ref().map_or(false, |a| !a.roles.is_empty()) {
-      self.push_str(" class=\"");
-      for class in classes {
-        self.push_str(class);
-        self.push_ch(' ');
-      }
-      if let Some(roles) = attrs.as_ref().map(|a| &a.roles) {
-        for role in roles {
-          self.push_str(role);
-          self.push_ch(' ');
-        }
-      }
-      self.html.pop();
-      self.push_ch('"');
-    }
-    self.push_ch('>');
+    let mut open_tag = OpenTag::new(element, attrs);
+    classes.iter().for_each(|c| open_tag.push_class(c));
+    self.push_open_tag(open_tag);
   }
 
   fn render_footnotes(&mut self) {
@@ -1150,18 +1127,6 @@ impl AsciidoctorHtml {
       self.push([cite, "</div>"]);
     }
     self.push_str("</div>");
-  }
-
-  fn add_classes(&mut self, classes: &[&str]) {
-    if !classes.is_empty() {
-      self.push_str(" class=\"");
-      for class in classes.iter().take(classes.len() - 1) {
-        self.push_str(class);
-        self.push_ch(' ');
-      }
-      self.push_str(classes.last().unwrap());
-      self.push_ch('"');
-    }
   }
 
   fn render_checklist_item(&mut self, item: &ListItem) {

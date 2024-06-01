@@ -12,7 +12,6 @@ asciidork-eval = { path = "../eval", version = "0.5.0" }
 asciidork-meta = { path = "../meta", version = "0.5.0" }
 lazy_static = "1.4.0"
 regex = "1.10.2"
-smallvec = "1.13.1"
 
 [dev-dependencies]
 asciidork-parser = { path = "../parser" }

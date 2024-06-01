@@ -4,7 +4,7 @@ use crate::internal::*;
 impl AsciidoctorHtml {
   pub(super) fn open_table_element(&mut self, block: &Block) {
     let mut tag = OpenTag::new("table", block.meta.attrs.as_ref());
-    tag.push_class("tableblock", None);
+    tag.push_class("tableblock");
 
     tag.push_resolved_attr_class(
       "frame",
@@ -32,13 +32,13 @@ impl AsciidoctorHtml {
       .filter(|width| *width != 100);
 
     if block.meta.has_attr_option("autowidth") {
-      tag.push_class("fit-content", None);
+      tag.push_class("fit-content");
     } else if explicit_width.is_none() {
-      tag.push_class("stretch", None);
+      tag.push_class("stretch");
     }
 
     if let Some(float) = block.meta.attr_named("float") {
-      tag.push_class(float, None);
+      tag.push_class(float);
     }
 
     tag.push_resolved_attr_class(
@@ -50,12 +50,11 @@ impl AsciidoctorHtml {
       &self.doc_meta,
     );
 
-    self.push_open_tag(tag);
-
     if let Some(width) = explicit_width {
-      self.html.pop();
-      self.push([r#" style="width: "#, &num_str!(width), "%;\">"]);
+      tag.push_style(format!("width: {}%;", width));
     }
+
+    self.push_open_tag(tag);
   }
 
   pub(super) fn table_caption(&mut self, block: &Block) {

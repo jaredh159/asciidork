@@ -107,7 +107,6 @@ dependencies = [
  "lazy_static",
  "pretty_assertions",
  "regex",
- "smallvec",
  "test-utils",
 ]
 
