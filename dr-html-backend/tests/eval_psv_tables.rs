@@ -454,3 +454,16 @@ assert_html!(
   "#},
   contains: r#"<table class="tableblock frame-all grid-all fit-content">"#
 );
+
+assert_html!(
+  psv_tab_separated,
+  adoc! {"
+    [separator=\"\t\"]
+    |===
+    \tone\ttwo
+    |===
+  "},
+  contains:
+    r#"<p class="tableblock">one</p>"#,
+    r#"<p class="tableblock">two</p>"#,
+);

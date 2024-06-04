@@ -93,6 +93,12 @@ impl<'src> Token<'src> {
       Some(num_str.parse::<u8>().expect("exceeded max 255 callouts"))
     }
   }
+
+  pub fn drop_leading_bytes(&mut self, n: usize) {
+    debug_assert!(n <= self.lexeme.len());
+    self.lexeme = &self.lexeme[n..];
+    self.loc.start += n;
+  }
 }
 
 pub trait TokenIs {

@@ -77,14 +77,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     specs
   }
 
-  pub(super) fn starts_cell(&self, tokens: &mut TableTokens, sep: u8) -> bool {
+  pub(super) fn starts_psv_cell(&self, tokens: &mut TableTokens, sep: char) -> bool {
     self.peek_cell_start(tokens, sep).is_some()
   }
 
   pub(super) fn consume_cell_start(
     &self,
     tokens: &mut TableTokens,
-    sep: u8,
+    sep: char,
   ) -> Option<(CellSpec, usize)> {
     let data = self.peek_cell_start(tokens, sep)?;
     tokens.discard(data.drop_tokens);
@@ -96,7 +96,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Some((data.spec, data.resuming))
   }
 
-  fn peek_cell_start(&self, tokens: &mut TableTokens, sep: u8) -> Option<CellStart> {
+  fn peek_cell_start(&self, tokens: &mut TableTokens, sep: char) -> Option<CellStart> {
     let Some(first_token) = tokens.current_mut() else {
       return None;
     };
@@ -105,12 +105,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
 
     // no explicit cell spec, but we're sitting on the sep, so infer default
-    if first_byte == &sep {
+    if first_token.lexeme.starts_with(sep) {
+      let sep_len = sep.len_utf8();
       return Some(CellStart {
         spec: CellSpec::default(),
-        drop_tokens: if first_token.len() == 1 { 1 } else { 0 },
-        drop_bytes: if first_token.len() == 1 { 0 } else { 1 },
-        resuming: first_token.loc.start + 1,
+        drop_tokens: if first_token.len() == sep_len { 1 } else { 0 },
+        drop_bytes: if first_token.len() == sep_len { 0 } else { sep_len },
+        resuming: first_token.loc.start + sep_len,
       });
     }
 
@@ -146,26 +147,30 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let Some(cursor_token) = tokens.nth(cursor) else {
       return None;
     };
+
+    let mut buf = [0; 4];
+    let sep_bytes = sep.encode_utf8(&mut buf).as_bytes();
+
     match (style_within_word, cursor_token.lexeme.as_bytes()) {
-      (false, bytes) if bytes == [sep] => Some(CellStart {
+      (false, bytes) if bytes == sep_bytes => Some(CellStart {
         spec,
         drop_tokens: cursor + 1,
         drop_bytes: 0,
         resuming: cursor_token.loc.end,
       }),
-      (true, bytes) if bytes.len() == 2 && bytes.get(1) == Some(&sep) => Some(CellStart {
+      (true, bytes) if bytes.len() == 2 && bytes[1..].starts_with(sep_bytes) => Some(CellStart {
         spec,
         drop_tokens: cursor + 1,
         drop_bytes: 0,
         resuming: cursor_token.loc.end,
       }),
-      (true, bytes) if bytes.len() > 2 && bytes.get(1) == Some(&sep) => {
+      (true, bytes) if bytes.len() > 2 && bytes[1..].starts_with(sep_bytes) => {
         let joined = tokens.nth(cursor).unwrap();
         Some(CellStart {
           spec,
           drop_tokens: cursor,
-          drop_bytes: 2,
-          resuming: joined.loc.start + 2,
+          drop_bytes: 1 + sep_bytes.len(),
+          resuming: joined.loc.start + 1 + sep_bytes.len(),
         })
       }
       _ => None,
@@ -267,10 +272,10 @@ mod tests {
   #[test]
   fn test_parse_cell_specs() {
     let cases = [
-      (b'|', "|foo", "foo", Some((CellSpec::default(), 1))),
-      (b'|', "foo", "foo", None),
+      ('|', "|foo", "foo", Some((CellSpec::default(), 1))),
+      ('|', "foo", "foo", None),
       (
-        b'|',
+        '|',
         "m|foo",
         "foo",
         Some((
@@ -282,7 +287,7 @@ mod tests {
         )),
       ),
       (
-        b'|',
+        '|',
         "2+|3",
         "3",
         Some((
@@ -294,7 +299,7 @@ mod tests {
         )),
       ),
       (
-        b'|',
+        '|',
         "3*2.4+>.^s|foo",
         "foo",
         Some((
@@ -309,9 +314,9 @@ mod tests {
           11,
         )),
       ),
-      (b'x', "xfoo", "foo", Some((CellSpec::default(), 1))),
+      ('x', "xfoo", "foo", Some((CellSpec::default(), 1))),
       (
-        b'x',
+        'x',
         "3*2.4+>.^sxfoo",
         "foo",
         Some((
@@ -327,7 +332,23 @@ mod tests {
         )),
       ),
       (
-        b'|',
+        '¦',
+        "3*2.4+>.^s¦foo",
+        "foo",
+        Some((
+          CellSpec {
+            duplication: Some(3),
+            col_span: Some(2),
+            row_span: Some(4),
+            h_align: Some(HorizontalAlignment::Right),
+            v_align: Some(VerticalAlignment::Middle),
+            style: Some(CellContentStyle::Strong),
+          },
+          12,
+        )),
+      ),
+      (
+        '|',
         ".3+<.>m|foo",
         "foo",
         Some((

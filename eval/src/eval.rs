@@ -247,12 +247,14 @@ fn eval_block(block: &Block, doc: &Document, backend: &mut impl Backend) {
         eval_table_row(header_row, TableSection::Header, doc, backend);
         backend.exit_table_section(TableSection::Header);
       }
-      backend.enter_table_section(TableSection::Body);
-      table
-        .rows
-        .iter()
-        .for_each(|row| eval_table_row(row, TableSection::Body, doc, backend));
-      backend.exit_table_section(TableSection::Body);
+      if !table.rows.is_empty() {
+        backend.enter_table_section(TableSection::Body);
+        table
+          .rows
+          .iter()
+          .for_each(|row| eval_table_row(row, TableSection::Body, doc, backend));
+        backend.exit_table_section(TableSection::Body);
+      }
       if let Some(footer_row) = &table.footer_row {
         backend.enter_table_section(TableSection::Footer);
         eval_table_row(footer_row, TableSection::Footer, doc, backend);

@@ -92,7 +92,7 @@ mod tests {
   fn test_table_context() {
     let mut ctx = TableContext {
       delim_ch: b'|',
-      format: DataFormat::Prefix(b'|'),
+      format: DataFormat::Prefix('|'),
       col_specs: vecb![],
       num_cols: 3,
       counting_cols: false,
