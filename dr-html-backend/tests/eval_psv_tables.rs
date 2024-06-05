@@ -456,6 +456,19 @@ assert_html!(
 );
 
 assert_html!(
+  multibyte_separator,
+  adoc! {r#"
+    [separator="¦"]
+    |===
+    ¦one¦two
+    |===
+  "#},
+  contains:
+    r#"<p class="tableblock">one</p>"#,
+    r#"<p class="tableblock">two</p>"#,
+);
+
+assert_html!(
   psv_tab_separated,
   adoc! {"
     [separator=\"\t\"]

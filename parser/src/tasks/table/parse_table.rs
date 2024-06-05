@@ -48,6 +48,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut ctx = TableContext {
       delim_ch,
       format,
+      cell_separator: format.separator(),
+      embeddable_cell_separator: match format.separator() {
+        ':' | ';' | '|' | ',' => None,
+        sep => Some(sep),
+      },
       num_cols: col_specs.len(),
       counting_cols: col_specs.is_empty(),
       col_specs,

@@ -75,6 +75,10 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
     self.0.consume_current()
   }
 
+  pub fn drop_leading_bytes(&mut self, n: usize) {
+    self.0.drop_leading_bytes(n);
+  }
+
   pub fn consume_splitting(&mut self, embeddable_separator: Option<char>) -> Option<Token<'src>> {
     let Some(sep) = embeddable_separator else {
       return self.consume_current();
@@ -89,7 +93,7 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
       // NB: caller must check that lexeme doesn't START with sep
       debug_assert!(!before.is_empty());
       let loc = token.loc;
-      self.0.drop_leading_bytes(before.len());
+      self.drop_leading_bytes(before.len());
       Some(Token {
         kind: TokenKind::Word,
         lexeme: before,

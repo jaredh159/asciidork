@@ -96,8 +96,10 @@ impl<'src> Token<'src> {
 
   pub fn drop_leading_bytes(&mut self, n: usize) {
     debug_assert!(n <= self.lexeme.len());
-    self.lexeme = &self.lexeme[n..];
-    self.loc.start += n;
+    if n > 0 {
+      self.lexeme = &self.lexeme[n..];
+      self.loc.start += n;
+    }
   }
 }
 

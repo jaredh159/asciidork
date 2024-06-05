@@ -7,6 +7,8 @@ use crate::internal::*;
 pub struct TableContext<'bmp, 'src> {
   pub delim_ch: u8,
   pub format: DataFormat,
+  pub cell_separator: char,
+  pub embeddable_cell_separator: Option<char>,
   pub col_specs: BumpVec<'bmp, ColSpec>,
   pub num_cols: usize,
   pub counting_cols: bool,
@@ -93,6 +95,8 @@ mod tests {
     let mut ctx = TableContext {
       delim_ch: b'|',
       format: DataFormat::Prefix('|'),
+      cell_separator: '|',
+      embeddable_cell_separator: None,
       col_specs: vecb![],
       num_cols: 3,
       counting_cols: false,

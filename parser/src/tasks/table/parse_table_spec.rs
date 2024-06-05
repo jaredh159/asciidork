@@ -88,11 +88,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ) -> Option<(CellSpec, usize)> {
     let data = self.peek_cell_start(tokens, sep)?;
     tokens.discard(data.drop_tokens);
-    if data.drop_bytes > 0 {
-      let token = tokens.current_mut().unwrap();
-      token.lexeme = &token.lexeme[data.drop_bytes..];
-      token.loc.start += data.drop_bytes;
-    }
+    tokens.drop_leading_bytes(data.drop_bytes);
     Some((data.spec, data.resuming))
   }
 

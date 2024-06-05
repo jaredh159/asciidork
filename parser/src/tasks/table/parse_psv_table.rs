@@ -104,10 +104,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     loop {
-      if self.starts_psv_cell(tokens, ctx.format.separator()) {
+      if self.starts_psv_cell(tokens, ctx.cell_separator) {
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       }
-      let Some(token) = tokens.consume_current() else {
+      let Some(token) = tokens.consume_splitting(ctx.embeddable_cell_separator) else {
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       };
 

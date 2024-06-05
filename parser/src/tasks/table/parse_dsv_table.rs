@@ -57,19 +57,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     let mut end = start;
-    let sep = ctx.format.separator();
-    let embeddable_sep = match sep {
-      ':' | ';' | '|' | ',' => None,
-      _ => Some(sep),
-    };
 
     loop {
-      if tokens.current().is_none() || self.consume_dsv_delimiter(tokens, ctx, sep) {
+      if tokens.current().is_none() || self.consume_dsv_delimiter(tokens, ctx) {
         return self
           .finish_cell(CellSpec::default(), cell_tokens, col_index, ctx, start..end)
           .map(|data| data.map(|(cell, _)| cell));
       }
-      let token = tokens.consume_splitting(embeddable_sep).unwrap();
+      let token = tokens
+        .consume_splitting(ctx.embeddable_cell_separator)
+        .unwrap();
       if token.is(TokenKind::Newline) {
         // see note in Parser::parse_psv_table_cell
         ctx.counting_cols = false
@@ -84,21 +81,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  fn consume_dsv_delimiter(
-    &self,
-    tokens: &mut TableTokens,
-    ctx: &mut TableContext,
-    delim: char,
-  ) -> bool {
+  fn consume_dsv_delimiter(&self, tokens: &mut TableTokens, ctx: &mut TableContext) -> bool {
     if tokens.current().is(TokenKind::Newline) {
       ctx.counting_cols = false;
       tokens.consume_current();
       return true;
     }
 
-    let sep_len = delim.len_utf8();
+    let sep_len = ctx.cell_separator.len_utf8();
     let token = tokens.current_mut().unwrap();
-    if token.lexeme.starts_with(delim) {
+    if token.lexeme.starts_with(ctx.cell_separator) {
       if token.lexeme.len() == sep_len {
         tokens.consume_current();
         true

@@ -469,8 +469,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn drop_leading_bytes(&mut self, n: usize) {
     debug_assert!(n <= self.current_token().unwrap().lexeme.len());
-    self.all_tokens[self.pos].drop_leading_bytes(n);
-    self.src = &self.src[n..];
+    if n > 0 {
+      self.all_tokens[self.pos].drop_leading_bytes(n);
+      self.src = &self.src[n..];
+    }
   }
 
   pub fn starts_nested_list(&self, stack: &ListStack) -> bool {
