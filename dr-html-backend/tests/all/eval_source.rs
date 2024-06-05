@@ -1,7 +1,5 @@
 use test_utils::{adoc, html, raw_html};
 
-mod helpers;
-
 assert_html!(
   indented_literal_block,
   " foo bar",

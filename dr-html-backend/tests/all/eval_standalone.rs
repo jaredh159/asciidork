@@ -1,7 +1,5 @@
 use test_utils::*;
 
-mod helpers;
-
 assert_standalone_body!(
   normal_doc_structure,
   adoc! {r#"

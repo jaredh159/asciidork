@@ -1,3 +1,5 @@
+#![macro_use]
+
 #[macro_export]
 macro_rules! assert_html {
   ($name:ident, $input:expr, $expected:expr) => {

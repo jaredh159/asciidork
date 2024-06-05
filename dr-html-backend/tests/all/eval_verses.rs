@@ -1,7 +1,5 @@
 use test_utils::*;
 
-mod helpers;
-
 assert_html!(
   delimited_verse_block,
   adoc! {r#"

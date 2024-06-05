@@ -1,6 +1,5 @@
 use asciidork_meta::JobSettings;
 use test_utils::{adoc, html};
-mod helpers;
 
 assert_html!(
   single_simple_section,

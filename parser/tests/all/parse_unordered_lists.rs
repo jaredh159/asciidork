@@ -1,10 +1,9 @@
+use crate::attrs;
 use asciidork_ast::prelude::*;
 use asciidork_ast::short::block::*;
 use asciidork_ast::{Inline, ListVariant};
 use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
-
-mod attrs;
 
 #[test]
 fn test_simple_unordered_list() {

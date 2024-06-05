@@ -1,7 +1,5 @@
 use test_utils::*;
 
-mod helpers;
-
 assert_html!(
   collapsible_delimited,
   adoc! {r#"

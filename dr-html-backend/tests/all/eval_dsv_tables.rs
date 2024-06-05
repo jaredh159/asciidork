@@ -1,7 +1,5 @@
 use test_utils::*;
 
-mod helpers;
-
 assert_html!(
   basic_dsv_table,
   adoc! {r#"

@@ -1,7 +1,5 @@
 use test_utils::{adoc, html};
 
-mod helpers;
-
 assert_html!(
   basic_toc,
   adoc! {"

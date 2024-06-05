@@ -3,8 +3,6 @@ use asciidork_eval::eval;
 use asciidork_parser::prelude::*;
 use test_utils::{adoc, assert_eq, html};
 
-mod helpers;
-
 use regex::Regex;
 
 assert_inline_html!(

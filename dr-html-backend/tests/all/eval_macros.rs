@@ -1,7 +1,5 @@
 use test_utils::*;
 
-mod helpers;
-
 assert_html!(
   keyboard_macro,
   adoc! {r#"

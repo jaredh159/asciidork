@@ -1,5 +1,4 @@
 use test_utils::{adoc, html};
-mod helpers;
 
 assert_html!(
   most_basic_unordered_list,

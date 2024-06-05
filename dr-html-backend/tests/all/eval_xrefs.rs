@@ -1,8 +1,6 @@
 use asciidork_meta::JobSettings;
 use test_utils::*;
 
-mod helpers;
-
 assert_html!(
   xrefs,
   |s: &mut JobSettings| s.strict = false,

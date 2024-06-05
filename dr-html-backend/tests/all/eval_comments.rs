@@ -1,8 +1,6 @@
 use asciidork_parser::Parser;
 use test_utils::{assert_eq, *};
 
-mod helpers;
-
 assert_html!(
   block_comment_inside_example,
   adoc! {r#"
