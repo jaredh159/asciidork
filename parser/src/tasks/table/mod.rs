@@ -31,6 +31,23 @@ impl DataFormat {
       DataFormat::Delimited(c) => *c,
     }
   }
+
+  pub const fn embeddable_separator(&self) -> Option<char> {
+    match self.separator() {
+      ':' | ';' | '|' | ',' => None,
+      sep => Some(sep),
+    }
+  }
+
+  pub const fn separator_token_kind(&self) -> Option<TokenKind> {
+    match self.separator() {
+      ':' => Some(TokenKind::Colon),
+      ';' => Some(TokenKind::SemiColon),
+      '|' => Some(TokenKind::Pipe),
+      ',' => Some(TokenKind::Comma),
+      _ => None,
+    }
+  }
 }
 
 impl fmt::Debug for DataFormat {

@@ -36,8 +36,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     };
 
     if let Some(sep) = meta.attr_named("separator") {
-      // TODO: handle < 1 char and > 1 char w/ errors
-      format.replace_separator(sep.chars().next().unwrap());
+      let msg = "Cell separator must be exactly one character";
+      let mut chars = sep.chars();
+      match chars.next() {
+        None => self.err_at_pattern(msg, meta.start, "separator")?,
+        Some(ch) => {
+          format.replace_separator(ch);
+          if chars.next().is_some() {
+            self.err_at_pattern(msg, meta.start, sep)?;
+          }
+        }
+      }
     }
 
     let col_widths = col_specs
@@ -49,10 +58,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       delim_ch,
       format,
       cell_separator: format.separator(),
-      embeddable_cell_separator: match format.separator() {
-        ':' | ';' | '|' | ',' => None,
-        sep => Some(sep),
-      },
+      embeddable_cell_separator: format.embeddable_separator(),
+      cell_separator_tokenkind: format.separator_token_kind(),
       num_cols: col_specs.len(),
       counting_cols: col_specs.is_empty(),
       col_specs,
@@ -375,4 +382,38 @@ fn newline_token(start: usize) -> Token<'static> {
     lexeme: "\n",
     loc: SourceLocation::new(start, start + 1),
   }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use test_utils::{assert_eq, *};
+
+  assert_error!(
+    multichar_cell_separator,
+    adoc! {r#"
+      [separator="||"]
+      |===
+      ||one||two
+      |===
+    "# },
+    error! { r#"
+      1: [separator="||"]
+                     ^^ Cell separator must be exactly one character
+    "#}
+  );
+
+  assert_error!(
+    empty_cell_separator,
+    adoc! {r#"
+      [separator=""]
+      |===
+      ||one||two
+      |===
+    "# },
+    error! { r#"
+      1: [separator=""]
+          ^^^^^^^^^ Cell separator must be exactly one character
+    "#}
+  );
 }

@@ -88,6 +88,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return true;
     }
 
+    if let Some(tokenkind) = ctx.cell_separator_tokenkind {
+      return if tokens.current().is(tokenkind) {
+        tokens.consume_current();
+        true
+      } else {
+        false
+      };
+    }
+
     let sep_len = ctx.cell_separator.len_utf8();
     let token = tokens.current_mut().unwrap();
     if token.lexeme.starts_with(ctx.cell_separator) {
@@ -95,8 +104,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         tokens.consume_current();
         true
       } else {
-        token.loc.start += sep_len;
-        token.lexeme = &token.lexeme[sep_len..];
+        token.drop_leading_bytes(sep_len);
         true
       }
     } else {
