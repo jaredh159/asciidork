@@ -560,7 +560,13 @@ impl Backend for AsciidoctorHtml {
     for width in table.col_widths.distribute() {
       self.push_str("<col");
       if let DistributedColWidth::Percentage(width) = width {
-        write!(self.html, r#" style="width: {}%;""#, width).unwrap();
+        if width.fract() == 0.0 {
+          write!(self.html, r#" style="width: {}%;""#, width).unwrap();
+        } else {
+          let width_s = format!("{:.4}", width);
+          let width_s = width_s.trim_end_matches('0');
+          write!(self.html, r#" style="width: {width_s}%;""#).unwrap();
+        }
       }
       self.push_ch('>');
     }

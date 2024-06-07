@@ -1,4 +1,4 @@
-use super::{context::*, TableTokens};
+use super::{context::*, DataFormat, TableTokens};
 use crate::internal::*;
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
@@ -48,14 +48,51 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       return Ok(None);
     }
     let mut start = tokens.current().unwrap().loc.start;
-    let mut cell_tokens = bvec![in self.bump];
 
-    // trim leading whitespace
+    let mut trimmed_newline = false;
     while tokens.current().is_whitespaceish() {
       let trimmed = tokens.consume_current().unwrap();
+      println!("trimmed: {:?}", trimmed.kind);
       start = trimmed.loc.end;
+      if trimmed.is(TokenKind::Newline) {
+        trimmed_newline = true;
+        ctx.counting_cols = false;
+      }
     }
 
+    // delimiter followed by newline is an empty cell
+    if ctx.dsv_last_consumed == DsvLastConsumed::Delimiter && trimmed_newline {
+      let spec = CellSpec::default();
+      return self
+        .finish_cell(spec, bvec![in self.bump], col_index, ctx, start..start)
+        .map(|data| data.map(|(cell, _)| cell));
+    }
+
+    let maybe_cell = match ctx.format {
+      DataFormat::Csv(_) => self.finish_csv_table_cell(tokens, ctx, col_index, start)?,
+      DataFormat::Delimited(_) => self.finish_dsv_table_cell(tokens, ctx, col_index, start)?,
+      _ => unreachable!(),
+    };
+
+    if ctx.header_row.is_unknown()
+      && maybe_cell.is_some()
+      && ctx.dsv_last_consumed == DsvLastConsumed::Newline
+      && tokens.current().is(TokenKind::Newline)
+    {
+      ctx.header_row = HeaderRow::FoundImplicit;
+    }
+
+    Ok(maybe_cell)
+  }
+
+  fn finish_dsv_table_cell(
+    &mut self,
+    tokens: &mut TableTokens<'bmp, 'src>,
+    ctx: &mut TableContext<'bmp, 'src>,
+    col_index: usize,
+    start: usize,
+  ) -> Result<Option<Cell<'bmp>>> {
+    let mut cell_tokens = bvec![in self.bump];
     let mut end = start;
 
     loop {
@@ -81,15 +118,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  fn consume_dsv_delimiter(&self, tokens: &mut TableTokens, ctx: &mut TableContext) -> bool {
+  pub(crate) fn consume_dsv_delimiter(
+    &self,
+    tokens: &mut TableTokens,
+    ctx: &mut TableContext,
+  ) -> bool {
     if tokens.current().is(TokenKind::Newline) {
+      ctx.dsv_last_consumed = DsvLastConsumed::Newline;
       ctx.counting_cols = false;
       tokens.consume_current();
       return true;
     }
 
+    ctx.dsv_last_consumed = DsvLastConsumed::Other;
     if let Some(tokenkind) = ctx.cell_separator_tokenkind {
       return if tokens.current().is(tokenkind) {
+        ctx.dsv_last_consumed = DsvLastConsumed::Delimiter;
         tokens.consume_current();
         true
       } else {
@@ -100,11 +144,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let sep_len = ctx.cell_separator.len_utf8();
     let token = tokens.current_mut().unwrap();
     if token.lexeme.starts_with(ctx.cell_separator) {
+      ctx.dsv_last_consumed = DsvLastConsumed::Delimiter;
       if token.lexeme.len() == sep_len {
         tokens.consume_current();
         true
       } else {
-        token.drop_leading_bytes(sep_len);
+        tokens.drop_leading_bytes(sep_len);
         true
       }
     } else {
@@ -169,23 +214,52 @@ mod tests {
       adoc! {r#"
         [format="dsv"]
         |===
-        one:two:
+        one:
+        two:
         |===
       "#},
       Table {
-        col_widths: ColWidths::new(vecb![w(1), w(1), w(1)]),
-        rows: vecb![Row::new(vecb![
-          cell!(d: "one", 20..23),
-          cell!(d: "two", 24..27),
-          empty_cell!(),
-        ])],
+        col_widths: ColWidths::new(vecb![w(1), w(1)]),
+        rows: vecb![
+          Row::new(vecb![cell!(d: "one", 20..23), empty_cell!(),]),
+          Row::new(vecb![cell!(d: "two", 25..28), empty_cell!(),])
+        ],
         ..empty_table!()
       }
     );
   }
 
   #[test]
-  fn dsv_weird_multibyte_separator() {
+  fn dsv_trailing_space_empty_cells() {
+    assert_table!(
+      //         v-- trailing space
+      ":===\none: \ntwo:\n:===",
+      Table {
+        col_widths: ColWidths::new(vecb![w(1), w(1)]),
+        rows: vecb![
+          Row::new(vecb![cell!(d: "one", 5..8), empty_cell!(),]),
+          Row::new(vecb![cell!(d: "two", 11..14), empty_cell!(),])
+        ],
+        ..empty_table!()
+      }
+    );
+    assert_table!(
+      //             v-- trailing space
+      ":===\none:two: \n:===",
+      Table {
+        col_widths: ColWidths::new(vecb![w(1), w(1), w(1)]),
+        rows: vecb![Row::new(vecb![
+          cell!(d: "one", 5..8),
+          cell!(d: "two", 9..12),
+          empty_cell!(),
+        ]),],
+        ..empty_table!()
+      }
+    );
+  }
+
+  #[test]
+  fn dsv_multibyte_char_separator() {
     assert_table!(
       adoc! {r#"
         [format="dsv",separator=¦]
@@ -279,6 +353,26 @@ mod tests {
           Row::new(vecb![cell!(d: "1", 43..44), cell!(d: "2", 45..46),]),
           Row::new(vecb![cell!(d: "3", 47..48), cell!(d: "4", 49..50),])
         ],
+        ..empty_table!()
+      }
+    );
+  }
+
+  #[test]
+  fn dsv_empty_non_eol_cell() {
+    assert_table!(
+      adoc! {r#"
+        :===
+        a: :c
+        :===
+      "#},
+      Table {
+        col_widths: ColWidths::new(vecb![w(1), w(1), w(1)]),
+        rows: vecb![Row::new(vecb![
+          cell!(d: "a", 5..6),
+          empty_cell!(),
+          cell!(d: "c", 9..10),
+        ]),],
         ..empty_table!()
       }
     );

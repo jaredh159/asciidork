@@ -16,9 +16,9 @@ pub struct TableContext<'bmp, 'src> {
   pub header_row: HeaderRow,
   pub header_reparse_cells: BumpVec<'bmp, ParseCellData<'bmp, 'src>>,
   pub autowidths: bool,
-  pub can_infer_implicit_header: bool,
   pub phantom_cells: HashSet<(usize, usize)>,
   pub effective_row_idx: usize,
+  pub dsv_last_consumed: DsvLastConsumed,
   pub table: Table<'bmp>,
 }
 
@@ -47,6 +47,13 @@ pub struct ParseCellData<'bmp, 'src> {
   pub loc: SourceLocation,
   pub cell_spec: CellSpec,
   pub col_spec: Option<ColSpec>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DsvLastConsumed {
+  Delimiter,
+  Newline,
+  Other,
 }
 
 impl<'bmp, 'src> TableContext<'bmp, 'src> {
@@ -105,9 +112,9 @@ mod tests {
       header_row: HeaderRow::Unknown,
       header_reparse_cells: vecb![],
       autowidths: false,
-      can_infer_implicit_header: false,
       phantom_cells: HashSet::new(),
       effective_row_idx: 0,
+      dsv_last_consumed: DsvLastConsumed::Other,
       table: Table {
         col_widths: ColWidths::new(vecb![]),
         header_row: None,

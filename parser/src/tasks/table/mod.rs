@@ -3,6 +3,7 @@ use std::fmt;
 use crate::internal::*;
 
 mod context;
+mod parse_csv_table;
 mod parse_dsv_table;
 mod parse_psv_table;
 mod parse_table;

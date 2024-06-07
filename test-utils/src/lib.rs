@@ -58,7 +58,7 @@ macro_rules! parse_table {
 macro_rules! assert_table {
   ($input:expr, $expected:expr$(,)?) => {{
     let table = parse_table!($input);
-    assert_eq!(table, $expected);
+    assert_eq!(table, $expected, from: $input);
   }};
 }
 
@@ -70,7 +70,7 @@ macro_rules! assert_table_loose {
       BlockContent::Table(table) => table,
       _ => panic!("expected table block content"),
     };
-    assert_eq!(table, $expected);
+    assert_eq!(table, $expected, from: $input);
   }};
 }
 
@@ -78,7 +78,7 @@ macro_rules! assert_table_loose {
 macro_rules! assert_inlines {
   ($input:expr, $expected:expr$(,)?) => {{
     let inlines = parse_inline_nodes!($input);
-    assert_eq!(inlines, $expected);
+    assert_eq!(inlines, $expected, from: $input);
   }};
 }
 
@@ -86,7 +86,7 @@ macro_rules! assert_inlines {
 macro_rules! assert_blocks {
   ($input:expr, $expected:expr$(,)?) => {
     let blocks = parse_blocks!($input);
-    assert_eq!(blocks, $expected);
+    assert_eq!(blocks, $expected, from: $input);
   };
 }
 

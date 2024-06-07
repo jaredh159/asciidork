@@ -1,4 +1,4 @@
-use crate::asciidoctor_html::num_str;
+use crate::asciidoctor_html::{num_str, Newlines};
 use crate::internal::*;
 
 impl AsciidoctorHtml {
@@ -89,7 +89,10 @@ impl AsciidoctorHtml {
 
     match &cell.content {
       CellContent::AsciiDoc(_) => self.push_str("<div class=\"content\">"),
-      CellContent::Literal(_) => self.push_str("<div class=\"literal\"><pre>"),
+      CellContent::Literal(_) => {
+        self.newlines = Newlines::Preserve;
+        self.push_str("<div class=\"literal\"><pre>");
+      }
       _ => {}
     }
   }
@@ -98,7 +101,10 @@ impl AsciidoctorHtml {
     match (section, &cell.content) {
       (TableSection::Header, _) => self.push_str("</th>"),
       (TableSection::Body, CellContent::Header(_)) => self.push_str("</th>"),
-      (_, CellContent::Literal(_)) => self.push_str("</pre></div></td>"),
+      (_, CellContent::Literal(_)) => {
+        self.newlines = self.default_newlines;
+        self.push_str("</pre></div></td>");
+      }
       (_, CellContent::AsciiDoc(_)) => self.push_str("</div></td>"),
       _ => self.push_str("</td>"),
     }

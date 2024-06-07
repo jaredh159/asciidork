@@ -29,7 +29,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       (Some("tsv"), _) => DataFormat::Csv('\t'),
       (Some("dsv"), _) => DataFormat::Delimited(':'),
       (_, b':') => DataFormat::Delimited(':'),
-      (_, b',') => DataFormat::Delimited(','),
+      (_, b',') => DataFormat::Csv(','),
       (_, b'|') => DataFormat::Prefix('|'),
       (_, b'!') => DataFormat::Prefix('!'),
       _ => DataFormat::Prefix(delim_ch as char),
@@ -66,8 +66,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       header_row: HeaderRow::Unknown,
       header_reparse_cells: bvec![in self.bump],
       autowidths: meta.has_attr_option("autowidth"),
-      can_infer_implicit_header: false,
       phantom_cells: HashSet::new(),
+      dsv_last_consumed: DsvLastConsumed::Other,
       effective_row_idx: 0,
       table: Table {
         col_widths: col_widths.into(),
@@ -87,14 +87,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let (mut tokens, end) = self.table_content(lines, &delim_line)?;
     if ctx.counting_cols {
-      if matches!(ctx.format, DataFormat::Delimited(_)) {
+      if !matches!(ctx.format, DataFormat::Prefix(_)) {
         self.parse_dsv_implicit_first_row(&mut tokens, &mut ctx)?;
       } else {
         self.parse_psv_implicit_first_row(&mut tokens, &mut ctx)?;
       }
     }
 
-    if matches!(ctx.format, DataFormat::Delimited(_)) {
+    if !matches!(ctx.format, DataFormat::Prefix(_)) {
       while let Some(row) = self.parse_dsv_table_row(&mut tokens, &mut ctx)? {
         self.push_table_row(row, &mut ctx)?;
       }
@@ -123,10 +123,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   ) -> Result<()> {
     if ctx.table.rows.is_empty()
       && ctx.table.header_row.is_none()
-      && (ctx.header_row.known_to_exist() || ctx.can_infer_implicit_header)
+      && ctx.header_row.known_to_exist()
     {
-      if ctx.header_row.is_unknown() {
-        ctx.header_row = HeaderRow::FoundImplicit;
+      if ctx.header_row == HeaderRow::FoundImplicit {
         self.reparse_header_cells(&mut row, ctx)?;
       }
       ctx.table.header_row = Some(row);
@@ -150,10 +149,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ctx.effective_row_idx += 1;
     let width = if ctx.autowidths { ColWidth::Auto } else { ColWidth::Proportional(1) };
     ctx.table.col_widths = ColWidths::new(bvec![in self.bump; width; ctx.num_cols]);
-    if ctx.header_row.known_to_exist() || ctx.can_infer_implicit_header {
+    if ctx.header_row.known_to_exist() {
       let mut row = Row::new(cells);
-      if ctx.header_row.is_unknown() {
-        ctx.header_row = HeaderRow::FoundImplicit;
+      if ctx.header_row == HeaderRow::FoundImplicit {
         self.reparse_header_cells(&mut row, ctx)?;
       }
       ctx.table.header_row = Some(row);
@@ -183,7 +181,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       cell_style = CellContentStyle::Default;
     }
 
-    if ctx.header_row.is_unknown() {
+    let mut trimmed_implicit_header = false;
+    if ctx.header_row.is_unknown() && matches!(ctx.format, DataFormat::Prefix(_)) {
       let mut ws = SmallVec::<[TokenKind; 12]>::new();
       while cell_tokens.last().is_whitespaceish() {
         let token = cell_tokens.pop().unwrap();
@@ -191,10 +190,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         ws.push(token.kind);
       }
       if ws.len() > 1 && ws[ws.len() - 2..] == [Newline, Newline] {
-        ctx.can_infer_implicit_header = true;
+        trimmed_implicit_header = true;
+        ctx.header_row = HeaderRow::FoundImplicit;
       }
     } else {
-      ctx.can_infer_implicit_header = false;
       while cell_tokens.last().is_whitespaceish() {
         loc.end = cell_tokens.pop().unwrap().loc.start;
       }
@@ -202,7 +201,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let repeat = cell_spec.duplication.unwrap_or(1);
     if cell_style == CellContentStyle::AsciiDoc {
-      if ctx.header_row.is_unknown() {
+      if ctx.header_row.is_unknown() || trimmed_implicit_header {
         ctx.header_reparse_cells.push(ParseCellData {
           cell_tokens: cell_tokens.clone(),
           loc: loc.clone().into(),
@@ -210,7 +209,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           col_spec: col_spec.cloned(),
         });
       }
+      dbg!(&cell_tokens, &loc);
       let mut cell_line = self.line_from(cell_tokens, loc.clone());
+      dbg!(&cell_line.src);
+
       cell_line.trim_for_cell(cell_style);
       let cell_parser = self.cell_parser(cell_line.src, loc.start);
       return match cell_parser.parse() {
@@ -239,7 +241,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       cell_spec,
       col_spec: col_spec.cloned(),
     };
-    if ctx.header_row.is_unknown() && cell_style == CellContentStyle::Literal {
+    if cell_style == CellContentStyle::Literal
+      && (ctx.header_row.is_unknown() || trimmed_implicit_header)
+    {
       ctx.header_reparse_cells.push(cell_data.clone());
     }
     let cell = self.parse_non_asciidoc_cell(cell_data, cell_style)?;
