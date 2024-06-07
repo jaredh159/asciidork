@@ -3,7 +3,7 @@ name = "test-utils"
 edition = "2021"
 
 [dependencies]
-asciidork-parser = { path = "../parser", version = "0.5.0" }
+asciidork-parser = { path = "../parser", version = "0.6.0" }
 asciidork-ast = { path = "../ast", version = "0.5.0" }
 lazy_static = "1.4.0"
 regex = { version = "1.10.2", features = ["std", "use_std"] }
