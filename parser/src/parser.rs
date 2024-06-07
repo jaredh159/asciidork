@@ -26,7 +26,7 @@ pub(crate) struct ListContext {
 }
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub fn new(bump: &'bmp Bump, src: &'src str) -> Parser<'bmp, 'src> {
+  pub fn new(bump: &'bmp Bump, src: impl Into<LexerSource<'src>>) -> Parser<'bmp, 'src> {
     Parser {
       bump,
       lexer: Lexer::new(src),
@@ -41,7 +41,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn new_settings(
     bump: &'bmp Bump,
-    src: &'src str,
+    src: impl Into<LexerSource<'src>>,
     settings: JobSettings,
   ) -> Parser<'bmp, 'src> {
     let mut p = Parser::new(bump, src);

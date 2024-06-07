@@ -1,7 +1,7 @@
 use asciidork_dr_html_backend::AsciidoctorHtml;
 use asciidork_eval::eval;
 use asciidork_parser::prelude::*;
-use test_utils::{adoc, assert_eq, html};
+use test_utils::{adoc, assert_eq, html, leaked_bump};
 
 use regex::Regex;
 
@@ -681,11 +681,10 @@ fn test_head_opts() {
       Contains(r#"<link rel="icon" type="image/png" href="custom/my/icon.png">"#),
     ),
   ];
-  let bump = &Bump::new();
 
   for (opts, expectation) in cases {
     let input = format!("= Doc Header\n{}\n\nignore me\n\n", opts);
-    let parser = Parser::new(bump, &input);
+    let parser = Parser::new(leaked_bump(), input.as_ref());
     let document = parser.parse().unwrap().document;
     let html = eval(&document, AsciidoctorHtml::new()).unwrap();
     match expectation {
@@ -706,7 +705,7 @@ fn test_head_opts() {
     }
   }
   // one test with no doc header
-  let parser = Parser::new(bump, "without doc header");
+  let parser = Parser::new(leaked_bump(), "without doc header");
   let document = parser.parse().unwrap().document;
   let html = eval(&document, AsciidoctorHtml::new()).unwrap();
   assert!(html.contains("<title>Untitled</title>"));

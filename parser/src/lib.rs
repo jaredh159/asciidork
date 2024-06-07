@@ -19,6 +19,7 @@ extern crate asciidork_meta as meta;
 
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
+  pub use crate::lexer::{LexerSource, SourceFile};
   pub use crate::parser::Parser;
   pub use asciidork_ast::Json;
   pub use bumpalo::Bump;

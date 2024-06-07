@@ -17,26 +17,31 @@ use args::{Args, Output};
 
 fn main() -> Result<(), Box<dyn Error>> {
   let args = Args::parse();
-  let src = {
-    if let Some(file) = &args.input {
-      let mut file = fs::File::open(file)?;
+  let (src, file) = {
+    if let Some(path) = &args.input {
+      let filename = path.to_string_lossy().into_owned();
+      let mut file = fs::File::open(path)?;
       let mut src = file
         .metadata()
         .ok()
         .map(|metadata| String::with_capacity(metadata.len() as usize))
         .unwrap_or_else(String::new);
       file.read_to_string(&mut src)?;
-      src
+      (src, SourceFile::File(filename))
     } else {
       let mut src = String::new();
       std::io::stdin().read_to_string(&mut src)?;
-      src
+      (src, SourceFile::Stdin)
     }
   };
 
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len());
-  let parser = Parser::new_settings(bump, &src, args.clone().into());
+  let parser = Parser::new_settings(
+    bump,
+    LexerSource::new(&src, Some(file)),
+    args.clone().into(),
+  );
   let result = parser.parse();
   let parse_time = parse_start.elapsed();
 

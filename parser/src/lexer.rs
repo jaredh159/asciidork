@@ -11,10 +11,36 @@ pub struct Lexer<'src> {
   at_line_start: bool,
   offset_adjustment: usize,
   pattern_breaker: Option<TokenKind>,
+  source_file: Option<SourceFile>,
+}
+
+// todo: manual debug for safety
+#[derive(Debug)]
+pub enum SourceFile {
+  Stdin,
+  File(String),
+}
+
+pub struct LexerSource<'src> {
+  src: &'src str,
+  file: Option<SourceFile>,
+}
+
+impl<'src> LexerSource<'src> {
+  pub const fn new(src: &'src str, file: Option<SourceFile>) -> Self {
+    LexerSource { src, file }
+  }
+}
+
+impl<'src> From<&'src str> for LexerSource<'src> {
+  fn from(src: &'src str) -> LexerSource<'src> {
+    LexerSource { src, file: None }
+  }
 }
 
 impl<'src> Lexer<'src> {
-  pub fn new(src: &'src str) -> Lexer<'src> {
+  pub fn new(src: impl Into<LexerSource<'src>>) -> Lexer<'src> {
+    let LexerSource { src, file } = src.into();
     let mut lexer = Lexer {
       src,
       bytes: src.bytes(),
@@ -22,6 +48,7 @@ impl<'src> Lexer<'src> {
       at_line_start: true,
       offset_adjustment: 0,
       pattern_breaker: None,
+      source_file: file,
     };
     lexer.peek = lexer.bytes.next();
     lexer

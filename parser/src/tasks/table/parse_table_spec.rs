@@ -363,7 +363,7 @@ mod tests {
 
     let parser = Parser::new(leaked_bump(), "");
     for (sep, input, remaining, expected) in &cases {
-      let mut lexer = Lexer::new(input);
+      let mut lexer = Lexer::new(*input);
       let line = lexer.consume_line(leaked_bump()).unwrap();
       let mut tokens = vecb![];
       line.drain_into(&mut tokens);

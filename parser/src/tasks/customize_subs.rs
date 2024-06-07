@@ -182,7 +182,7 @@ mod tests {
 
     for (attrs, current, expected) in cases {
       let input: &'static str = format!("{attrs}\nfoo").leak();
-      let block = parse_single_block!(&input);
+      let block = parse_single_block!(input);
       let attrs = block.meta.attrs;
       let next = from_meta(current, &attrs);
       assert_eq!(next, expected);
