@@ -25,6 +25,10 @@ macro_rules! assert_doc_content {
     let content = parse_doc_content!($input);
     assert_eq!(content, $expected);
   }};
+  ($input:expr, resolving: $bytes:expr, $expected:expr$(,)?) => {{
+    let content = parse_doc_content!($input, $bytes);
+    assert_eq!(content, $expected);
+  }};
 }
 
 #[macro_export]
@@ -449,6 +453,10 @@ macro_rules! parse_single_block_loose {
 #[macro_export]
 macro_rules! parse_doc_content {
   ($input:expr) => {{
+    let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().unwrap().document.content
+  }};
+  ($input:expr, $bytes:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);
     parser.parse().unwrap().document.content
   }};
