@@ -25,7 +25,7 @@ macro_rules! assert_doc_content {
     let content = parse_doc_content!($input);
     assert_eq!(content, $expected);
   }};
-  ($input:expr, resolving: $bytes:expr, $expected:expr$(,)?) => {{
+  (resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {{
     let content = parse_doc_content!($input, $bytes);
     assert_eq!(content, $expected);
   }};
@@ -457,7 +457,21 @@ macro_rules! parse_doc_content {
     parser.parse().unwrap().document.content
   }};
   ($input:expr, $bytes:expr) => {{
-    let parser = Parser::new(leaked_bump(), $input);
+    let mut parser = Parser::new(leaked_bump(), $input);
+    struct MockResolver(pub Vec<u8>);
+    impl asciidork_parser::include_resolver::IncludeResolver for MockResolver {
+      fn resolve(
+        &mut self,
+        _path: &str,
+        buffer: &mut dyn asciidork_parser::include_resolver::IncludeBuffer,
+      ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
+        buffer.initialize(self.0.len());
+        let bytes = buffer.as_bytes_mut();
+        bytes.copy_from_slice(&self.0);
+        Ok(self.0.len())
+      }
+    }
+    parser.set_resolver(Box::new(MockResolver(Vec::from($bytes))));
     parser.parse().unwrap().document.content
   }};
 }

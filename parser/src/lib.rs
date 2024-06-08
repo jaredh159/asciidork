@@ -4,7 +4,7 @@ mod chunk;
 mod contiguous_lines;
 mod delimiter;
 mod diagnostic;
-mod include_resolver;
+pub mod include_resolver;
 mod lexer;
 mod line;
 mod list_stack;
@@ -34,7 +34,6 @@ pub mod prelude {
 }
 
 pub use diagnostic::{Diagnostic, DiagnosticColor};
-pub use include_resolver::LolResolver;
 pub use parser::Parser;
 
 mod internal {
@@ -42,6 +41,7 @@ mod internal {
   pub use crate::contiguous_lines::ContiguousLines;
   pub use crate::delimiter::*;
   pub use crate::diagnostic::*;
+  pub use crate::include_resolver::*;
   pub use crate::lexer::*;
   pub use crate::line::*;
   pub use crate::list_stack::*;

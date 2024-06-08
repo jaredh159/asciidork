@@ -4,9 +4,9 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 #[derive(Debug)]
-pub struct Lexer<'src> {
-  src: &'src str,
-  bytes: Bytes<'src>,
+pub struct Lexer<'arena> {
+  src: &'arena str,
+  bytes: Bytes<'arena>,
   peek: Option<u8>,
   at_line_start: bool,
   offset_adjustment: usize,
@@ -21,25 +21,25 @@ pub enum SourceFile {
   File(String),
 }
 
-pub struct AsciidocSource<'src> {
-  src: &'src str,
+pub struct AsciidocSource<'arena> {
+  src: &'arena str,
   file: Option<SourceFile>,
 }
 
-impl<'src> AsciidocSource<'src> {
-  pub const fn new(src: &'src str, file: Option<SourceFile>) -> Self {
+impl<'arena> AsciidocSource<'arena> {
+  pub const fn new(src: &'arena str, file: Option<SourceFile>) -> Self {
     AsciidocSource { src, file }
   }
 }
 
-impl<'src> From<&'src str> for AsciidocSource<'src> {
-  fn from(src: &'src str) -> AsciidocSource<'src> {
+impl<'arena> From<&'arena str> for AsciidocSource<'arena> {
+  fn from(src: &'arena str) -> AsciidocSource<'arena> {
     AsciidocSource { src, file: None }
   }
 }
 
-impl<'src> Lexer<'src> {
-  pub fn new(src: impl Into<AsciidocSource<'src>>) -> Lexer<'src> {
+impl<'arena> Lexer<'arena> {
+  pub fn new(src: impl Into<AsciidocSource<'arena>>) -> Lexer<'arena> {
     let AsciidocSource { src, file } = src.into();
     let mut lexer = Lexer {
       src,
@@ -64,7 +64,7 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  pub fn raw_lines(&self) -> Lines<'src> {
+  pub fn raw_lines(&self) -> Lines<'arena> {
     self.src.lines()
   }
 
@@ -80,7 +80,7 @@ impl<'src> Lexer<'src> {
     self.peek == Some(c)
   }
 
-  pub fn loc_src(&self, loc: impl Into<SourceLocation>) -> &'src str {
+  pub fn loc_src(&self, loc: impl Into<SourceLocation>) -> &'arena str {
     let loc: SourceLocation = loc.into();
     &self.src[loc.start - self.offset_adjustment..loc.end - self.offset_adjustment]
   }
@@ -91,7 +91,7 @@ impl<'src> Lexer<'src> {
     println!("{}: {}", line_num, line);
   }
 
-  pub fn line_of(&self, location: usize) -> &'src str {
+  pub fn line_of(&self, location: usize) -> &'arena str {
     let location = location - self.offset_adjustment;
     let mut start = location;
     let mut end = location;
@@ -134,7 +134,7 @@ impl<'src> Lexer<'src> {
     (line_number, offset)
   }
 
-  pub fn consume_line<'bmp>(&mut self, bump: &'bmp Bump) -> Option<Line<'bmp, 'src>> {
+  pub fn consume_line<'bmp>(&mut self, bump: &'bmp Bump) -> Option<Line<'bmp, 'arena>> {
     if self.is_eof() {
       return None;
     }
@@ -183,14 +183,14 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  fn delimiter_line(&mut self) -> Option<Token<'src>> {
+  fn delimiter_line(&mut self) -> Option<Token<'arena>> {
     let (len, _) = self.at_delimiter_line()?;
     let start = self.offset();
     self.skip(len);
     Some(self.token(DelimiterLine, start, start + len))
   }
 
-  pub fn next_token(&mut self) -> Token<'src> {
+  pub fn next_token(&mut self) -> Token<'arena> {
     let breaker = self.pattern_breaker.take();
     if let Some(token) = self.delimiter_line() {
       return token;
@@ -262,19 +262,19 @@ impl<'src> Lexer<'src> {
     self.offset()
   }
 
-  fn single(&self, kind: TokenKind) -> Token<'src> {
+  fn single(&self, kind: TokenKind) -> Token<'arena> {
     let end = self.offset();
     let start = end - 1;
     self.token(kind, start, end)
   }
 
-  fn repeating(&mut self, c: u8, kind: TokenKind) -> Token<'src> {
+  fn repeating(&mut self, c: u8, kind: TokenKind) -> Token<'arena> {
     let start = self.offset() - 1;
     let end = self.advance_while(c);
     self.token(kind, start, end)
   }
 
-  fn digits(&mut self) -> Token<'src> {
+  fn digits(&mut self) -> Token<'arena> {
     let start = self.offset() - 1;
     let end = self.advance_while_with(|c| c.is_ascii_digit());
     self.token(Digits, start, end)
@@ -321,7 +321,7 @@ impl<'src> Lexer<'src> {
     ])
   }
 
-  fn word(&mut self, at_line_start: bool) -> Token<'src> {
+  fn word(&mut self, at_line_start: bool) -> Token<'arena> {
     let start = self.offset() - 1;
     let end = self.advance_to_word_boundary(true);
     // PERF: if i feel clear about the safety of how i move across
@@ -429,14 +429,14 @@ impl<'src> Lexer<'src> {
     }
   }
 
-  fn whitespace(&mut self) -> Token<'src> {
+  fn whitespace(&mut self) -> Token<'arena> {
     let start = self.offset() - 1;
     self.advance_while_one_of(&[b' ', b'\t']);
     let end = self.offset();
     self.token(Whitespace, start, end)
   }
 
-  fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'src> {
+  fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'arena> {
     Token {
       kind,
       loc: SourceLocation::new(start + self.offset_adjustment, end + self.offset_adjustment),
@@ -449,7 +449,7 @@ impl<'src> Lexer<'src> {
     ch: u8,
     at_line_start: bool,
     breaker: Option<TokenKind>,
-  ) -> Token<'src> {
+  ) -> Token<'arena> {
     let kind = if ch == b':' { Colon } else { SemiColon };
     if at_line_start || self.peek != Some(ch) {
       return self.single(kind);
@@ -500,7 +500,7 @@ impl<'src> Lexer<'src> {
     )
   }
 
-  fn maybe_callout_number(&mut self) -> Token<'src> {
+  fn maybe_callout_number(&mut self) -> Token<'arena> {
     let start = self.offset() - 1;
     match self.peek {
       Some(c) if c.is_ascii_digit() => {

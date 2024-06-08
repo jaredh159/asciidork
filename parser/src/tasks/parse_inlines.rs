@@ -62,6 +62,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         continue;
       }
 
+      if line.starts(Directive) && self.try_process_directive(&mut line)? {
+        continue;
+      }
+
       loop {
         if line.starts_with_seq(stop_tokens) {
           line.discard(stop_tokens.len());

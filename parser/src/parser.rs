@@ -14,6 +14,7 @@ pub struct Parser<'bmp: 'src, 'src> {
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) strict: bool, // todo: naming...
   pub(super) include_resolver: Option<Box<dyn IncludeResolver>>,
+  pub bufs: Vec<BumpVec<'bmp, u8>>,
 }
 
 pub struct ParseResult<'bmp> {
@@ -40,6 +41,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       errors: RefCell::new(Vec::new()),
       strict: true,
       include_resolver: None,
+      bufs: vec![],
     }
   }
 

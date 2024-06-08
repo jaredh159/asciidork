@@ -52,6 +52,20 @@ pub trait IncludeResolver {
 
 pub struct LolResolver;
 
+struct XockResolver(pub Vec<u8>);
+impl IncludeResolver for XockResolver {
+  fn resolve(
+    &mut self,
+    _path: &str,
+    buffer: &mut dyn IncludeBuffer,
+  ) -> std::result::Result<usize, ResolveError> {
+    buffer.initialize(self.0.len());
+    let bytes = buffer.as_bytes_mut();
+    bytes.copy_from_slice(&self.0);
+    Ok(self.0.len())
+  }
+}
+
 impl IncludeResolver for LolResolver {
   // fn resolve(
   //   &mut self,
