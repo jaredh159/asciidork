@@ -18,9 +18,16 @@ mod utils;
 extern crate asciidork_ast as ast;
 extern crate asciidork_meta as meta;
 
+#[macro_export]
+macro_rules! lexer {
+  ($self:ident) => {
+    $self.lexers[$self.lexer_idx]
+  };
+}
+
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
-  pub use crate::lexer::{LexerSource, SourceFile};
+  pub use crate::lexer::{AsciidocSource, SourceFile};
   pub use crate::parser::Parser;
   pub use asciidork_ast::Json;
   pub use bumpalo::Bump;
@@ -49,6 +56,7 @@ mod internal {
   pub use meta::{Author, DocType, JobSettings, ReadAttr};
   pub use smallvec::SmallVec;
   pub type Result<T> = std::result::Result<T, Diagnostic>;
+  pub use lexer;
 }
 
 pub mod variants {

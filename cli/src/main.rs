@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let bump = &Bump::with_capacity(src.len());
   let mut parser = Parser::new_settings(
     bump,
-    LexerSource::new(&src, Some(file)),
+    AsciidocSource::new(&src, Some(file)),
     args.clone().into(),
   );
   parser.set_resolver(Box::new(asciidork_parser::LolResolver));

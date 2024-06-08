@@ -21,26 +21,26 @@ pub enum SourceFile {
   File(String),
 }
 
-pub struct LexerSource<'src> {
+pub struct AsciidocSource<'src> {
   src: &'src str,
   file: Option<SourceFile>,
 }
 
-impl<'src> LexerSource<'src> {
+impl<'src> AsciidocSource<'src> {
   pub const fn new(src: &'src str, file: Option<SourceFile>) -> Self {
-    LexerSource { src, file }
+    AsciidocSource { src, file }
   }
 }
 
-impl<'src> From<&'src str> for LexerSource<'src> {
-  fn from(src: &'src str) -> LexerSource<'src> {
-    LexerSource { src, file: None }
+impl<'src> From<&'src str> for AsciidocSource<'src> {
+  fn from(src: &'src str) -> AsciidocSource<'src> {
+    AsciidocSource { src, file: None }
   }
 }
 
 impl<'src> Lexer<'src> {
-  pub fn new(src: impl Into<LexerSource<'src>>) -> Lexer<'src> {
-    let LexerSource { src, file } = src.into();
+  pub fn new(src: impl Into<AsciidocSource<'src>>) -> Lexer<'src> {
+    let AsciidocSource { src, file } = src.into();
     let mut lexer = Lexer {
       src,
       bytes: src.bytes(),
@@ -226,7 +226,7 @@ impl<'src> Lexer<'src> {
       Some(b'\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
       Some(ch) if ch == b';' || ch == b':' => self.maybe_term_delimiter(ch, at_line_start, breaker),
-      Some(_) => self.word(),
+      Some(_) => self.word(at_line_start),
       None => self.token(Eof, self.offset(), self.offset()),
     }
   }
@@ -321,7 +321,7 @@ impl<'src> Lexer<'src> {
     ])
   }
 
-  fn word(&mut self) -> Token<'src> {
+  fn word(&mut self, at_line_start: bool) -> Token<'src> {
     let start = self.offset() - 1;
     let end = self.advance_to_word_boundary(true);
     // PERF: if i feel clear about the safety of how i move across
@@ -330,6 +330,15 @@ impl<'src> Lexer<'src> {
 
     // special cases
     match self.peek {
+      // directives
+      Some(b':') if at_line_start && lexeme == "include" && self.src.len() - end > 4 => {
+        let peek = &self.src[end + 1..end + 3].as_bytes();
+        if peek[0] == b':' && !peek[1].is_ascii_whitespace() {
+          self.advance();
+          self.advance();
+          return self.token(Directive, start, end + 2);
+        }
+      }
       // macros
       Some(b':') if !self.peek_term_delimiter() => {
         if self.is_macro_name(lexeme) {
@@ -573,6 +582,30 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      (
+        "include::foo",
+        vec![(Directive, "include::"), (Word, "foo")],
+      ),
+      (
+        "foo include::foo",
+        vec![
+          (Word, "foo"),
+          (Whitespace, " "),
+          (Word, "include"),
+          (Colon, ":"),
+          (Colon, ":"),
+          (Word, "foo"),
+        ],
+      ),
+      (
+        "include:: foo",
+        vec![
+          (Word, "include"),
+          (TermDelimiter, "::"),
+          (Whitespace, " "),
+          (Word, "foo"),
+        ],
+      ),
       ("|===", vec![(Pipe, "|"), (EqualSigns, "===")]),
       ("////", vec![(DelimiterLine, "////")]),
       ("<.>", vec![(CalloutNumber, "<.>")]),

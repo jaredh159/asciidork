@@ -15,6 +15,7 @@ pub enum TokenKind {
   Dashes,
   DelimiterLine,
   Digits,
+  Directive,
   Discard,
   DoubleQuote,
   Dots,
