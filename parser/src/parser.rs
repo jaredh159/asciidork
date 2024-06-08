@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::internal::*;
+use crate::{include_resolver::IncludeResolver, internal::*};
 
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Parser<'bmp: 'src, 'src> {
   pub(super) bump: &'bmp Bump,
   pub(super) lexer: Lexer<'src>,
@@ -12,6 +12,7 @@ pub struct Parser<'bmp: 'src, 'src> {
   pub(super) ctx: ParseContext<'bmp>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) strict: bool, // todo: naming...
+  pub(super) include_resolver: Option<Box<dyn IncludeResolver>>,
 }
 
 pub struct ParseResult<'bmp> {
@@ -36,6 +37,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       ctx: ParseContext::new(bump),
       errors: RefCell::new(Vec::new()),
       strict: true,
+      include_resolver: None,
     }
   }
 
@@ -48,6 +50,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     p.strict = settings.strict;
     p.document.meta = settings.into();
     p
+  }
+
+  pub fn set_resolver(&mut self, resolver: Box<dyn IncludeResolver>) {
+    self.include_resolver = Some(resolver);
   }
 
   pub fn cell_parser(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {

@@ -355,7 +355,10 @@ macro_rules! test_inlines_loose {
     fn $name() {
       let mut settings = ::asciidork_meta::JobSettings::embedded();
       settings.strict = false;
+
       let parser = Parser::new_settings(leaked_bump(), $input, settings);
+      // parser.set_resolver(Box::new(::asciidork_parser::LolResolver));
+
       let content = parser.parse().unwrap().document.content;
       let blocks = content.blocks().expect("expected blocks").clone();
       if blocks.len() != 1 {

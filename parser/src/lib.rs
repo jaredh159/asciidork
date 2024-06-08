@@ -4,6 +4,7 @@ mod chunk;
 mod contiguous_lines;
 mod delimiter;
 mod diagnostic;
+mod include_resolver;
 mod lexer;
 mod line;
 mod list_stack;
@@ -26,6 +27,7 @@ pub mod prelude {
 }
 
 pub use diagnostic::{Diagnostic, DiagnosticColor};
+pub use include_resolver::LolResolver;
 pub use parser::Parser;
 
 mod internal {

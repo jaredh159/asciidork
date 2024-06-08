@@ -37,11 +37,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len());
-  let parser = Parser::new_settings(
+  let mut parser = Parser::new_settings(
     bump,
     LexerSource::new(&src, Some(file)),
     args.clone().into(),
   );
+  parser.set_resolver(Box::new(asciidork_parser::LolResolver));
+
   let result = parser.parse();
   let parse_time = parse_start.elapsed();
 

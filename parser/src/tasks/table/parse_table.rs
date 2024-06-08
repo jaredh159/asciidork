@@ -18,6 +18,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let delim_ch = first_token.lexeme.as_bytes()[0];
     debug_assert!(first_token.lexeme.len() == 1);
 
+    if let Some(resolver) = self.include_resolver.as_mut() {
+      let mut buf = bvec![in self.bump];
+      resolver.resolve("test.adoc", &mut buf).unwrap();
+      // to string the buf
+      let buf = std::str::from_utf8(&buf).unwrap();
+      dbg!(&buf);
+      panic!("here");
+    }
+
     let col_specs = meta
       .attr_named("cols")
       .map(|cols_attr| self.parse_col_specs(cols_attr))
