@@ -11,10 +11,10 @@ pub struct Diagnostic {
 
 impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn err_at(&self, message: impl Into<String>, start: usize, end: usize) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(start);
+    let (line_num, offset) = self.lexers[self.lexer_idx].line_number_with_offset(start);
     self.handle_err(Diagnostic {
       line_num,
-      line: self.lexer.line_of(start).to_string(),
+      line: self.lexers[self.lexer_idx].line_of(start).to_string(),
       message: message.into(),
       underline_start: offset,
       underline_width: end - start,
@@ -26,7 +26,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .loc()
       .expect("non empty line for `err_entire_line`")
       .start;
-    let (line_num, offset) = self.lexer.line_number_with_offset(start);
+    let (line_num, offset) = self.lexers[self.lexer_idx].line_number_with_offset(start);
     self.handle_err(Diagnostic {
       line_num,
       line: line.src.to_string(),
@@ -42,8 +42,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     message: impl Into<String>,
   ) -> Result<()> {
     let key = &key.into();
-    for (idx, line) in self
-      .lexer
+    for (idx, line) in self.lexers[self.lexer_idx]
       .raw_lines()
       .enumerate()
       .skip_while(|(_, l)| l.is_empty())
@@ -71,8 +70,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     line_start: usize,
     pattern: &str,
   ) -> Result<()> {
-    let (line_num, _) = self.lexer.line_number_with_offset(line_start);
-    let line = self.lexer.line_of(line_start);
+    let (line_num, _) = self.lexers[self.lexer_idx].line_number_with_offset(line_start);
+    let line = self.lexers[self.lexer_idx].line_of(line_start);
     if let Some(idx) = line.find(pattern) {
       return self.handle_err(Diagnostic {
         line_num,
@@ -96,10 +95,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   pub(crate) fn err_token_full(&self, message: impl Into<String>, token: &Token) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc.start);
+    let (line_num, offset) = self.lexers[self.lexer_idx].line_number_with_offset(token.loc.start);
     self.handle_err(Diagnostic {
       line_num,
-      line: self.lexer.line_of(token.loc.start).to_string(),
+      line: self.lexers[self.lexer_idx]
+        .line_of(token.loc.start)
+        .to_string(),
       message: message.into(),
       underline_start: offset,
       underline_width: token.lexeme.len(),
@@ -107,10 +108,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   pub(crate) fn err_token_start(&self, message: impl Into<String>, token: &Token) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc.start);
+    let (line_num, offset) = self.lexers[self.lexer_idx].line_number_with_offset(token.loc.start);
     self.handle_err(Diagnostic {
       line_num,
-      line: self.lexer.line_of(token.loc.start).to_string(),
+      line: self.lexers[self.lexer_idx]
+        .line_of(token.loc.start)
+        .to_string(),
       message: message.into(),
       underline_start: offset,
       underline_width: 1,
@@ -118,11 +121,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   pub(crate) fn err(&self, message: impl Into<String>, token: Option<&Token>) -> Result<()> {
-    let location = token.map_or_else(|| self.lexer.loc(), |t| t.loc);
-    let (line_num, offset) = self.lexer.line_number_with_offset(location.start);
+    let location = token.map_or_else(|| self.lexers[self.lexer_idx].loc(), |t| t.loc);
+    let (line_num, offset) = self.lexers[self.lexer_idx].line_number_with_offset(location.start);
     self.handle_err(Diagnostic {
       line_num,
-      line: self.lexer.line_of(location.start).to_string(),
+      line: self.lexers[self.lexer_idx]
+        .line_of(location.start)
+        .to_string(),
       message: message.into(),
       underline_start: offset,
       underline_width: 1,

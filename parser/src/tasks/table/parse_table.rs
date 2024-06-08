@@ -354,7 +354,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       if line.src == start_delim.src {
         self.restore_lines(lines);
         return Ok((
-          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
+          TableTokens::new(tokens, self.lexers[self.lexer_idx].loc_src(start..end)),
           line.loc().unwrap().end,
         ));
       }
@@ -374,7 +374,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       }
       if next_line.src == start_delim.src {
         return Ok((
-          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
+          TableTokens::new(tokens, self.lexers[self.lexer_idx].loc_src(start..end)),
           next_line.loc().unwrap().end,
         ));
       }
@@ -384,7 +384,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       next_line.drain_into(&mut tokens);
     }
     self.err_line("Table never closed, started here", start_delim)?;
-    let loc = self.lexer.loc_src(start..end);
+    let loc = self.lexers[self.lexer_idx].loc_src(start..end);
     Ok((TableTokens::new(tokens, loc), end))
   }
 }

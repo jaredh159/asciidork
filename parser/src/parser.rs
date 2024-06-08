@@ -5,7 +5,8 @@ use crate::{include_resolver::IncludeResolver, internal::*};
 // #[derive(Debug)]
 pub struct Parser<'bmp: 'src, 'src> {
   pub(super) bump: &'bmp Bump,
-  pub(super) lexer: Lexer<'src>,
+  pub(super) lexers: BumpVec<'bmp, Lexer<'src>>,
+  pub(super) lexer_idx: usize,
   pub(super) document: Document<'bmp>,
   pub(super) peeked_lines: Option<ContiguousLines<'bmp, 'src>>,
   pub(super) peeked_meta: Option<ChunkMeta<'bmp>>,
@@ -30,7 +31,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn new(bump: &'bmp Bump, src: impl Into<LexerSource<'src>>) -> Parser<'bmp, 'src> {
     Parser {
       bump,
-      lexer: Lexer::new(src),
+      lexers: bvec![in bump; Lexer::new(src)],
+      lexer_idx: 0,
       document: Document::new(bump),
       peeked_lines: None,
       peeked_meta: None,
@@ -59,7 +61,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn cell_parser(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {
     let mut cell_parser = Parser::new(self.bump, src);
     cell_parser.strict = self.strict;
-    cell_parser.lexer.adjust_offset(offset);
+    cell_parser.lexers[self.lexer_idx].adjust_offset(offset);
     cell_parser.ctx = self.ctx.clone_for_cell();
     cell_parser.document.meta = self.document.meta.clone_for_cell();
     cell_parser.document.anchors = Rc::clone(&self.document.anchors);
@@ -67,7 +69,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 
   pub(crate) fn debug_loc(&self, loc: SourceLocation) {
-    println!("{:?}, {}", loc, self.lexer.loc_src(loc));
+    println!("{:?}, {}", loc, self.lexers[self.lexer_idx].loc_src(loc));
   }
 
   pub(crate) fn loc(&self) -> SourceLocation {
@@ -75,7 +77,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .peeked_lines
       .as_ref()
       .and_then(|lines| lines.loc())
-      .unwrap_or_else(|| self.lexer.loc())
+      .unwrap_or_else(|| self.lexers[self.lexer_idx].loc())
   }
 
   pub(crate) fn line_from(
@@ -83,26 +85,26 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     tokens: BumpVec<'bmp, Token<'src>>,
     loc: impl Into<SourceLocation>,
   ) -> Line<'bmp, 'src> {
-    Line::new(tokens, self.lexer.loc_src(loc))
+    Line::new(tokens, self.lexers[self.lexer_idx].loc_src(loc))
   }
 
   pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
     debug_assert!(self.peeked_lines.is_none());
-    self.lexer.consume_line(self.bump)
+    self.lexers[self.lexer_idx].consume_line(self.bump)
   }
 
   pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'bmp, 'src>> {
     if let Some(peeked) = self.peeked_lines.take() {
       return Some(peeked);
     }
-    self.lexer.consume_empty_lines();
-    if self.lexer.is_eof() {
+    self.lexers[self.lexer_idx].consume_empty_lines();
+    if self.lexers[self.lexer_idx].is_eof() {
       return None;
     }
     let mut lines = BumpVec::new_in(self.bump);
-    while let Some(line) = self.lexer.consume_line(self.bump) {
+    while let Some(line) = self.lexers[self.lexer_idx].consume_line(self.bump) {
       lines.push(line);
-      if self.lexer.peek_is(b'\n') {
+      if self.lexers[self.lexer_idx].peek_is(b'\n') {
         break;
       }
     }
@@ -120,7 +122,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     let mut additional_lines = BumpVec::new_in(self.bump);
-    while !self.lexer.is_eof() && !self.at_delimiter(delimiter) {
+    while !self.lexers[self.lexer_idx].is_eof() && !self.at_delimiter(delimiter) {
       additional_lines.push(self.read_line().unwrap());
     }
     lines.extend(additional_lines);
@@ -129,14 +131,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn at_delimiter(&self, delimiter: Delimiter) -> bool {
     match delimiter {
-      Delimiter::BlockQuote => self.lexer.at_delimiter_line() == Some((4, b'_')),
-      Delimiter::Example => self.lexer.at_delimiter_line() == Some((4, b'=')),
-      Delimiter::Open => self.lexer.at_delimiter_line() == Some((2, b'-')),
-      Delimiter::Sidebar => self.lexer.at_delimiter_line() == Some((4, b'*')),
-      Delimiter::Listing => self.lexer.at_delimiter_line() == Some((4, b'-')),
-      Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
-      Delimiter::Passthrough => self.lexer.at_delimiter_line() == Some((4, b'+')),
-      Delimiter::Comment => self.lexer.at_delimiter_line() == Some((4, b'/')),
+      Delimiter::BlockQuote => self.lexers[self.lexer_idx].at_delimiter_line() == Some((4, b'_')),
+      Delimiter::Example => self.lexers[self.lexer_idx].at_delimiter_line() == Some((4, b'=')),
+      Delimiter::Open => self.lexers[self.lexer_idx].at_delimiter_line() == Some((2, b'-')),
+      Delimiter::Sidebar => self.lexers[self.lexer_idx].at_delimiter_line() == Some((4, b'*')),
+      Delimiter::Listing => self.lexers[self.lexer_idx].at_delimiter_line() == Some((4, b'-')),
+      Delimiter::Literal => self.lexers[self.lexer_idx].at_delimiter_line() == Some((4, b'.')),
+      Delimiter::Passthrough => self.lexers[self.lexer_idx].at_delimiter_line() == Some((4, b'+')),
+      Delimiter::Comment => self.lexers[self.lexer_idx].at_delimiter_line() == Some((4, b'/')),
     }
   }
 
@@ -170,7 +172,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       if self.peeked_lines.is_none() {
         self.peeked_lines = self.read_lines();
       }
-      self.lexer.truncate();
+      self.lexers[self.lexer_idx].truncate();
     }
 
     while let Some(chunk) = self.parse_chunk()? {
