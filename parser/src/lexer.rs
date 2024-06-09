@@ -5,13 +5,16 @@ use crate::variants::token::*;
 
 #[derive(Debug)]
 pub struct Lexer<'arena> {
-  src: &'arena str,
-  bytes: Bytes<'arena>,
-  peek: Option<u8>,
-  at_line_start: bool,
-  offset_adjustment: usize,
-  pattern_breaker: Option<TokenKind>,
-  source_file: Option<SourceFile>,
+  // src: &'arena str,
+  // bytes: Bytes<'arena>,
+  // peek: Option<u8>,
+  // at_line_start: bool, // maybe
+  // offset_adjustment: usize,           // maybe push down
+  pattern_breaker: Option<TokenKind>, // see if we can eliminate
+  // source_file: Option<SourceFile>,
+  idx: usize,
+  prev_idx: Option<usize>,
+  sources: BumpVec<'arena, AdocSource<'arena>>,
 }
 
 // todo: manual debug for safety
@@ -38,34 +41,123 @@ impl<'arena> From<&'arena str> for AsciidocSource<'arena> {
   }
 }
 
+#[derive(Debug)]
+pub struct AdocSource<'arena> {
+  src: BumpVec<'arena, u8>,
+  pos: usize,
+  offset: usize,
+  file: Option<SourceFile>,
+}
+
+impl<'arena> AdocSource<'arena> {
+  pub const fn new(src: BumpVec<'arena, u8>, file: Option<SourceFile>) -> Self {
+    AdocSource { src, pos: 0, offset: 0, file }
+  }
+
+  pub fn peek(&self) -> Option<u8> {
+    self.src.get(self.pos + 1).copied()
+  }
+
+  pub fn nth(&self, n: usize) -> Option<u8> {
+    self.src.get(self.pos + n).copied()
+  }
+
+  pub fn src_loc(&self, loc: impl Into<SourceLocation>) -> &'arena str {
+    let loc: SourceLocation = loc.into();
+    // let hello: &str = std::str::from_utf8(&bytes[0..4]).unwrap();
+    // &self.src[loc.start - self.offset_adjustment..loc.end - self.offset_adjustment]
+    std::str::from_utf8(&self.src[loc.start - self.offset..loc.end - self.offset]).unwrap()
+  }
+
+  pub fn at_line_start(&self) -> bool {
+    self.pos == 0 || self.src[self.pos - 1] == b'\n'
+  }
+
+  // rename byte_slice?
+  pub fn bytes(&self, range: std::ops::Range<usize>) -> &'arena [u8] {
+    &self.src[range]
+  }
+
+  pub fn bytes2(&self) -> impl Iterator<Item = &u8> {
+    self.src[self.pos..].iter()
+  }
+
+  pub fn line_of(&self, location: usize) -> &'arena str {
+    todo!()
+    // let location = location - self.offset;
+    // let mut start = location;
+    // let mut end = location;
+
+    // for c in self.src.bytes().rev().skip(self.src.len() - location) {
+    //   if start == 0 || c == b'\n' {
+    //     break;
+    //   } else {
+    //     start -= 1;
+    //   }
+    // }
+
+    // for c in self.src.bytes().skip(location) {
+    //   if c == b'\n' {
+    //     break;
+    //   } else {
+    //     end += 1;
+    //   }
+    // }
+
+    // &self.src[start..end]
+  }
+
+  pub fn line_number_with_offset(&self, location: usize) -> (usize, usize) {
+    let mut line_number = 1;
+    let mut offset: usize = 0;
+    for c in self.src.iter().take(location) {
+      if c == &b'\n' {
+        offset = 0;
+        line_number += 1;
+      } else {
+        offset += 1;
+      }
+    }
+    (line_number, offset)
+  }
+
+  fn remaining_len(&self) -> usize {
+    self.src.len() - self.pos
+  }
+}
+
 impl<'arena> Lexer<'arena> {
-  pub fn new(src: impl Into<AsciidocSource<'arena>>) -> Lexer<'arena> {
-    let AsciidocSource { src, file } = src.into();
-    let mut lexer = Lexer {
-      src,
-      bytes: src.bytes(),
-      peek: None,
-      at_line_start: true,
-      offset_adjustment: 0,
+  pub fn new(bump: &'arena Bump, src: BumpVec<'arena, u8>, file: Option<SourceFile>) -> Self {
+    Self {
       pattern_breaker: None,
-      source_file: file,
-    };
-    lexer.peek = lexer.bytes.next();
-    lexer
+      idx: 0,
+      prev_idx: None,
+      sources: bvec![in bump; AdocSource::new(src, file)],
+    }
+  }
+
+  pub fn peek(&self) -> Option<u8> {
+    self.sources[self.idx].peek()
+  }
+
+  pub fn nth(&self, n: usize) -> Option<u8> {
+    self.sources[self.idx].nth(n)
   }
 
   pub fn adjust_offset(&mut self, offset_adjustment: usize) {
-    self.offset_adjustment = offset_adjustment;
+    // self.offset_adjustment = offset_adjustment;
+    todo!()
   }
 
   pub fn consume_empty_lines(&mut self) {
-    while self.peek == Some(b'\n') {
+    while self.peek() == Some(b'\n') {
       self.advance();
     }
   }
 
   pub fn raw_lines(&self) -> Lines<'arena> {
-    self.src.lines()
+    // self.src.lines()
+    todo!()
   }
 
   pub fn loc(&self) -> SourceLocation {
@@ -73,16 +165,15 @@ impl<'arena> Lexer<'arena> {
   }
 
   pub const fn is_eof(&self) -> bool {
-    self.peek.is_none()
+    self.peek().is_none()
   }
 
   pub fn peek_is(&self, c: u8) -> bool {
-    self.peek == Some(c)
+    self.peek() == Some(c)
   }
 
   pub fn loc_src(&self, loc: impl Into<SourceLocation>) -> &'arena str {
-    let loc: SourceLocation = loc.into();
-    &self.src[loc.start - self.offset_adjustment..loc.end - self.offset_adjustment]
+    self.sources[self.idx].src_loc(loc)
   }
 
   pub fn print_current_line(&self) {
@@ -92,27 +183,7 @@ impl<'arena> Lexer<'arena> {
   }
 
   pub fn line_of(&self, location: usize) -> &'arena str {
-    let location = location - self.offset_adjustment;
-    let mut start = location;
-    let mut end = location;
-
-    for c in self.src.bytes().rev().skip(self.src.len() - location) {
-      if start == 0 || c == b'\n' {
-        break;
-      } else {
-        start -= 1;
-      }
-    }
-
-    for c in self.src.bytes().skip(location) {
-      if c == b'\n' {
-        break;
-      } else {
-        end += 1;
-      }
-    }
-
-    &self.src[start..end]
+    self.sources[self.idx].line_of(location)
   }
 
   pub fn line_number(&self, location: usize) -> usize {
@@ -121,17 +192,7 @@ impl<'arena> Lexer<'arena> {
   }
 
   pub fn line_number_with_offset(&self, location: usize) -> (usize, usize) {
-    let mut line_number = 1;
-    let mut offset: usize = 0;
-    for c in self.src.bytes().take(location) {
-      if c == b'\n' {
-        offset = 0;
-        line_number += 1;
-      } else {
-        offset += 1;
-      }
-    }
-    (line_number, offset)
+    self.sources[self.idx].line_number_with_offset(location)
   }
 
   pub fn consume_line<'bmp>(&mut self, bump: &'bmp Bump) -> Option<Line<'bmp, 'arena>> {
@@ -143,31 +204,39 @@ impl<'arena> Lexer<'arena> {
     let mut tokens = bvec![in bump];
     while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token();
-      end = token.loc.end - self.offset_adjustment;
+      end = token.loc.end; // was: - self.sources[self.idx].offset;
       tokens.push(token);
     }
     if self.peek_is(b'\n') {
       self.advance();
     }
-    Some(Line::new(tokens, &self.src[start..end]))
+    Some(Line::new(
+      tokens,
+      &self.sources[self.idx].src_loc(start..end),
+    ))
   }
 
   pub fn at_empty_line(&self) -> bool {
-    self.at_line_start && self.peek_is(b'\n')
+    self.sources[self.idx].at_line_start() && self.peek_is(b'\n')
   }
 
   pub fn at_delimiter_line(&self) -> Option<(usize, u8)> {
-    if !self.at_line_start
+    if !self.sources[self.idx].at_line_start()
       || self.is_eof()
       || !matches!(
-        self.peek,
+        self.peek(),
         Some(b'_' | b'-' | b'*' | b'=' | b'.' | b'+' | b'/')
       )
     {
       return None;
     }
-    let mut c = self.bytes.clone();
-    let sequence = [self.peek, c.next(), c.next(), c.next(), c.next()];
+    let sequence = [
+      self.nth(1),
+      self.nth(2),
+      self.nth(3),
+      self.nth(4),
+      self.nth(5),
+    ];
     match sequence {
       [Some(b'-'), Some(b'-'), Some(b'\n') | None, _, _] => Some((2, b'-')),
       [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n') | None]
@@ -195,7 +264,7 @@ impl<'arena> Lexer<'arena> {
     if let Some(token) = self.delimiter_line() {
       return token;
     }
-    let at_line_start = self.at_line_start;
+    let at_line_start = self.sources[self.idx].at_line_start();
     match self.advance() {
       Some(b'=') => self.repeating(b'=', EqualSigns),
       Some(b'-') => self.repeating(b'-', Dashes),
@@ -231,25 +300,29 @@ impl<'arena> Lexer<'arena> {
     }
   }
 
+  //  TODO: maybe rename pos?
   fn offset(&self) -> usize {
-    self.src.len() - self.bytes.len() - (self.peek.is_some() as usize)
+    self.sources[self.idx].pos
   }
 
   fn advance(&mut self) -> Option<u8> {
-    let next = std::mem::replace(&mut self.peek, self.bytes.next());
-    self.at_line_start = matches!(next, Some(b'\n'));
-    next
+    // let next = std::mem::replace(&mut self.peek, self.bytes.next());
+    // self.at_line_start = matches!(next, Some(b'\n'));
+    // next
+    self.sources[self.idx].pos += 1;
+    self.sources[self.idx].peek()
   }
 
-  pub fn skip(&mut self, n: usize) -> Option<u8> {
+  pub fn skip(&mut self, n: usize) {
     debug_assert!(n > 1);
-    let next = std::mem::replace(&mut self.peek, self.bytes.nth(n - 1));
-    self.at_line_start = matches!(next, Some(b'\n'));
-    next
+    // let next = std::mem::replace(&mut self.peek, self.bytes.nth(n - 1));
+    // self.at_line_start = matches!(next, Some(b'\n'));
+    // next
+    self.sources[self.idx].pos += n;
   }
 
   fn advance_if(&mut self, c: u8) -> bool {
-    if self.peek == Some(c) {
+    if self.peek() == Some(c) {
       self.advance();
       true
     } else {
@@ -281,7 +354,7 @@ impl<'arena> Lexer<'arena> {
   }
 
   fn advance_while_with(&mut self, f: impl Fn(u8) -> bool) -> usize {
-    while self.peek.map_or(false, &f) {
+    while self.peek().map_or(false, &f) {
       self.advance();
     }
     self.offset()
@@ -321,18 +394,24 @@ impl<'arena> Lexer<'arena> {
     ])
   }
 
+  fn remaining_len(&self) -> usize {
+    self.sources[self.idx].remaining_len()
+  }
+
   fn word(&mut self, at_line_start: bool) -> Token<'arena> {
     let start = self.offset() - 1;
     let end = self.advance_to_word_boundary(true);
     // PERF: if i feel clear about the safety of how i move across
     // bytes and word boundaries, i could change all of these to get_unchecked
-    let lexeme = &self.src[start..end];
+    // let lexeme = &self.src[start..end];
+    let lexeme = self.sources[self.idx].src_loc(start..end);
 
     // special cases
-    match self.peek {
+    match self.peek() {
       // directives
-      Some(b':') if at_line_start && lexeme == "include" && self.src.len() - end > 4 => {
-        let peek = &self.src[end + 1..end + 3].as_bytes();
+      Some(b':') if at_line_start && lexeme == "include" && self.remaining_len() - end > 4 => {
+        // let peek = &self.src[end + 1..end + 3].as_bytes();
+        let peek = self.sources[self.idx].bytes(end + 1..end + 3);
         if peek[0] == b':' && !peek[1].is_ascii_whitespace() {
           self.advance();
           self.advance();
@@ -355,7 +434,8 @@ impl<'arena> Lexer<'arena> {
         self.advance();
         let domain_end = self
           .advance_while_with(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-' || c == b'_');
-        let domain = &self.src[end + 1..domain_end];
+        // let domain = &self.src[end + 1..domain_end];
+        let domain = self.sources[self.idx].src_loc(end + 1..domain_end);
         if domain.len() > 3 && domain.contains('.') && !self.peek_is(b'@') {
           return self.token(MaybeEmail, start, domain_end);
         }
@@ -369,8 +449,9 @@ impl<'arena> Lexer<'arena> {
   }
 
   fn reverse_by(&mut self, n: usize) {
-    self.bytes = self.src[self.offset() - n..].bytes();
-    self.peek = self.bytes.next();
+    // self.bytes = self.src[self.offset() - n..].bytes();
+    // self.peek = self.bytes.next();
+    self.sources[self.idx].pos -= n;
   }
 
   fn is_macro_name(&self, lexeme: &str) -> bool {
@@ -396,7 +477,7 @@ impl<'arena> Lexer<'arena> {
 
   fn advance_until(&mut self, stop: u8) {
     loop {
-      match self.peek {
+      match self.peek() {
         None => break,
         Some(c) if c == stop => break,
         _ => {
@@ -408,7 +489,7 @@ impl<'arena> Lexer<'arena> {
 
   fn advance_until_one_of(&mut self, chars: &[u8]) -> usize {
     loop {
-      match self.peek {
+      match self.peek() {
         Some(c) if chars.contains(&c) => break,
         None => break,
         _ => {
@@ -421,7 +502,7 @@ impl<'arena> Lexer<'arena> {
 
   fn advance_while_one_of(&mut self, chars: &[u8]) {
     loop {
-      match self.peek {
+      match self.peek() {
         Some(c) if chars.contains(&c) => {}
         _ => break,
       }
@@ -437,10 +518,12 @@ impl<'arena> Lexer<'arena> {
   }
 
   fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'arena> {
+    let offset = self.sources[self.idx].offset;
     Token {
       kind,
-      loc: SourceLocation::new(start + self.offset_adjustment, end + self.offset_adjustment),
-      lexeme: &self.src[start..end],
+      loc: SourceLocation::new(start + offset, end + offset),
+      // lexeme: &self.src[start..end],
+      lexeme: self.sources[self.idx].src_loc(start..end),
     }
   }
 
@@ -451,24 +534,25 @@ impl<'arena> Lexer<'arena> {
     breaker: Option<TokenKind>,
   ) -> Token<'arena> {
     let kind = if ch == b':' { Colon } else { SemiColon };
-    if at_line_start || self.peek != Some(ch) {
+    if at_line_start || self.peek() != Some(ch) {
       return self.single(kind);
     }
     if breaker == Some(kind) {
       self.pattern_breaker = Some(kind); // propagate the pattern breaker
       return self.single(kind);
     }
-    let mut c = self.bytes.clone();
+    // let mut c = self.bytes.clone();
+    let mut c = self.sources[self.idx].bytes2();
     match c.next() {
       None | Some(b' ' | b'\n' | b'\t') => {
         self.advance();
         let end = self.offset();
         return self.token(TermDelimiter, end - 2, end);
       }
-      Some(n) if ch == b':' && n == b':' => {
+      Some(n) if ch == b':' && n == &b':' => {
         let mut num_colons = 3;
         let mut next = c.next();
-        if next == Some(b':') {
+        if next == Some(&b':') {
           num_colons += 1;
           next = c.next();
         }
@@ -488,8 +572,9 @@ impl<'arena> Lexer<'arena> {
   }
 
   fn peek_term_delimiter(&self) -> bool {
-    let mut c = self.bytes.clone();
-    if c.next() != Some(b':') {
+    // let mut c = self.bytes.clone();
+    let mut c = self.sources[self.idx].bytes2();
+    if c.next() != Some(&b':') {
       return false;
     }
     matches!(
@@ -502,13 +587,13 @@ impl<'arena> Lexer<'arena> {
 
   fn maybe_callout_number(&mut self) -> Token<'arena> {
     let start = self.offset() - 1;
-    match self.peek {
+    match self.peek() {
       Some(c) if c.is_ascii_digit() => {
         self.advance();
-        while self.peek.map_or(false, |c| c.is_ascii_digit()) {
+        while self.peek().map_or(false, |c| c.is_ascii_digit()) {
           self.advance();
         }
-        if self.peek == Some(b'>') {
+        if self.peek() == Some(b'>') {
           self.advance();
           return self.token(CalloutNumber, start, self.offset());
         } else {
@@ -517,7 +602,7 @@ impl<'arena> Lexer<'arena> {
       }
       Some(b'.') => {
         self.advance();
-        if self.peek == Some(b'>') {
+        if self.peek() == Some(b'>') {
           self.advance();
           return self.token(CalloutNumber, start, self.offset());
         } else {
@@ -525,7 +610,8 @@ impl<'arena> Lexer<'arena> {
         }
       }
       Some(b'!') => {
-        let mut peek = self.bytes.clone();
+        // let mut peek = self.bytes.clone();
+        let mut peek = self.sources[self.idx].bytes2();
         match (peek.next(), peek.next(), peek.next()) {
           (Some(b'-'), Some(b'-'), Some(b'.')) => {
             if let (Some(b'-'), Some(b'-'), Some(b'>')) = (peek.next(), peek.next(), peek.next()) {
@@ -556,10 +642,11 @@ impl<'arena> Lexer<'arena> {
   }
 
   pub fn truncate(&mut self) {
-    self.src = &self.src[..self.offset()];
-    self.bytes = self.src.bytes();
-    while self.bytes.next().is_some() {}
-    self.peek = None;
+    todo!()
+    // self.src = &self.src[..self.offset()];
+    // self.bytes = self.src.bytes();
+    // while self.bytes.next().is_some() {}
+    // self.peek = None;
   }
 }
 
