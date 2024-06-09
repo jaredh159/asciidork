@@ -3,14 +3,14 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   /// if this function is called, the following invaraints hold:
   /// - the line is not empty
   /// - the line starts with a word
   /// - we are considering the line _directly_ below the doc title
   ///
   /// Therefore, it would be an error for this line to not be an author line
-  pub(super) fn parse_author_line(&mut self, line: Line<'bmp, 'src>) -> Result<()> {
+  pub(super) fn parse_author_line(&mut self, line: Line<'bmp>) -> Result<()> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
 

@@ -1,14 +1,14 @@
 use crate::internal::*;
 
 #[derive(Debug, Clone)]
-pub struct ContiguousLines<'bmp, 'src> {
+pub struct ContiguousLines<'bmp> {
   // NB: lines kept in reverse, as there is no VecDeque in bumpalo
   // and we almost always want to consume from the front, so fake it
-  reversed_lines: BumpVec<'bmp, Line<'bmp, 'src>>,
+  reversed_lines: BumpVec<'bmp, Line<'bmp>>,
 }
 
-impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
-  pub fn new(mut lines: BumpVec<'bmp, Line<'bmp, 'src>>) -> Self {
+impl<'bmp> ContiguousLines<'bmp> {
+  pub fn new(mut lines: BumpVec<'bmp, Line<'bmp>>) -> Self {
     lines.reverse();
     ContiguousLines { reversed_lines: lines }
   }
@@ -21,50 +21,50 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.reversed_lines.iter().map(Line::num_tokens).sum()
   }
 
-  pub fn current(&self) -> Option<&Line<'bmp, 'src>> {
+  pub fn current(&self) -> Option<&Line<'bmp>> {
     self.reversed_lines.last()
   }
 
-  pub fn current_mut(&mut self) -> Option<&mut Line<'bmp, 'src>> {
+  pub fn current_mut(&mut self) -> Option<&mut Line<'bmp>> {
     self.reversed_lines.last_mut()
   }
 
-  pub fn current_satisfies(&self, f: impl Fn(&Line<'bmp, 'src>) -> bool) -> bool {
+  pub fn current_satisfies(&self, f: impl Fn(&Line<'bmp>) -> bool) -> bool {
     self.current().map(f).unwrap_or(false)
   }
 
-  pub fn first(&self) -> Option<&Line<'bmp, 'src>> {
+  pub fn first(&self) -> Option<&Line<'bmp>> {
     self.reversed_lines.last()
   }
 
-  pub fn iter(&'bmp self) -> impl ExactSizeIterator<Item = &Line<'bmp, 'src>> + '_ {
+  pub fn iter(&'bmp self) -> impl ExactSizeIterator<Item = &Line<'bmp>> + '_ {
     LinesIter {
       lines: self,
       pos: self.num_lines() - 1,
     }
   }
 
-  pub fn last(&self) -> Option<&Line<'bmp, 'src>> {
+  pub fn last(&self) -> Option<&Line<'bmp>> {
     self.reversed_lines.first()
   }
 
-  pub fn last_mut(&mut self) -> Option<&mut Line<'bmp, 'src>> {
+  pub fn last_mut(&mut self) -> Option<&mut Line<'bmp>> {
     self.reversed_lines.first_mut()
   }
 
-  pub fn remove_last_unchecked(&mut self) -> Line<'bmp, 'src> {
+  pub fn remove_last_unchecked(&mut self) -> Line<'bmp> {
     self.reversed_lines.remove(0)
   }
 
-  pub fn nth(&self, n: usize) -> Option<&Line<'bmp, 'src>> {
+  pub fn nth(&self, n: usize) -> Option<&Line<'bmp>> {
     self.reversed_lines.get(self.reversed_lines.len() - n - 1)
   }
 
-  pub fn current_token(&self) -> Option<&Token<'src>> {
+  pub fn current_token(&self) -> Option<&Token<'bmp>> {
     self.current().and_then(|line| line.current_token())
   }
 
-  pub fn nth_token(&self, n: usize) -> Option<&Token<'src>> {
+  pub fn nth_token(&self, n: usize) -> Option<&Token<'bmp>> {
     self.current().and_then(|line| line.nth_token(n))
   }
 
@@ -72,29 +72,29 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     self.reversed_lines.is_empty()
   }
 
-  pub fn consume_current(&mut self) -> Option<Line<'bmp, 'src>> {
+  pub fn consume_current(&mut self) -> Option<Line<'bmp>> {
     self.reversed_lines.pop()
   }
 
-  pub fn consume_current_token(&mut self) -> Option<Token<'src>> {
+  pub fn consume_current_token(&mut self) -> Option<Token<'bmp>> {
     self
       .consume_current()
       .and_then(|mut line| line.consume_current())
   }
 
-  pub fn extend(&mut self, mut other: BumpVec<'bmp, Line<'bmp, 'src>>) {
+  pub fn extend(&mut self, mut other: BumpVec<'bmp, Line<'bmp>>) {
     other.reverse();
     other.extend(self.reversed_lines.drain(..));
     self.reversed_lines = other;
   }
 
-  pub fn restore_if_nonempty(&mut self, line: Line<'bmp, 'src>) {
+  pub fn restore_if_nonempty(&mut self, line: Line<'bmp>) {
     if !line.is_empty() {
       self.reversed_lines.push(line);
     }
   }
 
-  pub fn any(&self, f: impl FnMut(&Line<'bmp, 'src>) -> bool) -> bool {
+  pub fn any(&self, f: impl FnMut(&Line<'bmp>) -> bool) -> bool {
     self.reversed_lines.iter().any(f)
   }
 
@@ -192,7 +192,7 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
     }
   }
 
-  pub fn discard_until(&mut self, predicate: impl Fn(&Line<'bmp, 'src>) -> bool) {
+  pub fn discard_until(&mut self, predicate: impl Fn(&Line<'bmp>) -> bool) {
     while let Some(line) = self.first() {
       if predicate(line) {
         return;
@@ -241,13 +241,13 @@ impl<'bmp, 'src> ContiguousLines<'bmp, 'src> {
   }
 }
 
-struct LinesIter<'bmp, 'src> {
-  lines: &'bmp ContiguousLines<'bmp, 'src>,
+struct LinesIter<'bmp> {
+  lines: &'bmp ContiguousLines<'bmp>,
   pos: usize,
 }
 
-impl<'bmp, 'src> Iterator for LinesIter<'bmp, 'src> {
-  type Item = &'bmp Line<'bmp, 'src>;
+impl<'bmp> Iterator for LinesIter<'bmp> {
+  type Item = &'bmp Line<'bmp>;
 
   fn next(&mut self) -> Option<Self::Item> {
     if self.pos == usize::MAX {
@@ -260,7 +260,7 @@ impl<'bmp, 'src> Iterator for LinesIter<'bmp, 'src> {
   }
 }
 
-impl<'bmp, 'src> ExactSizeIterator for LinesIter<'bmp, 'src> {
+impl<'bmp> ExactSizeIterator for LinesIter<'bmp> {
   fn len(&self) -> usize {
     self.lines.reversed_lines.len()
   }

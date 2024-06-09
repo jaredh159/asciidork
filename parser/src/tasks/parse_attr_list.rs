@@ -34,12 +34,12 @@ struct AttrState<'bmp: 'src, 'src> {
   is_legacy_anchor: bool,
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   /// Parse an attribute list.
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(crate) fn parse_attr_list(&mut self, line: &mut Line<'bmp, 'src>) -> Result<AttrList<'bmp>> {
+  pub(crate) fn parse_attr_list(&mut self, line: &mut Line<'bmp>) -> Result<AttrList<'bmp>> {
     self.parse_attrs(line, false)
   }
 
@@ -49,14 +49,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   /// and also for consuming the open bracket before calling this function._
   pub(super) fn parse_formatted_text_attr_list(
     &mut self,
-    line: &mut Line<'bmp, 'src>,
+    line: &mut Line<'bmp>,
   ) -> Result<AttrList<'bmp>> {
     self.parse_attrs(line, true)
   }
 
   fn parse_attrs(
     &mut self,
-    line: &mut Line<'bmp, 'src>,
+    line: &mut Line<'bmp>,
     formatted_text: bool,
   ) -> Result<AttrList<'bmp>> {
     use AttrKind::*;
@@ -228,7 +228,7 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
     self.tokens.push(token);
   }
 
-  fn commit_prev(&mut self, parser: &mut Parser<'bmp, 'src>) -> Result<()> {
+  fn commit_prev(&mut self, parser: &mut Parser<'bmp>) -> Result<()> {
     use AttrKind::*;
     if !self.attr.is_empty() || self.kind == Named {
       match &self.kind {

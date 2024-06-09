@@ -62,10 +62,10 @@ impl fmt::Debug for DataFormat {
 }
 
 #[derive(Debug, Clone)]
-pub struct TableTokens<'bmp, 'src>(Line<'bmp, 'src>);
+pub struct TableTokens<'bmp>(Line<'bmp>);
 
-impl<'bmp, 'src> TableTokens<'bmp, 'src> {
-  pub fn new(tokens: BumpVec<'bmp, Token<'src>>, src: &'src str) -> Self {
+impl<'bmp> TableTokens<'bmp> {
+  pub fn new(tokens: BumpVec<'bmp, Token<'bmp>>, src: &'bmp str) -> Self {
     Self(Line::new(tokens, src))
   }
 
@@ -73,15 +73,15 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
     self.0.discard(n);
   }
 
-  pub fn current(&self) -> Option<&Token<'src>> {
+  pub fn current(&self) -> Option<&Token<'bmp>> {
     self.0.current_token()
   }
 
-  pub fn current_mut(&mut self) -> Option<&mut Token<'src>> {
+  pub fn current_mut(&mut self) -> Option<&mut Token<'bmp>> {
     self.0.current_token_mut()
   }
 
-  pub fn nth(&self, n: usize) -> Option<&Token<'src>> {
+  pub fn nth(&self, n: usize) -> Option<&Token<'bmp>> {
     self.0.nth_token(n)
   }
 
@@ -89,7 +89,7 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
     self.0.has_seq_at(kinds, offset)
   }
 
-  pub fn consume_current(&mut self) -> Option<Token<'src>> {
+  pub fn consume_current(&mut self) -> Option<Token<'bmp>> {
     self.0.consume_current()
   }
 
@@ -97,7 +97,7 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
     self.0.drop_leading_bytes(n);
   }
 
-  pub fn consume_splitting(&mut self, embeddable_separator: Option<char>) -> Option<Token<'src>> {
+  pub fn consume_splitting(&mut self, embeddable_separator: Option<char>) -> Option<Token<'bmp>> {
     let Some(sep) = embeddable_separator else {
       return self.consume_current();
     };

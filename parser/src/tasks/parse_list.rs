@@ -1,10 +1,10 @@
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn parse_list(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: Option<ChunkMeta<'bmp>>,
   ) -> Result<Block<'bmp>> {
     let first_line = lines.consume_current().unwrap();
@@ -111,7 +111,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_list_item_blocks(
     &mut self,
-    lines: ContiguousLines<'bmp, 'src>,
+    lines: ContiguousLines<'bmp>,
     mut blocks: BumpVec<'bmp, Block<'bmp>>,
   ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
     if lines.starts_nested_list(&self.ctx.list.stack, true) {
@@ -166,8 +166,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn parse_description_list_item(
     &mut self,
     marker: ListMarker,
-    mut line: Line<'bmp, 'src>,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut line: Line<'bmp>,
+    mut lines: ContiguousLines<'bmp>,
   ) -> Result<Option<ListItem<'bmp>>> {
     let principle = {
       let before_delim = line.extract_line_before(&[TermDelimiter], self.bump);
@@ -192,7 +192,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn parse_description_list_item_blocks(
     &mut self,
-    lines: ContiguousLines<'bmp, 'src>,
+    lines: ContiguousLines<'bmp>,
   ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);

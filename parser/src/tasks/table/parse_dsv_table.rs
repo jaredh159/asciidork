@@ -1,11 +1,11 @@
 use super::{context::*, DataFormat, TableTokens};
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(super) fn parse_dsv_implicit_first_row(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'bmp>,
+    ctx: &mut TableContext<'bmp>,
   ) -> Result<()> {
     let mut cells = bvec![in self.bump];
     while let Some(cell) = self.parse_dsv_table_cell(tokens, ctx, cells.len())? {
@@ -20,8 +20,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(super) fn parse_dsv_table_row(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'bmp>,
+    ctx: &mut TableContext<'bmp>,
   ) -> Result<Option<Row<'bmp>>> {
     let mut cells = bvec![in self.bump];
     while let Some(cell) = self.parse_dsv_table_cell(tokens, ctx, cells.len())? {
@@ -40,8 +40,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_dsv_table_cell(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'bmp>,
+    ctx: &mut TableContext<'bmp>,
     col_index: usize,
   ) -> Result<Option<Cell<'bmp>>> {
     if tokens.is_empty() {
@@ -87,8 +87,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn finish_dsv_table_cell(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'bmp>,
+    ctx: &mut TableContext<'bmp>,
     col_index: usize,
     start: usize,
   ) -> Result<Option<Cell<'bmp>>> {

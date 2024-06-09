@@ -25,6 +25,10 @@ macro_rules! assert_doc_content {
     let content = parse_doc_content!($input);
     assert_eq!(content, $expected);
   }};
+  (resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {{
+    let content = parse_doc_content!($input, $bytes);
+    assert_eq!(content, $expected);
+  }};
 }
 
 #[macro_export]
@@ -355,7 +359,10 @@ macro_rules! test_inlines_loose {
     fn $name() {
       let mut settings = ::asciidork_meta::JobSettings::embedded();
       settings.strict = false;
+
       let parser = Parser::new_settings(leaked_bump(), $input, settings);
+      // parser.set_resolver(Box::new(::asciidork_parser::LolResolver));
+
       let content = parser.parse().unwrap().document.content;
       let blocks = content.blocks().expect("expected blocks").clone();
       if blocks.len() != 1 {
@@ -447,6 +454,24 @@ macro_rules! parse_single_block_loose {
 macro_rules! parse_doc_content {
   ($input:expr) => {{
     let parser = Parser::new(leaked_bump(), $input);
+    parser.parse().unwrap().document.content
+  }};
+  ($input:expr, $bytes:expr) => {{
+    let mut parser = Parser::new(leaked_bump(), $input);
+    struct MockResolver(pub Vec<u8>);
+    impl asciidork_parser::include_resolver::IncludeResolver for MockResolver {
+      fn resolve(
+        &mut self,
+        _path: &str,
+        buffer: &mut dyn asciidork_parser::include_resolver::IncludeBuffer,
+      ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
+        buffer.initialize(self.0.len());
+        let bytes = buffer.as_bytes_mut();
+        bytes.copy_from_slice(&self.0);
+        Ok(self.0.len())
+      }
+    }
+    parser.set_resolver(Box::new(MockResolver(Vec::from($bytes))));
     parser.parse().unwrap().document.content
   }};
 }

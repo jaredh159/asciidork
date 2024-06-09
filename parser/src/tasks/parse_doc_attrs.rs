@@ -5,8 +5,8 @@ use regex::Regex;
 
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'bmp, 'src>) -> Result<()> {
+impl<'bmp> Parser<'bmp> {
+  pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'bmp>) -> Result<()> {
     while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
       if key == "doctype" {
         if let AttrValue::String(s) = &value {
@@ -26,7 +26,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(super) fn parse_doc_attr(
     &self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Result<Option<(String, AttrValue, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
@@ -83,7 +83,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn join_wrapped_value(
     &self,
-    mut first_line_src: &'src str,
+    mut first_line_src: &'bmp str,
     lines: &mut ContiguousLines,
   ) -> Cow<str> {
     let has_continuation = if first_line_src.ends_with(" \\") {

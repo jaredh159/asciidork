@@ -1,6 +1,6 @@
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn parse_section(&mut self) -> Result<Option<Section<'bmp>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);

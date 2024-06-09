@@ -3,7 +3,7 @@ use regex::Regex;
 
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn section_id(
     &mut self,
     line: &str,
