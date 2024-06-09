@@ -2,7 +2,7 @@ use crate::internal::*;
 use crate::variants::token::*;
 use ast::short::block::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'bmp>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
@@ -95,7 +95,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_discrete_heading(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Block<'bmp>> {
     let mut line = lines.consume_current().unwrap();
@@ -118,7 +118,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   // they are the documented way to separate adjacent lists
   fn parse_line_comment_block(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Option<Block<'bmp>> {
     if lines.starts_with_comment_line() {
       let start = lines.current_token().unwrap().loc.start;
@@ -139,7 +139,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_delimited_block(
     &mut self,
     delimiter: Delimiter,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let prev = self.ctx.delimiter;
@@ -210,7 +210,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_image_block(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Block<'bmp>> {
     let mut line = lines.consume_current().unwrap();
@@ -229,7 +229,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_paragraph(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let context = meta.block_paragraph_context(&mut lines);
@@ -260,7 +260,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_quoted_paragraph(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let mut attr_line = lines.remove_last_unchecked();
@@ -293,7 +293,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_break(
     &mut self,
     context: BlockContext,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Option<Block<'bmp>>> {
     let end = lines.consume_current().unwrap().last_loc().unwrap().end;
@@ -309,7 +309,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_toc_macro(
     &mut self,
     token_loc: SourceLocation,
-    lines: ContiguousLines<'bmp, 'src>,
+    lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Block<'bmp>> {
     self.ctx.saw_toc_macro = true;

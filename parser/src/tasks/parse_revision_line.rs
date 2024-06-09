@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(super) fn parse_revision_line(&mut self, lines: &mut ContiguousLines) {
     let Some(line) = lines.current() else {
       return;

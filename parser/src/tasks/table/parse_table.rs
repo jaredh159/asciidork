@@ -7,10 +7,10 @@ use super::{context::*, DataFormat, TableTokens};
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn parse_table(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
+    mut lines: ContiguousLines<'bmp>,
     meta: ChunkMeta<'bmp>,
   ) -> Result<Block<'bmp>> {
     let delim_line = lines.consume_current().unwrap();
@@ -128,7 +128,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn push_table_row(
     &mut self,
     mut row: Row<'bmp>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    ctx: &mut TableContext<'bmp>,
   ) -> Result<()> {
     if ctx.table.rows.is_empty()
       && ctx.table.header_row.is_none()
@@ -150,7 +150,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn finish_implicit_header_row(
     &mut self,
     cells: BumpVec<'bmp, Cell<'bmp>>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    ctx: &mut TableContext<'bmp>,
   ) -> Result<()> {
     if cells.is_empty() {
       return Ok(());
@@ -176,9 +176,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn finish_cell(
     &mut self,
     cell_spec: CellSpec,
-    mut cell_tokens: BumpVec<'bmp, Token<'src>>,
+    mut cell_tokens: BumpVec<'bmp, Token<'bmp>>,
     col_index: usize,
-    ctx: &mut TableContext<'bmp, 'src>,
+    ctx: &mut TableContext<'bmp>,
     mut loc: Range<usize>,
   ) -> Result<Option<(Cell<'bmp>, u8)>> {
     let col_spec = ctx.col_specs.get(col_index);
@@ -269,7 +269,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn reparse_header_cells(
     &mut self,
     row: &mut Row<'bmp>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    ctx: &mut TableContext<'bmp>,
   ) -> Result<()> {
     for idx in 0..row.cells.len() {
       let mut content = CellContent::Literal(InlineNodes::new(self.bump));
@@ -292,7 +292,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_non_asciidoc_cell(
     &mut self,
-    data: ParseCellData<'bmp, 'src>,
+    data: ParseCellData<'bmp>,
     cell_style: CellContentStyle,
   ) -> Result<Cell<'bmp>> {
     let nodes = if data.cell_tokens.is_empty() {
@@ -343,9 +343,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
   fn table_content(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    start_delim: &Line<'bmp, 'src>,
-  ) -> Result<(TableTokens<'bmp, 'src>, usize)> {
+    mut lines: ContiguousLines<'bmp>,
+    start_delim: &Line<'bmp>,
+  ) -> Result<(TableTokens<'bmp>, usize)> {
     let mut tokens = BumpVec::with_capacity_in(lines.num_tokens(), self.bump);
     let delim_loc = start_delim.last_loc().unwrap();
     let start = delim_loc.end + 1;

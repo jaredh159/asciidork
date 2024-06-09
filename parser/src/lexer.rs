@@ -5,16 +5,10 @@ use crate::variants::token::*;
 
 #[derive(Debug)]
 pub struct Lexer<'arena> {
-  // src: &'arena str,
-  // bytes: Bytes<'arena>,
-  // peek: Option<u8>,
-  // at_line_start: bool, // maybe
-  // offset_adjustment: usize,           // maybe push down
   pattern_breaker: Option<TokenKind>, // see if we can eliminate
-  // source_file: Option<SourceFile>,
   idx: usize,
   prev_idx: Option<usize>,
-  sources: BumpVec<'arena, AdocSource<'arena>>,
+  sources: BumpVec<'arena, Source<'arena>>,
 }
 
 // todo: manual debug for safety
@@ -24,34 +18,18 @@ pub enum SourceFile {
   File(String),
 }
 
-pub struct AsciidocSource<'arena> {
-  src: &'arena str,
-  file: Option<SourceFile>,
-}
-
-impl<'arena> AsciidocSource<'arena> {
-  pub const fn new(src: &'arena str, file: Option<SourceFile>) -> Self {
-    AsciidocSource { src, file }
-  }
-}
-
-impl<'arena> From<&'arena str> for AsciidocSource<'arena> {
-  fn from(src: &'arena str) -> AsciidocSource<'arena> {
-    AsciidocSource { src, file: None }
-  }
-}
-
+// todo? no pub?
 #[derive(Debug)]
-pub struct AdocSource<'arena> {
+pub struct Source<'arena> {
   src: BumpVec<'arena, u8>,
   pos: usize,
-  offset: usize,
+  offset: usize, // naming... adjust?
   file: Option<SourceFile>,
 }
 
-impl<'arena> AdocSource<'arena> {
+impl<'arena> Source<'arena> {
   pub const fn new(src: BumpVec<'arena, u8>, file: Option<SourceFile>) -> Self {
-    AdocSource { src, pos: 0, offset: 0, file }
+    Source { src, pos: 0, offset: 0, file }
   }
 
   pub fn peek(&self) -> Option<u8> {
@@ -62,7 +40,7 @@ impl<'arena> AdocSource<'arena> {
     self.src.get(self.pos + n).copied()
   }
 
-  pub fn src_loc(&self, loc: impl Into<SourceLocation>) -> &'arena str {
+  pub fn src_loc(&'arena self, loc: impl Into<SourceLocation>) -> &'arena str {
     let loc: SourceLocation = loc.into();
     // let hello: &str = std::str::from_utf8(&bytes[0..4]).unwrap();
     // &self.src[loc.start - self.offset_adjustment..loc.end - self.offset_adjustment]
@@ -74,7 +52,7 @@ impl<'arena> AdocSource<'arena> {
   }
 
   // rename byte_slice?
-  pub fn bytes(&self, range: std::ops::Range<usize>) -> &'arena [u8] {
+  pub fn bytes(&'arena self, range: std::ops::Range<usize>) -> &'arena [u8] {
     &self.src[range]
   }
 
@@ -82,7 +60,7 @@ impl<'arena> AdocSource<'arena> {
     self.src[self.pos..].iter()
   }
 
-  pub fn line_of(&self, location: usize) -> &'arena str {
+  pub fn line_of(&self, _location: usize) -> &'arena str {
     todo!()
     // let location = location - self.offset;
     // let mut start = location;
@@ -132,7 +110,7 @@ impl<'arena> Lexer<'arena> {
       pattern_breaker: None,
       idx: 0,
       prev_idx: None,
-      sources: bvec![in bump; AdocSource::new(src, file)],
+      sources: bvec![in bump; Source::new(src, file)],
     }
   }
 
@@ -144,7 +122,7 @@ impl<'arena> Lexer<'arena> {
     self.sources[self.idx].nth(n)
   }
 
-  pub fn adjust_offset(&mut self, offset_adjustment: usize) {
+  pub fn adjust_offset(&mut self, _offset_adjustment: usize) {
     // self.offset_adjustment = offset_adjustment;
     todo!()
   }
@@ -164,7 +142,7 @@ impl<'arena> Lexer<'arena> {
     SourceLocation::from(self.offset())
   }
 
-  pub const fn is_eof(&self) -> bool {
+  pub fn is_eof(&self) -> bool {
     self.peek().is_none()
   }
 
@@ -172,7 +150,7 @@ impl<'arena> Lexer<'arena> {
     self.peek() == Some(c)
   }
 
-  pub fn loc_src(&self, loc: impl Into<SourceLocation>) -> &'arena str {
+  pub fn loc_src(&'arena self, loc: impl Into<SourceLocation>) -> &'arena str {
     self.sources[self.idx].src_loc(loc)
   }
 
@@ -195,7 +173,7 @@ impl<'arena> Lexer<'arena> {
     self.sources[self.idx].line_number_with_offset(location)
   }
 
-  pub fn consume_line<'bmp>(&mut self, bump: &'bmp Bump) -> Option<Line<'bmp, 'arena>> {
+  pub fn consume_line<'bmp>(&mut self, bump: &'bmp Bump) -> Option<Line<'arena>> {
     if self.is_eof() {
       return None;
     }
@@ -649,6 +627,23 @@ impl<'arena> Lexer<'arena> {
     // self.peek = None;
   }
 }
+
+// ??? TODO: delete me?
+pub struct AsciidocSource<'arena> {
+  src: &'arena str,
+  file: Option<SourceFile>,
+}
+impl<'arena> AsciidocSource<'arena> {
+  pub const fn new(src: &'arena str, file: Option<SourceFile>) -> Self {
+    AsciidocSource { src, file }
+  }
+}
+impl<'arena> From<&'arena str> for AsciidocSource<'arena> {
+  fn from(src: &'arena str) -> AsciidocSource<'arena> {
+    AsciidocSource { src, file: None }
+  }
+}
+// ??? TODO: delete me?
 
 #[cfg(test)]
 mod tests {

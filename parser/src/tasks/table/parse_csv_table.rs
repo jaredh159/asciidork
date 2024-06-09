@@ -2,11 +2,11 @@ use super::{context::*, TableTokens};
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn finish_csv_table_cell(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'bmp>,
+    ctx: &mut TableContext<'bmp>,
     col_index: usize,
     mut start: usize,
   ) -> Result<Option<Cell<'bmp>>> {

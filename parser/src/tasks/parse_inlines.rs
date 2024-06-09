@@ -22,17 +22,17 @@ impl<'bmp> Accum<'bmp> {
   }
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn parse_inlines(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Result<InlineNodes<'bmp>> {
     self.parse_inlines_until(lines, &[])
   }
 
   pub(crate) fn parse_inlines_until(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp>,
     stop_tokens: &[TokenKind],
   ) -> Result<InlineNodes<'bmp>> {
     let inlines = BumpVec::new_in(self.bump).into();
@@ -596,12 +596,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_inner<const N: usize>(
     &mut self,
-    start: &Token<'src>,
+    start: &Token<'bmp>,
     stop_tokens: [TokenKind; N],
     wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
     state: &mut Accum<'bmp>,
-    mut line: Line<'bmp, 'src>,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    mut line: Line<'bmp>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Result<()> {
     let mut loc = start.loc;
     stop_tokens
@@ -618,22 +618,22 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_unconstrained(
     &mut self,
-    token: &Token<'src>,
+    token: &Token<'bmp>,
     wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
     state: &mut Accum<'bmp>,
-    line: Line<'bmp, 'src>,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    line: Line<'bmp>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Result<()> {
     self.parse_inner(token, [token.kind, token.kind], wrap, state, line, lines)
   }
 
   fn parse_constrained(
     &mut self,
-    token: &Token<'src>,
+    token: &Token<'bmp>,
     wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
     state: &mut Accum<'bmp>,
-    line: Line<'bmp, 'src>,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    line: Line<'bmp>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Result<()> {
     self.parse_inner(token, [token.kind], wrap, state, line, lines)
   }
@@ -656,7 +656,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  fn should_stop_at(&self, line: &Line<'bmp, 'src>) -> bool {
+  fn should_stop_at(&self, line: &Line<'bmp>) -> bool {
     if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
       return true;
     }
@@ -680,8 +680,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn push_callout_tuck(
     &mut self,
-    token: &Token<'src>,
-    line: &mut Line<'bmp, 'src>,
+    token: &Token<'bmp>,
+    line: &mut Line<'bmp>,
     state: &mut Accum<'bmp>,
   ) {
     let mut tuck = token.to_source_string(self.bump);
@@ -712,7 +712,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 }
 
-fn push_newline_if_needed<'bmp>(state: &mut Accum<'bmp>, lines: &ContiguousLines<'bmp, '_>) {
+fn push_newline_if_needed<'bmp>(state: &mut Accum<'bmp>, lines: &ContiguousLines<'bmp>) {
   // LOGIC: if we have a current line and it is entirely unconsumed
   // it means we've finished parsing something at the end of the prev line
   // so we need to join with a newline, examples:
@@ -741,12 +741,12 @@ fn push_newline_if_needed<'bmp>(state: &mut Accum<'bmp>, lines: &ContiguousLines
   }
 }
 
-fn push_simple<'bmp, 'src>(
+fn push_simple<'bmp>(
   inline_node: Inline<'bmp>,
-  token: &Token<'src>,
-  mut line: Line<'bmp, 'src>,
+  token: &Token<'bmp>,
+  mut line: Line<'bmp>,
   state: &mut Accum<'bmp>,
-  lines: &mut ContiguousLines<'bmp, 'src>,
+  lines: &mut ContiguousLines<'bmp>,
 ) {
   let mut loc = token.loc;
   line.discard(1);

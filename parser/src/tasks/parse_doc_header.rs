@@ -1,7 +1,7 @@
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(crate) fn parse_document_header(&mut self) -> Result<()> {
     let Some(mut block) = self.read_lines() else {
       return Ok(());
@@ -45,7 +45,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_doc_title_author_revision(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Result<()> {
     let first_line = lines.current().expect("non-empty doc header");
     if !first_line.is_heading_level(0) {

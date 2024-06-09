@@ -65,7 +65,7 @@ fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
   specs.push(spec);
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
   pub(super) fn parse_col_specs(&mut self, cols_attr: &str) -> BumpVec<'bmp, ColSpec> {
     let mut specs = bvec![in self.bump];
     if cols_attr.trim().is_empty() {

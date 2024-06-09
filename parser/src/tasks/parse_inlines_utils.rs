@@ -58,7 +58,7 @@ pub const fn node(content: Inline, loc: SourceLocation) -> InlineNode {
 }
 
 pub fn finish_macro<'bmp>(
-  line: &Line<'bmp, '_>,
+  line: &Line<'bmp>,
   loc: &mut SourceLocation,
   line_end: SourceLocation,
   text: &mut CollectText<'bmp>,

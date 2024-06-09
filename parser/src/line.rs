@@ -5,34 +5,34 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 #[derive(Debug, Clone)]
-pub struct Line<'bmp, 'src> {
-  pub src: &'src str,
-  all_tokens: BumpVec<'bmp, Token<'src>>,
+pub struct Line<'bmp> {
+  pub src: &'bmp str,
+  all_tokens: BumpVec<'bmp, Token<'bmp>>,
   pos: usize,
 }
 
-impl<'bmp, 'src> Line<'bmp, 'src> {
-  pub fn new(tokens: BumpVec<'bmp, Token<'src>>, src: &'src str) -> Self {
+impl<'bmp> Line<'bmp> {
+  pub fn new(tokens: BumpVec<'bmp, Token<'bmp>>, src: &'bmp str) -> Self {
     Line { all_tokens: tokens, src, pos: 0 }
   }
 
-  pub fn drain_into(mut self, tokens: &mut BumpVec<'bmp, Token<'src>>) {
+  pub fn drain_into(mut self, tokens: &mut BumpVec<'bmp, Token<'bmp>>) {
     tokens.extend(self.all_tokens.drain(self.pos..));
   }
 
-  pub fn current_token(&self) -> Option<&Token<'src>> {
+  pub fn current_token(&self) -> Option<&Token<'bmp>> {
     self.all_tokens.get(self.pos)
   }
 
-  pub fn current_token_mut(&mut self) -> Option<&mut Token<'src>> {
+  pub fn current_token_mut(&mut self) -> Option<&mut Token<'bmp>> {
     self.all_tokens.get_mut(self.pos)
   }
 
-  pub fn peek_token(&self) -> Option<&Token<'src>> {
+  pub fn peek_token(&self) -> Option<&Token<'bmp>> {
     self.nth_token(1)
   }
 
-  pub fn last_token(&self) -> Option<&Token<'src>> {
+  pub fn last_token(&self) -> Option<&Token<'bmp>> {
     if self.is_empty() {
       return None;
     }
@@ -43,7 +43,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.last_token().map(|t| t.loc)
   }
 
-  pub fn nth_token(&self, n: usize) -> Option<&Token<'src>> {
+  pub fn nth_token(&self, n: usize) -> Option<&Token<'bmp>> {
     self.all_tokens.get(self.pos + n)
   }
 
@@ -121,7 +121,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     debug_assert!(token.unwrap().is(kind));
   }
 
-  pub fn discard_last(&mut self) -> Option<Token<'src>> {
+  pub fn discard_last(&mut self) -> Option<Token<'bmp>> {
     let Some(token) = self.all_tokens.pop() else {
       return None;
     };
@@ -146,11 +146,11 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
-  fn tokens(&self) -> impl ExactSizeIterator<Item = &Token<'src>> {
+  fn tokens(&self) -> impl ExactSizeIterator<Item = &Token<'bmp>> {
     self.all_tokens.iter().skip(self.pos)
   }
 
-  fn tokens_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Token<'src>> {
+  fn tokens_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Token<'bmp>> {
     self.all_tokens.iter_mut().skip(self.pos)
   }
 
@@ -185,7 +185,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.current_is(kind)
   }
 
-  pub fn starts_with(&self, predicate: impl Fn(&Token<'src>) -> bool) -> bool {
+  pub fn starts_with(&self, predicate: impl Fn(&Token<'bmp>) -> bool) -> bool {
     self.current_token().map(predicate).unwrap_or(false)
   }
 
@@ -359,7 +359,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   #[must_use]
-  pub fn consume_current(&mut self) -> Option<Token<'src>> {
+  pub fn consume_current(&mut self) -> Option<Token<'bmp>> {
     if self.is_empty() {
       return None;
     }
@@ -369,7 +369,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Some(token)
   }
 
-  pub fn into_lines_in(self, bump: &'bmp Bump) -> ContiguousLines<'bmp, 'src> {
+  pub fn into_lines_in(self, bump: &'bmp Bump) -> ContiguousLines<'bmp> {
     ContiguousLines::new(bvec![in bump; self])
   }
 
@@ -500,7 +500,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Some((checked, SourceString::new(src, loc)))
   }
 
-  pub fn extract_line_before(&mut self, seq: &[TokenKind], bump: &'bmp Bump) -> Line<'bmp, 'src> {
+  pub fn extract_line_before(&mut self, seq: &[TokenKind], bump: &'bmp Bump) -> Line<'bmp> {
     let mut tokens = BumpVec::with_capacity_in(self.num_tokens(), bump);
     let orig_src = self.src;
     let mut src_len = 0;

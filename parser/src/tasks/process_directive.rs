@@ -1,8 +1,8 @@
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(super) fn try_process_directive(&mut self, line: &Line<'bmp, 'src>) -> Result<bool> {
+impl<'bmp> Parser<'bmp> {
+  pub(super) fn try_process_directive(&mut self, line: &Line<'bmp>) -> Result<bool> {
     match line.current_token().unwrap().lexeme {
       "include::" => self.try_process_include_directive(line),
       "ifdef::" => todo!(),
@@ -12,7 +12,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  fn try_process_include_directive(&mut self, line: &Line<'bmp, 'src>) -> Result<bool> {
+  fn try_process_include_directive(&mut self, line: &Line<'bmp>) -> Result<bool> {
     // consider regex instead?
     if line.num_tokens() < 4
       || !line.contains_nonescaped(OpenBracket)
@@ -50,10 +50,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     // TODO: handle error
     resolver.resolve(&target, &mut self.bufs[0]).unwrap();
-    let lexer = Lexer::new(AsciidocSource::new(
-      std::str::from_utf8(&self.bufs[0]).unwrap(),
-      Some(SourceFile::File(target.to_string())),
-    ));
+    // let lexer = Lexer::new(AsciidocSource::new(
+    //   std::str::from_utf8(&self.bufs[0]).unwrap(),
+    //   Some(SourceFile::File(target.to_string())),
+    // ));
     // let mut parser = Parser::new(
     //   self.bump,
     //   AsciidocSource::new(

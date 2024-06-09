@@ -3,12 +3,12 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{include_resolver::IncludeResolver, internal::*};
 
 // #[derive(Debug)]
-pub struct Parser<'bmp: 'src, 'src> {
+pub struct Parser<'bmp> {
   pub(super) bump: &'bmp Bump,
-  pub(super) lexers: BumpVec<'bmp, Lexer<'src>>,
+  pub(super) lexers: BumpVec<'bmp, Lexer<'bmp>>,
   pub(super) lexer_idx: usize,
   pub(super) document: Document<'bmp>,
-  pub(super) peeked_lines: Option<ContiguousLines<'bmp, 'src>>,
+  pub(super) peeked_lines: Option<ContiguousLines<'bmp>>,
   pub(super) peeked_meta: Option<ChunkMeta<'bmp>>,
   pub(super) ctx: ParseContext<'bmp>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
@@ -28,11 +28,11 @@ pub(crate) struct ListContext {
   pub(crate) parsing_continuations: bool,
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub fn new(bump: &'bmp Bump, src: impl Into<AsciidocSource<'src>>) -> Parser<'bmp, 'src> {
+impl<'bmp> Parser<'bmp> {
+  pub fn new(bump: &'bmp Bump, src: BumpVec<'bmp, u8>, file: Option<SourceFile>) -> Self {
     Parser {
       bump,
-      lexers: bvec![in bump; Lexer::new(src)],
+      lexers: bvec![in bump; Lexer::new(bump, src, file)],
       lexer_idx: 0,
       document: Document::new(bump),
       peeked_lines: None,
@@ -47,10 +47,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn new_settings(
     bump: &'bmp Bump,
-    src: impl Into<AsciidocSource<'src>>,
+    src: BumpVec<'bmp, u8>,
+    file: Option<SourceFile>,
     settings: JobSettings,
-  ) -> Parser<'bmp, 'src> {
-    let mut p = Parser::new(bump, src);
+  ) -> Self {
+    let mut p = Parser::new(bump, src, file);
     p.strict = settings.strict;
     p.document.meta = settings.into();
     p
@@ -60,8 +61,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.include_resolver = Some(resolver);
   }
 
-  pub fn cell_parser(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {
-    let mut cell_parser = Parser::new(self.bump, src);
+  pub fn cell_parser(&mut self, src: &'bmp str, offset: usize) -> Parser<'bmp> {
+    // TODO: can we get away without cpying the bytes here?
+    // maybe set the lexer position manually?
+    let src = BumpVec::from_iter_in(src.bytes(), self.bump);
+    let mut cell_parser = Parser::new(self.bump, src, None); // TODO: file
     cell_parser.strict = self.strict;
     lexer!(cell_parser).adjust_offset(offset);
     cell_parser.ctx = self.ctx.clone_for_cell();
@@ -84,18 +88,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn line_from(
     &self,
-    tokens: BumpVec<'bmp, Token<'src>>,
+    tokens: BumpVec<'bmp, Token<'bmp>>,
     loc: impl Into<SourceLocation>,
-  ) -> Line<'bmp, 'src> {
+  ) -> Line<'bmp> {
     Line::new(tokens, lexer!(self).loc_src(loc))
   }
 
-  pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
+  pub(crate) fn read_line(&mut self) -> Option<Line<'bmp>> {
     debug_assert!(self.peeked_lines.is_none());
     lexer!(self).consume_line(self.bump)
   }
 
-  pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'bmp, 'src>> {
+  pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'bmp>> {
     if let Some(peeked) = self.peeked_lines.take() {
       return Some(peeked);
     }
@@ -114,10 +118,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Some(ContiguousLines::new(lines))
   }
 
-  pub(crate) fn read_lines_until(
-    &mut self,
-    delimiter: Delimiter,
-  ) -> Option<ContiguousLines<'bmp, 'src>> {
+  pub(crate) fn read_lines_until(&mut self, delimiter: Delimiter) -> Option<ContiguousLines<'bmp>> {
     let mut lines = self.read_lines()?;
     if lines.any(|l| l.is_delimiter(delimiter)) {
       return Some(lines);
@@ -144,7 +145,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  pub(crate) fn restore_lines(&mut self, lines: ContiguousLines<'bmp, 'src>) {
+  pub(crate) fn restore_lines(&mut self, lines: ContiguousLines<'bmp>) {
     debug_assert!(self.peeked_lines.is_none());
     if !lines.is_empty() {
       self.peeked_lines = Some(lines);
@@ -156,11 +157,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.peeked_meta = Some(meta);
   }
 
-  pub(crate) fn restore_peeked(
-    &mut self,
-    lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) {
+  pub(crate) fn restore_peeked(&mut self, lines: ContiguousLines<'bmp>, meta: ChunkMeta<'bmp>) {
     self.restore_lines(lines);
     self.restore_peeked_meta(meta);
   }
@@ -204,7 +201,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn parse_chunk_meta(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'bmp>,
   ) -> Result<ChunkMeta<'bmp>> {
     if let Some(meta) = self.peeked_meta.take() {
       return Ok(meta);
