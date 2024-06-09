@@ -88,7 +88,7 @@ impl<'bmp> Parser<'bmp> {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
             acc.commit();
-            match token.lexeme {
+            match token.lexeme.as_str() {
               "image:" => {
                 let target = line.consume_macro_target(self.bump);
                 let attrs = self.parse_attr_list(&mut line)?;
@@ -295,7 +295,7 @@ impl<'bmp> Parser<'bmp> {
             acc.push_node(Discarded, line.consume_current().unwrap().loc);
           }
 
-          MaybeEmail if subs.macros() && EMAIL_RE.is_match(token.lexeme) => {
+          MaybeEmail if subs.macros() && EMAIL_RE.is_match(&token.lexeme) => {
             acc.push_node(
               Macro(Link {
                 scheme: Some(UrlScheme::Mailto),
@@ -544,7 +544,7 @@ impl<'bmp> Parser<'bmp> {
           }
 
           Whitespace if token.lexeme.len() > 1 && subs.inline_formatting() => {
-            acc.push_node(MultiCharWhitespace(token.to_string(self.bump)), token.loc);
+            acc.push_node(MultiCharWhitespace(token.lexeme), token.loc);
           }
 
           Whitespace if line.current_is(Plus) && line.num_tokens() == 1 => {

@@ -16,7 +16,7 @@ impl<'bmp> CollectText<'bmp> {
   }
 
   pub fn push_token(&mut self, token: &Token<'_>) {
-    self.string.as_mut().unwrap().push_str(token.lexeme);
+    self.string.as_mut().unwrap().push_str(&token.lexeme);
     self.loc.extend(token.loc);
   }
 

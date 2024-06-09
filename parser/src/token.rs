@@ -44,26 +44,26 @@ pub enum TokenKind {
   Word,
 }
 
-#[derive(Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Token<'src> {
   pub kind: TokenKind,
   pub loc: SourceLocation,
-  pub lexeme: &'src str,
+  pub lexeme: BumpString<'src>,
 }
 
 impl<'src> Token<'src> {
-  pub fn to_string<'bmp>(&self, bump: &'bmp Bump) -> BumpString<'bmp> {
-    BumpString::from_str_in(self.lexeme, bump)
-  }
+  // pub fn to_string<'bmp>(&self, bump: &'bmp Bump) -> BumpString<'bmp> {
+  //   BumpString::from_str_in(self.lexeme, bump)
+  // }
 
   pub fn to_source_string<'bmp>(&self, bump: &'bmp Bump) -> SourceString<'bmp> {
-    let bump_str = BumpString::from_str_in(self.lexeme, bump);
-    SourceString::new(bump_str, self.loc)
+    // let bump_str = BumpString::from_str_in(self.lexeme, bump);
+    SourceString::new(self.lexeme, self.loc)
   }
 
   pub fn to_url_scheme(&self) -> Option<UrlScheme> {
     match self.kind {
-      TokenKind::MacroName => match self.lexeme {
+      TokenKind::MacroName => match self.lexeme.as_str() {
         "https:" => Some(UrlScheme::Https),
         "http:" => Some(UrlScheme::Http),
         "ftp:" => Some(UrlScheme::Ftp),

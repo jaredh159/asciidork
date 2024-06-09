@@ -31,7 +31,7 @@ impl<'bmp> ChunkMetaExt<'bmp> for ChunkMeta<'bmp> {
       .unwrap_or(false)
     {
       let lexeme = lines.current_token().unwrap().lexeme;
-      if let Some(context) = BlockContext::derive_admonition(lexeme) {
+      if let Some(context) = BlockContext::derive_admonition(&lexeme) {
         let mut line = lines.consume_current().unwrap();
         line.discard(3); // word, colon, whitespace
         lines.restore_if_nonempty(line);

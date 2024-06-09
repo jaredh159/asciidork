@@ -35,7 +35,7 @@ impl<'bmp> Parser<'bmp> {
     let first_token = lines.current_token().unwrap();
 
     if lines.is_block_macro() {
-      return match first_token.lexeme {
+      return match first_token.lexeme.as_str() {
         "image:" => self.parse_image_block(lines, meta),
         "toc:" => self.parse_toc_macro(first_token.loc, lines, meta),
         _ => todo!("unhandled block macro type: `{:?}`", first_token.lexeme),
@@ -116,10 +116,7 @@ impl<'bmp> Parser<'bmp> {
 
   // important to represent these as an ast node because
   // they are the documented way to separate adjacent lists
-  fn parse_line_comment_block(
-    &mut self,
-    lines: &mut ContiguousLines<'bmp>,
-  ) -> Option<Block<'bmp>> {
+  fn parse_line_comment_block(&mut self, lines: &mut ContiguousLines<'bmp>) -> Option<Block<'bmp>> {
     if lines.starts_with_comment_line() {
       let start = lines.current_token().unwrap().loc.start;
       lines.consume_current();

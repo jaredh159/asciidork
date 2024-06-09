@@ -32,7 +32,7 @@ impl<'src> Token<'src> {
     if self.kind != TokenKind::DelimiterLine {
       return None;
     }
-    match self.lexeme {
+    match self.lexeme.as_str() {
       "****" => Some(Delimiter::Sidebar),
       "====" => Some(Delimiter::Example),
       "____" => Some(Delimiter::BlockQuote),

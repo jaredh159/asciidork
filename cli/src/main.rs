@@ -36,7 +36,8 @@ fn main() -> Result<(), Box<dyn Error>> {
   };
 
   let parse_start = Instant::now();
-  let bump = &Bump::with_capacity(src.len());
+  // TODO: test capacity multiplier
+  let bump = &Bump::with_capacity(src.len() * 8);
   let parser = Parser::new_settings(
     bump,
     AsciidocSource::new(&src, Some(file)),
