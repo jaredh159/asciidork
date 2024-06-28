@@ -63,13 +63,17 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'\\') => self.single(Backslash),
       Some(ch) if ch.is_ascii_digit() => self.digits(),
       Some(ch) if ch == b';' || ch == b':' => self.maybe_term_delimiter(ch, at_line_start),
-      Some(_) => self.word(),
+      Some(_) => self.word(at_line_start),
       None => self.token(Eof, self.pos, self.pos),
     }
   }
 
   pub fn peek(&self) -> Option<u8> {
     self.src.get(self.pos).copied()
+  }
+
+  pub fn peek_n(&self, n: usize) -> Option<u8> {
+    self.src.get(self.pos + n).copied()
   }
 
   pub fn is_eof(&self) -> bool {
@@ -223,7 +227,7 @@ impl<'arena> SourceLexer<'arena> {
     self.token(Digits, start, end)
   }
 
-  fn word(&mut self) -> Token<'arena> {
+  fn word(&mut self, at_line_start: bool) -> Token<'arena> {
     let start = self.pos - 1;
     let end = self.advance_to_word_boundary(true);
     // PERF: if i feel clear about the safety of how i move across
@@ -232,6 +236,15 @@ impl<'arena> SourceLexer<'arena> {
 
     // special cases
     match self.peek() {
+      // directives
+      Some(b':') if at_line_start && lexeme == b"include" && self.remaining_len() > 4 => {
+        if self.peek_n(1) == Some(b':') && !self.peek_n(2).unwrap().is_ascii_whitespace() {
+          self.advance();
+          self.advance();
+          return self.token(Directive, start, end + 2);
+        }
+      }
+
       // macros
       Some(b':') if !self.peek_term_delimiter() => {
         if self.is_macro_name(lexeme) {
@@ -495,6 +508,10 @@ impl<'arena> SourceLexer<'arena> {
       _ => {}
     }
     self.single(LessThan)
+  }
+
+  fn remaining_len(&self) -> usize {
+    self.src.len() - self.pos
   }
 }
 

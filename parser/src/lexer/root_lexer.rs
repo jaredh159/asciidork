@@ -115,6 +115,30 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
+      (
+        "include::foo",
+        vec![(Directive, "include::"), (Word, "foo")],
+      ),
+      (
+        "foo include::foo",
+        vec![
+          (Word, "foo"),
+          (Whitespace, " "),
+          (Word, "include"),
+          (Colon, ":"),
+          (Colon, ":"),
+          (Word, "foo"),
+        ],
+      ),
+      (
+        "include:: foo",
+        vec![
+          (Word, "include"),
+          (TermDelimiter, "::"),
+          (Whitespace, " "),
+          (Word, "foo"),
+        ],
+      ),
       ("|===", vec![(Pipe, "|"), (EqualSigns, "===")]),
       ("////", vec![(DelimiterLine, "////")]),
       ("<.>", vec![(CalloutNumber, "<.>")]),
