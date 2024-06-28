@@ -4,23 +4,23 @@ use std::{cell::RefCell, rc::Rc};
 use crate::internal::*;
 
 #[derive(Debug)]
-pub struct ParseContext<'bmp> {
+pub struct ParseContext<'arena> {
   pub subs: Substitutions,
   pub delimiter: Option<Delimiter>,
   pub list: ListContext,
   pub section_level: u8,
   pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
-  pub anchor_ids: Rc<RefCell<HashSet<BumpString<'bmp>>>>,
-  pub xrefs: Rc<RefCell<HashMap<BumpString<'bmp>, SourceLocation>>>,
+  pub anchor_ids: Rc<RefCell<HashSet<BumpString<'arena>>>>,
+  pub xrefs: Rc<RefCell<HashMap<BumpString<'arena>, SourceLocation>>>,
   pub num_footnotes: Rc<RefCell<u16>>,
   pub saw_toc_macro: bool,
   pub in_asciidoc_table_cell: bool,
-  callouts: Rc<RefCell<BumpVec<'bmp, Callout>>>,
+  callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
 }
 
-impl<'bmp> ParseContext<'bmp> {
-  pub fn new(bump: &'bmp Bump) -> Self {
+impl<'arena> ParseContext<'arena> {
+  pub fn new(bump: &'arena Bump) -> Self {
     ParseContext {
       subs: Substitutions::default(),
       delimiter: None,
@@ -79,7 +79,7 @@ impl<'bmp> ParseContext<'bmp> {
     *callouts.last().unwrap()
   }
 
-  pub fn advance_callout_list(&mut self, bump: &'bmp Bump) {
+  pub fn advance_callout_list(&mut self, bump: &'arena Bump) {
     let last = { self.callouts.borrow().last().copied() };
     if let Some(last) = last {
       self.callouts = Rc::new(RefCell::new(

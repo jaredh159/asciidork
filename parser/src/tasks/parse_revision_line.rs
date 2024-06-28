@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(super) fn parse_revision_line(&mut self, lines: &mut ContiguousLines) {
     let Some(line) = lines.current() else {
       return;
@@ -16,7 +16,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     // https://regexr.com/7mbsk
     let pattern = r"^([^\s,:]+)(?:,\s*([^\s:]+))?(?::\s*(.+))?$";
     let re = Regex::new(pattern).unwrap();
-    let Some(captures) = re.captures(line.src) else {
+    let src = line.reassemble_src();
+    let Some(captures) = re.captures(&src) else {
       return;
     };
 
@@ -123,7 +124,7 @@ mod tests {
 
     for (input, rev, date, remark) in cases {
       let b = &bumpalo::Bump::new();
-      let mut parser = crate::Parser::new(b, input);
+      let mut parser = Parser::from_str(input, b);
       let mut block = parser.read_lines().unwrap();
       parser.parse_revision_line(&mut block);
       assert_eq!(

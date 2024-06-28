@@ -3,10 +3,10 @@ use std::ops::{Deref, DerefMut};
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct InlineNodes<'bmp>(BumpVec<'bmp, InlineNode<'bmp>>);
+pub struct InlineNodes<'arena>(BumpVec<'arena, InlineNode<'arena>>);
 
-impl<'bmp> InlineNodes<'bmp> {
-  pub fn new(bump: &'bmp Bump) -> Self {
+impl<'arena> InlineNodes<'arena> {
+  pub fn new(bump: &'arena Bump) -> Self {
     Self(BumpVec::new_in(bump))
   }
 
@@ -72,26 +72,26 @@ impl<'bmp> InlineNodes<'bmp> {
     }
   }
 
-  pub fn into_vec(self) -> BumpVec<'bmp, InlineNode<'bmp>> {
+  pub fn into_vec(self) -> BumpVec<'arena, InlineNode<'arena>> {
     self.0
   }
 }
 
-impl<'bmp> Deref for InlineNodes<'bmp> {
-  type Target = BumpVec<'bmp, InlineNode<'bmp>>;
+impl<'arena> Deref for InlineNodes<'arena> {
+  type Target = BumpVec<'arena, InlineNode<'arena>>;
   fn deref(&self) -> &Self::Target {
     &self.0
   }
 }
 
-impl<'bmp> DerefMut for InlineNodes<'bmp> {
+impl<'arena> DerefMut for InlineNodes<'arena> {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.0
   }
 }
 
-impl<'bmp> From<BumpVec<'bmp, InlineNode<'bmp>>> for InlineNodes<'bmp> {
-  fn from(vec: BumpVec<'bmp, InlineNode<'bmp>>) -> Self {
+impl<'arena> From<BumpVec<'arena, InlineNode<'arena>>> for InlineNodes<'arena> {
+  fn from(vec: BumpVec<'arena, InlineNode<'arena>>) -> Self {
     Self(vec)
   }
 }

@@ -1,39 +1,39 @@
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum MacroNode<'bmp> {
+pub enum MacroNode<'arena> {
   Footnote {
     number: u16,
-    id: Option<SourceString<'bmp>>,
-    text: InlineNodes<'bmp>,
+    id: Option<SourceString<'arena>>,
+    text: InlineNodes<'arena>,
   },
   Image {
     flow: Flow,
-    target: SourceString<'bmp>,
-    attrs: AttrList<'bmp>,
+    target: SourceString<'arena>,
+    attrs: AttrList<'arena>,
   },
   Keyboard {
-    keys: BumpVec<'bmp, BumpString<'bmp>>,
-    keys_src: SourceString<'bmp>,
+    keys: BumpVec<'arena, BumpString<'arena>>,
+    keys_src: SourceString<'arena>,
   },
   Link {
     scheme: Option<UrlScheme>,
-    target: SourceString<'bmp>,
-    attrs: Option<AttrList<'bmp>>,
+    target: SourceString<'arena>,
+    attrs: Option<AttrList<'arena>>,
   },
   Pass {
-    target: Option<SourceString<'bmp>>,
-    content: InlineNodes<'bmp>,
+    target: Option<SourceString<'arena>>,
+    content: InlineNodes<'arena>,
   },
   Icon {
-    target: SourceString<'bmp>,
-    attrs: AttrList<'bmp>,
+    target: SourceString<'arena>,
+    attrs: AttrList<'arena>,
   },
-  Button(SourceString<'bmp>),
-  Menu(BumpVec<'bmp, SourceString<'bmp>>),
+  Button(SourceString<'arena>),
+  Menu(BumpVec<'arena, SourceString<'arena>>),
   Xref {
-    id: SourceString<'bmp>,
-    linktext: Option<InlineNodes<'bmp>>,
+    id: SourceString<'arena>,
+    linktext: Option<InlineNodes<'arena>>,
   },
 }
 

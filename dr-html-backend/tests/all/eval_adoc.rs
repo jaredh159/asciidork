@@ -685,7 +685,7 @@ fn test_head_opts() {
 
   for (opts, expectation) in cases {
     let input = format!("= Doc Header\n{}\n\nignore me\n\n", opts);
-    let parser = Parser::new(bump, &input);
+    let parser = Parser::from_str(&input, bump);
     let document = parser.parse().unwrap().document;
     let html = eval(&document, AsciidoctorHtml::new()).unwrap();
     match expectation {
@@ -706,7 +706,7 @@ fn test_head_opts() {
     }
   }
   // one test with no doc header
-  let parser = Parser::new(bump, "without doc header");
+  let parser = Parser::from_str("without doc header", bump);
   let document = parser.parse().unwrap().document;
   let html = eval(&document, AsciidoctorHtml::new()).unwrap();
   assert!(html.contains("<title>Untitled</title>"));
@@ -752,7 +752,7 @@ fn test_non_embedded() {
   let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();
   let expected = re.replace_all(expected, "");
-  let parser = Parser::new(bump, input);
+  let parser = Parser::from_str(input, bump);
   let doc = parser.parse().unwrap().document;
   assert_eq!(
     eval(&doc, AsciidoctorHtml::new()).unwrap(),

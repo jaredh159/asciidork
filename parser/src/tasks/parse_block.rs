@@ -2,8 +2,8 @@ use crate::internal::*;
 use crate::variants::token::*;
 use ast::short::block::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'bmp>>> {
+impl<'arena> Parser<'arena> {
+  pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'arena>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
@@ -35,7 +35,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let first_token = lines.current_token().unwrap();
 
     if lines.is_block_macro() {
-      return match first_token.lexeme {
+      return match first_token.lexeme.as_str() {
         "image:" => self.parse_image_block(lines, meta),
         "toc:" => self.parse_toc_macro(first_token.loc, lines, meta),
         _ => todo!("unhandled block macro type: `{:?}`", first_token.lexeme),
@@ -77,10 +77,18 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           }));
         }
       }
-      SingleQuote if lines.current_satisfies(|line| line.src == "'''") => {
+      SingleQuote
+        if lines.current_satisfies(|line| {
+          line.num_tokens() == 3 && line.starts_with_seq(&[SingleQuote, SingleQuote, SingleQuote])
+        }) =>
+      {
         return self.parse_break(Context::ThematicBreak, lines, meta);
       }
-      LessThan if lines.current_satisfies(|line| line.src == "<<<") => {
+      LessThan
+        if lines.current_satisfies(|line| {
+          line.num_tokens() == 3 && line.starts_with_seq(&[LessThan, LessThan, LessThan])
+        }) =>
+      {
         return self.parse_break(Context::PageBreak, lines, meta);
       }
       _ => {}
@@ -95,15 +103,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_discrete_heading(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Block<'bmp>> {
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Block<'arena>> {
     let mut line = lines.consume_current().unwrap();
     let level = line.heading_level().unwrap();
     line.discard_assert(TokenKind::EqualSigns);
     line.discard_assert(TokenKind::Whitespace);
-    let id = self.section_id(line.src, meta.attrs.as_ref());
-    let content = self.parse_inlines(&mut line.into_lines_in(self.bump))?;
+    let id = self.section_id(&line, meta.attrs.as_ref());
+    let content = self.parse_inlines(&mut line.into_lines())?;
     let end = content.last_loc().unwrap().end;
     self.restore_lines(lines);
     Ok(Block {
@@ -118,8 +126,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   // they are the documented way to separate adjacent lists
   fn parse_line_comment_block(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
-  ) -> Option<Block<'bmp>> {
+    lines: &mut ContiguousLines<'arena>,
+  ) -> Option<Block<'arena>> {
     if lines.starts_with_comment_line() {
       let start = lines.current_token().unwrap().loc.start;
       lines.consume_current();
@@ -139,9 +147,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_delimited_block(
     &mut self,
     delimiter: Delimiter,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Option<Block<'bmp>>> {
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Option<Block<'arena>>> {
     let prev = self.ctx.delimiter;
     self.ctx.delimiter = Some(delimiter);
     let delimiter_token = lines.consume_current_token().unwrap();
@@ -161,7 +169,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     ) {
       let mut lines = self
         .read_lines_until(delimiter)
-        .unwrap_or_else(|| ContiguousLines::new(bvec![in self.bump]));
+        .unwrap_or_else(|| ContiguousLines::new(Deq::new(self.bump)));
 
       if context == Context::Listing || context == Context::Literal {
         if let Some(comment) = meta.attrs.as_ref().and_then(|a| a.named("line-comment")) {
@@ -210,9 +218,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_image_block(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Block<'bmp>> {
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Block<'arena>> {
     let mut line = lines.consume_current().unwrap();
     let start = line.loc().unwrap().start;
     line.discard_assert(MacroName);
@@ -229,9 +237,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_paragraph(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Option<Block<'bmp>>> {
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Option<Block<'arena>>> {
     let context = meta.block_paragraph_context(&mut lines);
     // TODO: probably a better stack-like context API is possible here...
     let restore_subs = self.ctx.set_subs_for(context, &meta);
@@ -260,10 +268,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_quoted_paragraph(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Option<Block<'bmp>>> {
-    let mut attr_line = lines.remove_last_unchecked();
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Option<Block<'arena>>> {
+    let mut attr_line = lines.pop().unwrap();
     attr_line.discard_assert(TokenKind::Dashes); // `--`
     attr_line.discard_assert(TokenKind::Whitespace);
     let end = attr_line.last_location().unwrap().end;
@@ -293,9 +301,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_break(
     &mut self,
     context: BlockContext,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Option<Block<'bmp>>> {
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Option<Block<'arena>>> {
     let end = lines.consume_current().unwrap().last_loc().unwrap().end;
     self.restore_lines(lines);
     Ok(Some(Block {
@@ -309,9 +317,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   fn parse_toc_macro(
     &mut self,
     token_loc: SourceLocation,
-    lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Block<'bmp>> {
+    lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Block<'arena>> {
     self.ctx.saw_toc_macro = true;
     if self.document.toc.is_none() {
       self.err_at(
@@ -338,7 +346,7 @@ mod tests {
 
   #[test]
   fn test_parse_doc_attr_entry() {
-    let mut parser = Parser::new(leaked_bump(), ":!figure-caption:\n\n");
+    let mut parser = Parser::from_str(":!figure-caption:\n\n", leaked_bump());
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
       context: Context::DocumentAttributeDecl,
@@ -356,7 +364,8 @@ mod tests {
       second para (ignored)
     "};
 
-    let parser = Parser::new_settings(leaked_bump(), input, JobSettings::inline());
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::inline());
     let result = parser.parse().unwrap();
     let blocks = result.document.content.blocks().unwrap();
     assert_eq!(blocks.len(), 1);

@@ -1,7 +1,7 @@
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(crate) fn parse_document_header(&mut self) -> Result<()> {
     let Some(mut block) = self.read_lines() else {
       return Ok(());
@@ -43,10 +43,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self.document.toc = Some(TableOfContents { title, nodes, position })
   }
 
-  fn parse_doc_title_author_revision(
-    &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
-  ) -> Result<()> {
+  fn parse_doc_title_author_revision(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
     let first_line = lines.current().expect("non-empty doc header");
     if !first_line.is_heading_level(0) {
       // author and revision must follow doc title, so if non title, skip
@@ -59,10 +56,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     self
       .document
       .meta
-      .insert_header_attr("doctitle", header_line.src)
+      .insert_header_attr("doctitle", header_line.reassemble_src().as_str())
       .unwrap();
 
-    self.document.title = Some(self.parse_inlines(&mut header_line.into_lines_in(self.bump))?);
+    self.document.title = Some(self.parse_inlines(&mut header_line.into_lines())?);
     // TODO: subtitle
 
     if lines.starts(Word) {
@@ -131,7 +128,7 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, expected) in cases {
-      let lines = Parser::new(bump, input).read_lines().unwrap();
+      let lines = Parser::from_str(input, bump).read_lines().unwrap();
       assert_eq!(
         is_doc_header(&lines),
         expected,

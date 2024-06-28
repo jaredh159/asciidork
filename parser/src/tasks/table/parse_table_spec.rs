@@ -65,8 +65,8 @@ fn parse_col_spec(col_attr: &str, specs: &mut BumpVec<ColSpec>) {
   specs.push(spec);
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(super) fn parse_col_specs(&mut self, cols_attr: &str) -> BumpVec<'bmp, ColSpec> {
+impl<'arena> Parser<'arena> {
+  pub(super) fn parse_col_specs(&mut self, cols_attr: &str) -> BumpVec<'arena, ColSpec> {
     let mut specs = bvec![in self.bump];
     if cols_attr.trim().is_empty() {
       return specs;
@@ -361,13 +361,13 @@ mod tests {
       ),
     ];
 
-    let parser = Parser::new(leaked_bump(), "");
+    let parser = Parser::from_str("", leaked_bump());
     for (sep, input, remaining, expected) in &cases {
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(leaked_bump()).unwrap();
-      let mut tokens = vecb![];
+      let mut lexer = Lexer::from_str(leaked_bump(), input);
+      let line = lexer.consume_line().unwrap();
+      let mut tokens = Deq::new(leaked_bump());
       line.drain_into(&mut tokens);
-      let mut tokens = TableTokens::new(tokens, lexer.loc_src(0..input.len()));
+      let mut tokens = TableTokens::new(tokens);
       let start = parser.consume_cell_start(&mut tokens, *sep);
       assert_eq!(start, *expected, from: input);
       if let Some((_, loc)) = *expected {
@@ -461,7 +461,7 @@ mod tests {
         ],
       ),
     ];
-    let mut parser = Parser::new(leaked_bump(), "");
+    let mut parser = Parser::from_str("", leaked_bump());
     for (input, expected) in cases {
       let cols = parser.parse_col_specs(input);
       assert_eq!(cols, *expected);

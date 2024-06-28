@@ -3,18 +3,18 @@ use std::fmt::{Debug, Formatter, Result};
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Anchor<'bmp> {
-  pub reftext: Option<InlineNodes<'bmp>>,
-  pub title: InlineNodes<'bmp>,
+pub struct Anchor<'arena> {
+  pub reftext: Option<InlineNodes<'arena>>,
+  pub title: InlineNodes<'arena>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Section<'bmp> {
-  pub meta: ChunkMeta<'bmp>,
+pub struct Section<'arena> {
+  pub meta: ChunkMeta<'arena>,
   pub level: u8,
-  pub id: Option<BumpString<'bmp>>,
-  pub heading: InlineNodes<'bmp>,
-  pub blocks: BumpVec<'bmp, Block<'bmp>>,
+  pub id: Option<BumpString<'arena>>,
+  pub heading: InlineNodes<'arena>,
+  pub blocks: BumpVec<'arena, Block<'arena>>,
 }
 
 #[derive(Default, Clone, Copy, Eq, PartialEq)]

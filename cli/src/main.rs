@@ -18,6 +18,8 @@ use args::{Args, Output};
 fn main() -> Result<(), Box<dyn Error>> {
   let args = Args::parse();
   let src = {
+    // TODO: for perf, better to read the file straight into a BumpVec<u8>
+    // have an initializer on Parser that takes ownership of it
     if let Some(file) = &args.input {
       let mut file = fs::File::open(file)?;
       let mut src = file
@@ -36,7 +38,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len());
-  let parser = Parser::new_settings(bump, &src, args.clone().into());
+  let mut parser = Parser::from_str(&src, bump);
+  parser.apply_job_settings(args.clone().into());
+
   let result = parser.parse();
   let parse_time = parse_start.elapsed();
 

@@ -19,13 +19,13 @@ enum Quotes {
 }
 
 #[derive(Debug)]
-struct AttrState<'bmp: 'src, 'src> {
-  bump: &'bmp Bump,
-  attr_list: AttrList<'bmp>,
+struct AttrState<'arena> {
+  bump: &'arena Bump,
+  attr_list: AttrList<'arena>,
   quotes: Quotes,
-  attr: CollectText<'bmp>,
-  name: CollectText<'bmp>,
-  tokens: BumpVec<'bmp, Token<'src>>,
+  attr: CollectText<'arena>,
+  name: CollectText<'arena>,
+  tokens: Deq<'arena, Token<'arena>>,
   kind: AttrKind,
   escaping: bool,
   parse_range: (usize, usize),
@@ -34,12 +34,12 @@ struct AttrState<'bmp: 'src, 'src> {
   is_legacy_anchor: bool,
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   /// Parse an attribute list.
   ///
   /// _NB: Caller is responsible for ensuring the line contains an attr list
   /// and also for consuming the open bracket before calling this function._
-  pub(crate) fn parse_attr_list(&mut self, line: &mut Line<'bmp, 'src>) -> Result<AttrList<'bmp>> {
+  pub(crate) fn parse_attr_list(&mut self, line: &mut Line<'arena>) -> Result<AttrList<'arena>> {
     self.parse_attrs(line, false)
   }
 
@@ -49,16 +49,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   /// and also for consuming the open bracket before calling this function._
   pub(super) fn parse_formatted_text_attr_list(
     &mut self,
-    line: &mut Line<'bmp, 'src>,
-  ) -> Result<AttrList<'bmp>> {
+    line: &mut Line<'arena>,
+  ) -> Result<AttrList<'arena>> {
     self.parse_attrs(line, true)
   }
 
   fn parse_attrs(
     &mut self,
-    line: &mut Line<'bmp, 'src>,
+    line: &mut Line<'arena>,
     formatted_text: bool,
-  ) -> Result<AttrList<'bmp>> {
+  ) -> Result<AttrList<'arena>> {
     use AttrKind::*;
     use Quotes::*;
     let parse_start = line.current_token().unwrap().loc.start;
@@ -181,7 +181,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 }
 
-impl<'bmp, 'src> AttrState<'bmp, 'src> {
+impl<'arena> AttrState<'arena> {
   fn new_in(bump: &Bump, formatted_text: bool, parse_range: (usize, usize)) -> AttrState {
     let start_loc = SourceLocation::new(parse_range.0, parse_range.0);
     AttrState {
@@ -193,7 +193,7 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
       quotes: Quotes::Default,
       attr: CollectText::new_in(start_loc, bump),
       name: CollectText::new_in(start_loc, bump),
-      tokens: BumpVec::new_in(bump),
+      tokens: Deq::new(bump),
       kind: AttrKind::Positional,
       escaping: false,
       parse_range,
@@ -223,12 +223,12 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
     self.attr.loc = self.name.loc.incr_end().clamp_end(); // skip `=`
   }
 
-  fn push_token(&mut self, token: Token<'src>) {
+  fn push_token(&mut self, token: Token<'arena>) {
     self.attr.push_token(&token);
     self.tokens.push(token);
   }
 
-  fn commit_prev(&mut self, parser: &mut Parser<'bmp, 'src>) -> Result<()> {
+  fn commit_prev(&mut self, parser: &mut Parser<'arena>) -> Result<()> {
     use AttrKind::*;
     if !self.attr.is_empty() || self.kind == Named {
       match &self.kind {
@@ -248,9 +248,9 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
         }
         Positional => {
           self.err_if_formatted(parser)?;
-          let tokens = std::mem::replace(&mut self.tokens, BumpVec::new_in(self.bump));
-          let line = parser.line_from(tokens, self.attr.take_src().loc);
-          let inlines = parser.parse_inlines(&mut line.into_lines_in(self.bump))?;
+          self.attr.drop_src();
+          let line = Line::new(std::mem::replace(&mut self.tokens, Deq::new(self.bump)));
+          let inlines = parser.parse_inlines(&mut line.into_lines())?;
           self.attr_list.positional.push(Some(inlines));
         }
         Named => {
@@ -260,22 +260,22 @@ impl<'bmp, 'src> AttrState<'bmp, 'src> {
             self.attr_list.id = Some(self.attr.take_src());
           // special case: empty string for named, `foo=""`
           } else if self.tokens.len() == 1 {
-            self.tokens.remove(0); // remove name
+            self.tokens.pop_front(); // remove name
             self
               .attr_list
               .named
               .insert(name, InlineNodes::new(self.bump));
           } else if self.tokens.len() > 1 {
-            self.tokens.remove(0); // remove name
-            let tokens = std::mem::replace(&mut self.tokens, BumpVec::new_in(self.bump));
-            let line = parser.line_from(tokens, self.attr.take_src().loc);
+            self.tokens.pop_front(); // remove name
+            self.attr.drop_src();
+            let line = Line::new(std::mem::replace(&mut self.tokens, Deq::new(self.bump)));
             let restore = parser.ctx.subs;
             parser.ctx.subs = if matches!(name.src.as_str(), "subs" | "cols") {
               Substitutions::none()
             } else {
               Substitutions::attr_value()
             };
-            let inlines = parser.parse_inlines(&mut line.into_lines_in(self.bump))?;
+            let inlines = parser.parse_inlines(&mut line.into_lines())?;
             parser.ctx.subs = restore;
             self.attr_list.named.insert(name, inlines);
           }
@@ -576,11 +576,11 @@ mod tests {
       ),
     ];
     for (input, expected) in cases {
-      let mut parser = Parser::new(leaked_bump(), input);
+      let mut parser = Parser::from_str(input, leaked_bump());
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
-      assert_eq!(attr_list, expected);
+      assert_eq!(attr_list, expected, from: input);
     }
   }
 
@@ -613,7 +613,7 @@ mod tests {
     ];
 
     for (input, expected) in cases {
-      let mut parser = Parser::new(leaked_bump(), input);
+      let mut parser = Parser::from_str(input, leaked_bump());
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
@@ -659,7 +659,7 @@ mod tests {
     ];
 
     for (input, formatted, expected) in cases {
-      let mut parser = Parser::new(leaked_bump(), input);
+      let mut parser = Parser::from_str(input, leaked_bump());
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let diag = parser.parse_attrs(&mut line, formatted).err().unwrap();

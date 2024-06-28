@@ -2,15 +2,15 @@ use super::{context::*, TableTokens};
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(crate) fn finish_csv_table_cell(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
     col_index: usize,
     mut start: usize,
-  ) -> Result<Option<Cell<'bmp>>> {
-    let mut cell_tokens = bvec![in self.bump];
+  ) -> Result<Option<Cell<'arena>>> {
+    let mut cell_tokens = Deq::new(self.bump);
     let mut end = start;
 
     let mut quote = {

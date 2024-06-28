@@ -3,14 +3,14 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   /// if this function is called, the following invaraints hold:
   /// - the line is not empty
   /// - the line starts with a word
   /// - we are considering the line _directly_ below the doc title
   ///
   /// Therefore, it would be an error for this line to not be an author line
-  pub(super) fn parse_author_line(&mut self, line: Line<'bmp, 'src>) -> Result<()> {
+  pub(super) fn parse_author_line(&mut self, line: Line<'arena>) -> Result<()> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
 
@@ -21,7 +21,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
     let mut first_start = usize::MAX;
     let mut last_end = 0;
-    for captures in re.captures_iter(line.src) {
+    let src = line.reassemble_src();
+    for captures in re.captures_iter(&src) {
       if let Some(m) = captures.get(0) {
         if m.start() < first_start {
           first_start = m.start();
@@ -31,7 +32,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       self.document.meta.add_author(self.author_from(captures));
     }
 
-    let num_bytes = line.src.bytes().len();
+    let num_bytes = src.bytes().len();
     if first_start == usize::MAX {
       self.err("invalid author line", line.current_token())
     } else if first_start > 0 {
@@ -45,7 +46,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  fn author_from(&self, captures: regex::Captures<'bmp>) -> Author {
+  fn author_from(&self, captures: regex::Captures) -> Author {
     let first_name = captures.get(1).unwrap().as_str().to_string();
     let middle_name = captures.get(3).map(|m| m.as_str().trim_end().to_string());
     let last_name = captures.get(5).unwrap().as_str().to_string();
@@ -96,7 +97,7 @@ mod tests {
     ];
 
     for (input, authors) in cases {
-      let mut parser = crate::Parser::new(leaked_bump(), input);
+      let mut parser = crate::Parser::from_str(input, leaked_bump());
       let line = parser.read_line().unwrap();
 
       let expected_authors = authors

@@ -9,7 +9,7 @@ pub struct Diagnostic {
   pub underline_width: usize,
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(crate) fn err_at(&self, message: impl Into<String>, start: usize, end: usize) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
     self.handle_err(Diagnostic {
@@ -27,12 +27,13 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .expect("non empty line for `err_entire_line`")
       .start;
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
+    let line = line.reassemble_src().to_string();
     self.handle_err(Diagnostic {
       line_num,
-      line: line.src.to_string(),
       message: message.into(),
       underline_start: offset,
-      underline_width: line.src.len(),
+      underline_width: line.len(),
+      line,
     })
   }
 

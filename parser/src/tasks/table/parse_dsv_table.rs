@@ -1,11 +1,11 @@
 use super::{context::*, DataFormat, TableTokens};
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(super) fn parse_dsv_implicit_first_row(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
   ) -> Result<()> {
     let mut cells = bvec![in self.bump];
     while let Some(cell) = self.parse_dsv_table_cell(tokens, ctx, cells.len())? {
@@ -20,9 +20,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(super) fn parse_dsv_table_row(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
-  ) -> Result<Option<Row<'bmp>>> {
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
+  ) -> Result<Option<Row<'arena>>> {
     let mut cells = bvec![in self.bump];
     while let Some(cell) = self.parse_dsv_table_cell(tokens, ctx, cells.len())? {
       cells.push(cell);
@@ -40,10 +40,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_dsv_table_cell(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
     col_index: usize,
-  ) -> Result<Option<Cell<'bmp>>> {
+  ) -> Result<Option<Cell<'arena>>> {
     if tokens.is_empty() {
       return Ok(None);
     }
@@ -52,7 +52,6 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut trimmed_newline = false;
     while tokens.current().is_whitespaceish() {
       let trimmed = tokens.consume_current().unwrap();
-      println!("trimmed: {:?}", trimmed.kind);
       start = trimmed.loc.end;
       if trimmed.is(TokenKind::Newline) {
         trimmed_newline = true;
@@ -64,7 +63,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if ctx.dsv_last_consumed == DsvLastConsumed::Delimiter && trimmed_newline {
       let spec = CellSpec::default();
       return self
-        .finish_cell(spec, bvec![in self.bump], col_index, ctx, start..start)
+        .finish_cell(spec, Deq::new(self.bump), col_index, ctx, start..start)
         .map(|data| data.map(|(cell, _)| cell));
     }
 
@@ -87,12 +86,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn finish_dsv_table_cell(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
     col_index: usize,
     start: usize,
-  ) -> Result<Option<Cell<'bmp>>> {
-    let mut cell_tokens = bvec![in self.bump];
+  ) -> Result<Option<Cell<'arena>>> {
+    let mut cell_tokens = Deq::new(self.bump);
     let mut end = start;
 
     loop {

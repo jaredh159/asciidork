@@ -4,22 +4,22 @@ use super::DataFormat;
 use crate::internal::*;
 
 #[derive(Debug, Clone)]
-pub struct TableContext<'bmp, 'src> {
+pub struct TableContext<'arena> {
   pub delim_ch: u8,
   pub format: DataFormat,
   pub cell_separator: char,
   pub embeddable_cell_separator: Option<char>,
   pub cell_separator_tokenkind: Option<TokenKind>,
-  pub col_specs: BumpVec<'bmp, ColSpec>,
+  pub col_specs: BumpVec<'arena, ColSpec>,
   pub num_cols: usize,
   pub counting_cols: bool,
   pub header_row: HeaderRow,
-  pub header_reparse_cells: BumpVec<'bmp, ParseCellData<'bmp, 'src>>,
+  pub header_reparse_cells: BumpVec<'arena, ParseCellData<'arena>>,
   pub autowidths: bool,
   pub phantom_cells: HashSet<(usize, usize)>,
   pub effective_row_idx: usize,
   pub dsv_last_consumed: DsvLastConsumed,
-  pub table: Table<'bmp>,
+  pub table: Table<'arena>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,8 +42,8 @@ impl HeaderRow {
 }
 
 #[derive(Debug, Clone)]
-pub struct ParseCellData<'bmp, 'src> {
-  pub cell_tokens: BumpVec<'bmp, Token<'src>>,
+pub struct ParseCellData<'arena> {
+  pub cell_tokens: Deq<'arena, Token<'arena>>,
   pub loc: SourceLocation,
   pub cell_spec: CellSpec,
   pub col_spec: Option<ColSpec>,
@@ -56,7 +56,7 @@ pub enum DsvLastConsumed {
   Other,
 }
 
-impl<'bmp, 'src> TableContext<'bmp, 'src> {
+impl<'arena> TableContext<'arena> {
   pub fn add_phantom_cells(&mut self, cell: &Cell, col: usize) {
     if cell.row_span == 0 && cell.col_span == 0 {
       return;

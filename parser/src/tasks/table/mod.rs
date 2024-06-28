@@ -62,26 +62,26 @@ impl fmt::Debug for DataFormat {
 }
 
 #[derive(Debug, Clone)]
-pub struct TableTokens<'bmp, 'src>(Line<'bmp, 'src>);
+pub struct TableTokens<'arena>(Line<'arena>);
 
-impl<'bmp, 'src> TableTokens<'bmp, 'src> {
-  pub fn new(tokens: BumpVec<'bmp, Token<'src>>, src: &'src str) -> Self {
-    Self(Line::new(tokens, src))
+impl<'arena> TableTokens<'arena> {
+  pub fn new(tokens: Deq<'arena, Token<'arena>>) -> Self {
+    Self(Line::new(tokens))
   }
 
   pub fn discard(&mut self, n: usize) {
     self.0.discard(n);
   }
 
-  pub fn current(&self) -> Option<&Token<'src>> {
+  pub fn current(&self) -> Option<&Token<'arena>> {
     self.0.current_token()
   }
 
-  pub fn current_mut(&mut self) -> Option<&mut Token<'src>> {
+  pub fn current_mut(&mut self) -> Option<&mut Token<'arena>> {
     self.0.current_token_mut()
   }
 
-  pub fn nth(&self, n: usize) -> Option<&Token<'src>> {
+  pub fn nth(&self, n: usize) -> Option<&Token<'arena>> {
     self.0.nth_token(n)
   }
 
@@ -89,7 +89,7 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
     self.0.has_seq_at(kinds, offset)
   }
 
-  pub fn consume_current(&mut self) -> Option<Token<'src>> {
+  pub fn consume_current(&mut self) -> Option<Token<'arena>> {
     self.0.consume_current()
   }
 
@@ -97,7 +97,7 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
     self.0.drop_leading_bytes(n);
   }
 
-  pub fn consume_splitting(&mut self, embeddable_separator: Option<char>) -> Option<Token<'src>> {
+  pub fn consume_splitting(&mut self, embeddable_separator: Option<char>) -> Option<Token<'arena>> {
     let Some(sep) = embeddable_separator else {
       return self.consume_current();
     };
@@ -110,12 +110,14 @@ impl<'bmp, 'src> TableTokens<'bmp, 'src> {
       let (before, _) = token.lexeme.split_once(sep).unwrap();
       // NB: caller must check that lexeme doesn't START with sep
       debug_assert!(!before.is_empty());
+      let lexeme = BumpString::from_str_in(before, self.0.bump_arena());
       let loc = token.loc;
-      self.drop_leading_bytes(before.len());
+      let before_len = before.len();
+      self.drop_leading_bytes(before_len);
       Some(Token {
         kind: TokenKind::Word,
-        lexeme: before,
-        loc: SourceLocation::new(loc.start, loc.start + before.len()),
+        lexeme,
+        loc: SourceLocation::new(loc.start, loc.start + before_len),
       })
     } else {
       self.consume_current()

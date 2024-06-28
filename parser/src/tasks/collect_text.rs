@@ -1,13 +1,13 @@
 use crate::internal::*;
 
-pub struct CollectText<'bmp> {
-  bump: &'bmp bumpalo::Bump,
-  string: Option<BumpString<'bmp>>,
+pub struct CollectText<'arena> {
+  bump: &'arena Bump,
+  string: Option<BumpString<'arena>>,
   pub loc: SourceLocation,
 }
 
-impl<'bmp> CollectText<'bmp> {
-  pub fn new_in(loc: SourceLocation, bump: &'bmp bumpalo::Bump) -> Self {
+impl<'arena> CollectText<'arena> {
+  pub fn new_in(loc: SourceLocation, bump: &'arena bumpalo::Bump) -> Self {
     CollectText {
       bump,
       string: Some(BumpString::new_in(bump)),
@@ -16,7 +16,7 @@ impl<'bmp> CollectText<'bmp> {
   }
 
   pub fn push_token(&mut self, token: &Token<'_>) {
-    self.string.as_mut().unwrap().push_str(token.lexeme);
+    self.string.as_mut().unwrap().push_str(&token.lexeme);
     self.loc.extend(token.loc);
   }
 
@@ -52,18 +52,21 @@ impl<'bmp> CollectText<'bmp> {
     self.loc.end -= n;
   }
 
-  pub fn take(&mut self) -> BumpString<'bmp> {
+  fn take(&mut self) -> BumpString<'arena> {
     self.loc = self.loc.clamp_end();
     self.string.replace(BumpString::new_in(self.bump)).unwrap()
   }
 
-  pub fn take_src(&mut self) -> SourceString<'bmp> {
+  pub fn take_src(&mut self) -> SourceString<'arena> {
     let src_loc = self.loc;
-    self.loc = self.loc.clamp_end();
     SourceString::new(self.take(), src_loc)
   }
 
-  pub fn commit_inlines(&mut self, inlines: &mut InlineNodes<'bmp>) {
+  pub fn drop_src(&mut self) {
+    self.take();
+  }
+
+  pub fn commit_inlines(&mut self, inlines: &mut InlineNodes<'arena>) {
     match (self.is_empty(), inlines.last_mut()) {
       (
         false,
@@ -95,11 +98,11 @@ impl<'bmp> CollectText<'bmp> {
   }
 }
 
-impl<'bmp> std::fmt::Debug for CollectText<'bmp> {
+impl<'arena> std::fmt::Debug for CollectText<'arena> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,
-      "TextSpan {{ string: {}, loc: {:?} }}",
+      "CollectText {{ string: {}, loc: {:?} }}",
       self
         .string
         .as_ref()

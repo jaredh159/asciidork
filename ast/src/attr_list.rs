@@ -2,17 +2,17 @@ use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/positional-and-named-attributes/
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct AttrList<'bmp> {
-  pub positional: BumpVec<'bmp, Option<InlineNodes<'bmp>>>,
-  pub named: Named<'bmp>,
-  pub id: Option<SourceString<'bmp>>,
-  pub roles: BumpVec<'bmp, SourceString<'bmp>>,
-  pub options: BumpVec<'bmp, SourceString<'bmp>>,
+pub struct AttrList<'arena> {
+  pub positional: BumpVec<'arena, Option<InlineNodes<'arena>>>,
+  pub named: Named<'arena>,
+  pub id: Option<SourceString<'arena>>,
+  pub roles: BumpVec<'arena, SourceString<'arena>>,
+  pub options: BumpVec<'arena, SourceString<'arena>>,
   pub loc: SourceLocation,
 }
 
-impl<'bmp> AttrList<'bmp> {
-  pub fn new(loc: SourceLocation, bump: &'bmp Bump) -> Self {
+impl<'arena> AttrList<'arena> {
+  pub fn new(loc: SourceLocation, bump: &'arena Bump) -> Self {
     AttrList {
       positional: BumpVec::new_in(bump),
       named: Named::new_in(bump),
@@ -109,22 +109,22 @@ impl<'bmp> AttrList<'bmp> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Named<'bmp>(BumpVec<'bmp, (SourceString<'bmp>, InlineNodes<'bmp>)>);
+pub struct Named<'arena>(BumpVec<'arena, (SourceString<'arena>, InlineNodes<'arena>)>);
 
-impl<'bmp> Named<'bmp> {
-  pub fn new_in(bump: &'bmp Bump) -> Self {
+impl<'arena> Named<'arena> {
+  pub fn new_in(bump: &'arena Bump) -> Self {
     Named(BumpVec::new_in(bump))
   }
 
-  pub fn from(vec: BumpVec<'bmp, (SourceString<'bmp>, InlineNodes<'bmp>)>) -> Self {
+  pub fn from(vec: BumpVec<'arena, (SourceString<'arena>, InlineNodes<'arena>)>) -> Self {
     Named(vec)
   }
 
-  pub fn insert(&mut self, key: SourceString<'bmp>, value: InlineNodes<'bmp>) {
+  pub fn insert(&mut self, key: SourceString<'arena>, value: InlineNodes<'arena>) {
     self.0.push((key, value));
   }
 
-  pub fn get(&self, key: &str) -> Option<&InlineNodes<'bmp>> {
+  pub fn get(&self, key: &str) -> Option<&InlineNodes<'arena>> {
     self
       .0
       .iter()

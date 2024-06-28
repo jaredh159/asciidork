@@ -355,7 +355,8 @@ macro_rules! test_inlines_loose {
     fn $name() {
       let mut settings = ::asciidork_meta::JobSettings::embedded();
       settings.strict = false;
-      let parser = Parser::new_settings(leaked_bump(), $input, settings);
+      let mut parser = Parser::from_str($input, leaked_bump());
+      parser.apply_job_settings(settings);
       let content = parser.parse().unwrap().document.content;
       let blocks = content.blocks().expect("expected blocks").clone();
       if blocks.len() != 1 {
@@ -446,7 +447,7 @@ macro_rules! parse_single_block_loose {
 #[macro_export]
 macro_rules! parse_doc_content {
   ($input:expr) => {{
-    let parser = Parser::new(leaked_bump(), $input);
+    let parser = Parser::from_str($input, leaked_bump());
     parser.parse().unwrap().document.content
   }};
 }
@@ -456,7 +457,8 @@ macro_rules! parse_doc_content_loose {
   ($input:expr) => {{
     let mut settings = ::asciidork_meta::JobSettings::embedded();
     settings.strict = false;
-    let parser = Parser::new_settings(leaked_bump(), $input, settings);
+    let mut parser = Parser::from_str($input, leaked_bump());
+    parser.apply_job_settings(settings);
     parser.parse().unwrap().document.content
   }};
 }
@@ -464,7 +466,7 @@ macro_rules! parse_doc_content_loose {
 #[macro_export]
 macro_rules! parse {
   ($input:expr) => {{
-    let parser = Parser::new(leaked_bump(), $input);
+    let parser = Parser::from_str($input, leaked_bump());
     parser.parse()
   }};
 }
@@ -472,7 +474,7 @@ macro_rules! parse {
 #[macro_export]
 macro_rules! parse_doc {
   ($input:expr) => {{
-    let parser = Parser::new(leaked_bump(), $input);
+    let parser = Parser::from_str($input, leaked_bump());
     parser.parse().unwrap().document
   }};
 }
@@ -480,7 +482,7 @@ macro_rules! parse_doc {
 #[macro_export]
 macro_rules! parse_toc {
   ($input:expr) => {{
-    let parser = Parser::new(leaked_bump(), $input);
+    let parser = Parser::from_str($input, leaked_bump());
     parser.parse().unwrap().document.toc.expect("expected toc")
   }};
 }
@@ -488,7 +490,7 @@ macro_rules! parse_toc {
 #[macro_export]
 macro_rules! parse_errors {
   ($input:expr) => {{
-    let parser = Parser::new(leaked_bump(), $input);
+    let parser = Parser::from_str($input, leaked_bump());
     parser.parse().err().expect("expected parse failure")
   }};
 }
@@ -496,7 +498,7 @@ macro_rules! parse_errors {
 #[macro_export]
 macro_rules! parse_error {
   ($input:expr) => {{
-    let parser = Parser::new(leaked_bump(), $input);
+    let parser = Parser::from_str($input, leaked_bump());
     let mut diagnostics = parser.parse().err().expect(&format!(
       indoc::indoc! {"
         expected PARSE ERROR, but got none. input was:

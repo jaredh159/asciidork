@@ -3,19 +3,19 @@ use std::{cell::RefCell, rc::Rc};
 use crate::internal::*;
 
 #[derive(Debug)]
-pub struct Parser<'bmp: 'src, 'src> {
-  pub(super) bump: &'bmp Bump,
-  pub(super) lexer: Lexer<'src>,
-  pub(super) document: Document<'bmp>,
-  pub(super) peeked_lines: Option<ContiguousLines<'bmp, 'src>>,
-  pub(super) peeked_meta: Option<ChunkMeta<'bmp>>,
-  pub(super) ctx: ParseContext<'bmp>,
+pub struct Parser<'arena> {
+  pub(super) bump: &'arena Bump,
+  pub(super) lexer: Lexer<'arena>,
+  pub(super) document: Document<'arena>,
+  pub(super) peeked_lines: Option<ContiguousLines<'arena>>,
+  pub(super) peeked_meta: Option<ChunkMeta<'arena>>,
+  pub(super) ctx: ParseContext<'arena>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) strict: bool, // todo: naming...
 }
 
-pub struct ParseResult<'bmp> {
-  pub document: Document<'bmp>,
+pub struct ParseResult<'arena> {
+  pub document: Document<'arena>,
   pub warnings: Vec<Diagnostic>,
 }
 
@@ -25,11 +25,11 @@ pub(crate) struct ListContext {
   pub(crate) parsing_continuations: bool,
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub fn new(bump: &'bmp Bump, src: &'src str) -> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
+  pub fn new(src: BumpVec<'arena, u8>, bump: &'arena Bump) -> Self {
     Parser {
       bump,
-      lexer: Lexer::new(src),
+      lexer: Lexer::new(src, bump),
       document: Document::new(bump),
       peeked_lines: None,
       peeked_meta: None,
@@ -39,29 +39,32 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  pub fn new_settings(
-    bump: &'bmp Bump,
-    src: &'src str,
-    settings: JobSettings,
-  ) -> Parser<'bmp, 'src> {
-    let mut p = Parser::new(bump, src);
-    p.strict = settings.strict;
-    p.document.meta = settings.into();
-    p
+  pub fn from_str(src: &str, bump: &'arena Bump) -> Self {
+    Parser {
+      bump,
+      lexer: Lexer::from_str(bump, src),
+      document: Document::new(bump),
+      peeked_lines: None,
+      peeked_meta: None,
+      ctx: ParseContext::new(bump),
+      errors: RefCell::new(Vec::new()),
+      strict: true,
+    }
   }
 
-  pub fn cell_parser(&mut self, src: &'src str, offset: usize) -> Parser<'bmp, 'src> {
-    let mut cell_parser = Parser::new(self.bump, src);
+  pub fn apply_job_settings(&mut self, settings: JobSettings) {
+    self.strict = settings.strict;
+    self.document.meta = settings.into();
+  }
+
+  pub fn cell_parser(&mut self, src: BumpVec<'arena, u8>, offset: usize) -> Parser<'arena> {
+    let mut cell_parser = Parser::new(src, self.bump);
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
     cell_parser.ctx = self.ctx.clone_for_cell();
     cell_parser.document.meta = self.document.meta.clone_for_cell();
     cell_parser.document.anchors = Rc::clone(&self.document.anchors);
     cell_parser
-  }
-
-  pub(crate) fn debug_loc(&self, loc: SourceLocation) {
-    println!("{:?}, {}", loc, self.lexer.loc_src(loc));
   }
 
   pub(crate) fn loc(&self) -> SourceLocation {
@@ -72,20 +75,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       .unwrap_or_else(|| self.lexer.loc())
   }
 
-  pub(crate) fn line_from(
-    &self,
-    tokens: BumpVec<'bmp, Token<'src>>,
-    loc: impl Into<SourceLocation>,
-  ) -> Line<'bmp, 'src> {
-    Line::new(tokens, self.lexer.loc_src(loc))
-  }
-
-  pub(crate) fn read_line(&mut self) -> Option<Line<'bmp, 'src>> {
+  pub(crate) fn read_line(&mut self) -> Option<Line<'arena>> {
     debug_assert!(self.peeked_lines.is_none());
-    self.lexer.consume_line(self.bump)
+    self.lexer.consume_line()
   }
 
-  pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'bmp, 'src>> {
+  pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'arena>> {
     if let Some(peeked) = self.peeked_lines.take() {
       return Some(peeked);
     }
@@ -93,8 +88,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     if self.lexer.is_eof() {
       return None;
     }
-    let mut lines = BumpVec::new_in(self.bump);
-    while let Some(line) = self.lexer.consume_line(self.bump) {
+    let mut lines = Deq::new(self.bump);
+    while let Some(line) = self.lexer.consume_line() {
       lines.push(line);
       if self.lexer.peek_is(b'\n') {
         break;
@@ -107,7 +102,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn read_lines_until(
     &mut self,
     delimiter: Delimiter,
-  ) -> Option<ContiguousLines<'bmp, 'src>> {
+  ) -> Option<ContiguousLines<'arena>> {
     let mut lines = self.read_lines()?;
     if lines.any(|l| l.is_delimiter(delimiter)) {
       return Some(lines);
@@ -134,28 +129,24 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  pub(crate) fn restore_lines(&mut self, lines: ContiguousLines<'bmp, 'src>) {
+  pub(crate) fn restore_lines(&mut self, lines: ContiguousLines<'arena>) {
     debug_assert!(self.peeked_lines.is_none());
     if !lines.is_empty() {
       self.peeked_lines = Some(lines);
     }
   }
 
-  pub(crate) fn restore_peeked_meta(&mut self, meta: ChunkMeta<'bmp>) {
+  pub(crate) fn restore_peeked_meta(&mut self, meta: ChunkMeta<'arena>) {
     debug_assert!(self.peeked_meta.is_none());
     self.peeked_meta = Some(meta);
   }
 
-  pub(crate) fn restore_peeked(
-    &mut self,
-    lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) {
+  pub(crate) fn restore_peeked(&mut self, lines: ContiguousLines<'arena>, meta: ChunkMeta<'arena>) {
     self.restore_lines(lines);
     self.restore_peeked_meta(meta);
   }
 
-  pub fn parse(mut self) -> std::result::Result<ParseResult<'bmp>, Vec<Diagnostic>> {
+  pub fn parse(mut self) -> std::result::Result<ParseResult<'arena>, Vec<Diagnostic>> {
     self.parse_document_header()?;
 
     // ensure we only read a single "paragraph" for `inline` doc_type
@@ -185,7 +176,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     })
   }
 
-  fn parse_chunk(&mut self) -> Result<Option<Chunk<'bmp>>> {
+  fn parse_chunk(&mut self) -> Result<Option<Chunk<'arena>>> {
     match self.parse_section()? {
       Some(section) => Ok(Some(Chunk::Section(section))),
       None => Ok(self.parse_block()?.map(Chunk::Block)),
@@ -194,8 +185,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn parse_chunk_meta(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
-  ) -> Result<ChunkMeta<'bmp>> {
+    lines: &mut ContiguousLines<'arena>,
+  ) -> Result<ChunkMeta<'arena>> {
     if let Some(meta) = self.peeked_meta.take() {
       return Ok(meta);
     }
@@ -207,7 +198,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
         Some(line) if line.is_chunk_title() => {
           let mut line = lines.consume_current().unwrap();
           line.discard_assert(TokenKind::Dots);
-          title = Some(self.parse_inlines(&mut line.into_lines_in(self.bump))?);
+          title = Some(self.parse_inlines(&mut line.into_lines())?);
         }
         Some(line) if line.is_attr_list() => {
           let mut line = lines.consume_current().unwrap();
@@ -255,9 +246,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 }
 
 #[derive(Debug)]
-pub enum Chunk<'bmp> {
-  Block(Block<'bmp>),
-  Section(Section<'bmp>),
+pub enum Chunk<'arena> {
+  Block(Block<'arena>),
+  Section(Section<'arena>),
 }
 
 impl From<Diagnostic> for Vec<Diagnostic> {

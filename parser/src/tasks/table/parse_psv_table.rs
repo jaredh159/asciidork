@@ -1,11 +1,11 @@
 use super::{context::*, TableTokens};
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(super) fn parse_psv_implicit_first_row(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
   ) -> Result<()> {
     let mut cells = bvec![in self.bump];
     while let Some((cell, dupe)) = self.parse_psv_table_cell(tokens, ctx, cells.len())? {
@@ -31,9 +31,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(super) fn parse_psv_table_row(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
-  ) -> Result<Option<Row<'bmp>>> {
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
+  ) -> Result<Option<Row<'arena>>> {
     let mut cells = bvec![in self.bump];
     let mut num_effective_cells = ctx.row_phantom_cells();
     'outer: while let Some((cell, dupe)) = self.parse_psv_table_cell(tokens, ctx, cells.len())? {
@@ -64,10 +64,10 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_psv_table_cell(
     &mut self,
-    tokens: &mut TableTokens<'bmp, 'src>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    tokens: &mut TableTokens<'arena>,
+    ctx: &mut TableContext<'arena>,
     col_index: usize,
-  ) -> Result<Option<(Cell<'bmp>, u8)>> {
+  ) -> Result<Option<(Cell<'arena>, u8)>> {
     if tokens.is_empty() {
       return Ok(None);
     }
@@ -95,7 +95,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
 
     let mut end = start;
-    let mut cell_tokens = bvec![in self.bump];
+    let mut cell_tokens = Deq::new(self.bump);
 
     // trim leading whitespace
     while tokens.current().is(TokenKind::Whitespace) {

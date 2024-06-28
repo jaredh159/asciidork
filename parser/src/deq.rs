@@ -1,32 +1,50 @@
+use std::fmt;
+
 use crate::internal::*;
 
-pub trait DefaultIn {
-  fn default_in(bmp: &Bump) -> Self;
-}
-
-// NB: if we need push_front, switch to a ring buffer
-#[derive(Debug)]
-pub struct Deq<'bmp, T> {
-  bmp: &'bmp Bump,
-  buf: BumpVec<'bmp, T>,
+/// A Vec-like data structure that allows efficient popping from front
+/// by replacing the popped item with a default value and maintaining
+/// an internal position. It does not use a real ring buffer, so pushing
+/// to the front should only occur when we have a position to overwrite
+#[derive(Clone)]
+pub struct Deq<'arena, T> {
+  pub bump: &'arena Bump,
+  buf: BumpVec<'arena, T>,
   pos: usize,
 }
 
-impl<'bmp, T> Deq<'bmp, T> {
-  pub fn new(bmp: &'bmp Bump) -> Self {
+impl<'arena, T> Deq<'arena, T> {
+  pub fn new(bump: &'arena Bump) -> Self {
     Deq {
-      bmp,
-      buf: BumpVec::new_in(bmp),
+      bump,
+      buf: BumpVec::new_in(bump),
       pos: 0,
     }
   }
 
-  pub fn with_capacity(bmp: &'bmp Bump, capacity: usize) -> Self {
+  pub fn with_capacity(bump: &'arena Bump, capacity: usize) -> Self {
     Deq {
-      bmp,
-      buf: BumpVec::with_capacity_in(capacity, bmp),
+      bump,
+      buf: BumpVec::with_capacity_in(capacity, bump),
       pos: 0,
     }
+  }
+
+  pub fn clear(&mut self) {
+    self.buf.clear();
+    self.pos = 0;
+  }
+
+  pub fn extend(&mut self, other: impl IntoIterator<Item = T>) {
+    self.buf.extend(other);
+  }
+
+  pub fn get(&self, index: usize) -> Option<&T> {
+    self.buf.get(index + self.pos)
+  }
+
+  pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+    self.buf.get_mut(index + self.pos)
   }
 
   pub fn push(&mut self, item: T) {
@@ -48,6 +66,24 @@ impl<'bmp, T> Deq<'bmp, T> {
     self.buf.len() - self.pos
   }
 
+  pub fn first(&self) -> Option<&T> {
+    self.buf.get(self.pos)
+  }
+
+  pub fn last(&self) -> Option<&T> {
+    if self.is_empty() {
+      return None;
+    }
+    self.buf.last()
+  }
+
+  pub fn last_mut(&mut self) -> Option<&mut T> {
+    if self.is_empty() {
+      return None;
+    }
+    self.buf.last_mut()
+  }
+
   pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
     self.buf.iter().skip(self.pos)
   }
@@ -55,27 +91,63 @@ impl<'bmp, T> Deq<'bmp, T> {
   pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut T> {
     self.buf.iter_mut().skip(self.pos)
   }
+
+  pub fn into_iter(self) -> impl ExactSizeIterator<Item = T> + 'arena {
+    self.buf.into_iter().skip(self.pos)
+  }
+
+  pub fn reserve(&mut self, additional: usize) {
+    self.buf.reserve(additional + self.pos);
+  }
+
+  // this is not meant to be a general-purpose method, rather
+  // should only be called when we know we have a slot to overwrite
+  // which is why there is a debug_assert! to catch misuse
+  pub fn push_front(&mut self, item: T) {
+    if self.pos == 0 {
+      self.buf.insert(0, item);
+      debug_assert!(false, "unexpected O(n) push_front in Deq");
+    } else {
+      self.pos -= 1;
+      self.buf[self.pos] = item;
+    }
+  }
 }
 
-impl<'bmp, T: DefaultIn> Deq<'bmp, T> {
+pub trait DefaultIn<'a> {
+  fn default_in(bump: &'a Bump) -> Self;
+}
+
+impl<'arena, T: DefaultIn<'arena>> Deq<'arena, T> {
   pub fn pop_front(&mut self) -> Option<T> {
     if self.is_empty() {
       return None;
     }
-    let mut item = T::default_in(self.bmp);
+    let mut item = T::default_in(self.bump);
     std::mem::swap(&mut self.buf[self.pos], &mut item);
     self.pos += 1;
     Some(item)
   }
 }
 
+impl<'arena, T: fmt::Debug> fmt::Debug for Deq<'arena, T> {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(
+      f,
+      "{:?}",
+      self.buf.iter().skip(self.pos).collect::<Vec<_>>()
+    )
+  }
+}
+
+#[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::{assert_eq, *};
 
   #[test]
   fn deq_impl() {
-    let bump = Bump::new();
-    let mut deq = Deq::new(&bump);
+    let mut deq = Deq::new(leaked_bump());
     assert!(deq.is_empty());
     assert_eq!(deq.len(), 0);
     assert_eq!(deq.pop(), None);
@@ -130,8 +202,8 @@ mod tests {
     assert_eq!(iter.next(), None);
   }
 
-  impl DefaultIn for &'static str {
-    fn default_in(_bmp: &Bump) -> Self {
+  impl DefaultIn<'static> for &'static str {
+    fn default_in(_: &Bump) -> Self {
       "_"
     }
   }

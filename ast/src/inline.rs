@@ -1,43 +1,43 @@
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct InlineNode<'bmp> {
-  pub content: Inline<'bmp>,
+pub struct InlineNode<'arena> {
+  pub content: Inline<'arena>,
   pub loc: SourceLocation,
 }
 
-impl<'bmp> InlineNode<'bmp> {
-  pub const fn new(content: Inline<'bmp>, loc: SourceLocation) -> Self {
+impl<'arena> InlineNode<'arena> {
+  pub const fn new(content: Inline<'arena>, loc: SourceLocation) -> Self {
     Self { content, loc }
   }
 }
 
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Inline<'bmp> {
-  AttributeReference(BumpString<'bmp>),
-  Bold(InlineNodes<'bmp>),
+pub enum Inline<'arena> {
+  AttributeReference(BumpString<'arena>),
+  Bold(InlineNodes<'arena>),
   CurlyQuote(CurlyKind),
   Discarded,
-  Highlight(InlineNodes<'bmp>),
-  Macro(MacroNode<'bmp>),
-  Italic(InlineNodes<'bmp>),
-  InlinePassthrough(InlineNodes<'bmp>),
+  Highlight(InlineNodes<'arena>),
+  Macro(MacroNode<'arena>),
+  Italic(InlineNodes<'arena>),
+  InlinePassthrough(InlineNodes<'arena>),
   Newline,
   CalloutNum(Callout),
-  CalloutTuck(BumpString<'bmp>),
-  LegacyInlineAnchor(BumpString<'bmp>),
+  CalloutTuck(BumpString<'arena>),
+  LegacyInlineAnchor(BumpString<'arena>),
   LineBreak,
-  LineComment(BumpString<'bmp>),
-  LitMono(SourceString<'bmp>),
-  Mono(InlineNodes<'bmp>),
-  MultiCharWhitespace(BumpString<'bmp>),
-  Quote(QuoteKind, InlineNodes<'bmp>),
+  LineComment(BumpString<'arena>),
+  LitMono(SourceString<'arena>),
+  Mono(InlineNodes<'arena>),
+  MultiCharWhitespace(BumpString<'arena>),
+  Quote(QuoteKind, InlineNodes<'arena>),
   SpecialChar(SpecialCharKind),
-  Superscript(InlineNodes<'bmp>),
-  Subscript(InlineNodes<'bmp>),
-  Text(BumpString<'bmp>),
-  TextSpan(AttrList<'bmp>, InlineNodes<'bmp>),
+  Superscript(InlineNodes<'arena>),
+  Subscript(InlineNodes<'arena>),
+  Text(BumpString<'arena>),
+  TextSpan(AttrList<'arena>, InlineNodes<'arena>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -64,7 +64,7 @@ pub enum SpecialCharKind {
 
 // json
 
-impl<'bmp> Json for InlineNode<'bmp> {
+impl<'arena> Json for InlineNode<'arena> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     buf.begin_obj("InlineNode");
     buf.add_member("content", &self.content);
@@ -90,7 +90,7 @@ impl Json for CurlyKind {
   }
 }
 
-impl<'bmp> Json for Inline<'bmp> {
+impl<'arena> Json for Inline<'arena> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     buf.begin_obj("Inline");
     buf.push_str(r#","variant":""#);

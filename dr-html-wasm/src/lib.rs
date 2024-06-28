@@ -7,9 +7,9 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn convert(adoc: &str) -> String {
-  let bump = Bump::new();
-  let settings = JobSettings::embedded();
-  let parser = Parser::new_settings(&bump, adoc, settings);
+  let bump = &Bump::new();
+  let mut parser = Parser::from_str(adoc, bump);
+  parser.apply_job_settings(JobSettings::embedded());
   let result = parser.parse();
   match result {
     Ok(ParseResult { document, .. }) => {

@@ -1,12 +1,12 @@
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(crate) fn parse_list(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: Option<ChunkMeta<'bmp>>,
-  ) -> Result<Block<'bmp>> {
+    mut lines: ContiguousLines<'arena>,
+    meta: Option<ChunkMeta<'arena>>,
+  ) -> Result<Block<'arena>> {
     let first_line = lines.consume_current().unwrap();
     let marker = first_line.list_marker().unwrap();
     let variant = ListVariant::from(marker);
@@ -38,12 +38,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     &mut self,
     list_variant: ListVariant,
     autogen_conum: &mut u8,
-  ) -> Result<Option<ListItem<'bmp>>> {
+  ) -> Result<Option<ListItem<'arena>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
 
-    let Some(marker) = lines.first().and_then(|line| line.list_marker()) else {
+    let Some(marker) = lines.current().and_then(|line| line.list_marker()) else {
       self.restore_lines(lines);
       return Ok(None);
     };
@@ -85,7 +85,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       *autogen_conum = conum + 1;
     }
 
-    let mut item_lines = bvec![in self.bump; line];
+    let mut item_lines = Deq::with_capacity(self.bump, 1);
+    item_lines.push(line);
     while lines
       .current()
       .map(|line| line.continues_list_item_principle())
@@ -111,9 +112,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_list_item_blocks(
     &mut self,
-    lines: ContiguousLines<'bmp, 'src>,
-    mut blocks: BumpVec<'bmp, Block<'bmp>>,
-  ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
+    lines: ContiguousLines<'arena>,
+    mut blocks: BumpVec<'arena, Block<'arena>>,
+  ) -> Result<BumpVec<'arena, Block<'arena>>> {
     if lines.starts_nested_list(&self.ctx.list.stack, true) {
       self.restore_lines(lines);
       blocks.push(self.parse_block()?.unwrap());
@@ -146,8 +147,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_list_continuation_blocks(
     &mut self,
-    mut accum: BumpVec<'bmp, Block<'bmp>>,
-  ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
+    mut accum: BumpVec<'arena, Block<'arena>>,
+  ) -> Result<BumpVec<'arena, Block<'arena>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(accum);
     };
@@ -166,16 +167,16 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn parse_description_list_item(
     &mut self,
     marker: ListMarker,
-    mut line: Line<'bmp, 'src>,
-    mut lines: ContiguousLines<'bmp, 'src>,
-  ) -> Result<Option<ListItem<'bmp>>> {
+    mut line: Line<'arena>,
+    mut lines: ContiguousLines<'arena>,
+  ) -> Result<Option<ListItem<'arena>>> {
     let principle = {
-      let before_delim = line.extract_line_before(&[TermDelimiter], self.bump);
-      self.parse_inlines(&mut before_delim.into_lines_in(self.bump))?
+      let before_delim = line.extract_line_before(&[TermDelimiter]);
+      self.parse_inlines(&mut before_delim.into_lines())?
     };
 
     let marker_token = line.consume_current().unwrap();
-    let marker_src = marker_token.to_source_string(self.bump);
+    let marker_src = marker_token.into_source_string();
 
     line.trim_leading_whitespace();
     lines.restore_if_nonempty(line);
@@ -192,8 +193,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub fn parse_description_list_item_blocks(
     &mut self,
-    lines: ContiguousLines<'bmp, 'src>,
-  ) -> Result<BumpVec<'bmp, Block<'bmp>>> {
+    lines: ContiguousLines<'arena>,
+  ) -> Result<BumpVec<'arena, Block<'arena>>> {
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
     if let Some(block) = self.parse_block()? {
@@ -238,7 +239,7 @@ mod tests {
 
     let bump = &Bump::new();
     for (input, block_contexts) in cases {
-      let parser = Parser::new(bump, input);
+      let parser = Parser::from_str(input, bump);
       let content = parser.parse().unwrap().document.content;
       match content {
         DocContent::Blocks(blocks) => {
