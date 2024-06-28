@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -43,26 +45,21 @@ pub enum TokenKind {
   Word,
 }
 
-#[derive(Clone, PartialEq, Eq, Default)]
-pub struct Token<'src> {
+#[derive(Clone, PartialEq, Eq)]
+pub struct Token<'arena> {
   pub kind: TokenKind,
   pub loc: SourceLocation,
-  pub lexeme: &'src str,
+  pub lexeme: BumpString<'arena>,
 }
 
-impl<'src> Token<'src> {
-  pub fn to_string<'bmp>(&self, bump: &'bmp Bump) -> BumpString<'bmp> {
-    BumpString::from_str_in(self.lexeme, bump)
-  }
-
-  pub fn to_source_string<'bmp>(&self, bump: &'bmp Bump) -> SourceString<'bmp> {
-    let bump_str = BumpString::from_str_in(self.lexeme, bump);
-    SourceString::new(bump_str, self.loc)
+impl<'arena> Token<'arena> {
+  pub fn into_source_string(self) -> SourceString<'arena> {
+    SourceString::new(self.lexeme, self.loc)
   }
 
   pub fn to_url_scheme(&self) -> Option<UrlScheme> {
     match self.kind {
-      TokenKind::MacroName => match self.lexeme {
+      TokenKind::MacroName => match self.lexeme.as_str() {
         "https:" => Some(UrlScheme::Https),
         "http:" => Some(UrlScheme::Http),
         "ftp:" => Some(UrlScheme::Ftp),
@@ -74,7 +71,7 @@ impl<'src> Token<'src> {
     }
   }
 
-  pub const fn len(&self) -> usize {
+  pub fn len(&self) -> usize {
     self.lexeme.len()
   }
 
@@ -95,12 +92,24 @@ impl<'src> Token<'src> {
   }
 
   pub fn drop_leading_bytes(&mut self, n: usize) {
+    if n == 0 {
+      return;
+    }
     debug_assert!(n <= self.lexeme.len());
     self.kind = TokenKind::Word;
-    if n > 0 {
-      self.lexeme = &self.lexeme[n..];
-      self.loc.start += n;
+    let mut removed = 0;
+    loop {
+      let char = self.lexeme.remove(0);
+      let mut buf = [0; 4];
+      let bytes = char.encode_utf8(&mut buf).as_bytes();
+      removed += bytes.len();
+      match removed.cmp(&n) {
+        Ordering::Less => continue,
+        Ordering::Equal => break,
+        Ordering::Greater => panic!("Token::drop_leading_bytes() mid-char boundary"),
+      }
     }
+    self.loc.start += n;
   }
 }
 
@@ -119,7 +128,17 @@ pub trait TokenIs {
   }
 }
 
-impl<'src> TokenIs for Token<'src> {
+impl<'arena> DefaultIn<'arena> for Token<'arena> {
+  fn default_in(bump: &'arena Bump) -> Self {
+    Self {
+      kind: TokenKind::Eof,
+      loc: SourceLocation::default(),
+      lexeme: BumpString::from_str_in("", bump),
+    }
+  }
+}
+
+impl<'arena> TokenIs for Token<'arena> {
   fn is(&self, kind: TokenKind) -> bool {
     self.kind == kind
   }
@@ -133,7 +152,7 @@ impl<'src> TokenIs for Token<'src> {
   }
 }
 
-impl<'src> TokenIs for Option<&Token<'src>> {
+impl<'arena> TokenIs for Option<&Token<'arena>> {
   fn is(&self, kind: TokenKind) -> bool {
     self.map_or(false, |t| t.is(kind))
   }
@@ -147,12 +166,17 @@ impl<'src> TokenIs for Option<&Token<'src>> {
   }
 }
 
-impl<'src> std::fmt::Debug for Token<'src> {
+impl<'arena> std::fmt::Debug for Token<'arena> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let lexeme = if &self.lexeme == "\n" {
+      "\\n".to_string()
+    } else {
+      self.lexeme.to_string()
+    };
     write!(
       f,
       "Token {{ {:?}, \"{}\", {:?} }}",
-      self.kind, self.lexeme, self.loc
+      self.kind, lexeme, self.loc
     )
   }
 }

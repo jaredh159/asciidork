@@ -5,50 +5,76 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 #[derive(Debug, Clone)]
-pub struct Line<'bmp, 'src> {
-  pub src: &'src str,
-  all_tokens: BumpVec<'bmp, Token<'src>>,
-  pos: usize,
+pub struct Line<'arena> {
+  tokens: Deq<'arena, Token<'arena>>,
+  orig_len: usize,
 }
 
-impl<'bmp, 'src> Line<'bmp, 'src> {
-  pub fn new(tokens: BumpVec<'bmp, Token<'src>>, src: &'src str) -> Self {
-    Line { all_tokens: tokens, src, pos: 0 }
+impl<'arena> Line<'arena> {
+  pub fn new(tokens: Deq<'arena, Token<'arena>>) -> Self {
+    Line { orig_len: tokens.len(), tokens }
   }
 
-  pub fn drain_into(mut self, tokens: &mut BumpVec<'bmp, Token<'src>>) {
-    tokens.extend(self.all_tokens.drain(self.pos..));
+  pub fn drain_into(self, tokens: &mut Deq<'arena, Token<'arena>>) {
+    tokens.extend(self.tokens.into_iter());
   }
 
-  pub fn current_token(&self) -> Option<&Token<'src>> {
-    self.all_tokens.get(self.pos)
-  }
-
-  pub fn current_token_mut(&mut self) -> Option<&mut Token<'src>> {
-    self.all_tokens.get_mut(self.pos)
-  }
-
-  pub fn peek_token(&self) -> Option<&Token<'src>> {
-    self.nth_token(1)
-  }
-
-  pub fn last_token(&self) -> Option<&Token<'src>> {
-    if self.is_empty() {
-      return None;
+  pub fn into_bytes(self) -> BumpVec<'arena, u8> {
+    let mut bytes = BumpVec::new_in(self.tokens.bump);
+    if let (Some(first), Some(last)) = (self.tokens.first(), self.tokens.last()) {
+      bytes.reserve(last.loc.end - first.loc.start);
     }
-    self.all_tokens.last()
+    for token in self.tokens.iter() {
+      bytes.extend_from_slice(token.lexeme.as_bytes());
+    }
+    bytes
+  }
+
+  pub const fn bump_arena(&self) -> &'arena Bump {
+    self.tokens.bump
+  }
+
+  pub fn src_eq(&self, other: &Self) -> bool {
+    if self.tokens.len() != other.tokens.len() {
+      return false;
+    }
+    if self.src_len() != other.src_len() {
+      return false;
+    }
+    for (a, b) in self.tokens.iter().zip(other.tokens.iter()) {
+      if a.lexeme != b.lexeme {
+        return false;
+      }
+    }
+    true
+  }
+
+  pub fn current_token(&self) -> Option<&Token<'arena>> {
+    self.tokens.get(0)
+  }
+
+  pub fn current_token_mut(&mut self) -> Option<&mut Token<'arena>> {
+    self.tokens.get_mut(0)
+  }
+
+  pub fn peek_token(&self) -> Option<&Token<'arena>> {
+    self.tokens.get(1)
+  }
+
+  pub fn last_token(&self) -> Option<&Token<'arena>> {
+    self.tokens.last()
   }
 
   pub fn last_loc(&self) -> Option<SourceLocation> {
     self.last_token().map(|t| t.loc)
   }
 
-  pub fn nth_token(&self, n: usize) -> Option<&Token<'src>> {
-    self.all_tokens.get(self.pos + n)
+  pub fn nth_token(&self, n: usize) -> Option<&Token<'arena>> {
+    self.tokens.get(n)
   }
 
   pub fn num_tokens(&self) -> usize {
-    self.all_tokens.len() - self.pos
+    self.tokens.len()
   }
 
   pub fn current_is(&self, kind: TokenKind) -> bool {
@@ -68,7 +94,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   pub fn is_empty(&self) -> bool {
-    self.pos >= self.all_tokens.len()
+    self.tokens.is_empty()
   }
 
   pub fn is_heading(&self) -> bool {
@@ -121,12 +147,8 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     debug_assert!(token.unwrap().is(kind));
   }
 
-  pub fn discard_last(&mut self) -> Option<Token<'src>> {
-    let Some(token) = self.all_tokens.pop() else {
-      return None;
-    };
-    self.src = &self.src[..self.src.len() - token.lexeme.len()];
-    Some(token)
+  pub fn discard_last(&mut self) -> Option<Token<'arena>> {
+    self.tokens.pop()
   }
 
   pub fn discard_assert_last(&mut self, kind: TokenKind) {
@@ -146,12 +168,12 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     }
   }
 
-  fn tokens(&self) -> impl ExactSizeIterator<Item = &Token<'src>> {
-    self.all_tokens.iter().skip(self.pos)
+  fn tokens(&self) -> impl ExactSizeIterator<Item = &Token<'arena>> {
+    self.tokens.iter()
   }
 
-  fn tokens_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Token<'src>> {
-    self.all_tokens.iter_mut().skip(self.pos)
+  fn tokens_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Token<'arena>> {
+    self.tokens.iter_mut()
   }
 
   pub fn first_nonescaped(&self, kind: TokenKind) -> Option<&Token> {
@@ -170,7 +192,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       return false;
     }
     for (i, token_type) in kinds.iter().enumerate() {
-      if self.all_tokens[i + self.pos + offset].kind != *token_type {
+      if self.tokens.get(i + offset).unwrap().kind != *token_type {
         return false;
       }
     }
@@ -185,7 +207,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     self.current_is(kind)
   }
 
-  pub fn starts_with(&self, predicate: impl Fn(&Token<'src>) -> bool) -> bool {
+  pub fn starts_with(&self, predicate: impl Fn(&Token<'arena>) -> bool) -> bool {
     self.current_token().map(predicate).unwrap_or(false)
   }
 
@@ -218,7 +240,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
           return None;
         }
         for (j, kind) in kinds.iter().skip(1).enumerate() {
-          if self.all_tokens[self.pos + i + j + 1].kind != *kind {
+          if self.tokens.get(i + j + 1).unwrap().kind != *kind {
             continue 'outer;
           }
         }
@@ -283,23 +305,23 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   pub fn consume_to_string_until(
     &mut self,
     kind: TokenKind,
-    bump: &'bmp Bump,
-  ) -> SourceString<'bmp> {
+    bump: &'arena Bump,
+  ) -> SourceString<'arena> {
     let mut loc = self.loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
-      s.push_str(token.lexeme);
+      s.push_str(&token.lexeme);
       loc.extend(token.loc);
     }
     SourceString::new(s, loc)
   }
 
   #[must_use]
-  pub fn consume_to_string(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
+  pub fn consume_to_string(&mut self, bump: &'arena Bump) -> SourceString<'arena> {
     let mut loc = self.loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_current() {
-      s.push_str(token.lexeme);
+      s.push_str(&token.lexeme);
       loc.extend(token.loc);
     }
     SourceString::new(s, loc)
@@ -313,14 +335,17 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   #[must_use]
-  pub fn consume_macro_target(&mut self, bump: &'bmp Bump) -> SourceString<'bmp> {
+  pub fn consume_macro_target(&mut self, bump: &'arena Bump) -> SourceString<'arena> {
     let target = self.consume_to_string_until(OpenBracket, bump);
     self.discard_assert(OpenBracket);
     target
   }
 
   #[must_use]
-  pub fn consume_optional_macro_target(&mut self, bump: &'bmp Bump) -> Option<SourceString<'bmp>> {
+  pub fn consume_optional_macro_target(
+    &mut self,
+    bump: &'arena Bump,
+  ) -> Option<SourceString<'arena>> {
     let target = match self.current_is(OpenBracket) {
       true => None,
       false => Some(self.consume_to_string_until(OpenBracket, bump)),
@@ -330,7 +355,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
   }
 
   #[must_use]
-  pub fn consume_url(&mut self, start: Option<&Token>, bump: &'bmp Bump) -> SourceString<'bmp> {
+  pub fn consume_url(&mut self, start: Option<&Token>, bump: &'arena Bump) -> SourceString<'arena> {
     let mut loc = start.map_or_else(|| self.loc().unwrap(), |t| t.loc);
     let mut num_tokens = 0;
 
@@ -341,36 +366,32 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       }
     }
 
-    if num_tokens > 0 && self.all_tokens.get(self.pos + num_tokens - 1).is(Dots) {
+    if num_tokens > 0 && self.tokens.get(num_tokens - 1).is(Dots) {
       num_tokens -= 1;
     }
 
     let mut s = BumpString::new_in(bump);
     if let Some(start) = start {
-      s.push_str(start.lexeme);
+      s.push_str(&start.lexeme);
       loc.extend(start.loc);
     }
     for _ in 0..num_tokens {
       let token = self.consume_current().unwrap();
-      s.push_str(token.lexeme);
+      s.push_str(&token.lexeme);
       loc.extend(token.loc);
     }
     SourceString::new(s, loc)
   }
 
   #[must_use]
-  pub fn consume_current(&mut self) -> Option<Token<'src>> {
-    if self.is_empty() {
-      return None;
-    }
-    let token = std::mem::take(&mut self.all_tokens[self.pos]);
-    self.pos += 1;
-    self.src = &self.src[token.lexeme.len()..];
-    Some(token)
+  pub fn consume_current(&mut self) -> Option<Token<'arena>> {
+    self.tokens.pop_front()
   }
 
-  pub fn into_lines_in(self, bump: &'bmp Bump) -> ContiguousLines<'bmp, 'src> {
-    ContiguousLines::new(bvec![in bump; self])
+  pub fn into_lines(self) -> ContiguousLines<'arena> {
+    let mut lines = Deq::with_capacity(self.tokens.bump, 1);
+    lines.push(self);
+    ContiguousLines::new(lines)
   }
 
   pub fn loc(&self) -> Option<SourceLocation> {
@@ -379,6 +400,22 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn last_location(&self) -> Option<SourceLocation> {
     self.last_token().map(|t| t.loc)
+  }
+
+  pub fn src_len(&self) -> usize {
+    if self.tokens.is_empty() {
+      0
+    } else {
+      self.tokens.last().unwrap().loc.end - self.tokens.first().unwrap().loc.start
+    }
+  }
+
+  pub fn reassemble_src(&self) -> BumpString<'arena> {
+    let mut src = BumpString::with_capacity_in(self.src_len(), self.tokens.bump);
+    for token in self.tokens.iter() {
+      src.push_str(&token.lexeme);
+    }
+    src
   }
 
   pub fn list_marker(&self) -> Option<ListMarker> {
@@ -401,7 +438,8 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
         Some(ListMarker::Dash)
       }
       Star if second.is(Star) => {
-        let Some(captures) = REPEAT_STAR_LI_START.captures(self.src) else {
+        let src = self.reassemble_src();
+        let Some(captures) = REPEAT_STAR_LI_START.captures(&src) else {
           return None;
         };
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
@@ -415,7 +453,7 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       _ => {
         for token in self.tokens().skip(offset) {
           if token.is(TermDelimiter) {
-            return match token.lexeme {
+            return match token.lexeme.as_str() {
               "::" => Some(ListMarker::Colons(2)),
               ":::" => Some(ListMarker::Colons(3)),
               "::::" => Some(ListMarker::Colons(4)),
@@ -463,15 +501,14 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
 
   pub fn discard_leading_whitespace(&mut self) {
     if self.current_is(Whitespace) {
-      self.all_tokens[self.pos].kind = Discard;
+      self.tokens.get_mut(0).unwrap().kind = Discard;
     }
   }
 
   pub fn drop_leading_bytes(&mut self, n: usize) {
     debug_assert!(n <= self.current_token().unwrap().lexeme.len());
     if n > 0 {
-      self.all_tokens[self.pos].drop_leading_bytes(n);
-      self.src = &self.src[n..];
+      self.tokens.get_mut(0).unwrap().drop_leading_bytes(n);
     }
   }
 
@@ -482,7 +519,10 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
       .unwrap_or(false)
   }
 
-  pub fn consume_checklist_item(&mut self, bump: &'bmp Bump) -> Option<(bool, SourceString<'bmp>)> {
+  pub fn consume_checklist_item(
+    &mut self,
+    bump: &'arena Bump,
+  ) -> Option<(bool, SourceString<'arena>)> {
     if !self.starts(OpenBracket) || !self.has_seq_at(&[CloseBracket, Whitespace], 2) {
       return None;
     }
@@ -500,24 +540,20 @@ impl<'bmp, 'src> Line<'bmp, 'src> {
     Some((checked, SourceString::new(src, loc)))
   }
 
-  pub fn extract_line_before(&mut self, seq: &[TokenKind], bump: &'bmp Bump) -> Line<'bmp, 'src> {
-    let mut tokens = BumpVec::with_capacity_in(self.num_tokens(), bump);
-    let orig_src = self.src;
-    let mut src_len = 0;
+  pub fn extract_line_before(&mut self, seq: &[TokenKind]) -> Line<'arena> {
+    let mut tokens = Deq::with_capacity(self.tokens.bump, self.num_tokens());
     while !self.starts_with_seq(seq) {
-      let token = self.consume_current().unwrap();
-      src_len += token.lexeme.len();
-      tokens.push(token);
+      tokens.push(self.consume_current().unwrap());
     }
-    Line::new(tokens, &orig_src[..src_len])
+    Line::new(tokens)
   }
 
-  pub const fn is_partially_consumed(&self) -> bool {
-    self.pos > 0
+  pub fn is_partially_consumed(&self) -> bool {
+    self.tokens.len() < self.orig_len
   }
 
-  pub const fn is_fully_unconsumed(&self) -> bool {
-    self.pos == 0
+  pub fn is_fully_unconsumed(&self) -> bool {
+    self.tokens.len() == self.orig_len
   }
 
   pub fn trim_for_cell(&mut self, style: CellContentStyle) {
@@ -540,7 +576,6 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
   use crate::internal::*;
-  use crate::lexer::Lexer;
   use crate::token::{TokenKind::*, *};
   use bumpalo::Bump;
   use test_utils::assert_eq;
@@ -561,8 +596,8 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, expected) in cases {
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(bump).unwrap();
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
       assert_eq!(line.continues_list_item_principle(), expected, from: input);
     }
   }
@@ -584,8 +619,8 @@ mod tests {
       for marker in markers {
         stack.push(*marker);
       }
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(bump).unwrap();
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
       assert_eq!(line.starts_nested_list(&stack), expected, from: input);
     }
   }
@@ -630,8 +665,8 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, marker) in cases {
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(bump).unwrap();
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
       assert_eq!(line.list_marker(), marker, from: input);
     }
   }
@@ -658,8 +693,8 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, expected) in cases {
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(bump).unwrap();
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
       assert_eq!(line.starts_list_item(), expected, from: input);
     }
   }
@@ -667,28 +702,28 @@ mod tests {
   #[test]
   fn test_discard() {
     let bump = &Bump::new();
-    let mut lexer = Lexer::new("foo bar\nso baz\n");
-    let mut line = lexer.consume_line(bump).unwrap();
-    assert_eq!(line.src, "foo bar");
+    let mut lexer = Lexer::from_str(bump, "foo bar\nso baz\n");
+    let mut line = lexer.consume_line().unwrap();
+    assert_eq!(line.reassemble_src(), "foo bar");
     assert_eq!(line.num_tokens(), 3);
     line.discard(1);
-    assert_eq!(line.src, " bar");
+    assert_eq!(line.reassemble_src(), " bar");
     assert_eq!(line.num_tokens(), 2);
     line.discard(2);
-    assert_eq!(line.src, "");
+    assert_eq!(line.reassemble_src(), "");
     assert_eq!(line.num_tokens(), 0);
   }
 
   #[test]
   fn test_discard_last() {
     let bump = &Bump::new();
-    let mut lexer = Lexer::new("'foo'");
-    let mut line = lexer.consume_line(bump).unwrap();
-    assert_eq!(line.src, "'foo'");
+    let mut lexer = Lexer::from_str(bump, "'foo'");
+    let mut line = lexer.consume_line().unwrap();
+    assert_eq!(line.reassemble_src(), "'foo'");
     line.discard_last();
-    assert_eq!(line.src, "'foo");
+    assert_eq!(line.reassemble_src(), "'foo");
     line.discard_last();
-    assert_eq!(line.src, "'");
+    assert_eq!(line.reassemble_src(), "'");
   }
 
   #[test]
@@ -703,14 +738,14 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, token_types, pos, expected) in cases {
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(bump).unwrap();
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
       assert_eq!(line.has_seq_at(token_types, pos), expected);
     }
 
     // test that it works after shifting elements off of the front
-    let mut lexer = Lexer::new("foo_#");
-    let mut line = lexer.consume_line(bump).unwrap();
+    let mut lexer = Lexer::from_str(bump, "foo_#");
+    let mut line = lexer.consume_line().unwrap();
     line.discard(2); // `foo` and `_`
     assert!(line.has_seq_at(&[Hash], 0));
   }
@@ -725,8 +760,8 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, token_type, expected) in cases {
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(bump).unwrap();
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
       assert_eq!(line.ends_with_nonescaped(token_type), expected);
     }
   }
@@ -746,8 +781,8 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, token_types, expected) in cases {
-      let mut lexer = Lexer::new(input);
-      let line = lexer.consume_line(bump).unwrap();
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
       assert_eq!(line.contains_seq(token_types), expected);
     }
   }

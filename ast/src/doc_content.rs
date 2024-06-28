@@ -1,23 +1,23 @@
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum DocContent<'bmp> {
+pub enum DocContent<'arena> {
   Sectioned {
-    preamble: Option<BumpVec<'bmp, Block<'bmp>>>,
-    sections: BumpVec<'bmp, Section<'bmp>>,
+    preamble: Option<BumpVec<'arena, Block<'arena>>>,
+    sections: BumpVec<'arena, Section<'arena>>,
   },
-  Blocks(BumpVec<'bmp, Block<'bmp>>),
+  Blocks(BumpVec<'arena, Block<'arena>>),
 }
 
-impl<'bmp> DocContent<'bmp> {
-  pub fn push_block(&mut self, block: Block<'bmp>, _bump: &'bmp Bump) {
+impl<'arena> DocContent<'arena> {
+  pub fn push_block(&mut self, block: Block<'arena>, _bump: &'arena Bump) {
     match self {
       DocContent::Blocks(blocks) => blocks.push(block),
       _ => unreachable!("DocContent::push_block"),
     }
   }
 
-  pub fn push_section(&mut self, section: Section<'bmp>, bump: &'bmp Bump) {
+  pub fn push_section(&mut self, section: Section<'arena>, bump: &'arena Bump) {
     match self {
       DocContent::Sectioned { sections, .. } => sections.push(section),
       _ => {
@@ -31,7 +31,7 @@ impl<'bmp> DocContent<'bmp> {
     matches!(self, DocContent::Sectioned { .. })
   }
 
-  pub fn ensure_sectioned(&mut self, bump: &'bmp Bump) {
+  pub fn ensure_sectioned(&mut self, bump: &'arena Bump) {
     if let DocContent::Blocks(blocks) = self {
       let preamble = if blocks.is_empty() {
         None
@@ -43,7 +43,7 @@ impl<'bmp> DocContent<'bmp> {
     }
   }
 
-  pub const fn blocks(&self) -> Option<&BumpVec<'bmp, Block<'bmp>>> {
+  pub const fn blocks(&self) -> Option<&BumpVec<'arena, Block<'arena>>> {
     match self {
       DocContent::Blocks(blocks) => Some(blocks),
       _ => None,

@@ -1,20 +1,20 @@
 use crate::internal::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct ChunkMeta<'bmp> {
-  pub attrs: Option<AttrList<'bmp>>,
-  pub title: Option<InlineNodes<'bmp>>,
+pub struct ChunkMeta<'arena> {
+  pub attrs: Option<AttrList<'arena>>,
+  pub title: Option<InlineNodes<'arena>>,
   pub start: usize, // rename
 }
 
-impl<'bmp> ChunkMeta<'bmp> {
+impl<'arena> ChunkMeta<'arena> {
   pub const fn empty(start: usize) -> Self {
     Self { title: None, attrs: None, start }
   }
 
   pub const fn new(
-    attrs: Option<AttrList<'bmp>>,
-    title: Option<InlineNodes<'bmp>>,
+    attrs: Option<AttrList<'arena>>,
+    title: Option<InlineNodes<'arena>>,
     start: usize,
   ) -> Self {
     Self { title, attrs, start }

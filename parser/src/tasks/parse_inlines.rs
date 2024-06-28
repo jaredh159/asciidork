@@ -5,36 +5,36 @@ use crate::tasks::parse_inlines_utils::*;
 use crate::variants::token::*;
 use ast::variants::{inline::*, r#macro::*};
 
-struct Accum<'bmp> {
-  inlines: InlineNodes<'bmp>,
-  text: CollectText<'bmp>,
+struct Accum<'arena> {
+  inlines: InlineNodes<'arena>,
+  text: CollectText<'arena>,
 }
 
-impl<'bmp> Accum<'bmp> {
+impl<'arena> Accum<'arena> {
   fn commit(&mut self) {
     self.text.commit_inlines(&mut self.inlines);
   }
 
-  fn push_node(&mut self, node: Inline<'bmp>, loc: SourceLocation) {
+  fn push_node(&mut self, node: Inline<'arena>, loc: SourceLocation) {
     self.commit();
     self.inlines.push(InlineNode::new(node, loc));
     self.text.loc = loc.clamp_end();
   }
 }
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(crate) fn parse_inlines(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
-  ) -> Result<InlineNodes<'bmp>> {
+    lines: &mut ContiguousLines<'arena>,
+  ) -> Result<InlineNodes<'arena>> {
     self.parse_inlines_until(lines, &[])
   }
 
   pub(crate) fn parse_inlines_until(
     &mut self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'arena>,
     stop_tokens: &[TokenKind],
-  ) -> Result<InlineNodes<'bmp>> {
+  ) -> Result<InlineNodes<'arena>> {
     let inlines = BumpVec::new_in(self.bump).into();
     if lines.is_empty() {
       return Ok(inlines);
@@ -84,7 +84,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
             acc.commit();
-            match token.lexeme {
+            match token.lexeme.as_str() {
               "image:" => {
                 let target = line.consume_macro_target(self.bump);
                 let attrs = self.parse_attr_list(&mut line)?;
@@ -218,7 +218,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && token.lexeme == ";;" // this is a happy accident
               && line.continues_valid_callout_nums() =>
           {
-            self.push_callout_tuck(&token, &mut line, &mut acc);
+            push_callout_tuck(token, &mut line, &mut acc);
           }
 
           Hash
@@ -226,7 +226,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Whitespace)
               && line.continues_valid_callout_nums() =>
           {
-            self.push_callout_tuck(&token, &mut line, &mut acc);
+            push_callout_tuck(token, &mut line, &mut acc);
           }
 
           ForwardSlashes
@@ -235,7 +235,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
               && line.current_is(Whitespace)
               && line.continues_valid_callout_nums() =>
           {
-            self.push_callout_tuck(&token, &mut line, &mut acc);
+            push_callout_tuck(token, &mut line, &mut acc);
           }
 
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
@@ -260,14 +260,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             if line.current_is(Hash) {
               line.discard(1);
             }
-            let mut inner = line.extract_line_before(&[GreaterThan, GreaterThan], self.bump);
+            let mut inner = line.extract_line_before(&[GreaterThan, GreaterThan]);
             let id = inner.consume_to_string_until(Comma, self.bump);
             self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
             let mut linktext = None;
             if !inner.is_empty() {
               inner.discard_assert(Comma);
               if !inner.is_empty() {
-                linktext = Some(self.parse_inlines(&mut inner.into_lines_in(self.bump))?);
+                linktext = Some(self.parse_inlines(&mut inner.into_lines())?);
               }
             }
             line.discard_assert(GreaterThan);
@@ -291,14 +291,15 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             acc.push_node(Discarded, line.consume_current().unwrap().loc);
           }
 
-          MaybeEmail if subs.macros() && EMAIL_RE.is_match(token.lexeme) => {
+          MaybeEmail if subs.macros() && EMAIL_RE.is_match(&token.lexeme) => {
+            let loc = token.loc;
             acc.push_node(
               Macro(Link {
                 scheme: Some(UrlScheme::Mailto),
-                target: token.to_source_string(self.bump),
+                target: token.into_source_string(),
                 attrs: None,
               }),
-              token.loc,
+              loc,
             );
           }
 
@@ -540,7 +541,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           }
 
           Whitespace if token.lexeme.len() > 1 && subs.inline_formatting() => {
-            acc.push_node(MultiCharWhitespace(token.to_string(self.bump)), token.loc);
+            acc.push_node(MultiCharWhitespace(token.lexeme), token.loc);
           }
 
           Whitespace if line.current_is(Plus) && line.num_tokens() == 1 => {
@@ -570,7 +571,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
             acc.text.push_token(&next_token);
           }
 
-          _ if subs.macros() && token.is_url_scheme() && line.src.starts_with("//") => {
+          _ if subs.macros() && token.is_url_scheme() && line.current_is_len(ForwardSlashes, 2) => {
             let mut loc = token.loc;
             let line_end = line.last_location().unwrap();
             let target = line.consume_url(Some(&token), self.bump);
@@ -592,12 +593,12 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_inner<const N: usize>(
     &mut self,
-    start: &Token<'src>,
+    start: &Token<'arena>,
     stop_tokens: [TokenKind; N],
-    wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
-    state: &mut Accum<'bmp>,
-    mut line: Line<'bmp, 'src>,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
+    state: &mut Accum<'arena>,
+    mut line: Line<'arena>,
+    lines: &mut ContiguousLines<'arena>,
   ) -> Result<()> {
     let mut loc = start.loc;
     stop_tokens
@@ -614,30 +615,30 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_unconstrained(
     &mut self,
-    token: &Token<'src>,
-    wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
-    state: &mut Accum<'bmp>,
-    line: Line<'bmp, 'src>,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    token: &Token<'arena>,
+    wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
+    state: &mut Accum<'arena>,
+    line: Line<'arena>,
+    lines: &mut ContiguousLines<'arena>,
   ) -> Result<()> {
     self.parse_inner(token, [token.kind, token.kind], wrap, state, line, lines)
   }
 
   fn parse_constrained(
     &mut self,
-    token: &Token<'src>,
-    wrap: impl FnOnce(InlineNodes<'bmp>) -> Inline<'bmp>,
-    state: &mut Accum<'bmp>,
-    line: Line<'bmp, 'src>,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    token: &Token<'arena>,
+    wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
+    state: &mut Accum<'arena>,
+    line: Line<'arena>,
+    lines: &mut ContiguousLines<'arena>,
   ) -> Result<()> {
     self.parse_inner(token, [token.kind], wrap, state, line, lines)
   }
 
   fn merge_inlines(
     &self,
-    a: &mut BumpVec<'bmp, Inline<'bmp>>,
-    b: &mut BumpVec<'bmp, Inline<'bmp>>,
+    a: &mut BumpVec<'arena, Inline<'arena>>,
+    b: &mut BumpVec<'arena, Inline<'arena>>,
     append: Option<&str>,
   ) {
     if let (Some(Text(a_text)), Some(Text(b_text))) = (a.last_mut(), b.first_mut()) {
@@ -652,7 +653,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
   }
 
-  fn should_stop_at(&self, line: &Line<'bmp, 'src>) -> bool {
+  fn should_stop_at(&self, line: &Line<'arena>) -> bool {
     if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
       return true;
     }
@@ -674,20 +675,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     )
   }
 
-  fn push_callout_tuck(
-    &mut self,
-    token: &Token<'src>,
-    line: &mut Line<'bmp, 'src>,
-    state: &mut Accum<'bmp>,
-  ) {
-    let mut tuck = token.to_source_string(self.bump);
-    line.discard_assert(Whitespace);
-    tuck.src.push(' ');
-    tuck.loc.end += 1;
-    state.push_node(CalloutTuck(tuck.src), tuck.loc);
-  }
-
-  fn recover_custom_line_comment(&mut self, state: &mut Accum<'bmp>) {
+  fn recover_custom_line_comment(&mut self, state: &mut Accum<'arena>) {
     let Some(ref comment_bytes) = self.ctx.custom_line_comment else {
       return;
     };
@@ -708,7 +696,19 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   }
 }
 
-fn push_newline_if_needed<'bmp>(state: &mut Accum<'bmp>, lines: &ContiguousLines<'bmp, '_>) {
+fn push_callout_tuck<'arena>(
+  token: Token<'arena>,
+  line: &mut Line<'arena>,
+  state: &mut Accum<'arena>,
+) {
+  let mut tuck = token.into_source_string();
+  line.discard_assert(Whitespace);
+  tuck.src.push(' ');
+  tuck.loc.end += 1;
+  state.push_node(CalloutTuck(tuck.src), tuck.loc);
+}
+
+fn push_newline_if_needed<'arena>(state: &mut Accum<'arena>, lines: &ContiguousLines<'arena>) {
   // LOGIC: if we have a current line and it is entirely unconsumed
   // it means we've finished parsing something at the end of the prev line
   // so we need to join with a newline, examples:
@@ -737,12 +737,12 @@ fn push_newline_if_needed<'bmp>(state: &mut Accum<'bmp>, lines: &ContiguousLines
   }
 }
 
-fn push_simple<'bmp, 'src>(
-  inline_node: Inline<'bmp>,
-  token: &Token<'src>,
-  mut line: Line<'bmp, 'src>,
-  state: &mut Accum<'bmp>,
-  lines: &mut ContiguousLines<'bmp, 'src>,
+fn push_simple<'arena>(
+  inline_node: Inline<'arena>,
+  token: &Token<'arena>,
+  mut line: Line<'arena>,
+  state: &mut Accum<'arena>,
+  lines: &mut ContiguousLines<'arena>,
 ) {
   let mut loc = token.loc;
   line.discard(1);
@@ -1253,7 +1253,7 @@ mod tests {
 
   fn run(cases: Vec<(&str, InlineNodes)>) {
     for (input, expected) in cases {
-      let mut parser = Parser::new(leaked_bump(), input);
+      let mut parser = Parser::from_str(input, leaked_bump());
       let mut block = parser.read_lines().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
       assert_eq!(inlines, expected, from: input);

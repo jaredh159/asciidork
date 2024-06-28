@@ -57,11 +57,11 @@ pub const fn node(content: Inline, loc: SourceLocation) -> InlineNode {
   InlineNode::new(content, loc)
 }
 
-pub fn finish_macro<'bmp>(
-  line: &Line<'bmp, '_>,
+pub fn finish_macro<'arena>(
+  line: &Line<'arena>,
   loc: &mut SourceLocation,
   line_end: SourceLocation,
-  text: &mut CollectText<'bmp>,
+  text: &mut CollectText<'arena>,
 ) {
   if let Some(cur_location) = line.loc() {
     loc.extend(cur_location);

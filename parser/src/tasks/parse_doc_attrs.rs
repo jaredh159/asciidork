@@ -1,12 +1,10 @@
-use std::borrow::Cow;
-
 use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'bmp, 'src>) -> Result<()> {
+impl<'arena> Parser<'arena> {
+  pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
     while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
       if key == "doctype" {
         if let AttrValue::String(s) = &value {
@@ -26,13 +24,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(super) fn parse_doc_attr(
     &self,
-    lines: &mut ContiguousLines<'bmp, 'src>,
+    lines: &mut ContiguousLines<'arena>,
   ) -> Result<Option<(String, AttrValue, usize)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
     };
 
-    let Some(captures) = ATTR_RE.captures(line.src) else {
+    let src = line.reassemble_src();
+    let Some(captures) = ATTR_RE.captures(&src) else {
       return Ok(None);
     };
 
@@ -83,9 +82,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn join_wrapped_value(
     &self,
-    mut first_line_src: &'src str,
-    lines: &mut ContiguousLines,
-  ) -> Cow<str> {
+    mut first_line_src: &str,
+    lines: &mut ContiguousLines<'arena>,
+  ) -> BumpString<'arena> {
     let has_continuation = if first_line_src.ends_with(" \\") {
       first_line_src = &first_line_src[..first_line_src.len() - 2];
       true
@@ -93,23 +92,23 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       false
     };
 
+    let mut wrapped = BumpString::from_str_in(first_line_src, self.bump);
     if lines.is_empty() || !has_continuation {
-      return Cow::Borrowed(first_line_src);
+      return wrapped;
     }
 
-    let mut pieces = SmallVec::<[&str; 8]>::new();
-    pieces.push(first_line_src);
-
     while !lines.is_empty() {
+      wrapped.push(' ');
       let next_line = lines.consume_current().unwrap();
-      if next_line.src.ends_with(" \\") {
-        pieces.push(&next_line.src[..next_line.src.len() - 2]);
+      let next_line_src = next_line.reassemble_src();
+      if next_line_src.ends_with(" \\") {
+        wrapped.push_str(&next_line_src[..next_line_src.len() - 2]);
       } else {
-        pieces.push(next_line.src);
+        wrapped.push_str(&next_line_src);
         break;
       }
     }
-    Cow::Owned(pieces.join(" "))
+    wrapped
   }
 }
 
@@ -148,7 +147,7 @@ mod tests {
       (":foo: bar \\\n", ("foo", "bar".into())),
     ];
     for (input, (expected_key, expected_val)) in cases {
-      let mut parser = crate::Parser::new(b, input);
+      let mut parser = crate::Parser::from_str(input, b);
       parser
         .document
         .meta

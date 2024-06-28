@@ -1,13 +1,13 @@
 use crate::internal::*;
 use crate::variants::token::*;
 
-pub trait ChunkMetaExt<'bmp> {
+pub trait ChunkMetaExt<'arena> {
   fn block_style_or(&self, default: BlockContext) -> BlockContext;
   fn block_paragraph_context(&self, lines: &mut ContiguousLines) -> BlockContext;
   fn attrs_has_str_positional(&self, positional: &str) -> bool;
 }
 
-impl<'bmp> ChunkMetaExt<'bmp> for ChunkMeta<'bmp> {
+impl<'arena> ChunkMetaExt<'arena> for ChunkMeta<'arena> {
   fn block_style_or(&self, default: BlockContext) -> BlockContext {
     self
       .attrs
@@ -30,7 +30,7 @@ impl<'bmp> ChunkMetaExt<'bmp> for ChunkMeta<'bmp> {
       .map(|line| line.starts_with_seq(&[Word, Colon, Whitespace]))
       .unwrap_or(false)
     {
-      let lexeme = lines.current_token().unwrap().lexeme;
+      let lexeme = &lines.current_token().unwrap().lexeme;
       if let Some(context) = BlockContext::derive_admonition(lexeme) {
         let mut line = lines.consume_current().unwrap();
         line.discard(3); // word, colon, whitespace

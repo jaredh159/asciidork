@@ -1,14 +1,14 @@
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Block<'bmp> {
-  pub meta: ChunkMeta<'bmp>,
-  pub content: BlockContent<'bmp>,
+pub struct Block<'arena> {
+  pub meta: ChunkMeta<'arena>,
+  pub content: BlockContent<'arena>,
   pub context: BlockContext,
   pub loc: SourceLocation,
 }
 
-impl<'bmp> Block<'bmp> {
+impl<'arena> Block<'arena> {
   pub fn has_attr_option(&self, name: &str) -> bool {
     self
       .meta
@@ -23,37 +23,37 @@ impl<'bmp> Block<'bmp> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum BlockContent<'bmp> {
-  Compound(BumpVec<'bmp, Block<'bmp>>),
-  Simple(InlineNodes<'bmp>),
+pub enum BlockContent<'arena> {
+  Compound(BumpVec<'arena, Block<'arena>>),
+  Simple(InlineNodes<'arena>),
   Verbatim,
   Raw,
-  Empty(EmptyMetadata<'bmp>),
-  Table(Table<'bmp>),
-  Section(Section<'bmp>),
+  Empty(EmptyMetadata<'arena>),
+  Table(Table<'arena>),
+  Section(Section<'arena>),
   DocumentAttribute(String, AttrValue),
   QuotedParagraph {
-    quote: InlineNodes<'bmp>,
-    attr: SourceString<'bmp>,
-    cite: Option<SourceString<'bmp>>,
+    quote: InlineNodes<'arena>,
+    attr: SourceString<'arena>,
+    cite: Option<SourceString<'arena>>,
   },
   List {
     variant: ListVariant,
     depth: u8,
-    items: BumpVec<'bmp, ListItem<'bmp>>,
+    items: BumpVec<'arena, ListItem<'arena>>,
   },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum EmptyMetadata<'bmp> {
+pub enum EmptyMetadata<'arena> {
   Image {
-    target: SourceString<'bmp>,
-    attrs: AttrList<'bmp>,
+    target: SourceString<'arena>,
+    attrs: AttrList<'arena>,
   },
   DiscreteHeading {
     level: u8,
-    content: InlineNodes<'bmp>,
-    id: Option<BumpString<'bmp>>,
+    content: InlineNodes<'arena>,
+    id: Option<BumpString<'arena>>,
   },
   None,
 }
@@ -94,7 +94,7 @@ pub enum BlockContext {
   Video,
 }
 
-impl<'bmp> BlockContent<'bmp> {
+impl<'arena> BlockContent<'arena> {
   pub fn last_loc(&self) -> Option<SourceLocation> {
     match self {
       BlockContent::Compound(blocks) => blocks.last().map(|b| b.loc),

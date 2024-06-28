@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ColWidths<'bmp>(BumpVec<'bmp, ColWidth>);
+pub struct ColWidths<'arena>(BumpVec<'arena, ColWidth>);
 
 impl Deref for ColWidths<'_> {
   type Target = [ColWidth];
@@ -18,8 +18,8 @@ impl DerefMut for ColWidths<'_> {
   }
 }
 
-impl<'bmp> From<BumpVec<'bmp, ColWidth>> for ColWidths<'bmp> {
-  fn from(col_widths: BumpVec<'bmp, ColWidth>) -> Self {
+impl<'arena> From<BumpVec<'arena, ColWidth>> for ColWidths<'arena> {
+  fn from(col_widths: BumpVec<'arena, ColWidth>) -> Self {
     Self(col_widths)
   }
 }
@@ -30,8 +30,8 @@ pub enum DistributedColWidth {
   Auto(f32),
 }
 
-impl<'bmp> ColWidths<'bmp> {
-  pub fn new(col_widths: BumpVec<'bmp, ColWidth>) -> Self {
+impl<'arena> ColWidths<'arena> {
+  pub fn new(col_widths: BumpVec<'arena, ColWidth>) -> Self {
     Self(col_widths)
   }
 

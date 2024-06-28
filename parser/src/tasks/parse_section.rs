@@ -1,7 +1,7 @@
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
-  pub(crate) fn parse_section(&mut self) -> Result<Option<Section<'bmp>>> {
+impl<'arena> Parser<'arena> {
+  pub(crate) fn parse_section(&mut self) -> Result<Option<Section<'arena>>> {
     let Some(mut lines) = self.read_lines() else {
       return Ok(None);
     };
@@ -27,7 +27,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     let mut heading_line = lines.consume_current().unwrap();
     let equals = heading_line.consume_current().unwrap();
     heading_line.discard_assert(TokenKind::Whitespace);
-    let id = self.section_id(heading_line.src, meta.attrs.as_ref());
+    let id = self.section_id(&heading_line, meta.attrs.as_ref());
 
     let out_of_sequence = level > last_level && level - last_level > 1;
     if out_of_sequence {
@@ -41,7 +41,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       )?;
     }
 
-    let heading = self.parse_inlines(&mut heading_line.into_lines_in(self.bump))?;
+    let heading = self.parse_inlines(&mut heading_line.into_lines())?;
     if !out_of_sequence {
       self.push_toc_node(level, &heading, id.as_ref());
     }
@@ -72,8 +72,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub fn push_toc_node(
     &mut self,
     level: u8,
-    heading: &InlineNodes<'bmp>,
-    as_ref: Option<&BumpString<'bmp>>,
+    heading: &InlineNodes<'arena>,
+    as_ref: Option<&BumpString<'arena>>,
   ) {
     let Some(toc) = self.document.toc.as_mut() else {
       return;
@@ -113,7 +113,7 @@ mod tests {
 
       bar
     "};
-    let mut parser = Parser::new(leaked_bump(), input);
+    let mut parser = Parser::from_str(input, leaked_bump());
     let section = parser.parse_section().unwrap().unwrap();
     assert_eq!(
       section,

@@ -5,21 +5,21 @@ use crate::internal::*;
 
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#document
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Document<'bmp> {
+pub struct Document<'arena> {
   pub meta: DocumentMeta,
-  pub title: Option<InlineNodes<'bmp>>,
-  pub subtitle: Option<InlineNodes<'bmp>>,
-  pub content: DocContent<'bmp>,
-  pub toc: Option<TableOfContents<'bmp>>,
-  pub anchors: Rc<RefCell<HashMap<BumpString<'bmp>, Anchor<'bmp>>>>,
+  pub title: Option<InlineNodes<'arena>>,
+  pub subtitle: Option<InlineNodes<'arena>>,
+  pub content: DocContent<'arena>,
+  pub toc: Option<TableOfContents<'arena>>,
+  pub anchors: Rc<RefCell<HashMap<BumpString<'arena>, Anchor<'arena>>>>,
 }
 
-impl<'bmp> Document<'bmp> {
-  pub fn new(bump: &'bmp Bump) -> Self {
+impl<'arena> Document<'arena> {
+  pub fn new(bump: &'arena Bump) -> Self {
     Document::from_content(DocContent::Blocks(bvec![in bump]))
   }
 
-  pub fn from_content(content: DocContent<'bmp>) -> Self {
+  pub fn from_content(content: DocContent<'arena>) -> Self {
     Self {
       title: None,
       subtitle: None,

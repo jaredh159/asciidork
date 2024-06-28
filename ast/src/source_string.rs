@@ -3,17 +3,17 @@ use std::ops::Deref;
 use crate::internal::*;
 
 #[derive(PartialEq, Eq, Clone, Hash)]
-pub struct SourceString<'bmp> {
-  pub src: BumpString<'bmp>,
+pub struct SourceString<'arena> {
+  pub src: BumpString<'arena>,
   pub loc: SourceLocation,
 }
 
-impl<'bmp> SourceString<'bmp> {
-  pub const fn new(src: BumpString<'bmp>, loc: SourceLocation) -> Self {
+impl<'arena> SourceString<'arena> {
+  pub const fn new(src: BumpString<'arena>, loc: SourceLocation) -> Self {
     Self { src, loc }
   }
 
-  pub fn split_once(self, separator: &str, bump: &'bmp Bump) -> (Self, Option<Self>) {
+  pub fn split_once(self, separator: &str, bump: &'arena Bump) -> (Self, Option<Self>) {
     match self.src.split_once(separator) {
       Some((left, right)) => (
         Self::new(
@@ -41,7 +41,7 @@ impl Json for SourceString<'_> {
   }
 }
 
-impl<'bmp> Deref for SourceString<'bmp> {
+impl<'arena> Deref for SourceString<'arena> {
   type Target = str;
 
   fn deref(&self) -> &Self::Target {
@@ -49,13 +49,13 @@ impl<'bmp> Deref for SourceString<'bmp> {
   }
 }
 
-impl<'bmp> std::cmp::PartialEq<str> for SourceString<'bmp> {
+impl<'arena> std::cmp::PartialEq<str> for SourceString<'arena> {
   fn eq(&self, other: &str) -> bool {
     self.src == other
   }
 }
 
-impl<'bmp> std::fmt::Debug for SourceString<'bmp> {
+impl<'arena> std::fmt::Debug for SourceString<'arena> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "SourceString{{\"{}\",{:?}}}", self.src, self.loc)
   }

@@ -301,7 +301,7 @@ fn test_globally_unique_callouts() {
   );
 }
 
-const fn callout<'bmp>(num: u8, list_idx: u8, idx: u8) -> Inline<'bmp> {
+const fn callout<'arena>(num: u8, list_idx: u8, idx: u8) -> Inline<'arena> {
   CalloutNum(Callout {
     list_idx,
     callout_idx: idx,

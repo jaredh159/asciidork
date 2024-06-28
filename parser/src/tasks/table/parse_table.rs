@@ -7,12 +7,12 @@ use super::{context::*, DataFormat, TableTokens};
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(crate) fn parse_table(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    meta: ChunkMeta<'bmp>,
-  ) -> Result<Block<'bmp>> {
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Block<'arena>> {
     let delim_line = lines.consume_current().unwrap();
     let first_token = delim_line.current_token().unwrap();
     let delim_ch = first_token.lexeme.as_bytes()[0];
@@ -118,8 +118,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn push_table_row(
     &mut self,
-    mut row: Row<'bmp>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    mut row: Row<'arena>,
+    ctx: &mut TableContext<'arena>,
   ) -> Result<()> {
     if ctx.table.rows.is_empty()
       && ctx.table.header_row.is_none()
@@ -140,8 +140,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   pub(crate) fn finish_implicit_header_row(
     &mut self,
-    cells: BumpVec<'bmp, Cell<'bmp>>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    cells: BumpVec<'arena, Cell<'arena>>,
+    ctx: &mut TableContext<'arena>,
   ) -> Result<()> {
     if cells.is_empty() {
       return Ok(());
@@ -167,11 +167,11 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   pub(crate) fn finish_cell(
     &mut self,
     cell_spec: CellSpec,
-    mut cell_tokens: BumpVec<'bmp, Token<'src>>,
+    mut cell_tokens: Deq<'arena, Token<'arena>>,
     col_index: usize,
-    ctx: &mut TableContext<'bmp, 'src>,
+    ctx: &mut TableContext<'arena>,
     mut loc: Range<usize>,
-  ) -> Result<Option<(Cell<'bmp>, u8)>> {
+  ) -> Result<Option<(Cell<'arena>, u8)>> {
     let col_spec = ctx.col_specs.get(col_index);
     let mut cell_style = cell_spec
       .style
@@ -209,12 +209,9 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
           col_spec: col_spec.cloned(),
         });
       }
-      dbg!(&cell_tokens, &loc);
-      let mut cell_line = self.line_from(cell_tokens, loc.clone());
-      dbg!(&cell_line.src);
-
+      let mut cell_line = Line::new(cell_tokens);
       cell_line.trim_for_cell(cell_style);
-      let cell_parser = self.cell_parser(cell_line.src, loc.start);
+      let cell_parser = self.cell_parser(cell_line.into_bytes(), loc.start);
       return match cell_parser.parse() {
         Ok(ParseResult { document, warnings }) => {
           if !warnings.is_empty() {
@@ -259,8 +256,8 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
   // see: https://github.com/asciidoctor/asciidoctor/commit/ca2ca428
   fn reparse_header_cells(
     &mut self,
-    row: &mut Row<'bmp>,
-    ctx: &mut TableContext<'bmp, 'src>,
+    row: &mut Row<'arena>,
+    ctx: &mut TableContext<'arena>,
   ) -> Result<()> {
     for idx in 0..row.cells.len() {
       let mut content = CellContent::Literal(InlineNodes::new(self.bump));
@@ -283,17 +280,17 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
 
   fn parse_non_asciidoc_cell(
     &mut self,
-    data: ParseCellData<'bmp, 'src>,
+    data: ParseCellData<'arena>,
     cell_style: CellContentStyle,
-  ) -> Result<Cell<'bmp>> {
+  ) -> Result<Cell<'arena>> {
     let nodes = if data.cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
     } else {
-      let mut cell_line = self.line_from(data.cell_tokens, data.loc);
+      let mut cell_line = Line::new(data.cell_tokens);
       cell_line.trim_for_cell(cell_style);
       let prev_subs = self.ctx.subs;
       self.ctx.subs = cell_style.into();
-      let inlines = self.parse_inlines(&mut cell_line.into_lines_in(self.bump))?;
+      let inlines = self.parse_inlines(&mut cell_line.into_lines())?;
       self.ctx.subs = prev_subs;
       inlines
     };
@@ -310,7 +307,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     Ok(Cell::new(content, data.cell_spec, data.col_spec))
   }
 
-  fn split_paragraphs(&self, nodes: InlineNodes<'bmp>) -> BumpVec<'bmp, InlineNodes<'bmp>> {
+  fn split_paragraphs(&self, nodes: InlineNodes<'arena>) -> BumpVec<'arena, InlineNodes<'arena>> {
     let mut paras = bvec![in self.bump];
     if nodes.is_empty() {
       return paras;
@@ -332,42 +329,36 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     }
     paras
   }
+
   fn table_content(
     &mut self,
-    mut lines: ContiguousLines<'bmp, 'src>,
-    start_delim: &Line<'bmp, 'src>,
-  ) -> Result<(TableTokens<'bmp, 'src>, usize)> {
-    let mut tokens = BumpVec::with_capacity_in(lines.num_tokens(), self.bump);
+    mut lines: ContiguousLines<'arena>,
+    start_delim: &Line<'arena>,
+  ) -> Result<(TableTokens<'arena>, usize)> {
+    let mut tokens = Deq::with_capacity(self.bump, lines.num_tokens());
     let delim_loc = start_delim.last_loc().unwrap();
-    let start = delim_loc.end + 1;
     let mut end = delim_loc.end + 1;
     while let Some(line) = lines.consume_current() {
-      if line.src == start_delim.src {
+      if line.src_eq(start_delim) {
         self.restore_lines(lines);
-        return Ok((
-          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
-          line.loc().unwrap().end,
-        ));
+        return Ok((TableTokens::new(tokens), line.loc().unwrap().end));
       }
       if let Some(loc) = line.last_loc() {
         end = loc.end;
       }
       line.drain_into(&mut tokens);
       if !lines.is_empty() {
-        tokens.push(newline_token(end));
+        tokens.push(newline_token(end, self.bump));
         end += 1;
       }
     }
     while let Some(next_line) = self.read_line() {
       if !tokens.is_empty() {
-        tokens.push(newline_token(end));
+        tokens.push(newline_token(end, self.bump));
         end += 1;
       }
-      if next_line.src == start_delim.src {
-        return Ok((
-          TableTokens::new(tokens, self.lexer.loc_src(start..end)),
-          next_line.loc().unwrap().end,
-        ));
+      if next_line.src_eq(start_delim) {
+        return Ok((TableTokens::new(tokens), next_line.loc().unwrap().end));
       }
       if let Some(loc) = next_line.last_loc() {
         end = loc.end;
@@ -375,15 +366,14 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       next_line.drain_into(&mut tokens);
     }
     self.err_line("Table never closed, started here", start_delim)?;
-    let loc = self.lexer.loc_src(start..end);
-    Ok((TableTokens::new(tokens, loc), end))
+    Ok((TableTokens::new(tokens), end))
   }
 }
 
-fn newline_token(start: usize) -> Token<'static> {
+fn newline_token(start: usize, bump: &Bump) -> Token {
   Token {
     kind: TokenKind::Newline,
-    lexeme: "\n",
+    lexeme: BumpString::from_str_in("\n", bump),
     loc: SourceLocation::new(start, start + 1),
   }
 }

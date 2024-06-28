@@ -12,7 +12,8 @@ macro_rules! assert_html {
       let mut settings = ::asciidork_meta::JobSettings::embedded();
       #[allow(clippy::redundant_closure_call)]
       $mod_settings(&mut settings);
-      let parser = ::asciidork_parser::Parser::new_settings(bump, $input, settings);
+      let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
+      parser.apply_job_settings(settings);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         &document,
@@ -30,7 +31,8 @@ macro_rules! assert_html {
       let mut settings = ::asciidork_meta::JobSettings::embedded();
       #[allow(clippy::redundant_closure_call)]
       $mod_settings(&mut settings);
-      let parser = ::asciidork_parser::Parser::new_settings(bump, $input, settings);
+      let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
+      parser.apply_job_settings(settings);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         &document,
@@ -73,7 +75,8 @@ macro_rules! assert_standalone_body {
       let mut settings = ::asciidork_meta::JobSettings::default();
       #[allow(clippy::redundant_closure_call)]
       $mod_settings(&mut settings);
-      let parser = ::asciidork_parser::Parser::new_settings(bump, $input, settings);
+      let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
+      parser.apply_job_settings(settings);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         &document,
@@ -92,7 +95,7 @@ macro_rules! test_non_embedded_contains {
     #[test]
     fn $name() {
       let bump = &::asciidork_parser::prelude::Bump::new();
-      let parser = ::asciidork_parser::Parser::new(bump, $input);
+      let parser = ::asciidork_parser::Parser::from_str($input, bump);
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         &document,

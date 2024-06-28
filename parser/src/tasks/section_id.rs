@@ -3,12 +3,12 @@ use regex::Regex;
 
 use crate::internal::*;
 
-impl<'bmp, 'src> Parser<'bmp, 'src> {
+impl<'arena> Parser<'arena> {
   pub(crate) fn section_id(
     &mut self,
-    line: &str,
-    attrs: Option<&AttrList<'bmp>>,
-  ) -> Option<BumpString<'bmp>> {
+    line: &Line<'arena>,
+    attrs: Option<&AttrList<'arena>>,
+  ) -> Option<BumpString<'arena>> {
     if self.document.meta.is_false("sectids") {
       return None;
     }
@@ -27,7 +27,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
       Some(AttrValue::String(s)) => s,
       _ => "_",
     };
-    let auto_gen_id = self.autogen_sect_id(line, id_prefix, id_sep, false);
+    let auto_gen_id = self.autogen_sect_id(&line.reassemble_src(), id_prefix, id_sep, false);
     self.ctx.anchor_ids.borrow_mut().insert(auto_gen_id.clone());
     Some(auto_gen_id)
   }
@@ -39,7 +39,7 @@ impl<'bmp, 'src> Parser<'bmp, 'src> {
     prefix: &str,
     separator: Option<char>,
     removed_entities: bool,
-  ) -> BumpString<'bmp> {
+  ) -> BumpString<'arena> {
     let mut id = BumpString::with_capacity_in(line.len() + prefix.len() + 3, self.bump);
     let mut in_html_tag = false;
     let mut last_c = prefix.chars().last().unwrap_or('\0');
@@ -129,7 +129,7 @@ mod tests {
       ("State-of-the-art design", "_state_of_the_art_design"),
       ("Section 1.1.1", "_section_1_1_1"),
     ];
-    let parser = Parser::new(leaked_bump(), "");
+    let parser = Parser::from_str("", leaked_bump());
     for (input, expected) in cases {
       let id = parser.autogen_sect_id(input, "_", Some('_'), false);
       assert_eq!(id, *expected);
@@ -158,7 +158,7 @@ mod tests {
     ];
 
     for (line, id_prefix, id_sep, prev, expected) in cases {
-      let parser = Parser::new(leaked_bump(), "");
+      let parser = Parser::from_str("", leaked_bump());
       for s in prev {
         parser.ctx.anchor_ids.borrow_mut().insert(bstr!(s));
       }

@@ -3,22 +3,22 @@ use std::fmt::{Debug, Formatter, Result};
 use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ListItem<'bmp> {
+pub struct ListItem<'arena> {
   pub marker: ListMarker,
-  pub marker_src: SourceString<'bmp>,
-  pub principle: InlineNodes<'bmp>,
-  pub type_meta: ListItemTypeMeta<'bmp>,
-  pub blocks: BumpVec<'bmp, Block<'bmp>>,
+  pub marker_src: SourceString<'arena>,
+  pub principle: InlineNodes<'arena>,
+  pub type_meta: ListItemTypeMeta<'arena>,
+  pub blocks: BumpVec<'arena, Block<'arena>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ListItemTypeMeta<'bmp> {
-  Checklist(bool, SourceString<'bmp>),
+pub enum ListItemTypeMeta<'arena> {
+  Checklist(bool, SourceString<'arena>),
   Callout(SmallVec<[Callout; 4]>),
   None,
 }
 
-impl<'bmp> ListItem<'bmp> {
+impl<'arena> ListItem<'arena> {
   pub const fn loc_start(&self) -> usize {
     self.marker_src.loc.start
   }

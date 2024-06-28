@@ -19,14 +19,14 @@ pub enum VerticalAlignment {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum CellContent<'bmp> {
-  AsciiDoc(Document<'bmp>),
-  Default(BumpVec<'bmp, InlineNodes<'bmp>>),
-  Emphasis(BumpVec<'bmp, InlineNodes<'bmp>>),
-  Header(BumpVec<'bmp, InlineNodes<'bmp>>),
-  Literal(InlineNodes<'bmp>),
-  Monospace(BumpVec<'bmp, InlineNodes<'bmp>>),
-  Strong(BumpVec<'bmp, InlineNodes<'bmp>>),
+pub enum CellContent<'arena> {
+  AsciiDoc(Document<'arena>),
+  Default(BumpVec<'arena, InlineNodes<'arena>>),
+  Emphasis(BumpVec<'arena, InlineNodes<'arena>>),
+  Header(BumpVec<'arena, InlineNodes<'arena>>),
+  Literal(InlineNodes<'arena>),
+  Monospace(BumpVec<'arena, InlineNodes<'arena>>),
+  Strong(BumpVec<'arena, InlineNodes<'arena>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -57,11 +57,11 @@ pub struct ColSpec {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Table<'bmp> {
-  pub col_widths: ColWidths<'bmp>,
-  pub header_row: Option<Row<'bmp>>,
-  pub rows: BumpVec<'bmp, Row<'bmp>>,
-  pub footer_row: Option<Row<'bmp>>,
+pub struct Table<'arena> {
+  pub col_widths: ColWidths<'arena>,
+  pub header_row: Option<Row<'arena>>,
+  pub rows: BumpVec<'arena, Row<'arena>>,
+  pub footer_row: Option<Row<'arena>>,
 }
 
 impl Default for ColSpec {
@@ -86,16 +86,16 @@ pub struct CellSpec {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Cell<'bmp> {
-  pub content: CellContent<'bmp>,
+pub struct Cell<'arena> {
+  pub content: CellContent<'arena>,
   pub col_span: u8,
   pub row_span: u8,
   pub h_align: HorizontalAlignment,
   pub v_align: VerticalAlignment,
 }
 
-impl<'bmp> Cell<'bmp> {
-  pub fn new(content: CellContent<'bmp>, cell_spec: CellSpec, col_spec: Option<ColSpec>) -> Self {
+impl<'arena> Cell<'arena> {
+  pub fn new(content: CellContent<'arena>, cell_spec: CellSpec, col_spec: Option<ColSpec>) -> Self {
     Self {
       content,
       col_span: cell_spec.col_span.unwrap_or(1),
@@ -113,12 +113,12 @@ impl<'bmp> Cell<'bmp> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Row<'bmp> {
-  pub cells: BumpVec<'bmp, Cell<'bmp>>,
+pub struct Row<'arena> {
+  pub cells: BumpVec<'arena, Cell<'arena>>,
 }
 
-impl<'bmp> Row<'bmp> {
-  pub fn new(cells: BumpVec<'bmp, Cell<'bmp>>) -> Self {
+impl<'arena> Row<'arena> {
+  pub fn new(cells: BumpVec<'arena, Cell<'arena>>) -> Self {
     Self { cells }
   }
 }

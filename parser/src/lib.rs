@@ -3,6 +3,7 @@
 mod chunk;
 mod contiguous_lines;
 mod delimiter;
+mod deq;
 mod diagnostic;
 mod lexer;
 mod line;
@@ -31,6 +32,7 @@ mod internal {
   pub use crate::chunk::*;
   pub use crate::contiguous_lines::ContiguousLines;
   pub use crate::delimiter::*;
+  pub use crate::deq::*;
   pub use crate::diagnostic::*;
   pub use crate::lexer::*;
   pub use crate::line::*;
