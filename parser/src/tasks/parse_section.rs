@@ -2,7 +2,7 @@ use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_section(&mut self) -> Result<Option<Section<'arena>>> {
-    let Some(mut lines) = self.read_lines() else {
+    let Some(mut lines) = self.read_lines()? else {
       return Ok(None);
     };
 

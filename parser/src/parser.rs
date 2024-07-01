@@ -2,7 +2,6 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::internal::*;
 
-#[derive(Debug)]
 pub struct Parser<'arena> {
   pub(super) bump: &'arena Bump,
   pub(super) lexer: Lexer<'arena>,
@@ -12,6 +11,7 @@ pub struct Parser<'arena> {
   pub(super) ctx: ParseContext<'arena>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) strict: bool, // todo: naming...
+  pub(super) include_resolver: Option<Box<dyn IncludeResolver>>,
 }
 
 pub struct ParseResult<'arena> {
@@ -36,6 +36,7 @@ impl<'arena> Parser<'arena> {
       ctx: ParseContext::new(bump),
       errors: RefCell::new(Vec::new()),
       strict: true,
+      include_resolver: None,
     }
   }
 
@@ -49,12 +50,17 @@ impl<'arena> Parser<'arena> {
       ctx: ParseContext::new(bump),
       errors: RefCell::new(Vec::new()),
       strict: true,
+      include_resolver: None,
     }
   }
 
   pub fn apply_job_settings(&mut self, settings: JobSettings) {
     self.strict = settings.strict;
     self.document.meta = settings.into();
+  }
+
+  pub fn set_resolver(&mut self, resolver: Box<dyn IncludeResolver>) {
+    self.include_resolver = Some(resolver);
   }
 
   pub fn cell_parser(&mut self, src: BumpVec<'arena, u8>, offset: usize) -> Parser<'arena> {
@@ -80,32 +86,37 @@ impl<'arena> Parser<'arena> {
     self.lexer.consume_line()
   }
 
-  pub(crate) fn read_lines(&mut self) -> Option<ContiguousLines<'arena>> {
+  pub(crate) fn read_lines(&mut self) -> Result<Option<ContiguousLines<'arena>>> {
     if let Some(peeked) = self.peeked_lines.take() {
-      return Some(peeked);
+      return Ok(Some(peeked));
     }
     self.lexer.consume_empty_lines();
     if self.lexer.is_eof() {
-      return None;
+      return Ok(None);
     }
     let mut lines = Deq::new(self.bump);
     while let Some(line) = self.lexer.consume_line() {
+      if line.starts(TokenKind::Directive) && self.try_process_directive(&line)? {
+        continue;
+      }
       lines.push(line);
       if self.lexer.peek_is(b'\n') {
         break;
       }
     }
     debug_assert!(!lines.is_empty());
-    Some(ContiguousLines::new(lines))
+    Ok(Some(ContiguousLines::new(lines)))
   }
 
   pub(crate) fn read_lines_until(
     &mut self,
     delimiter: Delimiter,
-  ) -> Option<ContiguousLines<'arena>> {
-    let mut lines = self.read_lines()?;
+  ) -> Result<Option<ContiguousLines<'arena>>> {
+    let Some(mut lines) = self.read_lines()? else {
+      return Ok(None);
+    };
     if lines.any(|l| l.is_delimiter(delimiter)) {
-      return Some(lines);
+      return Ok(Some(lines));
     }
 
     let mut additional_lines = BumpVec::new_in(self.bump);
@@ -113,7 +124,7 @@ impl<'arena> Parser<'arena> {
       additional_lines.push(self.read_line().unwrap());
     }
     lines.extend(additional_lines);
-    Some(lines)
+    Ok(Some(lines))
   }
 
   fn at_delimiter(&self, delimiter: Delimiter) -> bool {
@@ -153,7 +164,8 @@ impl<'arena> Parser<'arena> {
     // https://docs.asciidoctor.org/asciidoc/latest/document/doctype/#inline-doctype-rules
     if self.document.meta.get_doctype() == DocType::Inline {
       if self.peeked_lines.is_none() {
-        self.peeked_lines = self.read_lines();
+        // tmp:
+        self.peeked_lines = self.read_lines().expect("tmep");
       }
       self.lexer.truncate();
     }

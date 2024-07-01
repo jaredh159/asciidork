@@ -62,6 +62,10 @@ impl<'arena> Parser<'arena> {
         continue;
       }
 
+      // if line.starts(Directive) && self.try_process_directive(&line)? {
+      //   continue;
+      // }
+
       loop {
         if line.starts_with_seq(stop_tokens) {
           line.discard(stop_tokens.len());
@@ -635,23 +639,23 @@ impl<'arena> Parser<'arena> {
     self.parse_inner(token, [token.kind], wrap, state, line, lines)
   }
 
-  fn merge_inlines(
-    &self,
-    a: &mut BumpVec<'arena, Inline<'arena>>,
-    b: &mut BumpVec<'arena, Inline<'arena>>,
-    append: Option<&str>,
-  ) {
-    if let (Some(Text(a_text)), Some(Text(b_text))) = (a.last_mut(), b.first_mut()) {
-      a_text.push_str(b_text);
-      b.remove(0);
-    }
-    a.append(b);
-    match (append, a.last_mut()) {
-      (Some(append), Some(Text(text))) => text.push_str(append),
-      (Some(append), _) => a.push(Text(BumpString::from_str_in(append, self.bump))),
-      _ => {}
-    }
-  }
+  // fn merge_inlines(
+  //   &self,
+  //   a: &mut BumpVec<'arena, Inline<'arena>>,
+  //   b: &mut BumpVec<'arena, Inline<'arena>>,
+  //   append: Option<&str>,
+  // ) {
+  //   if let (Some(Text(a_text)), Some(Text(b_text))) = (a.last_mut(), b.first_mut()) {
+  //     a_text.push_str(b_text);
+  //     b.remove(0);
+  //   }
+  //   a.append(b);
+  //   match (append, a.last_mut()) {
+  //     (Some(append), Some(Text(text))) => text.push_str(append),
+  //     (Some(append), _) => a.push(Text(BumpString::from_str_in(append, self.bump))),
+  //     _ => {}
+  //   }
+  // }
 
   fn should_stop_at(&self, line: &Line<'arena>) -> bool {
     if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
@@ -1254,7 +1258,7 @@ mod tests {
   fn run(cases: Vec<(&str, InlineNodes)>) {
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut block = parser.read_lines().unwrap();
+      let mut block = parser.read_lines().unwrap().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
       assert_eq!(inlines, expected, from: input);
     }

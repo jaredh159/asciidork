@@ -261,7 +261,7 @@ mod tests {
     let bump = &Bump::new();
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, bump);
-      let lines = parser.read_lines().unwrap();
+      let lines = parser.read_lines().unwrap().unwrap();
       assert_eq!(lines.is_quoted_paragraph(), expected, from: input);
     }
   }

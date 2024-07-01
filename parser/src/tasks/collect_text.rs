@@ -83,6 +83,7 @@ impl<'arena> CollectText<'arena> {
           loc: self.loc,
           content: Inline::Text(self.take()),
         });
+        // dbg!(inlines);
         self.loc = self.loc.clamp_end();
       }
       _ => {}

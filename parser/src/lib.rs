@@ -35,6 +35,7 @@ mod internal {
   pub use crate::delimiter::*;
   pub use crate::deq::*;
   pub use crate::diagnostic::*;
+  pub use crate::include_resolver::*;
   pub use crate::lexer::*;
   pub use crate::line::*;
   pub use crate::list_stack::*;

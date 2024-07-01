@@ -154,7 +154,7 @@ mod tests {
         .insert_doc_attr("custom", "value")
         .unwrap();
       parser.document.meta.insert_doc_attr("baz", "qux").unwrap();
-      let mut block = parser.read_lines().unwrap();
+      let mut block = parser.read_lines().unwrap().unwrap();
       let (key, value, _) = parser.parse_doc_attr(&mut block).unwrap().unwrap();
       assert_eq!(&key, expected_key);
       assert_eq!(value, expected_val);

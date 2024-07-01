@@ -8,6 +8,7 @@ pub enum TokenKind {
   Backtick,
   Backslash,
   Bang,
+  BeginInclude,
   CalloutNumber,
   Caret,
   CloseBrace,
@@ -21,6 +22,7 @@ pub enum TokenKind {
   Discard,
   DoubleQuote,
   Dots,
+  EndInclude,
   EqualSigns,
   #[default]
   Eof,
@@ -54,6 +56,10 @@ pub struct Token<'arena> {
 }
 
 impl<'arena> Token<'arena> {
+  pub fn new(kind: TokenKind, loc: impl Into<SourceLocation>, lexeme: BumpString<'arena>) -> Self {
+    Self { kind, loc: loc.into(), lexeme }
+  }
+
   pub fn into_source_string(self) -> SourceString<'arena> {
     SourceString::new(self.lexeme, self.loc)
   }

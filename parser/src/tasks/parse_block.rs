@@ -4,7 +4,8 @@ use ast::short::block::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'arena>>> {
-    let Some(mut lines) = self.read_lines() else {
+    println!("parse_block");
+    let Some(mut lines) = self.read_lines()? else {
       return Ok(None);
     };
 
@@ -168,7 +169,7 @@ impl<'arena> Parser<'arena> {
         | Context::Verse
     ) {
       let mut lines = self
-        .read_lines_until(delimiter)
+        .read_lines_until(delimiter)?
         .unwrap_or_else(|| ContiguousLines::new(Deq::new(self.bump)));
 
       if context == Context::Listing || context == Context::Literal {
@@ -198,7 +199,7 @@ impl<'arena> Parser<'arena> {
     };
 
     self.ctx.subs = restore_subs;
-    let end = if let Some(mut block) = self.read_lines() {
+    let end = if let Some(mut block) = self.read_lines()? {
       let token = block.consume_current_token().unwrap();
       debug_assert!(token.is(DelimiterLine));
       self.restore_lines(block);

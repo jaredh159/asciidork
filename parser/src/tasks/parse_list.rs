@@ -39,7 +39,7 @@ impl<'arena> Parser<'arena> {
     list_variant: ListVariant,
     autogen_conum: &mut u8,
   ) -> Result<Option<ListItem<'arena>>> {
-    let Some(mut lines) = self.read_lines() else {
+    let Some(mut lines) = self.read_lines()? else {
       return Ok(None);
     };
 
@@ -131,7 +131,7 @@ impl<'arena> Parser<'arena> {
       return Ok(blocks);
     }
 
-    let Some(lines) = self.read_lines() else {
+    let Some(lines) = self.read_lines()? else {
       return Ok(blocks);
     };
 
@@ -149,7 +149,7 @@ impl<'arena> Parser<'arena> {
     &mut self,
     mut accum: BumpVec<'arena, Block<'arena>>,
   ) -> Result<BumpVec<'arena, Block<'arena>>> {
-    let Some(mut lines) = self.read_lines() else {
+    let Some(mut lines) = self.read_lines()? else {
       return Ok(accum);
     };
     if !lines.starts_list_continuation() {
@@ -200,7 +200,7 @@ impl<'arena> Parser<'arena> {
     if let Some(block) = self.parse_block()? {
       blocks.push(block);
     }
-    let Some(lines) = self.read_lines() else {
+    let Some(lines) = self.read_lines()? else {
       return Ok(blocks);
     };
     if lines.starts_list_continuation() {
