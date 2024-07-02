@@ -120,8 +120,21 @@ impl<'arena> RootLexer<'arena> {
       }
       Action::Consume => match self.sources[self.idx].next_token() {
         Some(token) => token,
+        None if self.source_stack.is_empty() => Token::new(
+          TokenKind::Eof,
+          self.loc(),
+          BumpString::from_str_in("", self.bump),
+        ),
         None => {
-          todo!("exit cursor")
+          dbg!(&self);
+          let Some(prev_idx) = self.source_stack.pop() else {
+            return Token::new(
+              TokenKind::Eof,
+              self.loc(),
+              BumpString::from_str_in("", self.bump),
+            );
+          };
+          todo!("thingy")
         }
       },
     }

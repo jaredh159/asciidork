@@ -28,43 +28,44 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
-  pub fn next_token(&mut self) -> Token<'arena> {
+  pub fn next_token(&mut self) -> Option<Token<'arena>> {
     if let Some(token) = self.delimiter_line() {
-      return token;
+      return Some(token);
     }
     let at_line_start = self.at_line_start();
     match self.advance() {
-      Some(b'=') => self.repeating(b'=', EqualSigns),
-      Some(b'-') => self.repeating(b'-', Dashes),
-      Some(b' ' | b'\t') => self.whitespace(),
-      Some(b'&') => self.single(Ampersand),
-      Some(b'\n') => self.single(Newline),
-      Some(b'<') => self.maybe_callout_number(),
-      Some(b'>') => self.single(GreaterThan),
-      Some(b',') => self.single(Comma),
-      Some(b'^') => self.single(Caret),
-      Some(b'~') => self.single(Tilde),
-      Some(b'_') => self.single(Underscore),
-      Some(b'*') => self.single(Star),
-      Some(b'.') => self.repeating(b'.', Dots),
-      Some(b'/') => self.repeating(b'/', ForwardSlashes),
-      Some(b'!') => self.single(Bang),
-      Some(b'`') => self.single(Backtick),
-      Some(b'+') => self.single(Plus),
-      Some(b'[') => self.single(OpenBracket),
-      Some(b']') => self.single(CloseBracket),
-      Some(b'{') => self.single(OpenBrace),
-      Some(b'}') => self.single(CloseBrace),
-      Some(b'#') => self.single(Hash),
-      Some(b'%') => self.single(Percent),
-      Some(b'"') => self.single(DoubleQuote),
-      Some(b'|') => self.single(Pipe),
-      Some(b'\'') => self.single(SingleQuote),
-      Some(b'\\') => self.single(Backslash),
-      Some(ch) if ch.is_ascii_digit() => self.digits(),
-      Some(ch) if ch == b';' || ch == b':' => self.maybe_term_delimiter(ch, at_line_start),
-      Some(_) => self.word(at_line_start),
-      None => self.token(Eof, self.pos, self.pos),
+      Some(b'=') => Some(self.repeating(b'=', EqualSigns)),
+      Some(b'-') => Some(self.repeating(b'-', Dashes)),
+      Some(b' ' | b'\t') => Some(self.whitespace()),
+      Some(b'&') => Some(self.single(Ampersand)),
+      Some(b'\n') => Some(self.single(Newline)),
+      Some(b'<') => Some(self.maybe_callout_number()),
+      Some(b'>') => Some(self.single(GreaterThan)),
+      Some(b',') => Some(self.single(Comma)),
+      Some(b'^') => Some(self.single(Caret)),
+      Some(b'~') => Some(self.single(Tilde)),
+      Some(b'_') => Some(self.single(Underscore)),
+      Some(b'*') => Some(self.single(Star)),
+      Some(b'.') => Some(self.repeating(b'.', Dots)),
+      Some(b'/') => Some(self.repeating(b'/', ForwardSlashes)),
+      Some(b'!') => Some(self.single(Bang)),
+      Some(b'`') => Some(self.single(Backtick)),
+      Some(b'+') => Some(self.single(Plus)),
+      Some(b'[') => Some(self.single(OpenBracket)),
+      Some(b']') => Some(self.single(CloseBracket)),
+      Some(b'{') => Some(self.single(OpenBrace)),
+      Some(b'}') => Some(self.single(CloseBrace)),
+      Some(b'#') => Some(self.single(Hash)),
+      Some(b'%') => Some(self.single(Percent)),
+      Some(b'"') => Some(self.single(DoubleQuote)),
+      Some(b'|') => Some(self.single(Pipe)),
+      Some(b'\'') => Some(self.single(SingleQuote)),
+      Some(b'\\') => Some(self.single(Backslash)),
+      Some(ch) if ch.is_ascii_digit() => Some(self.digits()),
+      Some(ch) if ch == b';' || ch == b':' => Some(self.maybe_term_delimiter(ch, at_line_start)),
+      Some(_) => Some(self.word(at_line_start)),
+      // None => self.token(Eof, self.pos, self.pos),
+      None => None,
     }
   }
 
@@ -85,10 +86,10 @@ impl<'arena> SourceLexer<'arena> {
       return None;
     }
     let start = self.pos;
-    let mut _end = start;
+    let mut _end = start; // TODO: ... what?
     let mut tokens = Deq::new(self.bump);
     while !self.peek_is(b'\n') && !self.is_eof() {
-      let token = self.next_token();
+      let token = self.next_token().unwrap();
       _end = token.loc.end - self.offset;
       tokens.push(token);
     }
