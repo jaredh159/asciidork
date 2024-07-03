@@ -170,7 +170,7 @@ impl<'arena> Parser<'arena> {
     mut cell_tokens: Deq<'arena, Token<'arena>>,
     col_index: usize,
     ctx: &mut TableContext<'arena>,
-    mut loc: Range<usize>,
+    mut loc: Range<u32>,
   ) -> Result<Option<(Cell<'arena>, u8)>> {
     let col_spec = ctx.col_specs.get(col_index);
     let mut cell_style = cell_spec
@@ -334,7 +334,7 @@ impl<'arena> Parser<'arena> {
     &mut self,
     mut lines: ContiguousLines<'arena>,
     start_delim: &Line<'arena>,
-  ) -> Result<(TableTokens<'arena>, usize)> {
+  ) -> Result<(TableTokens<'arena>, u32)> {
     let mut tokens = Deq::with_capacity(self.bump, lines.num_tokens());
     let delim_loc = start_delim.last_loc().unwrap();
     let mut end = delim_loc.end + 1;
@@ -370,7 +370,7 @@ impl<'arena> Parser<'arena> {
   }
 }
 
-fn newline_token(start: usize, bump: &Bump) -> Token {
+fn newline_token(start: u32, bump: &Bump) -> Token {
   Token {
     kind: TokenKind::Newline,
     lexeme: BumpString::from_str_in("\n", bump),

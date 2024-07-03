@@ -28,7 +28,7 @@ struct AttrState<'arena> {
   tokens: Deq<'arena, Token<'arena>>,
   kind: AttrKind,
   escaping: bool,
-  parse_range: (usize, usize),
+  parse_range: (u32, u32),
   formatted_text: bool,
   prev_token: Option<TokenKind>,
   is_legacy_anchor: bool,
@@ -182,7 +182,7 @@ impl<'arena> Parser<'arena> {
 }
 
 impl<'arena> AttrState<'arena> {
-  fn new_in(bump: &Bump, formatted_text: bool, parse_range: (usize, usize)) -> AttrState {
+  fn new_in(bump: &Bump, formatted_text: bool, parse_range: (u32, u32)) -> AttrState {
     let start_loc = SourceLocation::new(parse_range.0, parse_range.0);
     AttrState {
       bump,

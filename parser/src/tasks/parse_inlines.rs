@@ -194,7 +194,7 @@ impl<'arena> Parser<'arena> {
                 let mut items = bvec![in self.bump; first];
                 let rest = line.consume_to_string_until(CloseBracket, self.bump);
 
-                let mut pos = rest.loc.start;
+                let mut pos = rest.loc.start as usize;
                 rest.split('>').for_each(|substr| {
                   let mut trimmed = substr.trim_start();
                   pos += substr.len() - trimmed.len();
@@ -202,7 +202,7 @@ impl<'arena> Parser<'arena> {
                   if !trimmed.is_empty() {
                     items.push(SourceString::new(
                       BumpString::from_str_in(trimmed, self.bump),
-                      SourceLocation::new(pos, pos + trimmed.len()),
+                      SourceLocation::new(pos as u32, (pos + trimmed.len()) as u32),
                     ));
                   }
                   pos += substr.len() + 1;
@@ -685,13 +685,13 @@ impl<'arena> Parser<'arena> {
     };
     let mut line_txt = state.text.str().as_bytes();
     let line_len = line_txt.len();
-    let mut back = comment_bytes.len();
+    let mut back = comment_bytes.len() as u32;
     if line_txt.ends_with(&[b' ']) {
       back += 1;
       line_txt = &line_txt[..line_len - 1];
     }
     if line_txt.ends_with(comment_bytes) {
-      let tuck = state.text.str().split_at(line_len - back).1;
+      let tuck = state.text.str().split_at(line_len - back as usize).1;
       let tuck = BumpString::from_str_in(tuck, self.bump);
       state.text.drop_last(back);
       let tuck_loc = SourceLocation::new(state.text.loc.end, state.text.loc.end + back);

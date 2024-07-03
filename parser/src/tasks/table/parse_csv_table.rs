@@ -8,7 +8,7 @@ impl<'arena> Parser<'arena> {
     tokens: &mut TableTokens<'arena>,
     ctx: &mut TableContext<'arena>,
     col_index: usize,
-    mut start: usize,
+    mut start: u32,
   ) -> Result<Option<Cell<'arena>>> {
     let mut cell_tokens = Deq::new(self.bump);
     let mut end = start;

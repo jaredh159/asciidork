@@ -37,10 +37,14 @@ impl<'arena> Parser<'arena> {
       self.err("invalid author line", line.current_token())
     } else if first_start > 0 {
       let start = line.current_token().unwrap().loc.start;
-      self.err_at("invalid author line", start, start + first_start)
+      self.err_at("invalid author line", start, start + first_start as u32)
     } else if last_end < num_bytes {
       let start = line.current_token().unwrap().loc.start;
-      self.err_at("invalid author line", start + last_end, start + num_bytes)
+      self.err_at(
+        "invalid author line",
+        start + last_end as u32,
+        start + num_bytes as u32,
+      )
     } else {
       Ok(())
     }

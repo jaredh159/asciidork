@@ -5,14 +5,15 @@ use crate::internal::*;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
 pub struct SourceLocation {
-  pub start: usize,
-  pub end: usize,
+  pub start: u32,
+  pub end: u32,
+  pub depth: u16,
 }
 
 impl SourceLocation {
-  pub fn new(start: usize, end: usize) -> Self {
+  pub fn new(start: u32, end: u32) -> Self {
     debug_assert!(start <= end);
-    Self { start, end }
+    Self { start, end, depth: 0 }
   }
 
   pub fn extend(&mut self, other: SourceLocation) {
@@ -53,15 +54,27 @@ impl SourceLocation {
   }
 }
 
-impl From<usize> for SourceLocation {
-  fn from(offset: usize) -> Self {
+impl From<u32> for SourceLocation {
+  fn from(offset: u32) -> Self {
     Self::new(offset, offset)
+  }
+}
+
+impl From<Range<u32>> for SourceLocation {
+  fn from(range: Range<u32>) -> Self {
+    Self::new(range.start, range.end)
+  }
+}
+
+impl From<Range<i32>> for SourceLocation {
+  fn from(range: Range<i32>) -> Self {
+    Self::new(range.start as u32, range.end as u32)
   }
 }
 
 impl From<Range<usize>> for SourceLocation {
   fn from(range: Range<usize>) -> Self {
-    Self::new(range.start, range.end)
+    Self::new(range.start as u32, range.end as u32)
   }
 }
 

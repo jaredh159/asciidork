@@ -26,7 +26,7 @@ impl Substitutions {
 }
 
 pub fn extend(loc: &mut SourceLocation, nodes: &[InlineNode<'_>], adding: usize) {
-  loc.end = nodes.last().map(|node| node.loc.end).unwrap_or(loc.end) + adding;
+  loc.end = nodes.last().map(|node| node.loc.end).unwrap_or(loc.end) + adding as u32;
 }
 
 pub fn starts_constrained(

@@ -6,7 +6,7 @@ use asciidork_ast::prelude::*;
 use test_utils::*;
 
 pub fn named(
-  pairs: &[(&'static str, Range<usize>, &'static str, Range<usize>)],
+  pairs: &[(&'static str, Range<u32>, &'static str, Range<u32>)],
 ) -> asciidork_ast::AttrList<'static> {
   let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
   attrs.loc.start = pairs[0].1.start - 1;
@@ -20,7 +20,7 @@ pub fn named(
   attrs
 }
 
-pub fn pos(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<'static> {
+pub fn pos(text: &'static str, range: Range<u32>) -> asciidork_ast::AttrList<'static> {
   let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
   attrs.loc.start = range.start - 1;
   attrs.loc.end = range.end + 1;
@@ -28,7 +28,7 @@ pub fn pos(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<'
   attrs
 }
 
-pub fn role(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<'static> {
+pub fn role(text: &'static str, range: Range<u32>) -> asciidork_ast::AttrList<'static> {
   let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
   attrs.loc.start = range.start - 2;
   attrs.loc.end = range.end + 1;
@@ -36,7 +36,7 @@ pub fn role(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<
   attrs
 }
 
-pub fn opt(text: &'static str, range: Range<usize>) -> asciidork_ast::AttrList<'static> {
+pub fn opt(text: &'static str, range: Range<u32>) -> asciidork_ast::AttrList<'static> {
   let mut attrs = AttrList::new(SourceLocation::new(0, 0), leaked_bump());
   attrs.loc.start = range.start - 2;
   attrs.loc.end = range.end + 1;

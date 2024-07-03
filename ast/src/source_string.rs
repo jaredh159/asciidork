@@ -18,11 +18,14 @@ impl<'arena> SourceString<'arena> {
       Some((left, right)) => (
         Self::new(
           BumpString::from_str_in(left, bump),
-          SourceLocation::new(self.loc.start, self.loc.start + left.len()),
+          SourceLocation::new(self.loc.start, self.loc.start + left.len() as u32),
         ),
         Some(Self::new(
           BumpString::from_str_in(right, bump),
-          SourceLocation::new(self.loc.start + left.len() + separator.len(), self.loc.end),
+          SourceLocation::new(
+            self.loc.start + left.len() as u32 + separator.len() as u32,
+            self.loc.end,
+          ),
         )),
       ),
       None => (self, None),

@@ -6,8 +6,8 @@ use crate::variants::token::*;
 pub struct SourceLexer<'arena> {
   pub bump: &'arena Bump,
   pub src: BumpVec<'arena, u8>,
-  pub pos: usize,
-  pub offset: usize,
+  pub pos: u32,
+  pub offset: u32,
 }
 
 impl<'arena> SourceLexer<'arena> {
@@ -70,15 +70,15 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   pub fn peek(&self) -> Option<u8> {
-    self.src.get(self.pos).copied()
+    self.src.get(self.pos as usize).copied()
   }
 
   pub fn peek_n(&self, n: usize) -> Option<u8> {
-    self.src.get(self.pos + n).copied()
+    self.src.get(self.pos as usize + n).copied()
   }
 
   pub fn is_eof(&self) -> bool {
-    self.pos == self.src.len()
+    self.pos == self.src.len() as u32
   }
 
   pub fn consume_line(&mut self) -> Option<Line<'arena>> {
@@ -105,7 +105,7 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
-  pub fn at_delimiter_line(&self) -> Option<(usize, u8)> {
+  pub fn at_delimiter_line(&self) -> Option<(u32, u8)> {
     if !self.at_line_start()
       || self.is_eof()
       || !matches!(
@@ -138,35 +138,35 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   pub fn truncate(&mut self) {
-    self.src.truncate(self.offset);
+    self.src.truncate(self.offset as usize);
   }
 
   pub fn raw_lines(&'arena self) -> impl Iterator<Item = &'arena str> {
     LinesIter { src: &self.src, start: 0, end: 0 }
   }
 
-  pub fn line_of(&self, location: usize) -> BumpString<'arena> {
+  pub fn line_of(&self, location: u32) -> BumpString<'arena> {
     let location = location - self.offset;
     let mut start = location;
     let mut end = location;
 
-    while start > 0 && self.src[start - 1] != b'\n' {
+    while start > 0 && self.src[start as usize - 1] != b'\n' {
       start -= 1;
     }
 
-    while end < self.src.len() && self.src[end] != b'\n' {
+    while end < self.src.len() as u32 && self.src[end as usize] != b'\n' {
       end += 1;
     }
 
-    let str = std::str::from_utf8(&self.src[start..end]).unwrap();
+    let str = std::str::from_utf8(&self.src[start as usize..end as usize]).unwrap();
     BumpString::from_str_in(str, self.bump)
   }
 
-  pub fn line_number_with_offset(&self, location: usize) -> (usize, usize) {
+  pub fn line_number_with_offset(&self, location: u32) -> (u32, u32) {
     let mut line_number = 1;
-    let mut offset: usize = 0;
+    let mut offset: u32 = 0;
     for idx in 0..location {
-      if self.src[idx] == b'\n' {
+      if self.src[idx as usize] == b'\n' {
         offset = 0;
         line_number += 1;
       } else {
@@ -181,15 +181,15 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   fn at_line_start(&self) -> bool {
-    self.pos == 0 || self.src.get(self.pos - 1) == Some(&b'\n')
+    self.pos == 0 || self.src.get(self.pos as usize - 1) == Some(&b'\n')
   }
 
   fn at_empty_line(&self) -> bool {
     self.at_line_start() && self.peek_is(b'\n')
   }
 
-  fn nth(&self, n: usize) -> Option<u8> {
-    self.src.get(self.pos + n).copied()
+  fn nth(&self, n: u32) -> Option<u8> {
+    self.src.get((self.pos + n) as usize).copied()
   }
 
   fn delimiter_line(&mut self) -> Option<Token<'arena>> {
@@ -199,7 +199,7 @@ impl<'arena> SourceLexer<'arena> {
     Some(self.token(DelimiterLine, start, start + len))
   }
 
-  fn skip(&mut self, n: usize) {
+  fn skip(&mut self, n: u32) {
     debug_assert!(n > 1);
     self.pos += n;
   }
@@ -233,7 +233,7 @@ impl<'arena> SourceLexer<'arena> {
     let end = self.advance_to_word_boundary(true);
     // PERF: if i feel clear about the safety of how i move across
     // bytes and word boundaries, i could change all of these to get_unchecked
-    let lexeme = &self.src[start..end];
+    let lexeme = &self.src[start as usize..end as usize];
 
     // special cases
     match self.peek() {
@@ -262,11 +262,11 @@ impl<'arena> SourceLexer<'arena> {
         self.advance();
         let domain_end = self
           .advance_while_with(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-' || c == b'_');
-        let domain = &self.src[end + 1..domain_end];
+        let domain = &self.src[end as usize + 1..domain_end as usize];
         if domain.len() > 3 && domain.contains(&b'.') && !self.peek_is(b'@') {
           return self.token(MaybeEmail, start, domain_end);
         }
-        self.reverse_by(domain.len());
+        self.reverse_by(domain.len() as u32);
         let end = self.advance_to_word_boundary(false);
         return self.token(Word, start, end);
       }
@@ -275,11 +275,11 @@ impl<'arena> SourceLexer<'arena> {
     self.token(Word, start, end)
   }
 
-  fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token<'arena> {
+  fn token(&self, kind: TokenKind, start: u32, end: u32) -> Token<'arena> {
     let str = if end == start {
       ""
     } else {
-      std::str::from_utf8(&self.src[start..end]).unwrap()
+      std::str::from_utf8(&self.src[start as usize..end as usize]).unwrap()
     };
     Token {
       kind,
@@ -288,7 +288,7 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
-  fn reverse_by(&mut self, n: usize) {
+  fn reverse_by(&mut self, n: u32) {
     self.pos -= n;
   }
 
@@ -328,7 +328,7 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
-  fn advance_while(&mut self, c: u8) -> usize {
+  fn advance_while(&mut self, c: u8) -> u32 {
     while self.advance_if(c) {}
     self.pos
   }
@@ -343,7 +343,7 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
-  fn advance_while_with(&mut self, f: impl Fn(u8) -> bool) -> usize {
+  fn advance_while_with(&mut self, f: impl Fn(u8) -> bool) -> u32 {
     while self.peek().map_or(false, &f) {
       self.advance();
     }
@@ -362,7 +362,7 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
-  fn advance_until_one_of(&mut self, chars: &[u8]) -> usize {
+  fn advance_until_one_of(&mut self, chars: &[u8]) -> u32 {
     loop {
       match self.peek() {
         Some(c) if chars.contains(&c) => break,
@@ -375,7 +375,7 @@ impl<'arena> SourceLexer<'arena> {
     self.pos
   }
 
-  fn advance_to_word_boundary(&mut self, with_at: bool) -> usize {
+  fn advance_to_word_boundary(&mut self, with_at: bool) -> u32 {
     self.advance_until_one_of(&[
       b' ',
       b'\t',
@@ -411,14 +411,14 @@ impl<'arena> SourceLexer<'arena> {
 
   fn maybe_term_delimiter(&mut self, ch: u8, at_line_start: bool) -> Token<'arena> {
     let kind = if ch == b':' { Colon } else { SemiColon };
-    if self.pos > 1 && self.src[self.pos - 2] == ch {
+    if self.pos > 1 && self.src[self.pos as usize - 2] == ch {
       return self.single(kind);
     }
     if at_line_start || self.peek() != Some(ch) {
       return self.single(kind);
     }
 
-    let mut peek = self.src[self.pos + 1..].iter();
+    let mut peek = self.src[self.pos as usize + 1..].iter();
     match peek.next() {
       None | Some(b' ' | b'\n' | b'\t') => {
         self.advance();
@@ -444,7 +444,7 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   fn peek_term_delimiter(&self) -> bool {
-    let mut peek = self.src[self.pos + 1..].iter();
+    let mut peek = self.src[self.pos as usize + 1..].iter();
     if peek.next() != Some(&b':') {
       return false;
     }
@@ -481,7 +481,7 @@ impl<'arena> SourceLexer<'arena> {
         }
       }
       Some(b'!') => {
-        let mut peek = self.src[self.pos + 1..].iter();
+        let mut peek = self.src[self.pos as usize + 1..].iter();
         match (peek.next(), peek.next(), peek.next()) {
           (Some(b'-'), Some(b'-'), Some(b'.')) => {
             if let (Some(b'-'), Some(b'-'), Some(b'>')) = (peek.next(), peek.next(), peek.next()) {
@@ -511,8 +511,8 @@ impl<'arena> SourceLexer<'arena> {
     self.single(LessThan)
   }
 
-  fn remaining_len(&self) -> usize {
-    self.src.len() - self.pos
+  fn remaining_len(&self) -> u32 {
+    self.src.len() as u32 - self.pos
   }
 }
 

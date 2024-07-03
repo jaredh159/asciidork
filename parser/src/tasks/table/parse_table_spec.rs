@@ -8,9 +8,9 @@ use TokenKind::*;
 #[derive(Debug)]
 struct CellStart {
   spec: CellSpec,
-  drop_tokens: usize,
-  drop_bytes: usize,
-  resuming: usize,
+  drop_tokens: u32,
+  drop_bytes: u32,
+  resuming: u32,
 }
 
 lazy_static! {
@@ -85,9 +85,9 @@ impl<'arena> Parser<'arena> {
     &self,
     tokens: &mut TableTokens,
     sep: char,
-  ) -> Option<(CellSpec, usize)> {
+  ) -> Option<(CellSpec, u32)> {
     let data = self.peek_cell_start(tokens, sep)?;
-    tokens.discard(data.drop_tokens);
+    tokens.discard(data.drop_tokens as usize);
     tokens.drop_leading_bytes(data.drop_bytes);
     Some((data.spec, data.resuming))
   }
@@ -106,8 +106,8 @@ impl<'arena> Parser<'arena> {
       return Some(CellStart {
         spec: CellSpec::default(),
         drop_tokens: if first_token.len() == sep_len { 1 } else { 0 },
-        drop_bytes: if first_token.len() == sep_len { 0 } else { sep_len },
-        resuming: first_token.loc.start + sep_len,
+        drop_bytes: if first_token.len() == sep_len { 0 } else { sep_len as u32 },
+        resuming: first_token.loc.start + sep_len as u32,
       });
     }
 
@@ -150,13 +150,13 @@ impl<'arena> Parser<'arena> {
     match (style_within_word, cursor_token.lexeme.as_bytes()) {
       (false, bytes) if bytes == sep_bytes => Some(CellStart {
         spec,
-        drop_tokens: cursor + 1,
+        drop_tokens: cursor as u32 + 1,
         drop_bytes: 0,
         resuming: cursor_token.loc.end,
       }),
       (true, bytes) if bytes.len() == 2 && bytes[1..].starts_with(sep_bytes) => Some(CellStart {
         spec,
-        drop_tokens: cursor + 1,
+        drop_tokens: cursor as u32 + 1,
         drop_bytes: 0,
         resuming: cursor_token.loc.end,
       }),
@@ -164,9 +164,9 @@ impl<'arena> Parser<'arena> {
         let joined = tokens.nth(cursor).unwrap();
         Some(CellStart {
           spec,
-          drop_tokens: cursor,
-          drop_bytes: 1 + sep_bytes.len(),
-          resuming: joined.loc.start + 1 + sep_bytes.len(),
+          drop_tokens: cursor as u32,
+          drop_bytes: 1 + sep_bytes.len() as u32,
+          resuming: joined.loc.start + 1 + sep_bytes.len() as u32,
         })
       }
       _ => None,
@@ -194,7 +194,7 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) ->
 }
 
 fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  if tokens.has_seq_at(&[Digits, Star], *cursor) {
+  if tokens.has_seq_at(&[Digits, Star], *cursor as u32) {
     if let Some(Ok(digits)) = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>()) {
       spec.duplication = Some(digits);
       *cursor += 2;
@@ -203,12 +203,12 @@ fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &
 }
 
 fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  if tokens.has_seq_at(&[Digits, Plus], *cursor) {
+  if tokens.has_seq_at(&[Digits, Plus], *cursor as u32) {
     if let Some(Ok(digits)) = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>()) {
       spec.col_span = Some(digits);
       *cursor += 2;
     }
-  } else if tokens.has_seq_at(&[Dots, Digits, Plus], *cursor) {
+  } else if tokens.has_seq_at(&[Dots, Digits, Plus], *cursor as u32) {
     if !tokens.nth(*cursor).is_len(Dots, 1) {
       return;
     }
@@ -216,7 +216,7 @@ fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usi
       spec.row_span = Some(digits);
       *cursor += 3;
     }
-  } else if tokens.has_seq_at(&[Digits, Dots, Digits, Plus], *cursor) {
+  } else if tokens.has_seq_at(&[Digits, Dots, Digits, Plus], *cursor as u32) {
     if !tokens.nth(*cursor + 1).is_len(Dots, 1) {
       return;
     }
@@ -371,7 +371,10 @@ mod tests {
       let start = parser.consume_cell_start(&mut tokens, *sep);
       assert_eq!(start, *expected, from: input);
       if let Some((_, loc)) = *expected {
-        assert_eq!(input.as_bytes().get(loc), remaining.as_bytes().first());
+        assert_eq!(
+          input.as_bytes().get(loc as usize),
+          remaining.as_bytes().first()
+        );
       }
     }
   }

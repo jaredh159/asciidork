@@ -89,7 +89,7 @@ impl<'arena> Parser<'arena> {
     tokens: &mut TableTokens<'arena>,
     ctx: &mut TableContext<'arena>,
     col_index: usize,
-    start: usize,
+    start: u32,
   ) -> Result<Option<Cell<'arena>>> {
     let mut cell_tokens = Deq::new(self.bump);
     let mut end = start;
@@ -148,7 +148,7 @@ impl<'arena> Parser<'arena> {
         tokens.consume_current();
         true
       } else {
-        tokens.drop_leading_bytes(sep_len);
+        tokens.drop_leading_bytes(sep_len as u32);
         true
       }
     } else {

@@ -22,7 +22,7 @@ impl<'arena> Line<'arena> {
   pub fn into_bytes(self) -> BumpVec<'arena, u8> {
     let mut bytes = BumpVec::new_in(self.tokens.bump);
     if let (Some(first), Some(last)) = (self.tokens.first(), self.tokens.last()) {
-      bytes.reserve(last.loc.end - first.loc.start);
+      bytes.reserve((last.loc.end - first.loc.start) as usize);
     }
     for token in self.tokens.iter() {
       bytes.extend_from_slice(token.lexeme.as_bytes());
@@ -187,12 +187,12 @@ impl<'arena> Line<'arena> {
     None
   }
 
-  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: usize) -> bool {
-    if kinds.is_empty() || self.tokens().len() < offset + kinds.len() {
+  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: u32) -> bool {
+    if kinds.is_empty() || self.tokens().len() < offset as usize + kinds.len() {
       return false;
     }
     for (i, token_type) in kinds.iter().enumerate() {
-      if self.tokens.get(i + offset).unwrap().kind != *token_type {
+      if self.tokens.get(i + offset as usize).unwrap().kind != *token_type {
         return false;
       }
     }
@@ -406,7 +406,7 @@ impl<'arena> Line<'arena> {
     if self.tokens.is_empty() {
       0
     } else {
-      self.tokens.last().unwrap().loc.end - self.tokens.first().unwrap().loc.start
+      (self.tokens.last().unwrap().loc.end - self.tokens.first().unwrap().loc.start) as usize
     }
   }
 
@@ -505,8 +505,8 @@ impl<'arena> Line<'arena> {
     }
   }
 
-  pub fn drop_leading_bytes(&mut self, n: usize) {
-    debug_assert!(n <= self.current_token().unwrap().lexeme.len());
+  pub fn drop_leading_bytes(&mut self, n: u32) {
+    debug_assert!(n as usize <= self.current_token().unwrap().lexeme.len());
     if n > 0 {
       self.tokens.get_mut(0).unwrap().drop_leading_bytes(n);
     }
@@ -728,7 +728,7 @@ mod tests {
 
   #[test]
   fn test_line_has_seq_at() {
-    let cases: Vec<(&str, &[TokenKind], usize, bool)> = vec![
+    let cases: Vec<(&str, &[TokenKind], u32, bool)> = vec![
       ("foo bar_:", &[Word, Whitespace], 0, true),
       ("foo bar_:", &[Word, Whitespace], 1, false),
       ("foo bar", &[Whitespace, Word], 1, true),

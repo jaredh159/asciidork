@@ -44,7 +44,7 @@ impl<'arena> InlineNodes<'arena> {
     self.last().map(|node| node.loc)
   }
 
-  pub fn last_loc_end(&self) -> Option<usize> {
+  pub fn last_loc_end(&self) -> Option<u32> {
     self.last().map(|node| node.loc.end)
   }
 

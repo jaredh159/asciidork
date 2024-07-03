@@ -25,7 +25,7 @@ impl<'arena> Parser<'arena> {
   pub(super) fn parse_doc_attr(
     &self,
     lines: &mut ContiguousLines<'arena>,
-  ) -> Result<Option<(String, AttrValue, usize)>> {
+  ) -> Result<Option<(String, AttrValue, u32)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
     };
@@ -50,11 +50,11 @@ impl<'arena> Parser<'arena> {
 
     let attr = if let Some(re_match) = captures.get(2) {
       if is_negated {
-        let start = line.loc().unwrap().start + re_match.start();
+        let start = line.loc().unwrap().start + re_match.start() as u32;
         self.err_at(
           "Cannot unset attr with `!` AND provide value",
           start + 1,
-          start + 1 + re_match.len(),
+          start + 1 + re_match.len() as u32,
         )?;
       }
 

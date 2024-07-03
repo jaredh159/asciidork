@@ -63,7 +63,7 @@ impl<'arena> Parser<'arena> {
     self.include_resolver = Some(resolver);
   }
 
-  pub fn cell_parser(&mut self, src: BumpVec<'arena, u8>, offset: usize) -> Parser<'arena> {
+  pub fn cell_parser(&mut self, src: BumpVec<'arena, u8>, offset: u32) -> Parser<'arena> {
     let mut cell_parser = Parser::new(src, self.bump);
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
