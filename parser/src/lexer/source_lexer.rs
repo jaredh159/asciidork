@@ -7,7 +7,7 @@ pub struct SourceLexer<'arena> {
   pub bump: &'arena Bump,
   pub src: BumpVec<'arena, u8>,
   pub pos: u32,
-  pub offset: u32,
+  pub offset: u32, // needed?
 }
 
 impl<'arena> SourceLexer<'arena> {

@@ -5,16 +5,9 @@ use crate::internal::*;
 pub struct RootLexer<'arena> {
   bump: &'arena Bump,
   idx: usize, // u16?
-  action: Action,
-  source_stack: SmallVec<[u16; 4]>,
+  next_idx: Option<u16>,
+  source_stack: Vec<SourceLocation>,
   sources: BumpVec<'arena, SourceLexer<'arena>>,
-}
-
-#[derive(Debug)]
-enum Action {
-  Enter(u16),
-  Exit(u16),
-  Consume,
 }
 
 impl<'arena> RootLexer<'arena> {
@@ -22,8 +15,8 @@ impl<'arena> RootLexer<'arena> {
     Self {
       bump,
       idx: 0,
-      action: Action::Consume,
-      source_stack: SmallVec::new(),
+      next_idx: None,
+      source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::new(src, bump)],
     }
   }
@@ -32,8 +25,8 @@ impl<'arena> RootLexer<'arena> {
     Self {
       bump,
       idx: 0,
-      action: Action::Consume,
-      source_stack: SmallVec::new(),
+      next_idx: None,
+      source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_str(src, bump)],
     }
   }
@@ -42,8 +35,8 @@ impl<'arena> RootLexer<'arena> {
     Self {
       bump,
       idx: 0,
-      action: Action::Consume,
-      source_stack: SmallVec::new(),
+      next_idx: None,
+      source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_byte_slice(bytes, bump)],
     }
   }
@@ -51,7 +44,7 @@ impl<'arena> RootLexer<'arena> {
   pub fn push_source(&mut self, _filename: &str, src: BumpVec<'arena, u8>) {
     self.sources.push(SourceLexer::new(src, self.bump));
     let next_idx = self.sources.len() as u16 - 1;
-    self.action = Action::Enter(next_idx);
+    self.next_idx = Some(next_idx);
   }
 
   pub fn adjust_offset(&mut self, offset_adjustment: u32) {
@@ -104,36 +97,32 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn next_token(&mut self) -> Token<'arena> {
-    match self.action {
-      Action::Enter(next_idx) => {
+    match self.next_idx.take() {
+      Some(next_idx) => {
         let mut include_loc = self.loc().decr();
         let mut line = self.line_of(include_loc.start);
         line.replace_range(0..9, &format!("{{->{:05}}}", next_idx));
         include_loc.start -= line.len() as u32;
-        self.source_stack.push(self.idx as u16);
+        include_loc.include_depth = self.idx as u16;
+        self.source_stack.push(include_loc);
         self.idx = next_idx as usize;
-        self.action = Action::Consume;
         Token::new(TokenKind::BeginInclude, include_loc, line)
       }
-      Action::Exit(_idx) => {
-        todo!("exit cursor")
-      }
-      Action::Consume => match self.sources[self.idx].next_token() {
-        Some(token) => token,
+      None => match self.sources[self.idx].next_token() {
+        Some(mut token) => {
+          token.loc.include_depth = self.idx as u16;
+          token
+        }
         None => {
-          dbg!(&self);
-          let Some(prev_idx) = self.source_stack.pop() else {
-            return Token::new(
-              TokenKind::Eof,
-              self.loc(),
-              BumpString::from_str_in("", self.bump),
-            );
+          let Some(prev_loc) = self.source_stack.pop() else {
+            let empty = BumpString::from_str_in("", self.bump);
+            return Token::new(TokenKind::Eof, self.loc(), empty);
           };
-
-          // wed jared 👍, maybe should hold a vec of SourceLocation, which
-          // would give me both the depth, and the full loc of the line
-
-          todo!("thingy")
+          let prev_idx = self.idx;
+          self.idx = prev_loc.include_depth as usize;
+          let mut line = self.line_of(prev_loc.start);
+          line.replace_range(0..9, &format!("{{<-{:05}}}", prev_idx));
+          Token::new(TokenKind::EndInclude, prev_loc, line)
         }
       },
     }
@@ -152,7 +141,7 @@ mod tests {
   use ast::SourceLocation;
   use test_utils::{assert_eq, *};
 
-  // #[test]
+  #[test]
   fn test_include_boundaries() {
     let input = adoc! {"
       foo
@@ -161,19 +150,6 @@ mod tests {
     "};
     let bump = &Bump::new();
     let mut lexer = RootLexer::from_str(bump, input);
-    // assert_eq!(lexer.next_token(), Token::new(Word, 0..3, bstr!("foo")));
-    // assert_eq!(lexer.next_token(), Token::new(Newline, 3..4, bstr!("\n")));
-    // assert_eq!(
-    //   lexer.next_token(),
-    //   Token::new(Directive, 4..13, bstr!("include::"))
-    // );
-    // assert_eq!(lexer.next_token(), Token::new(Word, 13..16, bstr!("foo")));
-    // assert_eq!(lexer.next_token(), Token::new(Dots, 16..17, bstr!(".")));
-    // assert_eq!(lexer.next_token(), Token::new(Word, 17..21, bstr!("adoc")));
-    // assert_eq!(
-    //   lexer.next_token(),
-    //   Token::new(OpenBracket, 21..22, bstr!("["))
-    // );
 
     // parse up to the end of the include directive
     (0..7).for_each(|_| _ = lexer.next_token());
@@ -190,20 +166,18 @@ mod tests {
       Token::new(BeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
     );
     assert_eq!(&input[4..23], "include::bar.adoc[]");
-    // tues jared, get this passing, express depth in source location
-    // consider dropping location from `Block`, deriving from contents
-    // remember maybe u16 the idxs in lexers
+
     assert_eq!(
       lexer.next_token(),
-      Token::new(Word, 0..3 /* /1 */, bstr!("bar"))
+      Token::new(Word, SourceLocation::new_depth(0, 3, 1), bstr!("bar"))
     );
     assert_eq!(
       lexer.next_token(),
-      Token::new(Newline, 3..4 /* /1 */, bstr!("\n"))
+      Token::new(Newline, SourceLocation::new_depth(3, 4, 1), bstr!("\n"))
     );
     assert_eq!(
       lexer.next_token(),
-      Token::new(EndInclude, 4..24, bstr!("{<-00001}bar.adoc[]\n"))
+      Token::new(EndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
     );
   }
 

@@ -7,13 +7,18 @@ use crate::internal::*;
 pub struct SourceLocation {
   pub start: u32,
   pub end: u32,
-  pub depth: u16,
+  pub include_depth: u16,
 }
 
 impl SourceLocation {
   pub fn new(start: u32, end: u32) -> Self {
     debug_assert!(start <= end);
-    Self { start, end, depth: 0 }
+    Self { start, end, include_depth: 0 }
+  }
+
+  pub fn new_depth(start: u32, end: u32, include_depth: u16) -> Self {
+    debug_assert!(start <= end);
+    Self { start, end, include_depth }
   }
 
   pub fn extend(&mut self, other: SourceLocation) {
@@ -80,7 +85,17 @@ impl From<Range<usize>> for SourceLocation {
 
 impl Debug for SourceLocation {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-    write!(f, "{}..{}", self.start, self.end)
+    write!(
+      f,
+      "{}..{}{}",
+      self.start,
+      self.end,
+      if self.include_depth > 0 {
+        format!("/{}", self.include_depth)
+      } else {
+        String::new()
+      }
+    )
   }
 }
 
