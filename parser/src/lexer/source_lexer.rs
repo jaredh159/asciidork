@@ -33,7 +33,9 @@ impl<'arena> SourceLexer<'arena> {
       return Some(token);
     }
     let at_line_start = self.at_line_start();
-    match self.advance() {
+    let byte = self.nth(0);
+    self.pos += 1;
+    match byte {
       Some(b'=') => Some(self.repeating(b'=', EqualSigns)),
       Some(b'-') => Some(self.repeating(b'-', Dashes)),
       Some(b' ' | b'\t') => Some(self.whitespace()),
@@ -313,10 +315,8 @@ impl<'arena> SourceLexer<'arena> {
     )
   }
 
-  fn advance(&mut self) -> Option<u8> {
-    let byte = self.nth(0);
+  fn advance(&mut self) {
     self.pos += 1;
-    byte
   }
 
   fn advance_if(&mut self, c: u8) -> bool {

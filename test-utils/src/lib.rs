@@ -140,6 +140,12 @@ macro_rules! node {
   ($node:expr, $range:expr$(,)?) => {
     InlineNode::new($node, SourceLocation::new($range.start, $range.end))
   };
+  ($text:expr; $range:expr, depth: $depth:expr) => {
+    InlineNode::new(
+      Inline::Text(bstr!($text)),
+      SourceLocation::new_depth($range.start, $range.end, $depth),
+    )
+  };
   ($text:expr; $range:expr) => {
     InlineNode::new(
       Inline::Text(bstr!($text)),

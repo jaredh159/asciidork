@@ -4,7 +4,7 @@ use crate::internal::*;
 #[derive(Debug)]
 pub struct RootLexer<'arena> {
   bump: &'arena Bump,
-  idx: usize, // u16?
+  idx: u16,
   next_idx: Option<u16>,
   source_stack: Vec<SourceLocation>,
   sources: BumpVec<'arena, SourceLexer<'arena>>,
@@ -48,27 +48,40 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn adjust_offset(&mut self, offset_adjustment: u32) {
-    self.sources[self.idx].offset = offset_adjustment;
+    self.sources[self.idx as usize].offset = offset_adjustment;
   }
 
   pub fn peek(&self) -> Option<u8> {
-    self.sources[self.idx].peek()
+    // case: we're about to switch to a new source
+    if self.next_idx.is_some() {
+      return Some(b'{'); // fake peek the generated boundary start include-token
+    }
+    // case: normal path: we're peeking at the current source, and have bytes
+    if let Some(c) = self.sources[self.idx as usize].peek() {
+      return Some(c);
+    }
+    // case: we're out of bytes, check if we're returning to a previous source
+    if !self.source_stack.is_empty() {
+      return Some(b'{'); // fake peek the generated boundary end include-token
+    }
+    // case: nothing left in any source, root EOF
+    None
   }
 
   pub fn consume_empty_lines(&mut self) {
-    self.sources[self.idx].consume_empty_lines();
+    self.sources[self.idx as usize].consume_empty_lines();
   }
 
   pub fn raw_lines(&'arena self) -> impl Iterator<Item = &'arena str> {
-    self.sources[self.idx].raw_lines()
+    self.sources[self.idx as usize].raw_lines()
   }
 
   pub fn loc(&self) -> SourceLocation {
-    SourceLocation::from(self.sources[self.idx].pos)
+    SourceLocation::from(self.sources[self.idx as usize].pos)
   }
 
   pub fn at_delimiter_line(&self) -> Option<(u32, u8)> {
-    self.sources[self.idx].at_delimiter_line()
+    self.sources[self.idx as usize].at_delimiter_line()
   }
 
   pub fn is_eof(&self) -> bool {
@@ -80,7 +93,7 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn line_of(&self, location: u32) -> BumpString<'arena> {
-    self.sources[self.idx].line_of(location)
+    self.sources[self.idx as usize].line_of(location)
   }
 
   pub fn line_number(&self, location: u32) -> u32 {
@@ -89,11 +102,22 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn line_number_with_offset(&self, location: u32) -> (u32, u32) {
-    self.sources[self.idx].line_number_with_offset(location)
+    self.sources[self.idx as usize].line_number_with_offset(location)
   }
 
   pub fn consume_line(&mut self) -> Option<Line<'arena>> {
-    self.sources[self.idx].consume_line()
+    if self.is_eof() {
+      return None;
+    }
+    let mut tokens = Deq::new(self.bump);
+    while !self.peek_is(b'\n') && !self.is_eof() {
+      let token = self.next_token();
+      tokens.push(token);
+    }
+    if self.peek_is(b'\n') {
+      self.sources[self.idx as usize].pos += 1;
+    }
+    Some(Line::new(tokens))
   }
 
   pub fn next_token(&mut self) -> Token<'arena> {
@@ -103,14 +127,14 @@ impl<'arena> RootLexer<'arena> {
         let mut line = self.line_of(include_loc.start);
         line.replace_range(0..9, &format!("{{->{:05}}}", next_idx));
         include_loc.start -= line.len() as u32;
-        include_loc.include_depth = self.idx as u16;
+        include_loc.include_depth = self.idx;
         self.source_stack.push(include_loc);
-        self.idx = next_idx as usize;
+        self.idx = next_idx;
         Token::new(TokenKind::BeginInclude, include_loc, line)
       }
-      None => match self.sources[self.idx].next_token() {
+      None => match self.sources[self.idx as usize].next_token() {
         Some(mut token) => {
-          token.loc.include_depth = self.idx as u16;
+          token.loc.include_depth = self.idx;
           token
         }
         None => {
@@ -119,7 +143,7 @@ impl<'arena> RootLexer<'arena> {
             return Token::new(TokenKind::Eof, self.loc(), empty);
           };
           let prev_idx = self.idx;
-          self.idx = prev_loc.include_depth as usize;
+          self.idx = prev_loc.include_depth;
           let mut line = self.line_of(prev_loc.start);
           line.replace_range(0..9, &format!("{{<-{:05}}}", prev_idx));
           Token::new(TokenKind::EndInclude, prev_loc, line)
@@ -129,7 +153,7 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn truncate(&mut self) {
-    self.sources[self.idx].truncate();
+    self.sources[self.idx as usize].truncate();
   }
 }
 

@@ -36,6 +36,7 @@ impl<'arena> InlineNodes<'arena> {
       Inline::Text(s) => text.push(s.as_str()),
       Inline::TextSpan(_, nodes) => text.extend(nodes.plain_text()),
       Inline::CalloutTuck(_) => {}
+      Inline::IncludeBoundary(_, _) => {}
     });
     text
   }

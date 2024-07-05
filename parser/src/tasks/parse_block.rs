@@ -4,7 +4,6 @@ use ast::short::block::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_block(&mut self) -> Result<Option<Block<'arena>>> {
-    println!("parse_block");
     let Some(mut lines) = self.read_lines()? else {
       return Ok(None);
     };

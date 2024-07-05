@@ -62,10 +62,6 @@ impl<'arena> Parser<'arena> {
         continue;
       }
 
-      // if line.starts(Directive) && self.try_process_directive(&line)? {
-      //   continue;
-      // }
-
       loop {
         if line.starts_with_seq(stop_tokens) {
           line.discard(stop_tokens.len());
@@ -240,6 +236,21 @@ impl<'arena> Parser<'arena> {
               && line.continues_valid_callout_nums() =>
           {
             push_callout_tuck(token, &mut line, &mut acc);
+          }
+
+          BeginInclude => {
+            let depth: u16 = token.lexeme[3..8].parse().unwrap();
+            acc.push_node(
+              IncludeBoundary(IncludeBoundaryKind::Begin, depth),
+              token.loc,
+            );
+            acc.text.loc = SourceLocation::new_depth(0, 0, depth);
+          }
+
+          EndInclude => {
+            let depth: u16 = token.lexeme[3..8].parse().unwrap();
+            acc.push_node(IncludeBoundary(IncludeBoundaryKind::End, depth), token.loc);
+            acc.text.loc = SourceLocation::new_depth(0, 0, depth);
           }
 
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {

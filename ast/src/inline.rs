@@ -23,6 +23,7 @@ pub enum Inline<'arena> {
   Macro(MacroNode<'arena>),
   Italic(InlineNodes<'arena>),
   InlinePassthrough(InlineNodes<'arena>),
+  IncludeBoundary(IncludeBoundaryKind, u16),
   Newline,
   CalloutNum(Callout),
   CalloutTuck(BumpString<'arena>),
@@ -44,6 +45,12 @@ pub enum Inline<'arena> {
 pub enum QuoteKind {
   Double,
   Single,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum IncludeBoundaryKind {
+  Begin,
+  End,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -95,6 +102,7 @@ impl<'arena> Json for Inline<'arena> {
     buf.begin_obj("Inline");
     buf.push_str(r#","variant":""#);
     match self {
+      Inline::IncludeBoundary(..) => todo!(),
       Inline::AttributeReference(s) => {
         buf.push_str("AttributeReference\"");
         buf.add_member("name", s);
