@@ -195,7 +195,6 @@ mod tests {
                   }]
                 },
                 context: BlockContext::UnorderedList,
-                loc: SourceLocation::new(8, 13)
               }]),
               meta: {
                 let mut m = DocumentMeta::default();
@@ -230,7 +229,7 @@ mod tests {
           content: DocContent::Blocks(vecb![Block {
             context: BlockContext::Literal,
             content: BlockContent::Simple(just!("literal", 23..30)),
-            ..empty_block!(21..30)
+            ..empty_block!(21)
           }]),
           meta: {
             let mut m = DocumentMeta::default();
@@ -868,7 +867,6 @@ mod tests {
           ..empty_table!()
         }),
         context: BlockContext::Table,
-        loc: SourceLocation::new(0, 51),
       }
     )
   }

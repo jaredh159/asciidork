@@ -66,7 +66,6 @@ fn test_ordered_w_nested_unordered() {
             },
           ],
         },
-        ..empty_block!(11..30)
       }],
     }]
   );

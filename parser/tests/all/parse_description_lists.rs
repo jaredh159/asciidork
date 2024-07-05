@@ -16,7 +16,7 @@ fn test_simple_description_list() {
       blocks: vecb![Block {
         content: Content::Simple(just!("bar", 6..9)),
         context: Context::Paragraph,
-        ..empty_block!(6..9)
+        ..empty_block!(6)
       }],
     }]
   );
@@ -38,7 +38,7 @@ fn test_two_line_description_list() {
       blocks: vecb![Block {
         content: Content::Simple(just!("bar", 6..9)),
         context: Context::Paragraph,
-        ..empty_block!(6..9)
+        ..empty_block!(6)
       }],
     }]
   );

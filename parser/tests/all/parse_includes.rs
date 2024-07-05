@@ -19,7 +19,7 @@ fn basic_include() {
           node!("Line-2!"; 0..7, depth: 1),
           node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
         ]),
-        ..empty_block!(0..11)
+        ..empty_block!(0)
       }
     ])
   )

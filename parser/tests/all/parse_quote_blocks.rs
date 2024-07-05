@@ -22,7 +22,7 @@ fn test_quoted_paragraph() {
       attr: src!("Thomas Jefferson", 65..81),
       cite: Some(src!("Papers of Thomas Jefferson: Volume 11", 83..120)),
     },
-    ..empty_block!(0..120)
+    ..empty_block!(0)
   };
   assert_block!(input, expected);
 }
@@ -55,7 +55,6 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
       attr: src!("Thomas Jefferson", 81..97),
       cite: None,
     },
-    ..empty_block!(0..97)
   };
   assert_block!(input, expected);
 }
@@ -80,7 +79,6 @@ fn test_simple_blockquote() {
     },
     context: Context::BlockQuote,
     content: Content::Simple(nodes![node!("foo"; 24.. 27)]),
-    ..empty_block!(0..27)
   };
   assert_block!(input, expected,)
 }
@@ -109,9 +107,8 @@ fn test_parse_delimited_blockquote() {
     content: Content::Compound(vecb![Block {
       context: Context::Paragraph,
       content: Content::Simple(just!("foo", 29..32)),
-      ..empty_block!(29..32)
+      ..empty_block!(29)
     }]),
-    ..empty_block!(0..37)
   };
   assert_block!(input, expected);
 }
@@ -144,7 +141,6 @@ fn test_delimited_verse_block() {
         node!(Newline, 32..33),
         node!("bar"; 33..36),
       ]),
-      ..empty_block!(0..41)
     }
   );
 }

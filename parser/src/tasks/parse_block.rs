@@ -23,7 +23,6 @@ impl<'arena> Parser<'arena> {
         self.restore_peeked(lines, meta);
         let section = self.parse_section()?.unwrap();
         return Ok(Some(Block {
-          loc: SourceLocation::new(section.meta.start, self.loc().end),
           meta: ChunkMeta::empty(section.meta.start),
           context: Context::Section,
           content: Content::Section(section),
@@ -70,7 +69,6 @@ impl<'arena> Parser<'arena> {
             self.err_at(err, meta.start, end)?;
           }
           return Ok(Some(Block {
-            loc: SourceLocation::new(meta.start, end),
             meta,
             context: Context::DocumentAttributeDecl,
             content: Content::DocumentAttribute(key, value),
@@ -112,10 +110,8 @@ impl<'arena> Parser<'arena> {
     line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&line, meta.attrs.as_ref());
     let content = self.parse_inlines(&mut line.into_lines())?;
-    let end = content.last_loc().unwrap().end;
     self.restore_lines(lines);
     Ok(Block {
-      loc: SourceLocation::new(meta.start, end),
       meta,
       context: Context::DiscreteHeading,
       content: Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),
@@ -137,7 +133,6 @@ impl<'arena> Parser<'arena> {
           meta: ChunkMeta::empty(start),
           context: Context::Comment,
           content: Content::Empty(EmptyMetadata::None),
-          loc: SourceLocation::new(start, self.loc().end),
         });
       }
     }
@@ -198,22 +193,15 @@ impl<'arena> Parser<'arena> {
     };
 
     self.ctx.subs = restore_subs;
-    let end = if let Some(mut block) = self.read_lines()? {
+    if let Some(mut block) = self.read_lines()? {
       let token = block.consume_current_token().unwrap();
       debug_assert!(token.is(DelimiterLine));
       self.restore_lines(block);
-      token.loc.end
     } else {
       self.err_token_full("This delimiter was never closed", &delimiter_token)?;
-      content.last_loc().unwrap_or(delimiter_token.loc).end
     };
     self.ctx.delimiter = prev;
-    Ok(Some(Block {
-      loc: SourceLocation::new(meta.start, end),
-      meta,
-      content,
-      context,
-    }))
+    Ok(Some(Block { meta, content, context }))
   }
 
   fn parse_image_block(
@@ -222,14 +210,12 @@ impl<'arena> Parser<'arena> {
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     let mut line = lines.consume_current().unwrap();
-    let start = line.loc().unwrap().start;
     line.discard_assert(MacroName);
     line.discard_assert(Colon);
     let target = line.consume_macro_target(self.bump);
     let attrs = self.parse_attr_list(&mut line)?;
     Ok(Block {
       meta,
-      loc: SourceLocation::new(start, attrs.loc.end),
       context: Context::Image,
       content: Content::Empty(EmptyMetadata::Image { target, attrs }),
     })
@@ -247,10 +233,6 @@ impl<'arena> Parser<'arena> {
     self.ctx.subs = restore_subs;
 
     self.restore_lines(lines);
-    let Some(end) = inlines.last_loc_end() else {
-      return Ok(None);
-    };
-
     let content = if context == Context::Comment {
       // PERF: could squeeze out some speed by not parsing inlines
       Content::Empty(EmptyMetadata::None)
@@ -258,12 +240,7 @@ impl<'arena> Parser<'arena> {
       Content::Simple(inlines)
     };
 
-    Ok(Some(Block {
-      loc: SourceLocation::new(meta.start, end),
-      meta,
-      context,
-      content,
-    }))
+    Ok(Some(Block { meta, context, content }))
   }
 
   fn parse_quoted_paragraph(
@@ -274,7 +251,6 @@ impl<'arena> Parser<'arena> {
     let mut attr_line = lines.pop().unwrap();
     attr_line.discard_assert(TokenKind::Dashes); // `--`
     attr_line.discard_assert(TokenKind::Whitespace);
-    let end = attr_line.last_location().unwrap().end;
     let (attr, cite) = attr_line
       .consume_to_string(self.bump)
       .split_once(", ", self.bump);
@@ -287,7 +263,6 @@ impl<'arena> Parser<'arena> {
       .unwrap()
       .discard_assert_last(TokenKind::DoubleQuote);
     Ok(Some(Block {
-      loc: SourceLocation::new(meta.start, end),
       meta,
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
@@ -304,10 +279,9 @@ impl<'arena> Parser<'arena> {
     mut lines: ContiguousLines<'arena>,
     meta: ChunkMeta<'arena>,
   ) -> Result<Option<Block<'arena>>> {
-    let end = lines.consume_current().unwrap().last_loc().unwrap().end;
+    lines.consume_current();
     self.restore_lines(lines);
     Ok(Some(Block {
-      loc: SourceLocation::new(meta.start, end),
       meta,
       context,
       content: Content::Empty(EmptyMetadata::None),
@@ -329,7 +303,6 @@ impl<'arena> Parser<'arena> {
       )?;
     }
     return Ok(Block {
-      loc: SourceLocation::new(meta.start, self.loc().end),
       meta,
       context: Context::TableOfContents,
       content: Content::Empty(EmptyMetadata::None),
@@ -351,7 +324,7 @@ mod tests {
     let expected = Block {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrValue::Bool(false)),
-      ..empty_block!(0..17)
+      ..empty_block!(0)
     };
     assert_eq!(block, expected);
   }
@@ -374,7 +347,7 @@ mod tests {
       Block {
         context: Context::Paragraph,
         content: Content::Simple(just!("first para", 0..10)),
-        ..empty_block!(0..10)
+        ..empty_block!(0)
       }
     );
   }

@@ -27,7 +27,7 @@ impl<'arena> ListItem<'arena> {
     self
       .blocks
       .last()
-      .map(|block| block.loc)
+      .and_then(|block| block.content.last_loc())
       .or_else(|| self.principle.last_loc())
   }
 

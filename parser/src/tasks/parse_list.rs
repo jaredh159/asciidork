@@ -27,7 +27,6 @@ impl<'arena> Parser<'arena> {
 
     let meta = meta.unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc_start()));
     Ok(Block {
-      loc: SourceLocation::new(meta.start, items.last().unwrap().last_loc_end().unwrap()),
       meta,
       context: variant.to_context(),
       content: BlockContent::List { variant, depth, items },

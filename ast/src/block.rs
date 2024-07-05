@@ -5,7 +5,6 @@ pub struct Block<'arena> {
   pub meta: ChunkMeta<'arena>,
   pub content: BlockContent<'arena>,
   pub context: BlockContext,
-  pub loc: SourceLocation,
 }
 
 impl<'arena> Block<'arena> {
@@ -97,11 +96,11 @@ pub enum BlockContext {
 impl<'arena> BlockContent<'arena> {
   pub fn last_loc(&self) -> Option<SourceLocation> {
     match self {
-      BlockContent::Compound(blocks) => blocks.last().map(|b| b.loc),
+      BlockContent::Compound(blocks) => blocks.last().and_then(|b| b.content.last_loc()),
       BlockContent::Simple(inline_nodes) => inline_nodes.last_loc(),
       BlockContent::Section(Section { heading, blocks, .. }) => {
         if !blocks.is_empty() {
-          blocks.last().map(|b| b.loc)
+          blocks.last().and_then(|b| b.content.last_loc())
         } else {
           heading.last_loc()
         }

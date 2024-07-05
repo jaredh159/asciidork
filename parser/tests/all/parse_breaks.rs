@@ -11,7 +11,7 @@ fn test_basic_thematic_break() {
     Block {
       context: Context::ThematicBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0..3)
+      ..empty_block!(0)
     }
   );
 }
@@ -30,7 +30,6 @@ fn test_themmatic_break_w_attrs() {
       },
       context: Context::ThematicBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0..12)
     }
   );
 }
@@ -50,7 +49,7 @@ fn test_break_in_flow_of_blocks() {
       Block {
         context: Context::ThematicBreak,
         content: Content::Empty(EmptyMetadata::None),
-        ..empty_block!(7..10)
+        ..empty_block!(7)
       },
       simple_text_block!("World", 12..17),
     ]
@@ -71,7 +70,7 @@ fn test_break_not_followed_by_empty_line() {
       Block {
         context: Context::ThematicBreak,
         content: Content::Empty(EmptyMetadata::None),
-        ..empty_block!(7..10)
+        ..empty_block!(7)
       },
       simple_text_block!("World", 11..16),
     ]
@@ -95,7 +94,7 @@ fn test_invalid_break_not_preceded_by_empty_line() {
         node!(Newline, 7..8),
         node!("bar"; 8..11),
       ]),
-      ..empty_block!(0..11)
+      ..empty_block!(0)
     }],
   );
 }
@@ -107,7 +106,7 @@ fn test_page_break() {
     Block {
       context: Context::PageBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0..3)
+      ..empty_block!(0)
     }
   );
 }
@@ -126,7 +125,6 @@ fn test_page_break_w_attrs() {
       },
       context: Context::PageBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0..13)
     }
   );
 }

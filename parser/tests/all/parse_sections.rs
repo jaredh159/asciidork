@@ -18,7 +18,7 @@ fn test_parse_section() {
       blocks: vecb![Block {
         context: BlockContext::Paragraph,
         content: BlockContent::Simple(nodes![node!("bar"; 8..11)]),
-        ..empty_block!(8..11)
+        ..empty_block!(8)
       }]
     }
   );
@@ -57,7 +57,7 @@ fn test_parse_section_w_reftext() {
       blocks: vecb![Block {
         context: BlockContext::Paragraph,
         content: BlockContent::Simple(nodes![node!("bar"; 27..30)]),
-        ..empty_block!(27..30)
+        ..empty_block!(27)
       }]
     }
   );
@@ -89,10 +89,9 @@ fn test_parse_nested_section() {
           blocks: vecb![Block {
             context: BlockContext::Paragraph,
             content: BlockContent::Simple(nodes![node!("bar"; 17..20)]),
-            ..empty_block!(17..20)
+            ..empty_block!(17)
           }]
         }),
-        ..empty_block!(8..21)
       }]
     }
   );

@@ -85,7 +85,7 @@ impl<'arena> Parser<'arena> {
       ctx.header_row = HeaderRow::FoundNone;
     }
 
-    let (mut tokens, end) = self.table_content(lines, &delim_line)?;
+    let mut tokens = self.table_content(lines, &delim_line)?;
     if ctx.counting_cols {
       if !matches!(ctx.format, DataFormat::Prefix(_)) {
         self.parse_dsv_implicit_first_row(&mut tokens, &mut ctx)?;
@@ -111,7 +111,6 @@ impl<'arena> Parser<'arena> {
     Ok(Block {
       content: BlockContent::Table(ctx.table),
       context: BlockContext::Table,
-      loc: SourceLocation::new(meta.start, end),
       meta,
     })
   }
@@ -334,14 +333,14 @@ impl<'arena> Parser<'arena> {
     &mut self,
     mut lines: ContiguousLines<'arena>,
     start_delim: &Line<'arena>,
-  ) -> Result<(TableTokens<'arena>, u32)> {
+  ) -> Result<TableTokens<'arena>> {
     let mut tokens = Deq::with_capacity(self.bump, lines.num_tokens());
     let delim_loc = start_delim.last_loc().unwrap();
     let mut end = delim_loc.end + 1;
     while let Some(line) = lines.consume_current() {
       if line.src_eq(start_delim) {
         self.restore_lines(lines);
-        return Ok((TableTokens::new(tokens), line.loc().unwrap().end));
+        return Ok(TableTokens::new(tokens));
       }
       if let Some(loc) = line.last_loc() {
         end = loc.end;
@@ -358,7 +357,7 @@ impl<'arena> Parser<'arena> {
         end += 1;
       }
       if next_line.src_eq(start_delim) {
-        return Ok((TableTokens::new(tokens), next_line.loc().unwrap().end));
+        return Ok(TableTokens::new(tokens));
       }
       if let Some(loc) = next_line.last_loc() {
         end = loc.end;
@@ -366,7 +365,7 @@ impl<'arena> Parser<'arena> {
       next_line.drain_into(&mut tokens);
     }
     self.err_line("Table never closed, started here", start_delim)?;
-    Ok((TableTokens::new(tokens), end))
+    Ok(TableTokens::new(tokens))
   }
 }
 

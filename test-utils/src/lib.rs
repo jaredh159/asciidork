@@ -206,12 +206,11 @@ macro_rules! cell {
 
 #[macro_export]
 macro_rules! empty_block {
-  ($range:expr) => {
+  ($start:expr) => {
     Block {
-      meta: ChunkMeta::empty($range.start),
+      meta: ChunkMeta::empty($start),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
-      loc: SourceLocation::new($range.start, $range.end),
     }
   };
 }
@@ -295,7 +294,7 @@ macro_rules! simple_text_block {
     Block {
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!($text; $range)]),
-      ..empty_block!($range)
+      ..empty_block!($range.start)
     }
   }
 }

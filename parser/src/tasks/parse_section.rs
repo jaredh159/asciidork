@@ -125,7 +125,7 @@ mod tests {
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("foo"; 8..11)]),
-          ..empty_block!(8..11)
+          ..empty_block!(8)
         }]
       }
     );
@@ -140,7 +140,7 @@ mod tests {
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("bar"; 21..24)]),
-          ..empty_block!(21..24)
+          ..empty_block!(21)
         }]
       }
     );

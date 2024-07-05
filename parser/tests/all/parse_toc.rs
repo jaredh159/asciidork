@@ -48,7 +48,7 @@ fn test_toc_macro_block() {
       Block {
         context: BlockContext::TableOfContents,
         content: BlockContent::Empty(EmptyMetadata::None),
-        ..empty_block!(18..26)
+        ..empty_block!(18)
       }
     ]
   );
