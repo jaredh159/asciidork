@@ -541,7 +541,7 @@ impl<'arena> Parser<'arena> {
                 Ampersand => SpecialCharKind::Ampersand,
                 LessThan => SpecialCharKind::LessThan,
                 GreaterThan => SpecialCharKind::GreaterThan,
-                _ => unreachable!(),
+                _ => unreachable!("parse inline specia char kind"),
               }),
               token.loc,
             );

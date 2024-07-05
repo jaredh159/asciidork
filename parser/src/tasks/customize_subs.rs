@@ -49,7 +49,7 @@ pub fn from_meta(current: Substitutions, attrs: &Option<AttrList>) -> Substituti
           Strategy::Append => Substitutions::insert,
           Strategy::Prepend => Substitutions::prepend,
           Strategy::Remove => Substitutions::remove,
-          _ => unreachable!(),
+          _ => unreachable!("from_meta"),
         };
         match step_or_group {
           StepOrGroup::None => todo!(),

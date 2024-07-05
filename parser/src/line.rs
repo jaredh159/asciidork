@@ -458,7 +458,7 @@ impl<'arena> Line<'arena> {
               ":::" => Some(ListMarker::Colons(3)),
               "::::" => Some(ListMarker::Colons(4)),
               ";;" => Some(ListMarker::SemiColons),
-              _ => unreachable!(),
+              _ => unreachable!("Line::list_marker()"),
             };
           }
         }

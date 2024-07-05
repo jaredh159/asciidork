@@ -70,7 +70,7 @@ impl<'arena> Parser<'arena> {
     let maybe_cell = match ctx.format {
       DataFormat::Csv(_) => self.finish_csv_table_cell(tokens, ctx, col_index, start)?,
       DataFormat::Delimited(_) => self.finish_dsv_table_cell(tokens, ctx, col_index, start)?,
-      _ => unreachable!(),
+      _ => unreachable!("table format"),
     };
 
     if ctx.header_row.is_unknown()

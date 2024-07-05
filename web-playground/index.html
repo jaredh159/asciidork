@@ -10,6 +10,15 @@
       import init, { convert } from './public/wasm/dr_html_wasm.js';
       init().then(() => (window.convert = convert));
     </script>
+    <!-- <script> -->
+    <!--   fetch('./public/wasm/dr_html_wasm_bg.wasm') -->
+    <!--     .then((response) => response.arrayBuffer()) -->
+    <!--     .then((bytes) => WebAssembly.instantiate(bytes, {})) -->
+    <!--     .then((results) => { -->
+    <!--       console.log({ results }); -->
+    <!--       window.convert = results.instance.exports.convert; -->
+    <!--     }); -->
+    <!-- </script> -->
   </head>
   <body>
     <div id="root"></div>
