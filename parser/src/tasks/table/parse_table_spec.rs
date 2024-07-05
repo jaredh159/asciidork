@@ -140,7 +140,7 @@ impl<'arena> Parser<'arena> {
     if cursor == 0 {
       return None;
     }
-    let Some(cursor_token) = tokens.nth(cursor) else {
+    let Some(cursor_token) = tokens.nth(cursor as usize) else {
       return None;
     };
 
@@ -150,21 +150,21 @@ impl<'arena> Parser<'arena> {
     match (style_within_word, cursor_token.lexeme.as_bytes()) {
       (false, bytes) if bytes == sep_bytes => Some(CellStart {
         spec,
-        drop_tokens: cursor as u32 + 1,
+        drop_tokens: cursor + 1,
         drop_bytes: 0,
         resuming: cursor_token.loc.end,
       }),
       (true, bytes) if bytes.len() == 2 && bytes[1..].starts_with(sep_bytes) => Some(CellStart {
         spec,
-        drop_tokens: cursor as u32 + 1,
+        drop_tokens: cursor + 1,
         drop_bytes: 0,
         resuming: cursor_token.loc.end,
       }),
       (true, bytes) if bytes.len() > 2 && bytes[1..].starts_with(sep_bytes) => {
-        let joined = tokens.nth(cursor).unwrap();
+        let joined = tokens.nth(cursor as usize).unwrap();
         Some(CellStart {
           spec,
-          drop_tokens: cursor as u32,
+          drop_tokens: cursor,
           drop_bytes: 1 + sep_bytes.len() as u32,
           resuming: joined.loc.start + 1 + sep_bytes.len() as u32,
         })
@@ -174,8 +174,8 @@ impl<'arena> Parser<'arena> {
   }
 }
 
-fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) -> bool {
-  let Some(token) = tokens.nth(*cursor) else {
+fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) -> bool {
+  let Some(token) = tokens.nth(*cursor as usize) else {
     return false;
   };
   if !token.is(Word) {
@@ -193,35 +193,40 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) ->
   }
 }
 
-fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  if tokens.has_seq_at(&[Digits, Star], *cursor as u32) {
-    if let Some(Ok(digits)) = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>()) {
+fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
+  if tokens.has_seq_at(&[Digits, Star], *cursor) {
+    if let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>()) {
       spec.duplication = Some(digits);
       *cursor += 2;
     }
   }
 }
 
-fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  if tokens.has_seq_at(&[Digits, Plus], *cursor as u32) {
-    if let Some(Ok(digits)) = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>()) {
+fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
+  if tokens.has_seq_at(&[Digits, Plus], *cursor) {
+    if let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>()) {
       spec.col_span = Some(digits);
       *cursor += 2;
     }
-  } else if tokens.has_seq_at(&[Dots, Digits, Plus], *cursor as u32) {
-    if !tokens.nth(*cursor).is_len(Dots, 1) {
+  } else if tokens.has_seq_at(&[Dots, Digits, Plus], *cursor) {
+    if !tokens.nth(*cursor as usize).is_len(Dots, 1) {
       return;
     }
-    if let Some(Ok(digits)) = tokens.nth(*cursor + 1).map(|t| t.lexeme.parse::<u8>()) {
+    if let Some(Ok(digits)) = tokens
+      .nth(*cursor as usize + 1)
+      .map(|t| t.lexeme.parse::<u8>())
+    {
       spec.row_span = Some(digits);
       *cursor += 3;
     }
-  } else if tokens.has_seq_at(&[Digits, Dots, Digits, Plus], *cursor as u32) {
-    if !tokens.nth(*cursor + 1).is_len(Dots, 1) {
+  } else if tokens.has_seq_at(&[Digits, Dots, Digits, Plus], *cursor) {
+    if !tokens.nth(*cursor as usize + 1).is_len(Dots, 1) {
       return;
     }
-    let col = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>());
-    let row = tokens.nth(*cursor + 2).map(|t| t.lexeme.parse::<u8>());
+    let col = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>());
+    let row = tokens
+      .nth(*cursor as usize + 2)
+      .map(|t| t.lexeme.parse::<u8>());
     if let (Some(Ok(col)), Some(Ok(row))) = (col, row) {
       spec.col_span = Some(col);
       spec.row_span = Some(row);
@@ -230,8 +235,8 @@ fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usi
   }
 }
 
-fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  let Some(token) = tokens.nth(*cursor) else {
+fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
+  let Some(token) = tokens.nth(*cursor as usize) else {
     return;
   };
   match token.kind {
@@ -247,11 +252,11 @@ fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) 
   *cursor += 1;
 }
 
-fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  if !tokens.nth(*cursor).is_len(Dots, 1) {
+fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
+  if !tokens.nth(*cursor as usize).is_len(Dots, 1) {
     return;
   }
-  match tokens.nth(*cursor + 1).map(|t| t.kind) {
+  match tokens.nth(*cursor as usize + 1).map(|t| t.kind) {
     Some(GreaterThan) => spec.v_align = Some(VerticalAlignment::Bottom),
     Some(LessThan) => spec.v_align = Some(VerticalAlignment::Top),
     Some(Caret) => spec.v_align = Some(VerticalAlignment::Middle),

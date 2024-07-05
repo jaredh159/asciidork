@@ -25,13 +25,6 @@ fn basic_include() {
   )
 }
 
-// fri jared 👍 remove location from Block, it will be inferred from content
-// as it can cross include files
-
-// thursday jared 👍 get this test passing w/ new inline node type, review other `jared` notes
-// remember the parser or somthing has to hold on to source file names and suchlike
-// maybe do an audit of `usize as u32` and `usize as u16` to see if it's easier to flip polarity for perf
-
 /*
 
 foo
