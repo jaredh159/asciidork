@@ -25,19 +25,6 @@ fn basic_include() {
   )
 }
 
-/*
-
-foo
-include::bar.adoc[]
-baz
-
-foo
-[include bar]
-baz
-[finish include]
-
-*/
-
 // https://github.com/opendevise/asciidoc-parsing-lab/blob/main/test/tests/block/include/trailing-include-output.json
 // https://github.com/opendevise/asciidoc-parsing-lab/blob/main/test/tests/block/include/trailing-newline-after-include-output.json
 

@@ -163,11 +163,56 @@ mod tests {
   use crate::token::TokenKind;
   use crate::variants::token::*;
   use ast::SourceLocation;
-  use test_utils::{assert_eq, *};
+  use indoc::indoc;
+
+  fn lexeme(s: &'static str) -> BumpString<'static> {
+    bumpalo::collections::String::from_str_in(s, Box::leak(Box::new(Bump::new())))
+  }
+
+  macro_rules! assert_token_cases {
+    ($cases:expr) => {{
+      let bump = &Bump::new();
+      for (input, expected) in $cases {
+        let mut lexer = RootLexer::from_str(bump, input);
+        let mut index = 0;
+        for (token_type, lexeme) in expected {
+          let start = index;
+          let end = start + lexeme.len();
+          let expected_token = Token {
+            kind: token_type,
+            loc: SourceLocation::from(start..end),
+            lexeme: BumpString::from_str_in(lexeme, bump),
+          };
+          assert_eq!(lexer.next_token(), expected_token);
+          index = end;
+        }
+        assert_eq!(lexer.next_token().kind, Eof);
+      }
+    }};
+  }
+
+  macro_rules! refute_produces_token {
+    ($kind:ident, $cases:expr) => {{
+      for input in $cases {
+        let bump = &Bump::new();
+        let mut lexer = RootLexer::from_str(bump, input);
+        loop {
+          match lexer.next_token().kind {
+            Eof => {
+              assert_eq!(true, true);
+              break;
+            }
+            $kind => panic!("unexpected TokenKind::{:?} in input `{input}`", $kind),
+            _ => {}
+          }
+        }
+      }
+    }};
+  }
 
   #[test]
   fn test_include_boundaries() {
-    let input = adoc! {"
+    let input = indoc! {"
       foo
       include::bar.adoc[]
       baz
@@ -179,29 +224,32 @@ mod tests {
     (0..7).for_each(|_| _ = lexer.next_token());
     assert_eq!(
       lexer.next_token(),
-      Token::new(CloseBracket, 22..23, bstr!("]"))
+      Token::new(CloseBracket, 22..23, lexeme("]"))
     );
-    assert_eq!(lexer.next_token(), Token::new(Newline, 23..24, bstr!("\n")));
+    assert_eq!(
+      lexer.next_token(),
+      Token::new(Newline, 23..24, lexeme("\n"))
+    );
 
     // now mimic the parser resolving the include directive with `b"bar\n"`
     lexer.push_source("bar.adoc", bvec![in bump; b'b', b'a', b'r', b'\n']);
     assert_eq!(
       lexer.next_token(),
-      Token::new(BeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
+      Token::new(BeginInclude, 4..23, lexeme("{->00001}bar.adoc[]"))
     );
     assert_eq!(&input[4..23], "include::bar.adoc[]");
 
     assert_eq!(
       lexer.next_token(),
-      Token::new(Word, SourceLocation::new_depth(0, 3, 1), bstr!("bar"))
+      Token::new(Word, SourceLocation::new_depth(0, 3, 1), lexeme("bar"))
     );
     assert_eq!(
       lexer.next_token(),
-      Token::new(Newline, SourceLocation::new_depth(3, 4, 1), bstr!("\n"))
+      Token::new(Newline, SourceLocation::new_depth(3, 4, 1), lexeme("\n"))
     );
     assert_eq!(
       lexer.next_token(),
-      Token::new(EndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
+      Token::new(EndInclude, 4..23, lexeme("{<-00001}bar.adoc[]"))
     );
   }
 
@@ -217,30 +265,6 @@ mod tests {
   #[test]
   fn test_tokens() {
     let cases = vec![
-      (
-        "include::foo",
-        vec![(Directive, "include::"), (Word, "foo")],
-      ),
-      (
-        "foo include::foo",
-        vec![
-          (Word, "foo"),
-          (Whitespace, " "),
-          (Word, "include"),
-          (Colon, ":"),
-          (Colon, ":"),
-          (Word, "foo"),
-        ],
-      ),
-      (
-        "include:: foo",
-        vec![
-          (Word, "include"),
-          (TermDelimiter, "::"),
-          (Whitespace, " "),
-          (Word, "foo"),
-        ],
-      ),
       ("|===", vec![(Pipe, "|"), (EqualSigns, "===")]),
       ("////", vec![(DelimiterLine, "////")]),
       ("<.>", vec![(CalloutNumber, "<.>")]),
@@ -401,7 +425,7 @@ mod tests {
         vec![(EqualSigns, "=="), (Whitespace, " "), (Word, "Title")],
       ),
       (
-        adoc! { "
+        indoc! { "
           // ignored
           = Document Title
           Kismet R. Lee <kismet@asciidoctor.org>
@@ -475,42 +499,52 @@ mod tests {
         ],
       ),
     ];
-    let bump = &Bump::new();
-    for (input, expected) in cases {
-      let mut lexer = RootLexer::from_str(bump, input);
-      let mut index = 0;
-      for (token_type, lexeme) in expected {
-        let start = index;
-        let end = start + lexeme.len();
-        let expected_token = Token {
-          kind: token_type,
-          loc: SourceLocation::from(start..end),
-          lexeme: BumpString::from_str_in(lexeme, bump),
-        };
-        assert_eq!(lexer.next_token(), expected_token, from: input);
-        index = end;
-      }
-      assert_eq!(lexer.next_token().kind, Eof);
-    }
+    assert_token_cases!(cases);
+  }
+
+  #[test]
+  fn test_directives() {
+    assert_token_cases!([
+      (
+        "include::foo",
+        vec![(Directive, "include::"), (Word, "foo")],
+      ),
+      (
+        // not valid, but should lex as Directive
+        // parser will reject it as a match
+        "include::not-include []",
+        vec![
+          (Directive, "include::"),
+          (Word, "not-include"),
+          (Whitespace, " "),
+          (OpenBracket, "["),
+          (CloseBracket, "]")
+        ],
+      )
+    ]);
+
+    refute_produces_token!(
+      Directive,
+      [
+        "foo include::foo",        // not at start of line
+        "include:: foo",           // space after ::
+        "include:: not-include[]", // space after ::
+        "include:: []",            // space after ::
+        "include::[]",             // empty target
+      ]
+    );
   }
 
   #[test]
   fn test_term_delimiters() {
-    let col = (Colon, ":");
-    let semi = (SemiColon, ";");
     let foo = (Word, "foo");
     let space = (Whitespace, " ");
     let cases = vec![
       ("foo:: foo", vec![foo, (TermDelimiter, "::"), space, foo]),
-      ("foo::foo", vec![foo, col, col, foo]),
       ("foo::", vec![foo, (TermDelimiter, "::")]),
       ("foo;;", vec![foo, (TermDelimiter, ";;")]),
-      ("foo;;;", vec![foo, semi, semi, semi]),
       ("foo:::", vec![foo, (TermDelimiter, ":::")]),
       ("foo::::", vec![foo, (TermDelimiter, "::::")]),
-      ("foo:::::", vec![foo, col, col, col, col, col]),
-      ("foo:::::foo", vec![foo, col, col, col, col, col, foo]),
-      (":: foo", vec![col, col, space, foo]),
       // doesn't trip up on macros
       (
         "image:: foo",
@@ -529,23 +563,12 @@ mod tests {
         vec![(Word, "footnote"), (TermDelimiter, "::::"), space, foo],
       ),
     ];
-    let bump = &Bump::new();
-    for (input, expected) in cases {
-      let mut lexer = RootLexer::from_str(bump, input);
-      let mut index = 0;
-      for (token_type, lexeme) in expected {
-        let start = index;
-        let end = start + lexeme.len();
-        let expected_token = Token {
-          kind: token_type,
-          loc: SourceLocation::from(start..end),
-          lexeme: BumpString::from_str_in(lexeme, bump),
-        };
-        assert_eq!(lexer.next_token(), expected_token, from: input);
-        index = end;
-      }
-      assert_eq!(lexer.next_token().kind, Eof);
-    }
+    assert_token_cases!(cases);
+
+    refute_produces_token!(
+      TermDelimiter,
+      ["foo::foo", "foo;;;", "foo:::::", "foo:::::foo", ":: foo"]
+    );
   }
 
   #[test]

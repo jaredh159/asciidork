@@ -12,6 +12,7 @@ impl<'bmp> Parser<'bmp> {
     }
   }
 
+  // IncludeDirectiveRx = /^(\\)?include::([^\s\[](?:[^\[]*[^\s\[])?)\[(#{CC_ANY}+)?\]$/
   fn try_process_include_directive(&mut self, line: &Line<'bmp>) -> Result<bool> {
     // consider regex instead?
     if line.num_tokens() < 4
@@ -41,40 +42,14 @@ impl<'bmp> Parser<'bmp> {
     line.discard(1);
     let _attrs = self.parse_attr_list(&mut line)?;
     let Some(resolver) = self.include_resolver.as_mut() else {
-      // TODO: err?
+      // TODO: is this correct?
       self.err_token_full("No resolver found for include directive", &first)?;
       return Ok(false);
     };
 
     let mut buffer = BumpVec::new_in(self.bump);
     resolver.resolve(&target, &mut buffer).unwrap();
-    // let rofl = Lexer::new(buffer, self.bump);
-    // dbg!(std::str::from_utf8(&buffer).unwrap());
     self.lexer.push_source(&target, buffer);
-    // println!("{:?}", buffer);
-
-    // self.bufs.push(BumpVec::new_in(self.bump));
-
-    // TODO: handle error
-    // resolver.resolve(&target, &mut self.bufs[0]).unwrap();
-    // let lexer = Lexer::new(AsciidocSource::new(
-    //   std::str::from_utf8(&self.bufs[0]).unwrap(),
-    //   Some(SourceFile::File(target.to_string())),
-    // ));
-    // let mut parser = Parser::new(
-    //   self.bump,
-    //   AsciidocSource::new(
-    //     std::str::from_utf8(&buffer).unwrap(),
-    //     Some(SourceFile::File(target.to_string())),
-    //   ),
-    // );
-    // dbg!(parser.parse().unwrap().document);
-    // self.lexers.push(lexer);
-    // self.lexer_idx += 1;
-    // dbg!(resolver);
-
-    // dbg!(target);
-    // for token in tokens
     Ok(true)
   }
 }
