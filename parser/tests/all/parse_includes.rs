@@ -1,6 +1,6 @@
 use asciidork_ast::{prelude::*, IncludeBoundaryKind as Boundary};
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn basic_include() {

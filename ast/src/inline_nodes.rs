@@ -106,7 +106,7 @@ impl Json for InlineNodes<'_> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_plain_text() {
@@ -115,6 +115,6 @@ mod tests {
       node!(" "; 9..10),
       node!(Inline::Italic(just!("title", 12..18)), 11..19),
     ];
-    assert_eq!(heading.plain_text(), vec!["Document", " ", "title"]);
+    eq!(heading.plain_text(), vec!["Document", " ", "title"]);
   }
 }

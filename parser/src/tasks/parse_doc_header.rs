@@ -94,7 +94,7 @@ pub fn is_doc_header(lines: &ContiguousLines) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{adoc, assert_eq};
+  use test_utils::*;
 
   #[test]
   fn test_is_doc_header() {
@@ -129,7 +129,7 @@ mod tests {
     let bump = &Bump::new();
     for (input, expected) in cases {
       let lines = Parser::from_str(input, bump).read_lines().unwrap().unwrap();
-      assert_eq!(
+      eq!(
         is_doc_header(&lines),
         expected,
         from: input

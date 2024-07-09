@@ -1,5 +1,5 @@
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 assert_html!(
   block_comment_inside_example,

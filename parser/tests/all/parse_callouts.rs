@@ -3,7 +3,7 @@ use asciidork_ast::variants::inline::*;
 use asciidork_ast::{prelude::*, Inline};
 use asciidork_meta::{DocType, DocumentMeta};
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_parse_callout() {

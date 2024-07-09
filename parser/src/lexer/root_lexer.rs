@@ -163,11 +163,11 @@ mod tests {
   use crate::token::TokenKind;
   use crate::variants::token::*;
   use ast::SourceLocation;
-  use indoc::indoc;
+  use test_utils::*;
 
-  fn lexeme(s: &'static str) -> BumpString<'static> {
-    bumpalo::collections::String::from_str_in(s, Box::leak(Box::new(Bump::new())))
-  }
+  // fn lexeme(s: &'static str) -> BumpString<'static> {
+  //   bumpalo::collections::String::from_str_in(s, Box::leak(Box::new(Bump::new())))
+  // }
 
   macro_rules! assert_token_cases {
     ($cases:expr) => {{
@@ -212,7 +212,7 @@ mod tests {
 
   #[test]
   fn test_include_boundaries() {
-    let input = indoc! {"
+    let input = adoc! {"
       foo
       include::bar.adoc[]
       baz
@@ -224,32 +224,29 @@ mod tests {
     (0..7).for_each(|_| _ = lexer.next_token());
     assert_eq!(
       lexer.next_token(),
-      Token::new(CloseBracket, 22..23, lexeme("]"))
+      Token::new(CloseBracket, 22..23, bstr!("]"))
     );
-    assert_eq!(
-      lexer.next_token(),
-      Token::new(Newline, 23..24, lexeme("\n"))
-    );
+    assert_eq!(lexer.next_token(), Token::new(Newline, 23..24, bstr!("\n")));
 
     // now mimic the parser resolving the include directive with `b"bar\n"`
     lexer.push_source("bar.adoc", bvec![in bump; b'b', b'a', b'r', b'\n']);
     assert_eq!(
       lexer.next_token(),
-      Token::new(BeginInclude, 4..23, lexeme("{->00001}bar.adoc[]"))
+      Token::new(BeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
     );
     assert_eq!(&input[4..23], "include::bar.adoc[]");
 
     assert_eq!(
       lexer.next_token(),
-      Token::new(Word, SourceLocation::new_depth(0, 3, 1), lexeme("bar"))
+      Token::new(Word, SourceLocation::new_depth(0, 3, 1), bstr!("bar"))
     );
     assert_eq!(
       lexer.next_token(),
-      Token::new(Newline, SourceLocation::new_depth(3, 4, 1), lexeme("\n"))
+      Token::new(Newline, SourceLocation::new_depth(3, 4, 1), bstr!("\n"))
     );
     assert_eq!(
       lexer.next_token(),
-      Token::new(EndInclude, 4..23, lexeme("{<-00001}bar.adoc[]"))
+      Token::new(EndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
     );
   }
 
@@ -425,7 +422,7 @@ mod tests {
         vec![(EqualSigns, "=="), (Whitespace, " "), (Word, "Title")],
       ),
       (
-        indoc! { "
+        adoc! { "
           // ignored
           = Document Title
           Kismet R. Lee <kismet@asciidoctor.org>

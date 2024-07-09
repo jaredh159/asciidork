@@ -2,7 +2,7 @@ use crate::attrs;
 use asciidork_ast::short::block::*;
 use asciidork_ast::{prelude::*, Inline::Newline};
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_basic_thematic_break() {

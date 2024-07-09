@@ -770,7 +770,7 @@ fn push_simple<'arena>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_line_comments() {
@@ -1271,7 +1271,7 @@ mod tests {
       let mut parser = Parser::from_str(input, leaked_bump());
       let mut block = parser.read_lines().unwrap().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
-      assert_eq!(inlines, expected, from: input);
+      eq!(inlines, expected, from: input);
     }
   }
 }

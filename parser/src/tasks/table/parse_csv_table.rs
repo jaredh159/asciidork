@@ -72,7 +72,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
   use ColWidth::*;
 
   const fn w(width: u8) -> ColWidth {
@@ -235,7 +235,7 @@ mod tests {
       ,===
     "#};
     let table = parse_table!(adoc);
-    assert_eq!(
+    eq!(
       table.header_row,
       Some(Row::new(vecb![cell!(d: "a", 19..20), cell!(d: "b", 21..22)])),
       from: adoc

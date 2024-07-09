@@ -216,7 +216,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::assert_eq;
+  use test_utils::*;
 
   #[test]
   fn test_list_separation() {
@@ -242,9 +242,9 @@ mod tests {
       let content = parser.parse().unwrap().document.content;
       match content {
         DocContent::Blocks(blocks) => {
-          assert_eq!( blocks.len(), block_contexts.len(), from: input);
+          eq!( blocks.len(), block_contexts.len(), from: input);
           for (block, context) in blocks.iter().zip(block_contexts.iter()) {
-            assert_eq!(block.context, *context, from: input);
+            eq!(block.context, *context, from: input);
           }
         }
         _ => panic!("expected blocks, got {:?}", content),

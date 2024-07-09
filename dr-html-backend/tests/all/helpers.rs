@@ -18,7 +18,7 @@ macro_rules! assert_html {
       let actual = ::asciidork_eval::eval(
         &document,
         ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
-      ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
+      ::test_utils::eq!(actual, $expected.to_string(), from: $input);
     }
   };
   ($name:ident, $input:expr, contains: $($expected:expr),+$(,)?) => {
@@ -84,7 +84,7 @@ macro_rules! assert_standalone_body {
       let mut body = actual.splitn(2, "<body").nth(1).unwrap();
       body = body.splitn(2, "</body>").nth(0).unwrap();
       let body = format!("<body{}</body>", body);
-      ::test_utils::assert_eq!(body, $expected.to_string(), from: $input);
+      ::test_utils::eq!(body, $expected.to_string(), from: $input);
     }
   };
 }

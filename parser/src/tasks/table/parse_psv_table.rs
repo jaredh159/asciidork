@@ -132,7 +132,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
   use ColWidth::*;
 
   const fn w(width: u8) -> ColWidth {

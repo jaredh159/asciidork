@@ -309,7 +309,7 @@ impl<'arena> AttrState<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_parse_attr_list() {
@@ -580,7 +580,7 @@ mod tests {
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
-      assert_eq!(attr_list, expected, from: input);
+      eq!(attr_list, expected, from: input);
     }
   }
 
@@ -617,7 +617,7 @@ mod tests {
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
-      assert_eq!(attr_list, expected);
+      eq!(attr_list, expected);
     }
   }
 
@@ -663,7 +663,7 @@ mod tests {
       let mut line = parser.read_line().unwrap();
       line.discard(1); // `[`
       let diag = parser.parse_attrs(&mut line, formatted).err().unwrap();
-      assert_eq!(diag.plain_text(), expected, from: input);
+      eq!(diag.plain_text(), expected, from: input);
     }
   }
 }

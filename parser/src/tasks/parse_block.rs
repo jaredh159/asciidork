@@ -315,7 +315,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_parse_doc_attr_entry() {
@@ -326,7 +326,7 @@ mod tests {
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrValue::Bool(false)),
       ..empty_block!(0)
     };
-    assert_eq!(block, expected);
+    eq!(block, expected);
   }
 
   #[test]
@@ -341,8 +341,8 @@ mod tests {
     parser.apply_job_settings(JobSettings::inline());
     let result = parser.parse().unwrap();
     let blocks = result.document.content.blocks().unwrap();
-    assert_eq!(blocks.len(), 1);
-    assert_eq!(
+    eq!(blocks.len(), 1);
+    eq!(
       blocks[0],
       Block {
         context: Context::Paragraph,

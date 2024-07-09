@@ -1,7 +1,7 @@
 use crate::assert_html;
 use asciidork_meta::{JobAttr, JobSettings};
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 assert_html!(
   basic_asciidoc_content,

@@ -380,7 +380,7 @@ fn newline_token(start: u32, bump: &Bump) -> Token {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   assert_error!(
     multichar_cell_separator,

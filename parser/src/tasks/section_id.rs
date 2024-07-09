@@ -117,7 +117,7 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_autogen_sect_id() {

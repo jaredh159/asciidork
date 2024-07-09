@@ -268,7 +268,7 @@ fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_parse_cell_specs() {
@@ -374,9 +374,9 @@ mod tests {
       line.drain_into(&mut tokens);
       let mut tokens = TableTokens::new(tokens);
       let start = parser.consume_cell_start(&mut tokens, *sep);
-      assert_eq!(start, *expected, from: input);
+      eq!(start, *expected, from: input);
       if let Some((_, loc)) = *expected {
-        assert_eq!(
+        eq!(
           input.as_bytes().get(loc as usize),
           remaining.as_bytes().first()
         );
@@ -472,7 +472,7 @@ mod tests {
     let mut parser = Parser::from_str("", leaked_bump());
     for (input, expected) in cases {
       let cols = parser.parse_col_specs(input);
-      assert_eq!(cols, *expected);
+      eq!(cols, *expected);
     }
   }
 }

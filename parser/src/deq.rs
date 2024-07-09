@@ -143,7 +143,7 @@ impl<'arena, T: fmt::Debug> fmt::Debug for Deq<'arena, T> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn deq_impl() {

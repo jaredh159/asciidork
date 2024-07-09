@@ -553,7 +553,7 @@ impl<'a> Iterator for LinesIter<'a> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::assert_eq;
+  use test_utils::*;
 
   #[test]
   fn test_raw_lines() {
@@ -561,9 +561,9 @@ mod tests {
     let input = "hello\nworld\n\n";
     let lexer = SourceLexer::from_str(input, &bump);
     let mut lines = lexer.raw_lines();
-    assert_eq!(lines.next(), Some("hello"));
-    assert_eq!(lines.next(), Some("world"));
-    assert_eq!(lines.next(), Some(""));
-    assert_eq!(lines.next(), None);
+    eq!(lines.next(), Some("hello"));
+    eq!(lines.next(), Some("world"));
+    eq!(lines.next(), Some(""));
+    eq!(lines.next(), None);
   }
 }
