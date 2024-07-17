@@ -577,7 +577,7 @@ mod tests {
     ];
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut line = parser.read_line().unwrap();
+      let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
       eq!(attr_list, expected, from: input);
@@ -614,7 +614,7 @@ mod tests {
 
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut line = parser.read_line().unwrap();
+      let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
       eq!(attr_list, expected);
@@ -660,7 +660,7 @@ mod tests {
 
     for (input, formatted, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut line = parser.read_line().unwrap();
+      let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let diag = parser.parse_attrs(&mut line, formatted).err().unwrap();
       eq!(diag.plain_text(), expected, from: input);

@@ -81,9 +81,15 @@ impl<'arena> Parser<'arena> {
       .unwrap_or_else(|| self.lexer.loc())
   }
 
-  pub(crate) fn read_line(&mut self) -> Option<Line<'arena>> {
+  pub(crate) fn read_line(&mut self) -> Result<Option<Line<'arena>>> {
     debug_assert!(self.peeked_lines.is_none());
-    self.lexer.consume_line()
+    let Some(line) = self.lexer.consume_line() else {
+      return Ok(None);
+    };
+    if line.starts(TokenKind::Directive) && self.try_process_directive(&line)? {
+      return self.read_line();
+    }
+    Ok(Some(line))
   }
 
   pub(crate) fn read_lines(&mut self) -> Result<Option<ContiguousLines<'arena>>> {
@@ -95,10 +101,7 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     }
     let mut lines = Deq::new(self.bump);
-    while let Some(line) = self.lexer.consume_line() {
-      if line.starts(TokenKind::Directive) && self.try_process_directive(&line)? {
-        continue;
-      }
+    while let Some(line) = self.read_line()? {
       lines.push(line);
       if self.lexer.peek_is(b'\n') {
         break;
@@ -121,7 +124,7 @@ impl<'arena> Parser<'arena> {
 
     let mut additional_lines = BumpVec::new_in(self.bump);
     while !self.lexer.is_eof() && !self.at_delimiter(delimiter) {
-      additional_lines.push(self.read_line().unwrap());
+      additional_lines.push(self.read_line()?.unwrap());
     }
     lines.extend(additional_lines);
     Ok(Some(lines))
@@ -266,5 +269,85 @@ pub enum Chunk<'arena> {
 impl From<Diagnostic> for Vec<Diagnostic> {
   fn from(diagnostic: Diagnostic) -> Self {
     vec![diagnostic]
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use test_utils::*;
+
+  fn resolve(src: &'static str) -> Box<dyn IncludeResolver> {
+    struct MockResolver(pub Vec<u8>);
+    impl IncludeResolver for MockResolver {
+      fn resolve(
+        &mut self,
+        _path: &str,
+        buffer: &mut dyn IncludeBuffer,
+      ) -> std::result::Result<usize, ResolveError> {
+        buffer.initialize(self.0.len());
+        let bytes = buffer.as_bytes_mut();
+        bytes.copy_from_slice(&self.0);
+        Ok(self.0.len())
+      }
+    }
+    Box::new(MockResolver(Vec::from(src.as_bytes())))
+  }
+
+  fn reassemble(lines: ContiguousLines) -> String {
+    lines
+      .iter()
+      .map(|l| l.reassemble_src())
+      .collect::<Vec<_>>()
+      .join("\n")
+  }
+
+  #[test]
+  fn test_include_boundaries_lines() {
+    let input = adoc! {"
+      foo
+      include::bar.adoc[]
+      baz
+    "};
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.set_resolver(resolve("bar")); // <-- no newline
+    let lines = parser.read_lines().unwrap().unwrap();
+    assert_eq!(
+      reassemble(lines),
+      adoc! {"
+        foo
+        {->00001}bar.adoc[]bar{<-00001}bar.adoc[]
+        baz"
+      }
+    );
+    assert!(parser.read_lines().unwrap().is_none());
+  }
+
+  #[test]
+  fn test_include_boundaries_lines_2_newlines() {
+    let input = adoc! {"
+      foo
+      include::bar.adoc[]
+      baz
+    "};
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.set_resolver(resolve("bar\n\n")); // <-- 2 newline
+    let lines = parser.read_lines().unwrap().unwrap();
+    assert_eq!(
+      reassemble(lines),
+      adoc! {"
+        foo
+        {->00001}bar.adoc[]bar"
+      }
+    );
+    let lines = parser.read_lines().unwrap().unwrap();
+    assert_eq!(
+      reassemble(lines),
+      adoc! {"
+        {<-00001}bar.adoc[]
+        baz"
+      }
+    );
+    assert!(parser.read_lines().unwrap().is_none());
   }
 }

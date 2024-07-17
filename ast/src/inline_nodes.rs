@@ -76,6 +76,10 @@ impl<'arena> InlineNodes<'arena> {
   pub fn into_vec(self) -> BumpVec<'arena, InlineNode<'arena>> {
     self.0
   }
+
+  pub fn nth(&self, n: usize) -> Option<&InlineNode<'arena>> {
+    self.get(n)
+  }
 }
 
 impl<'arena> Deref for InlineNodes<'arena> {

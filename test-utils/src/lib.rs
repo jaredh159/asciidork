@@ -23,11 +23,11 @@ macro_rules! assert_block_core {
 macro_rules! assert_doc_content {
   ($input:expr, $expected:expr$(,)?) => {{
     let content = parse_doc_content!($input);
-    assert_eq!(content, $expected);
+    eq!(content, $expected, from: $input);
   }};
   (resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {{
     let content = parse_doc_content!($input, $bytes);
-    assert_eq!(content, $expected);
+    eq!(content, $expected, from: $input);
   }};
 }
 
@@ -138,7 +138,10 @@ macro_rules! vecb {
 #[macro_export]
 macro_rules! node {
   ($node:expr, $range:expr$(,)?) => {
-    InlineNode::new($node, SourceLocation::new($range.start, $range.end))
+    node!($node, $range, depth: 0)
+  };
+  ($node:expr, $range:expr, depth: $depth:expr$(,)?) => {
+    InlineNode::new($node, SourceLocation::new_depth($range.start, $range.end, $depth))
   };
   ($text:expr; $range:expr, depth: $depth:expr) => {
     InlineNode::new(
@@ -147,10 +150,7 @@ macro_rules! node {
     )
   };
   ($text:expr; $range:expr) => {
-    InlineNode::new(
-      Inline::Text(bstr!($text)),
-      SourceLocation::new($range.start, $range.end),
-    )
+    node!($text; $range, depth: 0)
   };
 }
 
@@ -454,13 +454,8 @@ macro_rules! parse_single_block_loose {
 }
 
 #[macro_export]
-macro_rules! parse_doc_content {
-  ($input:expr) => {{
-    let parser = Parser::from_str($input, leaked_bump());
-    parser.parse().unwrap().document.content
-  }};
-  ($input:expr, $bytes:expr) => {{
-    let mut parser = Parser::from_str($input, leaked_bump());
+macro_rules! const_resolver {
+  ($bytes:expr) => {{
     struct MockResolver(pub Vec<u8>);
     impl asciidork_parser::include_resolver::IncludeResolver for MockResolver {
       fn resolve(
@@ -474,7 +469,19 @@ macro_rules! parse_doc_content {
         Ok(self.0.len())
       }
     }
-    parser.set_resolver(Box::new(MockResolver(Vec::from($bytes))));
+    Box::new(MockResolver(Vec::from($bytes)))
+  }};
+}
+
+#[macro_export]
+macro_rules! parse_doc_content {
+  ($input:expr) => {{
+    let parser = Parser::from_str($input, leaked_bump());
+    parser.parse().unwrap().document.content
+  }};
+  ($input:expr, $bytes:expr) => {{
+    let mut parser = Parser::from_str($input, leaked_bump());
+    parser.set_resolver(const_resolver!($bytes));
     parser.parse().unwrap().document.content
   }};
 }

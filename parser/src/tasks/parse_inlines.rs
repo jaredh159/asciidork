@@ -4,7 +4,9 @@ use crate::internal::*;
 use crate::tasks::parse_inlines_utils::*;
 use crate::variants::token::*;
 use ast::variants::{inline::*, r#macro::*};
+use IncludeBoundaryKind::*;
 
+#[derive(Debug)]
 struct Accum<'arena> {
   inlines: InlineNodes<'arena>,
   text: CollectText<'arena>,
@@ -71,7 +73,7 @@ impl<'arena> Parser<'arena> {
         }
 
         let Some(token) = line.consume_current() else {
-          if !lines.is_empty() {
+          if should_add_joining_newline(lines, &acc) {
             acc.commit();
             acc.text.loc.end += 1;
             acc.push_node(Inline::Newline, acc.text.loc);
@@ -240,17 +242,15 @@ impl<'arena> Parser<'arena> {
 
           BeginInclude => {
             let depth: u16 = token.lexeme[3..8].parse().unwrap();
-            acc.push_node(
-              IncludeBoundary(IncludeBoundaryKind::Begin, depth),
-              token.loc,
-            );
+            acc.push_node(IncludeBoundary(Begin, depth), token.loc);
             acc.text.loc = SourceLocation::new_depth(0, 0, depth);
           }
 
           EndInclude => {
             let depth: u16 = token.lexeme[3..8].parse().unwrap();
-            acc.push_node(IncludeBoundary(IncludeBoundaryKind::End, depth), token.loc);
-            acc.text.loc = SourceLocation::new_depth(0, 0, depth);
+            acc.inlines.remove_trailing_newline();
+            acc.push_node(IncludeBoundary(End, depth), token.loc);
+            acc.text.loc = token.loc.clamp_end();
           }
 
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
@@ -765,6 +765,19 @@ fn push_simple<'arena>(
   lines.restore_if_nonempty(line);
   state.push_node(inline_node, loc);
   push_newline_if_needed(state, lines);
+}
+
+fn should_add_joining_newline(lines: &ContiguousLines, acc: &Accum) -> bool {
+  if lines.is_empty() {
+    false
+  } else if acc.inlines.len() != 1 {
+    true
+  } else {
+    !matches!(
+      acc.inlines.nth(0).unwrap().content,
+      Inline::IncludeBoundary(IncludeBoundaryKind::End, _),
+    )
+  }
 }
 
 #[cfg(test)]

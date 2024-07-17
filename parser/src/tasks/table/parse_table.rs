@@ -338,6 +338,7 @@ impl<'arena> Parser<'arena> {
     let delim_loc = start_delim.last_loc().unwrap();
     let mut end = delim_loc.end + 1;
     while let Some(line) = lines.consume_current() {
+      // TODO(perf): src_eq is O(n), see if we can refactor
       if line.src_eq(start_delim) {
         self.restore_lines(lines);
         return Ok(TableTokens::new(tokens));
@@ -351,11 +352,12 @@ impl<'arena> Parser<'arena> {
         end += 1;
       }
     }
-    while let Some(next_line) = self.read_line() {
+    while let Some(next_line) = self.read_line()? {
       if !tokens.is_empty() {
         tokens.push(newline_token(end, self.bump));
         end += 1;
       }
+      // TODO(perf): src_eq is O(n), see if we can refactor
       if next_line.src_eq(start_delim) {
         return Ok(TableTokens::new(tokens));
       }

@@ -8,16 +8,14 @@ macro_rules! assert_html {
   ($name:ident, $mod_settings:expr, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      let bump = &::asciidork_parser::prelude::Bump::new();
-      let mut settings = ::asciidork_meta::JobSettings::embedded();
-      #[allow(clippy::redundant_closure_call)]
-      $mod_settings(&mut settings);
-      let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
-      parser.apply_job_settings(settings);
-      let document = parser.parse().unwrap().document;
-      let actual = ::asciidork_eval::eval(
-        &document,
-        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+      let actual = _html!($input, $mod_settings, None);
+      ::test_utils::eq!(actual, $expected.to_string(), from: $input);
+    }
+  };
+  ($name:ident, resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {
+    #[test]
+    fn $name() {
+      let actual = _html!($input, |_| {}, Some(const_resolver!($bytes)));
       ::test_utils::eq!(actual, $expected.to_string(), from: $input);
     }
   };
@@ -27,16 +25,7 @@ macro_rules! assert_html {
   ($name:ident, $mod_settings:expr, $input:expr, contains: $($expected:expr),+$(,)?) => {
     #[test]
     fn $name() {
-      let bump = &::asciidork_parser::prelude::Bump::new();
-      let mut settings = ::asciidork_meta::JobSettings::embedded();
-      #[allow(clippy::redundant_closure_call)]
-      $mod_settings(&mut settings);
-      let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
-      parser.apply_job_settings(settings);
-      let document = parser.parse().unwrap().document;
-      let actual = ::asciidork_eval::eval(
-        &document,
-        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+      let actual = _html!($input, $mod_settings, None);
       $(assert!(
         actual.contains($expected),
         "\n`{}` was NOT found when expected\n\n\x1b[2m```adoc\x1b[0m\n{}\n\x1b[2m```\x1b[0m\n\n\x1b[2m```html\x1b[0m\n{}\n\x1b[2m```\x1b[0m",
@@ -105,4 +94,24 @@ macro_rules! test_non_embedded_contains {
       }
     }
   };
+}
+
+macro_rules! _html {
+  ($input:expr, $mod_settings:expr, $resolver:expr) => {{
+    let bump = &::asciidork_parser::prelude::Bump::new();
+    let mut settings = ::asciidork_meta::JobSettings::embedded();
+    #[allow(clippy::redundant_closure_call)]
+    $mod_settings(&mut settings);
+    let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
+    parser.apply_job_settings(settings);
+    if let Some(resolver) = $resolver {
+      parser.set_resolver(resolver);
+    }
+    let document = parser.parse().unwrap().document;
+    ::asciidork_eval::eval(
+      &document,
+      ::asciidork_dr_html_backend::AsciidoctorHtml::new(),
+    )
+    .unwrap()
+  }};
 }

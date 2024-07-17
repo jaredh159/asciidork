@@ -112,7 +112,11 @@ impl<'arena> RootLexer<'arena> {
     let mut tokens = Deq::new(self.bump);
     while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token();
+      let kind = token.kind;
       tokens.push(token);
+      if kind == TokenKind::EndInclude {
+        return Some(Line::new(tokens));
+      }
     }
     if self.peek_is(b'\n') {
       self.sources[self.idx as usize].pos += 1;
@@ -164,10 +168,6 @@ mod tests {
   use crate::variants::token::*;
   use ast::SourceLocation;
   use test_utils::*;
-
-  // fn lexeme(s: &'static str) -> BumpString<'static> {
-  //   bumpalo::collections::String::from_str_in(s, Box::leak(Box::new(Bump::new())))
-  // }
 
   macro_rules! assert_token_cases {
     ($cases:expr) => {{

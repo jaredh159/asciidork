@@ -406,7 +406,7 @@ impl<'arena> Line<'arena> {
     if self.tokens.is_empty() {
       0
     } else {
-      (self.tokens.last().unwrap().loc.end - self.tokens.first().unwrap().loc.start) as usize
+      self.tokens.iter().map(|token| token.lexeme.len()).sum()
     }
   }
 

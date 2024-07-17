@@ -102,7 +102,7 @@ mod tests {
 
     for (input, authors) in cases {
       let mut parser = crate::Parser::from_str(input, leaked_bump());
-      let line = parser.read_line().unwrap();
+      let line = parser.read_line().unwrap().unwrap();
 
       let expected_authors = authors
         .iter()
