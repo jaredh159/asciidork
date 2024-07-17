@@ -316,8 +316,28 @@ mod tests {
       reassemble(lines),
       adoc! {"
         foo
-        {->00001}bar.adoc[]bar{<-00001}bar.adoc[]
-        baz"
+        {->00001}bar.adoc[]bar
+        {<-00001}bar.adoc[]baz"
+      }
+    );
+    assert!(parser.read_lines().unwrap().is_none());
+  }
+
+  #[test]
+  fn test_include_boundaries_no_newline_end() {
+    let input = adoc! {"
+      foo
+      include::bar.adoc[]
+    "};
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.set_resolver(resolve("bar")); // <-- no newline
+    let lines = parser.read_lines().unwrap().unwrap();
+    assert_eq!(
+      reassemble(lines),
+      adoc! {"
+        foo
+        {->00001}bar.adoc[]bar
+        {<-00001}bar.adoc[]"
       }
     );
     assert!(parser.read_lines().unwrap().is_none());
@@ -340,12 +360,10 @@ mod tests {
         {->00001}bar.adoc[]bar"
       }
     );
-    let lines = parser.read_lines().unwrap().unwrap();
     assert_eq!(
-      reassemble(lines),
+      reassemble(parser.read_lines().unwrap().unwrap()),
       adoc! {"
-        {<-00001}bar.adoc[]
-        baz"
+        {<-00001}bar.adoc[]baz"
       }
     );
     assert!(parser.read_lines().unwrap().is_none());

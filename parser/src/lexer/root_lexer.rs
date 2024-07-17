@@ -41,7 +41,13 @@ impl<'arena> RootLexer<'arena> {
     }
   }
 
-  pub fn push_source(&mut self, _filename: &str, src: BumpVec<'arena, u8>) {
+  pub fn push_source(&mut self, _filename: &str, mut src: BumpVec<'arena, u8>) {
+    // match asciidoctor - its include processor returns an array of lines
+    // so even if the source has no trailing newline, it's inserted as a full line
+    // NB: the include resolver has taken care of reserving space for the newline
+    if src.last() != Some(&b'\n') {
+      src.push(b'\n');
+    }
     self.sources.push(SourceLexer::new(src, self.bump));
     let next_idx = self.sources.len() as u16 - 1;
     self.next_idx = Some(next_idx);
@@ -112,11 +118,7 @@ impl<'arena> RootLexer<'arena> {
     let mut tokens = Deq::new(self.bump);
     while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token();
-      let kind = token.kind;
       tokens.push(token);
-      if kind == TokenKind::EndInclude {
-        return Some(Line::new(tokens));
-      }
     }
     if self.peek_is(b'\n') {
       self.sources[self.idx as usize].pos += 1;

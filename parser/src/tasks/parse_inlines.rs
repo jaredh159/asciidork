@@ -45,6 +45,7 @@ impl<'arena> Parser<'arena> {
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
     let mut acc = Accum { inlines, text };
+    let mut saw_boundary_end = false;
 
     while let Some(mut line) = lines.consume_current() {
       if self.should_stop_at(&line) {
@@ -73,7 +74,7 @@ impl<'arena> Parser<'arena> {
         }
 
         let Some(token) = line.consume_current() else {
-          if should_add_joining_newline(lines, &acc) {
+          if !lines.is_empty() {
             acc.commit();
             acc.text.loc.end += 1;
             acc.push_node(Inline::Newline, acc.text.loc);
@@ -247,10 +248,10 @@ impl<'arena> Parser<'arena> {
           }
 
           EndInclude => {
+            saw_boundary_end = true;
             let depth: u16 = token.lexeme[3..8].parse().unwrap();
-            acc.inlines.remove_trailing_newline();
             acc.push_node(IncludeBoundary(End, depth), token.loc);
-            acc.text.loc = token.loc.clamp_end();
+            acc.text.loc = token.loc.clamp_end().incr();
           }
 
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
@@ -603,7 +604,18 @@ impl<'arena> Parser<'arena> {
     }
 
     acc.commit();
-    Ok(acc.inlines)
+
+    // handle case where we failed to trim the final newline because
+    // the paragraph ended at the end of an include, so we got an artificial
+    // "line" of the boundary end token, which is only for tracking positions
+    let mut nodes = acc.inlines;
+    if saw_boundary_end && matches!(nodes.last().unwrap().content, IncludeBoundary(End, _)) {
+      let boundary = nodes.pop().unwrap();
+      nodes.remove_trailing_newline();
+      nodes.push(boundary);
+    }
+
+    Ok(nodes)
   }
 
   fn parse_inner<const N: usize>(
@@ -765,19 +777,6 @@ fn push_simple<'arena>(
   lines.restore_if_nonempty(line);
   state.push_node(inline_node, loc);
   push_newline_if_needed(state, lines);
-}
-
-fn should_add_joining_newline(lines: &ContiguousLines, acc: &Accum) -> bool {
-  if lines.is_empty() {
-    false
-  } else if acc.inlines.len() != 1 {
-    true
-  } else {
-    !matches!(
-      acc.inlines.nth(0).unwrap().content,
-      Inline::IncludeBoundary(IncludeBoundaryKind::End, _),
-    )
-  }
 }
 
 #[cfg(test)]

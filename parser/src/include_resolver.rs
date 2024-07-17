@@ -15,6 +15,7 @@ pub trait IncludeBuffer {
 
 impl IncludeBuffer for Vec<u8> {
   fn initialize(&mut self, len: usize) {
+    self.reserve(len + 1);
     self.resize(len, 0);
   }
 
@@ -25,6 +26,7 @@ impl IncludeBuffer for Vec<u8> {
 
 impl<'a> IncludeBuffer for BumpVec<'a, u8> {
   fn initialize(&mut self, len: usize) {
+    self.reserve(len + 1);
     self.resize(len, 0);
   }
 

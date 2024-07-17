@@ -18,6 +18,7 @@ fn include_no_trailing_newline() {
           node!(Inline::Newline, 6..7),
           node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
+          // node!(Inline::Newline, 7..8, depth: 1),
           node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
         ]),
         ..empty_block!(0)
@@ -39,8 +40,8 @@ fn include_no_trailing_newline() {
           node!(Inline::Newline, 6..7),
           node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
+          node!(Inline::Newline, 7..8, depth: 1),
           node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
-          node!(Inline::Newline, 32..33),
           node!("Line-3"; 33..39),
         ]),
         ..empty_block!(0)
@@ -86,14 +87,21 @@ fn include_with_trailing_newline() {
           node!(Inline::Newline, 6..7),
           node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
+          // node!(Inline::Newline, 7..8, depth: 1),
+          node!(Inline::Newline, 7..8, depth: 1),
           node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
-          node!(Inline::Newline, 32..33),
           node!("Line-3"; 33..39),
         ]),
         ..empty_block!(0)
       }
     ])
   );
+  let input = adoc! {"
+    Line-1
+    include::some_file.adoc[]
+    Line-3
+  "};
+  assert_eq!("Line-3", &input[33..39]);
 }
 
 #[test]
@@ -120,7 +128,7 @@ fn include_with_2_trailing_newlines() {
         context: BlockContext::Paragraph,
         content: BlockContent::Simple(nodes![
           node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
-          node!("Line-3"; 32..39),
+          node!("Line-3"; 33..39),
         ]),
         ..empty_block!(7)
       }
