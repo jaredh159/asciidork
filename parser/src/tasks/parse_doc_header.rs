@@ -3,7 +3,7 @@ use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_document_header(&mut self) -> Result<()> {
-    let Some(mut block) = self.read_lines() else {
+    let Some(mut block) = self.read_lines()? else {
       return Ok(());
     };
 
@@ -94,7 +94,7 @@ pub fn is_doc_header(lines: &ContiguousLines) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{adoc, assert_eq};
+  use test_utils::*;
 
   #[test]
   fn test_is_doc_header() {
@@ -128,8 +128,8 @@ mod tests {
     ];
     let bump = &Bump::new();
     for (input, expected) in cases {
-      let lines = Parser::from_str(input, bump).read_lines().unwrap();
-      assert_eq!(
+      let lines = Parser::from_str(input, bump).read_lines().unwrap().unwrap();
+      expect_eq!(
         is_doc_header(&lines),
         expected,
         from: input

@@ -22,7 +22,7 @@ impl<'arena> CollectText<'arena> {
 
   pub fn push_str(&mut self, s: &str) {
     self.string.as_mut().unwrap().push_str(s);
-    self.loc.end += s.len();
+    self.loc.end += s.len() as u32;
   }
 
   pub fn str(&self) -> &str {
@@ -36,15 +36,15 @@ impl<'arena> CollectText<'arena> {
     }
     let trimmed = string.trim_end();
     let mut delta = string.len() - trimmed.len();
-    self.loc.end -= delta;
+    self.loc.end -= delta as u32;
     while delta > 0 {
       string.pop();
       delta -= 1;
     }
   }
 
-  pub fn drop_last(&mut self, n: usize) {
-    debug_assert!(n <= self.string.as_ref().unwrap().len());
+  pub fn drop_last(&mut self, n: u32) {
+    debug_assert!(n as usize <= self.string.as_ref().unwrap().len());
     let string = self.string.as_mut().unwrap();
     for _ in 0..n {
       string.pop();

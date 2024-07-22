@@ -126,7 +126,7 @@ impl StepOrGroup {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   fn exactly(subs: &[Subs]) -> Substitutions {
     let mut s = Substitutions::none();

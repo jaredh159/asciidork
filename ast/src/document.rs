@@ -12,6 +12,7 @@ pub struct Document<'arena> {
   pub content: DocContent<'arena>,
   pub toc: Option<TableOfContents<'arena>>,
   pub anchors: Rc<RefCell<HashMap<BumpString<'arena>, Anchor<'arena>>>>,
+  pub source_filenames: Vec<String>,
 }
 
 impl<'arena> Document<'arena> {
@@ -27,6 +28,7 @@ impl<'arena> Document<'arena> {
       toc: None,
       anchors: Rc::new(RefCell::new(HashMap::new())),
       meta: DocumentMeta::default(),
+      source_filenames: Vec::new(),
     }
   }
 }

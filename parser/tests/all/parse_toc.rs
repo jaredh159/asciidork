@@ -1,6 +1,6 @@
 use asciidork_ast::prelude::*;
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_basic_toc() {
@@ -48,7 +48,7 @@ fn test_toc_macro_block() {
       Block {
         context: BlockContext::TableOfContents,
         content: BlockContent::Empty(EmptyMetadata::None),
-        ..empty_block!(18..26)
+        ..empty_block!(18)
       }
     ]
   );

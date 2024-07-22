@@ -4,18 +4,18 @@ use crate::internal::*;
 pub struct ChunkMeta<'arena> {
   pub attrs: Option<AttrList<'arena>>,
   pub title: Option<InlineNodes<'arena>>,
-  pub start: usize, // rename
+  pub start: u32, // rename
 }
 
 impl<'arena> ChunkMeta<'arena> {
-  pub const fn empty(start: usize) -> Self {
+  pub const fn empty(start: u32) -> Self {
     Self { title: None, attrs: None, start }
   }
 
   pub const fn new(
     attrs: Option<AttrList<'arena>>,
     title: Option<InlineNodes<'arena>>,
-    start: usize,
+    start: u32,
   ) -> Self {
     Self { title, attrs, start }
   }

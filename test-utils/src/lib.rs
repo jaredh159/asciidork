@@ -23,7 +23,11 @@ macro_rules! assert_block_core {
 macro_rules! assert_doc_content {
   ($input:expr, $expected:expr$(,)?) => {{
     let content = parse_doc_content!($input);
-    assert_eq!(content, $expected);
+    expect_eq!(content, $expected, from: $input);
+  }};
+  (resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {{
+    let content = parse_doc_content!($input, $bytes);
+    expect_eq!(content, $expected, from: $input);
   }};
 }
 
@@ -58,7 +62,7 @@ macro_rules! parse_table {
 macro_rules! assert_table {
   ($input:expr, $expected:expr$(,)?) => {{
     let table = parse_table!($input);
-    assert_eq!(table, $expected, from: $input);
+    expect_eq!(table, $expected, from: $input);
   }};
 }
 
@@ -70,7 +74,7 @@ macro_rules! assert_table_loose {
       BlockContent::Table(table) => table,
       _ => panic!("expected table block content"),
     };
-    assert_eq!(table, $expected, from: $input);
+    expect_eq!(table, $expected, from: $input);
   }};
 }
 
@@ -78,7 +82,7 @@ macro_rules! assert_table_loose {
 macro_rules! assert_inlines {
   ($input:expr, $expected:expr$(,)?) => {{
     let inlines = parse_inline_nodes!($input);
-    assert_eq!(inlines, $expected, from: $input);
+    eq!(inlines, $expected, from: $input);
   }};
 }
 
@@ -86,7 +90,7 @@ macro_rules! assert_inlines {
 macro_rules! assert_blocks {
   ($input:expr, $expected:expr$(,)?) => {
     let blocks = parse_blocks!($input);
-    assert_eq!(blocks, $expected, from: $input);
+    expect_eq!(blocks, $expected, from: $input);
   };
 }
 
@@ -94,13 +98,13 @@ macro_rules! assert_blocks {
 macro_rules! assert_section {
   ($input:expr, reftext: $reftext:expr, $expected:expr$(,)?) => {
     let (section, refs) = parse_section!($input);
-    assert_eq!(section, $expected);
+    expect_eq!(section, $expected);
     let refs = refs.borrow();
     let xref = refs
       .get(&section.id.clone().expect("section id"))
       .expect("expected parsed section to have xref");
-    assert_eq!(xref.title, section.heading);
-    assert_eq!(xref.reftext, $reftext);
+    expect_eq!(xref.title, section.heading);
+    expect_eq!(xref.reftext, $reftext);
   };
   ($input:expr, $expected:expr$(,)?) => {
     assert_section!($input, reftext: None, $expected);
@@ -134,13 +138,19 @@ macro_rules! vecb {
 #[macro_export]
 macro_rules! node {
   ($node:expr, $range:expr$(,)?) => {
-    InlineNode::new($node, SourceLocation::new($range.start, $range.end))
+    node!($node, $range, depth: 0)
   };
-  ($text:expr; $range:expr) => {
+  ($node:expr, $range:expr, depth: $depth:expr$(,)?) => {
+    InlineNode::new($node, SourceLocation::new_depth($range.start, $range.end, $depth))
+  };
+  ($text:expr; $range:expr, depth: $depth:expr) => {
     InlineNode::new(
       Inline::Text(bstr!($text)),
-      SourceLocation::new($range.start, $range.end),
+      SourceLocation::new_depth($range.start, $range.end, $depth),
     )
+  };
+  ($text:expr; $range:expr) => {
+    node!($text; $range, depth: 0)
   };
 }
 
@@ -196,12 +206,11 @@ macro_rules! cell {
 
 #[macro_export]
 macro_rules! empty_block {
-  ($range:expr) => {
+  ($start:expr) => {
     Block {
-      meta: ChunkMeta::empty($range.start),
+      meta: ChunkMeta::empty($start),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
-      loc: SourceLocation::new($range.start, $range.end),
     }
   };
 }
@@ -229,8 +238,8 @@ macro_rules! empty_document {
 macro_rules! assert_list {
   ($input:expr, $expected_ctx:expr, $expected_items:expr) => {
     let (context, items, ..) = parse_list!($input);
-    assert_eq!(context, $expected_ctx, from: $input);
-    assert_eq!(items, $expected_items, from: $input);
+    expect_eq!(context, $expected_ctx, from: $input);
+    expect_eq!(items, $expected_items, from: $input);
   };
 }
 
@@ -285,7 +294,7 @@ macro_rules! simple_text_block {
     Block {
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!($text; $range)]),
-      ..empty_block!($range)
+      ..empty_block!($range.start)
     }
   }
 }
@@ -333,7 +342,7 @@ macro_rules! assert_error {
     #[test]
     fn $name() {
       let err = parse_error!($input);
-      assert_eq!(err.plain_text(), $expected, from: $input);
+      expect_eq!(err.plain_text(), $expected, from: $input);
     }
   };
 }
@@ -372,7 +381,7 @@ macro_rules! test_inlines_loose {
 }
 
 #[macro_export]
-macro_rules! assert_eq {
+macro_rules! expect_eq {
   ($left:expr, $right:expr$(,)?) => {{
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");
   }};
@@ -445,9 +454,34 @@ macro_rules! parse_single_block_loose {
 }
 
 #[macro_export]
+macro_rules! const_resolver {
+  ($bytes:expr) => {{
+    struct MockResolver(pub Vec<u8>);
+    impl asciidork_parser::include_resolver::IncludeResolver for MockResolver {
+      fn resolve(
+        &mut self,
+        _path: &str,
+        buffer: &mut dyn asciidork_parser::include_resolver::IncludeBuffer,
+      ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
+        buffer.initialize(self.0.len());
+        let bytes = buffer.as_bytes_mut();
+        bytes.copy_from_slice(&self.0);
+        Ok(self.0.len())
+      }
+    }
+    Box::new(MockResolver(Vec::from($bytes)))
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_doc_content {
   ($input:expr) => {{
     let parser = Parser::from_str($input, leaked_bump());
+    parser.parse().unwrap().document.content
+  }};
+  ($input:expr, $bytes:expr) => {{
+    let mut parser = Parser::from_str($input, leaked_bump());
+    parser.set_resolver(const_resolver!($bytes));
     parser.parse().unwrap().document.content
   }};
 }

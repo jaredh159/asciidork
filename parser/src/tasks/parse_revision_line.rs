@@ -125,7 +125,7 @@ mod tests {
     for (input, rev, date, remark) in cases {
       let b = &bumpalo::Bump::new();
       let mut parser = Parser::from_str(input, b);
-      let mut block = parser.read_lines().unwrap();
+      let mut block = parser.read_lines().unwrap().unwrap();
       parser.parse_revision_line(&mut block);
       assert_eq!(
         parser.document.meta.get("revnumber"),

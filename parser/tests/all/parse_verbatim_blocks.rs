@@ -3,7 +3,7 @@ use asciidork_ast::prelude::*;
 use asciidork_ast::short::block::*;
 use asciidork_ast::variants::inline::*;
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_parse_literal_block() {
@@ -16,7 +16,6 @@ fn test_parse_literal_block() {
       meta: ChunkMeta::new(Some(attrs::pos("literal", 1..8)), None, 0),
       context: Context::Literal,
       content: Content::Simple(just!("foo `bar`", 10..19)),
-      ..empty_block!(0..19)
     }
   );
 }
@@ -38,7 +37,7 @@ fn test_parse_delimited_literal_block() {
         node!(Newline, 14..15),
         node!("baz"; 15..18),
       ]),
-      ..empty_block!(0..23)
+      ..empty_block!(0)
     }
   )
 }
@@ -60,7 +59,7 @@ fn test_parse_delimited_literal_block_w_double_newline() {
       node!(Newline, 15..16),
       node!("baz"; 16..19),
     ]),
-    ..empty_block!(0..24)
+    ..empty_block!(0)
   };
   assert_block!(input, expected);
 }
@@ -76,7 +75,6 @@ fn test_parse_listing_block() {
       meta: ChunkMeta::new(Some(attrs::pos("listing", 1..8)), None, 0),
       context: Context::Listing,
       content: Content::Simple(nodes![node!("foo `bar`"; 10..19)]),
-      ..empty_block!(0..19)
     }
   );
 }
@@ -96,7 +94,7 @@ fn test_parse_delimited_listing_block() {
       node!(Newline, 14..15),
       node!("baz"; 15..18),
     ]),
-    ..empty_block!(0..23)
+    ..empty_block!(0)
   };
   assert_block!(input, expected);
 }
@@ -118,7 +116,7 @@ fn test_parse_delimited_listing_block_w_double_newline() {
       node!(Newline, 15..16),
       node!("baz"; 16..19),
     ]),
-    ..empty_block!(0..24)
+    ..empty_block!(0)
   };
   assert_block!(input, expected);
 }
@@ -130,7 +128,7 @@ fn test_parse_indented_literal_block() {
     Block {
       context: Context::Literal,
       content: Content::Simple(just!("foo bar", 1..8)),
-      ..empty_block!(0..8)
+      ..empty_block!(0)
     }
   );
 
@@ -139,7 +137,7 @@ fn test_parse_indented_literal_block() {
     Block {
       context: Context::Literal,
       content: Content::Simple(just!("foo bar", 2..9)),
-      ..empty_block!(0..9)
+      ..empty_block!(0)
     }
   );
 
@@ -156,7 +154,7 @@ fn test_parse_indented_literal_block() {
         node!(Newline, 4..5),
         node!("bar"; 5..8),
       ]),
-      ..empty_block!(0..8)
+      ..empty_block!(0)
     }
   );
 
@@ -175,7 +173,6 @@ fn test_parse_indented_literal_block() {
         node!(Newline, 13..14),
         node!("bar"; 14..18),
       ]),
-      ..empty_block!(0..18)
     }
   );
 }

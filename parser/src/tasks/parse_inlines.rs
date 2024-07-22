@@ -4,7 +4,9 @@ use crate::internal::*;
 use crate::tasks::parse_inlines_utils::*;
 use crate::variants::token::*;
 use ast::variants::{inline::*, r#macro::*};
+use IncludeBoundaryKind::*;
 
+#[derive(Debug)]
 struct Accum<'arena> {
   inlines: InlineNodes<'arena>,
   text: CollectText<'arena>,
@@ -43,6 +45,7 @@ impl<'arena> Parser<'arena> {
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
     let mut acc = Accum { inlines, text };
+    let mut saw_boundary_end = false;
 
     while let Some(mut line) = lines.consume_current() {
       if self.should_stop_at(&line) {
@@ -190,7 +193,7 @@ impl<'arena> Parser<'arena> {
                 let mut items = bvec![in self.bump; first];
                 let rest = line.consume_to_string_until(CloseBracket, self.bump);
 
-                let mut pos = rest.loc.start;
+                let mut pos = rest.loc.start as usize;
                 rest.split('>').for_each(|substr| {
                   let mut trimmed = substr.trim_start();
                   pos += substr.len() - trimmed.len();
@@ -198,7 +201,7 @@ impl<'arena> Parser<'arena> {
                   if !trimmed.is_empty() {
                     items.push(SourceString::new(
                       BumpString::from_str_in(trimmed, self.bump),
-                      SourceLocation::new(pos, pos + trimmed.len()),
+                      SourceLocation::new(pos as u32, (pos + trimmed.len()) as u32),
                     ));
                   }
                   pos += substr.len() + 1;
@@ -236,6 +239,19 @@ impl<'arena> Parser<'arena> {
               && line.continues_valid_callout_nums() =>
           {
             push_callout_tuck(token, &mut line, &mut acc);
+          }
+
+          BeginInclude => {
+            let depth: u16 = token.lexeme[3..8].parse().unwrap();
+            acc.push_node(IncludeBoundary(Begin, depth), token.loc);
+            acc.text.loc = SourceLocation::new_depth(0, 0, depth);
+          }
+
+          EndInclude => {
+            saw_boundary_end = true;
+            let depth: u16 = token.lexeme[3..8].parse().unwrap();
+            acc.push_node(IncludeBoundary(End, depth), token.loc);
+            acc.text.loc = token.loc.clamp_end().incr();
           }
 
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
@@ -588,7 +604,18 @@ impl<'arena> Parser<'arena> {
     }
 
     acc.commit();
-    Ok(acc.inlines)
+
+    // handle case where we failed to trim the final newline because
+    // the paragraph ended at the end of an include, so we got an artificial
+    // "line" of the boundary end token, which is only for tracking positions
+    let mut nodes = acc.inlines;
+    if saw_boundary_end && matches!(nodes.last().unwrap().content, IncludeBoundary(End, _)) {
+      let boundary = nodes.pop().unwrap();
+      nodes.remove_trailing_newline();
+      nodes.push(boundary);
+    }
+
+    Ok(nodes)
   }
 
   fn parse_inner<const N: usize>(
@@ -635,24 +662,6 @@ impl<'arena> Parser<'arena> {
     self.parse_inner(token, [token.kind], wrap, state, line, lines)
   }
 
-  fn merge_inlines(
-    &self,
-    a: &mut BumpVec<'arena, Inline<'arena>>,
-    b: &mut BumpVec<'arena, Inline<'arena>>,
-    append: Option<&str>,
-  ) {
-    if let (Some(Text(a_text)), Some(Text(b_text))) = (a.last_mut(), b.first_mut()) {
-      a_text.push_str(b_text);
-      b.remove(0);
-    }
-    a.append(b);
-    match (append, a.last_mut()) {
-      (Some(append), Some(Text(text))) => text.push_str(append),
-      (Some(append), _) => a.push(Text(BumpString::from_str_in(append, self.bump))),
-      _ => {}
-    }
-  }
-
   fn should_stop_at(&self, line: &Line<'arena>) -> bool {
     if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
       return true;
@@ -681,13 +690,13 @@ impl<'arena> Parser<'arena> {
     };
     let mut line_txt = state.text.str().as_bytes();
     let line_len = line_txt.len();
-    let mut back = comment_bytes.len();
+    let mut back = comment_bytes.len() as u32;
     if line_txt.ends_with(&[b' ']) {
       back += 1;
       line_txt = &line_txt[..line_len - 1];
     }
     if line_txt.ends_with(comment_bytes) {
-      let tuck = state.text.str().split_at(line_len - back).1;
+      let tuck = state.text.str().split_at(line_len - back as usize).1;
       let tuck = BumpString::from_str_in(tuck, self.bump);
       state.text.drop_last(back);
       let tuck_loc = SourceLocation::new(state.text.loc.end, state.text.loc.end + back);
@@ -755,7 +764,7 @@ fn push_simple<'arena>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_line_comments() {
@@ -1254,9 +1263,9 @@ mod tests {
   fn run(cases: Vec<(&str, InlineNodes)>) {
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut block = parser.read_lines().unwrap();
+      let mut block = parser.read_lines().unwrap().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
-      assert_eq!(inlines, expected, from: input);
+      expect_eq!(inlines, expected, from: input);
     }
   }
 }

@@ -85,7 +85,7 @@ impl<'arena> TableTokens<'arena> {
     self.0.nth_token(n)
   }
 
-  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: usize) -> bool {
+  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: u32) -> bool {
     self.0.has_seq_at(kinds, offset)
   }
 
@@ -93,7 +93,7 @@ impl<'arena> TableTokens<'arena> {
     self.0.consume_current()
   }
 
-  pub fn drop_leading_bytes(&mut self, n: usize) {
+  pub fn drop_leading_bytes(&mut self, n: u32) {
     self.0.drop_leading_bytes(n);
   }
 
@@ -112,7 +112,7 @@ impl<'arena> TableTokens<'arena> {
       debug_assert!(!before.is_empty());
       let lexeme = BumpString::from_str_in(before, self.0.bump_arena());
       let loc = token.loc;
-      let before_len = before.len();
+      let before_len = before.len() as u32;
       self.drop_leading_bytes(before_len);
       Some(Token {
         kind: TokenKind::Word,

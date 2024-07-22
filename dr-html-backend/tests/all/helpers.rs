@@ -8,17 +8,15 @@ macro_rules! assert_html {
   ($name:ident, $mod_settings:expr, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      let bump = &::asciidork_parser::prelude::Bump::new();
-      let mut settings = ::asciidork_meta::JobSettings::embedded();
-      #[allow(clippy::redundant_closure_call)]
-      $mod_settings(&mut settings);
-      let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
-      parser.apply_job_settings(settings);
-      let document = parser.parse().unwrap().document;
-      let actual = ::asciidork_eval::eval(
-        &document,
-        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
-      ::test_utils::assert_eq!(actual, $expected.to_string(), from: $input);
+      let actual = _html!($input, $mod_settings, None);
+      ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
+    }
+  };
+  ($name:ident, resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {
+    #[test]
+    fn $name() {
+      let actual = _html!($input, |_| {}, Some(const_resolver!($bytes)));
+      ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
     }
   };
   ($name:ident, $input:expr, contains: $($expected:expr),+$(,)?) => {
@@ -27,16 +25,7 @@ macro_rules! assert_html {
   ($name:ident, $mod_settings:expr, $input:expr, contains: $($expected:expr),+$(,)?) => {
     #[test]
     fn $name() {
-      let bump = &::asciidork_parser::prelude::Bump::new();
-      let mut settings = ::asciidork_meta::JobSettings::embedded();
-      #[allow(clippy::redundant_closure_call)]
-      $mod_settings(&mut settings);
-      let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
-      parser.apply_job_settings(settings);
-      let document = parser.parse().unwrap().document;
-      let actual = ::asciidork_eval::eval(
-        &document,
-        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+      let actual = _html!($input, $mod_settings, None);
       $(assert!(
         actual.contains($expected),
         "\n`{}` was NOT found when expected\n\n\x1b[2m```adoc\x1b[0m\n{}\n\x1b[2m```\x1b[0m\n\n\x1b[2m```html\x1b[0m\n{}\n\x1b[2m```\x1b[0m",
@@ -84,7 +73,7 @@ macro_rules! assert_standalone_body {
       let mut body = actual.splitn(2, "<body").nth(1).unwrap();
       body = body.splitn(2, "</body>").nth(0).unwrap();
       let body = format!("<body{}</body>", body);
-      ::test_utils::assert_eq!(body, $expected.to_string(), from: $input);
+      ::test_utils::expect_eq!(body, $expected.to_string(), from: $input);
     }
   };
 }
@@ -105,4 +94,24 @@ macro_rules! test_non_embedded_contains {
       }
     }
   };
+}
+
+macro_rules! _html {
+  ($input:expr, $mod_settings:expr, $resolver:expr) => {{
+    let bump = &::asciidork_parser::prelude::Bump::new();
+    let mut settings = ::asciidork_meta::JobSettings::embedded();
+    #[allow(clippy::redundant_closure_call)]
+    $mod_settings(&mut settings);
+    let mut parser = ::asciidork_parser::Parser::from_str($input, bump);
+    parser.apply_job_settings(settings);
+    if let Some(resolver) = $resolver {
+      parser.set_resolver(resolver);
+    }
+    let document = parser.parse().unwrap().document;
+    ::asciidork_eval::eval(
+      &document,
+      ::asciidork_dr_html_backend::AsciidoctorHtml::new(),
+    )
+    .unwrap()
+  }};
 }

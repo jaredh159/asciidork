@@ -1,7 +1,7 @@
 use asciidork_ast::prelude::*;
 use asciidork_ast::short::block::*;
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_simple_description_list() {
@@ -16,7 +16,7 @@ fn test_simple_description_list() {
       blocks: vecb![Block {
         content: Content::Simple(just!("bar", 6..9)),
         context: Context::Paragraph,
-        ..empty_block!(6..9)
+        ..empty_block!(6)
       }],
     }]
   );
@@ -38,7 +38,7 @@ fn test_two_line_description_list() {
       blocks: vecb![Block {
         content: Content::Simple(just!("bar", 6..9)),
         context: Context::Paragraph,
-        ..empty_block!(6..9)
+        ..empty_block!(6)
       }],
     }]
   );

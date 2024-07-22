@@ -8,9 +8,9 @@ use TokenKind::*;
 #[derive(Debug)]
 struct CellStart {
   spec: CellSpec,
-  drop_tokens: usize,
-  drop_bytes: usize,
-  resuming: usize,
+  drop_tokens: u32,
+  drop_bytes: u32,
+  resuming: u32,
 }
 
 lazy_static! {
@@ -85,9 +85,9 @@ impl<'arena> Parser<'arena> {
     &self,
     tokens: &mut TableTokens,
     sep: char,
-  ) -> Option<(CellSpec, usize)> {
+  ) -> Option<(CellSpec, u32)> {
     let data = self.peek_cell_start(tokens, sep)?;
-    tokens.discard(data.drop_tokens);
+    tokens.discard(data.drop_tokens as usize);
     tokens.drop_leading_bytes(data.drop_bytes);
     Some((data.spec, data.resuming))
   }
@@ -106,8 +106,8 @@ impl<'arena> Parser<'arena> {
       return Some(CellStart {
         spec: CellSpec::default(),
         drop_tokens: if first_token.len() == sep_len { 1 } else { 0 },
-        drop_bytes: if first_token.len() == sep_len { 0 } else { sep_len },
-        resuming: first_token.loc.start + sep_len,
+        drop_bytes: if first_token.len() == sep_len { 0 } else { sep_len as u32 },
+        resuming: first_token.loc.start + sep_len as u32,
       });
     }
 
@@ -140,7 +140,7 @@ impl<'arena> Parser<'arena> {
     if cursor == 0 {
       return None;
     }
-    let Some(cursor_token) = tokens.nth(cursor) else {
+    let Some(cursor_token) = tokens.nth(cursor as usize) else {
       return None;
     };
 
@@ -161,12 +161,12 @@ impl<'arena> Parser<'arena> {
         resuming: cursor_token.loc.end,
       }),
       (true, bytes) if bytes.len() > 2 && bytes[1..].starts_with(sep_bytes) => {
-        let joined = tokens.nth(cursor).unwrap();
+        let joined = tokens.nth(cursor as usize).unwrap();
         Some(CellStart {
           spec,
           drop_tokens: cursor,
-          drop_bytes: 1 + sep_bytes.len(),
-          resuming: joined.loc.start + 1 + sep_bytes.len(),
+          drop_bytes: 1 + sep_bytes.len() as u32,
+          resuming: joined.loc.start + 1 + sep_bytes.len() as u32,
         })
       }
       _ => None,
@@ -174,8 +174,8 @@ impl<'arena> Parser<'arena> {
   }
 }
 
-fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) -> bool {
-  let Some(token) = tokens.nth(*cursor) else {
+fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) -> bool {
+  let Some(token) = tokens.nth(*cursor as usize) else {
     return false;
   };
   if !token.is(Word) {
@@ -193,35 +193,40 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) ->
   }
 }
 
-fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
+fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
   if tokens.has_seq_at(&[Digits, Star], *cursor) {
-    if let Some(Ok(digits)) = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>()) {
+    if let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>()) {
       spec.duplication = Some(digits);
       *cursor += 2;
     }
   }
 }
 
-fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
+fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
   if tokens.has_seq_at(&[Digits, Plus], *cursor) {
-    if let Some(Ok(digits)) = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>()) {
+    if let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>()) {
       spec.col_span = Some(digits);
       *cursor += 2;
     }
   } else if tokens.has_seq_at(&[Dots, Digits, Plus], *cursor) {
-    if !tokens.nth(*cursor).is_len(Dots, 1) {
+    if !tokens.nth(*cursor as usize).is_len(Dots, 1) {
       return;
     }
-    if let Some(Ok(digits)) = tokens.nth(*cursor + 1).map(|t| t.lexeme.parse::<u8>()) {
+    if let Some(Ok(digits)) = tokens
+      .nth(*cursor as usize + 1)
+      .map(|t| t.lexeme.parse::<u8>())
+    {
       spec.row_span = Some(digits);
       *cursor += 3;
     }
   } else if tokens.has_seq_at(&[Digits, Dots, Digits, Plus], *cursor) {
-    if !tokens.nth(*cursor + 1).is_len(Dots, 1) {
+    if !tokens.nth(*cursor as usize + 1).is_len(Dots, 1) {
       return;
     }
-    let col = tokens.nth(*cursor).map(|t| t.lexeme.parse::<u8>());
-    let row = tokens.nth(*cursor + 2).map(|t| t.lexeme.parse::<u8>());
+    let col = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>());
+    let row = tokens
+      .nth(*cursor as usize + 2)
+      .map(|t| t.lexeme.parse::<u8>());
     if let (Some(Ok(col)), Some(Ok(row))) = (col, row) {
       spec.col_span = Some(col);
       spec.row_span = Some(row);
@@ -230,8 +235,8 @@ fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usi
   }
 }
 
-fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  let Some(token) = tokens.nth(*cursor) else {
+fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
+  let Some(token) = tokens.nth(*cursor as usize) else {
     return;
   };
   match token.kind {
@@ -247,11 +252,11 @@ fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) 
   *cursor += 1;
 }
 
-fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) {
-  if !tokens.nth(*cursor).is_len(Dots, 1) {
+fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
+  if !tokens.nth(*cursor as usize).is_len(Dots, 1) {
     return;
   }
-  match tokens.nth(*cursor + 1).map(|t| t.kind) {
+  match tokens.nth(*cursor as usize + 1).map(|t| t.kind) {
     Some(GreaterThan) => spec.v_align = Some(VerticalAlignment::Bottom),
     Some(LessThan) => spec.v_align = Some(VerticalAlignment::Top),
     Some(Caret) => spec.v_align = Some(VerticalAlignment::Middle),
@@ -263,7 +268,7 @@ fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut usize) 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_parse_cell_specs() {
@@ -369,9 +374,12 @@ mod tests {
       line.drain_into(&mut tokens);
       let mut tokens = TableTokens::new(tokens);
       let start = parser.consume_cell_start(&mut tokens, *sep);
-      assert_eq!(start, *expected, from: input);
+      expect_eq!(start, *expected, from: input);
       if let Some((_, loc)) = *expected {
-        assert_eq!(input.as_bytes().get(loc), remaining.as_bytes().first());
+        expect_eq!(
+          input.as_bytes().get(loc as usize),
+          remaining.as_bytes().first()
+        );
       }
     }
   }
@@ -464,7 +472,7 @@ mod tests {
     let mut parser = Parser::from_str("", leaked_bump());
     for (input, expected) in cases {
       let cols = parser.parse_col_specs(input);
-      assert_eq!(cols, *expected);
+      expect_eq!(cols, *expected);
     }
   }
 }

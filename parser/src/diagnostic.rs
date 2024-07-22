@@ -2,15 +2,15 @@ use crate::internal::*;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Diagnostic {
-  pub line_num: usize,
+  pub line_num: u32,
   pub line: String,
   pub message: String,
-  pub underline_start: usize,
-  pub underline_width: usize,
+  pub underline_start: u32,
+  pub underline_width: u32,
 }
 
 impl<'arena> Parser<'arena> {
-  pub(crate) fn err_at(&self, message: impl Into<String>, start: usize, end: usize) -> Result<()> {
+  pub(crate) fn err_at(&self, message: impl Into<String>, start: u32, end: u32) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
     self.handle_err(Diagnostic {
       line_num,
@@ -32,7 +32,7 @@ impl<'arena> Parser<'arena> {
       line_num,
       message: message.into(),
       underline_start: offset,
-      underline_width: line.len(),
+      underline_width: line.len() as u32,
       line,
     })
   }
@@ -54,11 +54,11 @@ impl<'arena> Parser<'arena> {
       }
       if line.starts_with(key) {
         return self.handle_err(Diagnostic {
-          line_num: idx + 1,
+          line_num: idx as u32 + 1,
           line: line.to_string(),
           message: message.into(),
           underline_start: 0,
-          underline_width: line.len(),
+          underline_width: line.len() as u32,
         });
       }
     }
@@ -69,7 +69,7 @@ impl<'arena> Parser<'arena> {
   pub(crate) fn err_at_pattern(
     &self,
     message: impl Into<String>,
-    line_start: usize,
+    line_start: u32,
     pattern: &str,
   ) -> Result<()> {
     let (line_num, _) = self.lexer.line_number_with_offset(line_start);
@@ -79,8 +79,8 @@ impl<'arena> Parser<'arena> {
         line_num,
         line: line.to_string(),
         message: message.into(),
-        underline_start: idx,
-        underline_width: pattern.len(),
+        underline_start: idx as u32,
+        underline_width: pattern.len() as u32,
       });
     }
     self.handle_err(Diagnostic {
@@ -88,7 +88,7 @@ impl<'arena> Parser<'arena> {
       line: line.to_string(),
       message: message.into(),
       underline_start: 0,
-      underline_width: line.len(),
+      underline_width: line.len() as u32,
     })
   }
 
@@ -103,7 +103,7 @@ impl<'arena> Parser<'arena> {
       line: self.lexer.line_of(token.loc.start).to_string(),
       message: message.into(),
       underline_start: offset,
-      underline_width: token.lexeme.len(),
+      underline_width: token.lexeme.len() as u32,
     })
   }
 
@@ -176,8 +176,8 @@ impl Diagnostic {
       colorizer.line_num(self.line_num.to_string()),
       colorizer.line_num(":"),
       colorizer.line(&self.line),
-      " ".repeat(self.underline_start + line_num_pad),
-      colorizer.location("^".repeat(self.underline_width)),
+      " ".repeat((self.underline_start + line_num_pad) as usize),
+      colorizer.location("^".repeat(self.underline_width as usize)),
       colorizer.message(&self.message),
     )
   }

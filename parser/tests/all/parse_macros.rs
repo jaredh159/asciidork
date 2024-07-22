@@ -1,7 +1,7 @@
 use asciidork_ast::prelude::*;
 use asciidork_ast::variants::{inline::*, r#macro::*};
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 test_inlines_loose!(
   xref_macro_alone,

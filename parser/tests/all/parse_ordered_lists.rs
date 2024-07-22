@@ -2,7 +2,7 @@ use asciidork_ast::prelude::*;
 use asciidork_ast::short::block::*;
 use asciidork_ast::ListVariant;
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_basic_ordered_list() {
@@ -66,7 +66,6 @@ fn test_ordered_w_nested_unordered() {
             },
           ],
         },
-        ..empty_block!(11..30)
       }],
     }]
   );

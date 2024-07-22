@@ -5,6 +5,7 @@ mod contiguous_lines;
 mod delimiter;
 mod deq;
 mod diagnostic;
+pub mod include_resolver;
 mod lexer;
 mod line;
 mod list_stack;
@@ -34,6 +35,7 @@ mod internal {
   pub use crate::delimiter::*;
   pub use crate::deq::*;
   pub use crate::diagnostic::*;
+  pub use crate::include_resolver::*;
   pub use crate::lexer::*;
   pub use crate::line::*;
   pub use crate::list_stack::*;

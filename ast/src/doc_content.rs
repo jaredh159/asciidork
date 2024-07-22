@@ -54,8 +54,8 @@ impl<'arena> DocContent<'arena> {
     match self {
       DocContent::Sectioned { sections, .. } => sections
         .last()
-        .and_then(|section| section.blocks.last().map(|block| block.loc)),
-      DocContent::Blocks(blocks) => blocks.last().map(|block| block.loc),
+        .and_then(|section| section.blocks.last().and_then(|b| b.content.last_loc())),
+      DocContent::Blocks(blocks) => blocks.last().and_then(|b| b.content.last_loc()),
     }
   }
 }

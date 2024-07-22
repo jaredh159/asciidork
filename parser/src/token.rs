@@ -8,6 +8,7 @@ pub enum TokenKind {
   Backtick,
   Backslash,
   Bang,
+  BeginInclude,
   CalloutNumber,
   Caret,
   CloseBrace,
@@ -17,9 +18,11 @@ pub enum TokenKind {
   Dashes,
   DelimiterLine,
   Digits,
+  Directive,
   Discard,
   DoubleQuote,
   Dots,
+  EndInclude,
   EqualSigns,
   #[default]
   Eof,
@@ -53,6 +56,10 @@ pub struct Token<'arena> {
 }
 
 impl<'arena> Token<'arena> {
+  pub fn new(kind: TokenKind, loc: impl Into<SourceLocation>, lexeme: BumpString<'arena>) -> Self {
+    Self { kind, loc: loc.into(), lexeme }
+  }
+
   pub fn into_source_string(self) -> SourceString<'arena> {
     SourceString::new(self.lexeme, self.loc)
   }
@@ -91,11 +98,11 @@ impl<'arena> Token<'arena> {
     }
   }
 
-  pub fn drop_leading_bytes(&mut self, n: usize) {
+  pub fn drop_leading_bytes(&mut self, n: u32) {
     if n == 0 {
       return;
     }
-    debug_assert!(n <= self.lexeme.len());
+    debug_assert!(n as usize <= self.lexeme.len());
     self.kind = TokenKind::Word;
     let mut removed = 0;
     loop {
@@ -103,7 +110,7 @@ impl<'arena> Token<'arena> {
       let mut buf = [0; 4];
       let bytes = char.encode_utf8(&mut buf).as_bytes();
       removed += bytes.len();
-      match removed.cmp(&n) {
+      match removed.cmp(&(n as usize)) {
         Ordering::Less => continue,
         Ordering::Equal => break,
         Ordering::Greater => panic!("Token::drop_leading_bytes() mid-char boundary"),

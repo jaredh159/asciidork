@@ -3,7 +3,7 @@ use smallvec::smallvec as svec;
 use asciidork_ast::prelude::*;
 use asciidork_ast::short::block::*;
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_parse_callout_list() {
@@ -288,6 +288,6 @@ fn assert_callout_list(
   let mut blocks = parse_blocks!(input);
   let last = blocks.pop().unwrap();
   let (context, items, ..) = list_block_data!(last).expect("expected list block data");
-  assert_eq!(context, expected_context, from: input);
-  assert_eq!(items, expected_items, from: input);
+  expect_eq!(context, expected_context, from: input);
+  expect_eq!(items, expected_items, from: input);
 }

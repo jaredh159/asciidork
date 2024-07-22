@@ -36,6 +36,7 @@ impl<'arena> InlineNodes<'arena> {
       Inline::Text(s) => text.push(s.as_str()),
       Inline::TextSpan(_, nodes) => text.extend(nodes.plain_text()),
       Inline::CalloutTuck(_) => {}
+      Inline::IncludeBoundary(_, _) => {}
     });
     text
   }
@@ -44,7 +45,7 @@ impl<'arena> InlineNodes<'arena> {
     self.last().map(|node| node.loc)
   }
 
-  pub fn last_loc_end(&self) -> Option<usize> {
+  pub fn last_loc_end(&self) -> Option<u32> {
     self.last().map(|node| node.loc.end)
   }
 
@@ -74,6 +75,10 @@ impl<'arena> InlineNodes<'arena> {
 
   pub fn into_vec(self) -> BumpVec<'arena, InlineNode<'arena>> {
     self.0
+  }
+
+  pub fn nth(&self, n: usize) -> Option<&InlineNode<'arena>> {
+    self.get(n)
   }
 }
 
@@ -105,7 +110,7 @@ impl Json for InlineNodes<'_> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_plain_text() {
@@ -114,6 +119,6 @@ mod tests {
       node!(" "; 9..10),
       node!(Inline::Italic(just!("title", 12..18)), 11..19),
     ];
-    assert_eq!(heading.plain_text(), vec!["Document", " ", "title"]);
+    expect_eq!(heading.plain_text(), vec!["Document", " ", "title"]);
   }
 }

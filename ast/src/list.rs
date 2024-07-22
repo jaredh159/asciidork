@@ -19,7 +19,7 @@ pub enum ListItemTypeMeta<'arena> {
 }
 
 impl<'arena> ListItem<'arena> {
-  pub const fn loc_start(&self) -> usize {
+  pub const fn loc_start(&self) -> u32 {
     self.marker_src.loc.start
   }
 
@@ -27,11 +27,11 @@ impl<'arena> ListItem<'arena> {
     self
       .blocks
       .last()
-      .map(|block| block.loc)
+      .and_then(|block| block.content.last_loc())
       .or_else(|| self.principle.last_loc())
   }
 
-  pub fn last_loc_end(&self) -> Option<usize> {
+  pub fn last_loc_end(&self) -> Option<u32> {
     self.last_loc().map(|loc| loc.end)
   }
 

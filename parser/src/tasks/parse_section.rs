@@ -2,7 +2,7 @@ use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_section(&mut self) -> Result<Option<Section<'arena>>> {
-    let Some(mut lines) = self.read_lines() else {
+    let Some(mut lines) = self.read_lines()? else {
       return Ok(None);
     };
 
@@ -100,7 +100,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_parse_2_sections() {
@@ -125,7 +125,7 @@ mod tests {
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("foo"; 8..11)]),
-          ..empty_block!(8..11)
+          ..empty_block!(8)
         }]
       }
     );
@@ -140,7 +140,7 @@ mod tests {
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("bar"; 21..24)]),
-          ..empty_block!(21..24)
+          ..empty_block!(21)
         }]
       }
     );

@@ -247,7 +247,7 @@ impl<'arena> DefaultIn<'arena> for Line<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::assert_eq;
+  use test_utils::*;
 
   #[test]
   fn test_is_quoted_paragraph() {
@@ -261,8 +261,8 @@ mod tests {
     let bump = &Bump::new();
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, bump);
-      let lines = parser.read_lines().unwrap();
-      assert_eq!(lines.is_quoted_paragraph(), expected, from: input);
+      let lines = parser.read_lines().unwrap().unwrap();
+      expect_eq!(lines.is_quoted_paragraph(), expected, from: input);
     }
   }
 }

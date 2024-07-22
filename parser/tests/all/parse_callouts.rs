@@ -3,7 +3,7 @@ use asciidork_ast::variants::inline::*;
 use asciidork_ast::{prelude::*, Inline};
 use asciidork_meta::{DocType, DocumentMeta};
 use asciidork_parser::Parser;
-use test_utils::{assert_eq, *};
+use test_utils::*;
 
 #[test]
 fn test_parse_callout() {
@@ -266,7 +266,7 @@ fn test_globally_unique_callouts() {
           node!(callout(1, 0, 0), 20..24), // <-- doc callout
         ]),
         context: Context::Literal,
-        ..empty_block!(5..29)
+        ..empty_block!(5)
       },
       Block {
         meta: ChunkMeta::new(None, None, 31),
@@ -281,7 +281,7 @@ fn test_globally_unique_callouts() {
                   node!("puts 'foo'"; 44..54),
                   node!(callout(1, 0, 1), 54..58), // <-- cell callout
                 ]),
-                ..empty_block!(39..63)
+                ..empty_block!(39)
               }]),
               meta: {
                 let mut m = DocumentMeta::default();
@@ -295,7 +295,6 @@ fn test_globally_unique_callouts() {
           footer_row: None,
         }),
         context: Context::Table,
-        ..empty_block!(31..65)
       }
     ]),
   );

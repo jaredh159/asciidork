@@ -93,6 +93,9 @@ impl Json for Document<'_> {
     // json is verbose compared to the source len
     // multiplying by 16 is an explicit choice to accept possible
     // extra unused memory for fewer/zero realloc + copy
-    self.content.last_loc().map_or(1024, |loc| loc.end * 16)
+    self
+      .content
+      .last_loc()
+      .map_or(1024, |loc| loc.end as usize * 16)
   }
 }

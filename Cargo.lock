@@ -434,8 +434,6 @@ dependencies = [
 name = "test-utils"
 version = "0.0.0"
 dependencies = [
- "asciidork-ast",
- "asciidork-parser",
  "bumpalo",
  "indoc",
  "lazy_static",

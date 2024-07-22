@@ -22,7 +22,7 @@ impl<'arena> Line<'arena> {
   pub fn into_bytes(self) -> BumpVec<'arena, u8> {
     let mut bytes = BumpVec::new_in(self.tokens.bump);
     if let (Some(first), Some(last)) = (self.tokens.first(), self.tokens.last()) {
-      bytes.reserve(last.loc.end - first.loc.start);
+      bytes.reserve((last.loc.end - first.loc.start) as usize);
     }
     for token in self.tokens.iter() {
       bytes.extend_from_slice(token.lexeme.as_bytes());
@@ -187,12 +187,12 @@ impl<'arena> Line<'arena> {
     None
   }
 
-  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: usize) -> bool {
-    if kinds.is_empty() || self.tokens().len() < offset + kinds.len() {
+  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: u32) -> bool {
+    if kinds.is_empty() || self.tokens().len() < offset as usize + kinds.len() {
       return false;
     }
     for (i, token_type) in kinds.iter().enumerate() {
-      if self.tokens.get(i + offset).unwrap().kind != *token_type {
+      if self.tokens.get(i + offset as usize).unwrap().kind != *token_type {
         return false;
       }
     }
@@ -406,7 +406,7 @@ impl<'arena> Line<'arena> {
     if self.tokens.is_empty() {
       0
     } else {
-      self.tokens.last().unwrap().loc.end - self.tokens.first().unwrap().loc.start
+      self.tokens.iter().map(|token| token.lexeme.len()).sum()
     }
   }
 
@@ -505,8 +505,8 @@ impl<'arena> Line<'arena> {
     }
   }
 
-  pub fn drop_leading_bytes(&mut self, n: usize) {
-    debug_assert!(n <= self.current_token().unwrap().lexeme.len());
+  pub fn drop_leading_bytes(&mut self, n: u32) {
+    debug_assert!(n as usize <= self.current_token().unwrap().lexeme.len());
     if n > 0 {
       self.tokens.get_mut(0).unwrap().drop_leading_bytes(n);
     }
@@ -578,7 +578,7 @@ mod tests {
   use crate::internal::*;
   use crate::token::{TokenKind::*, *};
   use bumpalo::Bump;
-  use test_utils::assert_eq;
+  use test_utils::*;
 
   #[test]
   fn test_continues_list_item_principle() {
@@ -598,7 +598,7 @@ mod tests {
     for (input, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      assert_eq!(line.continues_list_item_principle(), expected, from: input);
+      expect_eq!(line.continues_list_item_principle(), expected, from: input);
     }
   }
 
@@ -621,7 +621,7 @@ mod tests {
       }
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      assert_eq!(line.starts_nested_list(&stack), expected, from: input);
+      expect_eq!(line.starts_nested_list(&stack), expected, from: input);
     }
   }
 
@@ -667,7 +667,7 @@ mod tests {
     for (input, marker) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      assert_eq!(line.list_marker(), marker, from: input);
+      expect_eq!(line.list_marker(), marker, from: input);
     }
   }
 
@@ -695,7 +695,7 @@ mod tests {
     for (input, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      assert_eq!(line.starts_list_item(), expected, from: input);
+      expect_eq!(line.starts_list_item(), expected, from: input);
     }
   }
 
@@ -704,14 +704,14 @@ mod tests {
     let bump = &Bump::new();
     let mut lexer = Lexer::from_str(bump, "foo bar\nso baz\n");
     let mut line = lexer.consume_line().unwrap();
-    assert_eq!(line.reassemble_src(), "foo bar");
-    assert_eq!(line.num_tokens(), 3);
+    expect_eq!(line.reassemble_src(), "foo bar");
+    expect_eq!(line.num_tokens(), 3);
     line.discard(1);
-    assert_eq!(line.reassemble_src(), " bar");
-    assert_eq!(line.num_tokens(), 2);
+    expect_eq!(line.reassemble_src(), " bar");
+    expect_eq!(line.num_tokens(), 2);
     line.discard(2);
-    assert_eq!(line.reassemble_src(), "");
-    assert_eq!(line.num_tokens(), 0);
+    expect_eq!(line.reassemble_src(), "");
+    expect_eq!(line.num_tokens(), 0);
   }
 
   #[test]
@@ -719,16 +719,16 @@ mod tests {
     let bump = &Bump::new();
     let mut lexer = Lexer::from_str(bump, "'foo'");
     let mut line = lexer.consume_line().unwrap();
-    assert_eq!(line.reassemble_src(), "'foo'");
+    expect_eq!(line.reassemble_src(), "'foo'");
     line.discard_last();
-    assert_eq!(line.reassemble_src(), "'foo");
+    expect_eq!(line.reassemble_src(), "'foo");
     line.discard_last();
-    assert_eq!(line.reassemble_src(), "'");
+    expect_eq!(line.reassemble_src(), "'");
   }
 
   #[test]
   fn test_line_has_seq_at() {
-    let cases: Vec<(&str, &[TokenKind], usize, bool)> = vec![
+    let cases: Vec<(&str, &[TokenKind], u32, bool)> = vec![
       ("foo bar_:", &[Word, Whitespace], 0, true),
       ("foo bar_:", &[Word, Whitespace], 1, false),
       ("foo bar", &[Whitespace, Word], 1, true),
@@ -740,7 +740,7 @@ mod tests {
     for (input, token_types, pos, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      assert_eq!(line.has_seq_at(token_types, pos), expected);
+      expect_eq!(line.has_seq_at(token_types, pos), expected);
     }
 
     // test that it works after shifting elements off of the front
@@ -762,7 +762,7 @@ mod tests {
     for (input, token_type, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      assert_eq!(line.ends_with_nonescaped(token_type), expected);
+      expect_eq!(line.ends_with_nonescaped(token_type), expected);
     }
   }
 
@@ -783,7 +783,7 @@ mod tests {
     for (input, token_types, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      assert_eq!(line.contains_seq(token_types), expected);
+      expect_eq!(line.contains_seq(token_types), expected);
     }
   }
 }

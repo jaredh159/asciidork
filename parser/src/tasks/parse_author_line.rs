@@ -37,10 +37,14 @@ impl<'arena> Parser<'arena> {
       self.err("invalid author line", line.current_token())
     } else if first_start > 0 {
       let start = line.current_token().unwrap().loc.start;
-      self.err_at("invalid author line", start, start + first_start)
+      self.err_at("invalid author line", start, start + first_start as u32)
     } else if last_end < num_bytes {
       let start = line.current_token().unwrap().loc.start;
-      self.err_at("invalid author line", start + last_end, start + num_bytes)
+      self.err_at(
+        "invalid author line",
+        start + last_end as u32,
+        start + num_bytes as u32,
+      )
     } else {
       Ok(())
     }
@@ -63,7 +67,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_parse_author_lines() {
@@ -98,7 +102,7 @@ mod tests {
 
     for (input, authors) in cases {
       let mut parser = crate::Parser::from_str(input, leaked_bump());
-      let line = parser.read_line().unwrap();
+      let line = parser.read_line().unwrap().unwrap();
 
       let expected_authors = authors
         .iter()

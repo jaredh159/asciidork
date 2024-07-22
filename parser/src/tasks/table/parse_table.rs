@@ -85,7 +85,7 @@ impl<'arena> Parser<'arena> {
       ctx.header_row = HeaderRow::FoundNone;
     }
 
-    let (mut tokens, end) = self.table_content(lines, &delim_line)?;
+    let mut tokens = self.table_content(lines, &delim_line)?;
     if ctx.counting_cols {
       if !matches!(ctx.format, DataFormat::Prefix(_)) {
         self.parse_dsv_implicit_first_row(&mut tokens, &mut ctx)?;
@@ -111,7 +111,6 @@ impl<'arena> Parser<'arena> {
     Ok(Block {
       content: BlockContent::Table(ctx.table),
       context: BlockContext::Table,
-      loc: SourceLocation::new(meta.start, end),
       meta,
     })
   }
@@ -170,7 +169,7 @@ impl<'arena> Parser<'arena> {
     mut cell_tokens: Deq<'arena, Token<'arena>>,
     col_index: usize,
     ctx: &mut TableContext<'arena>,
-    mut loc: Range<usize>,
+    mut loc: Range<u32>,
   ) -> Result<Option<(Cell<'arena>, u8)>> {
     let col_spec = ctx.col_specs.get(col_index);
     let mut cell_style = cell_spec
@@ -334,14 +333,15 @@ impl<'arena> Parser<'arena> {
     &mut self,
     mut lines: ContiguousLines<'arena>,
     start_delim: &Line<'arena>,
-  ) -> Result<(TableTokens<'arena>, usize)> {
+  ) -> Result<TableTokens<'arena>> {
     let mut tokens = Deq::with_capacity(self.bump, lines.num_tokens());
     let delim_loc = start_delim.last_loc().unwrap();
     let mut end = delim_loc.end + 1;
     while let Some(line) = lines.consume_current() {
+      // TODO(perf): src_eq is O(n), see if we can refactor
       if line.src_eq(start_delim) {
         self.restore_lines(lines);
-        return Ok((TableTokens::new(tokens), line.loc().unwrap().end));
+        return Ok(TableTokens::new(tokens));
       }
       if let Some(loc) = line.last_loc() {
         end = loc.end;
@@ -352,13 +352,14 @@ impl<'arena> Parser<'arena> {
         end += 1;
       }
     }
-    while let Some(next_line) = self.read_line() {
+    while let Some(next_line) = self.read_line()? {
       if !tokens.is_empty() {
         tokens.push(newline_token(end, self.bump));
         end += 1;
       }
+      // TODO(perf): src_eq is O(n), see if we can refactor
       if next_line.src_eq(start_delim) {
-        return Ok((TableTokens::new(tokens), next_line.loc().unwrap().end));
+        return Ok(TableTokens::new(tokens));
       }
       if let Some(loc) = next_line.last_loc() {
         end = loc.end;
@@ -366,11 +367,11 @@ impl<'arena> Parser<'arena> {
       next_line.drain_into(&mut tokens);
     }
     self.err_line("Table never closed, started here", start_delim)?;
-    Ok((TableTokens::new(tokens), end))
+    Ok(TableTokens::new(tokens))
   }
 }
 
-fn newline_token(start: usize, bump: &Bump) -> Token {
+fn newline_token(start: u32, bump: &Bump) -> Token {
   Token {
     kind: TokenKind::Newline,
     lexeme: BumpString::from_str_in("\n", bump),
@@ -381,7 +382,7 @@ fn newline_token(start: usize, bump: &Bump) -> Token {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   assert_error!(
     multichar_cell_separator,

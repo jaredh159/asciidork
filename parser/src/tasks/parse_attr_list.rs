@@ -28,7 +28,7 @@ struct AttrState<'arena> {
   tokens: Deq<'arena, Token<'arena>>,
   kind: AttrKind,
   escaping: bool,
-  parse_range: (usize, usize),
+  parse_range: (u32, u32),
   formatted_text: bool,
   prev_token: Option<TokenKind>,
   is_legacy_anchor: bool,
@@ -182,7 +182,7 @@ impl<'arena> Parser<'arena> {
 }
 
 impl<'arena> AttrState<'arena> {
-  fn new_in(bump: &Bump, formatted_text: bool, parse_range: (usize, usize)) -> AttrState {
+  fn new_in(bump: &Bump, formatted_text: bool, parse_range: (u32, u32)) -> AttrState {
     let start_loc = SourceLocation::new(parse_range.0, parse_range.0);
     AttrState {
       bump,
@@ -309,7 +309,7 @@ impl<'arena> AttrState<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use test_utils::{assert_eq, *};
+  use test_utils::*;
 
   #[test]
   fn test_parse_attr_list() {
@@ -577,10 +577,10 @@ mod tests {
     ];
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut line = parser.read_line().unwrap();
+      let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
-      assert_eq!(attr_list, expected, from: input);
+      expect_eq!(attr_list, expected, from: input);
     }
   }
 
@@ -614,10 +614,10 @@ mod tests {
 
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut line = parser.read_line().unwrap();
+      let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
-      assert_eq!(attr_list, expected);
+      expect_eq!(attr_list, expected);
     }
   }
 
@@ -660,10 +660,10 @@ mod tests {
 
     for (input, formatted, expected) in cases {
       let mut parser = Parser::from_str(input, leaked_bump());
-      let mut line = parser.read_line().unwrap();
+      let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let diag = parser.parse_attrs(&mut line, formatted).err().unwrap();
-      assert_eq!(diag.plain_text(), expected, from: input);
+      expect_eq!(diag.plain_text(), expected, from: input);
     }
   }
 }

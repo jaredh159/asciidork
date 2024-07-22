@@ -26,7 +26,7 @@ mod internal {
     pub use crate::doc_content::DocContent;
     pub use crate::document::Document;
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
-    pub use crate::inline::{CurlyKind::*, QuoteKind::*};
+    pub use crate::inline::{CurlyKind::*, IncludeBoundaryKind, QuoteKind::*};
     pub use crate::inline_nodes::InlineNodes;
     pub use crate::json::*;
     pub use crate::list::*;

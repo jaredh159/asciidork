@@ -5,14 +5,20 @@ use crate::internal::*;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
 pub struct SourceLocation {
-  pub start: usize,
-  pub end: usize,
+  pub start: u32,
+  pub end: u32,
+  pub include_depth: u16,
 }
 
 impl SourceLocation {
-  pub fn new(start: usize, end: usize) -> Self {
+  pub fn new(start: u32, end: u32) -> Self {
     debug_assert!(start <= end);
-    Self { start, end }
+    Self { start, end, include_depth: 0 }
+  }
+
+  pub fn new_depth(start: u32, end: u32, include_depth: u16) -> Self {
+    debug_assert!(start <= end);
+    Self { start, end, include_depth }
   }
 
   pub fn extend(&mut self, other: SourceLocation) {
@@ -21,53 +27,75 @@ impl SourceLocation {
   }
 
   pub fn clamp_start(&self) -> SourceLocation {
-    Self::new(self.start, self.start)
+    Self::new_depth(self.start, self.start, self.include_depth)
   }
 
   pub fn clamp_end(&self) -> SourceLocation {
-    Self::new(self.end, self.end)
+    Self::new_depth(self.end, self.end, self.include_depth)
   }
 
   pub fn decr_end(&self) -> SourceLocation {
-    Self::new(self.start, self.end - 1)
+    Self::new_depth(self.start, self.end - 1, self.include_depth)
   }
 
   pub fn incr_end(&self) -> SourceLocation {
-    Self::new(self.start, self.end + 1)
+    Self::new_depth(self.start, self.end + 1, self.include_depth)
   }
 
   pub fn decr_start(&self) -> SourceLocation {
-    Self::new(self.start - 1, self.end)
+    Self::new_depth(self.start - 1, self.end, self.include_depth)
   }
 
   pub fn incr_start(&self) -> SourceLocation {
-    Self::new(self.start + 1, self.end)
+    Self::new_depth(self.start + 1, self.end, self.include_depth)
   }
 
   pub fn incr(&self) -> SourceLocation {
-    Self::new(self.start + 1, self.end + 1)
+    Self::new_depth(self.start + 1, self.end + 1, self.include_depth)
   }
 
   pub fn decr(&self) -> SourceLocation {
-    Self::new(self.start - 1, self.end - 1)
+    Self::new_depth(self.start - 1, self.end - 1, self.include_depth)
   }
 }
 
-impl From<usize> for SourceLocation {
-  fn from(offset: usize) -> Self {
+impl From<u32> for SourceLocation {
+  fn from(offset: u32) -> Self {
     Self::new(offset, offset)
+  }
+}
+
+impl From<Range<u32>> for SourceLocation {
+  fn from(range: Range<u32>) -> Self {
+    Self::new(range.start, range.end)
+  }
+}
+
+impl From<Range<i32>> for SourceLocation {
+  fn from(range: Range<i32>) -> Self {
+    Self::new(range.start as u32, range.end as u32)
   }
 }
 
 impl From<Range<usize>> for SourceLocation {
   fn from(range: Range<usize>) -> Self {
-    Self::new(range.start, range.end)
+    Self::new(range.start as u32, range.end as u32)
   }
 }
 
 impl Debug for SourceLocation {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-    write!(f, "{}..{}", self.start, self.end)
+    write!(
+      f,
+      "{}..{}{}",
+      self.start,
+      self.end,
+      if self.include_depth > 0 {
+        format!("/{}", self.include_depth)
+      } else {
+        String::new()
+      }
+    )
   }
 }
 

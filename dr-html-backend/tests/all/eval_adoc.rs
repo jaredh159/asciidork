@@ -1,7 +1,7 @@
 use asciidork_dr_html_backend::AsciidoctorHtml;
 use asciidork_eval::eval;
 use asciidork_parser::prelude::*;
-use test_utils::{adoc, assert_eq, html};
+use test_utils::*;
 
 use regex::Regex;
 
@@ -754,7 +754,7 @@ fn test_non_embedded() {
   let expected = re.replace_all(expected, "");
   let parser = Parser::from_str(input, bump);
   let doc = parser.parse().unwrap().document;
-  assert_eq!(
+  expect_eq!(
     eval(&doc, AsciidoctorHtml::new()).unwrap(),
     expected,
     from: input
