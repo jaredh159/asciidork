@@ -86,8 +86,13 @@ impl<'arena> Parser<'arena> {
     let Some(line) = self.lexer.consume_line() else {
       return Ok(None);
     };
-    if line.starts(TokenKind::Directive) && self.try_process_directive(&line)? {
-      return self.read_line();
+    if line.starts(TokenKind::Directive) {
+      return match self.try_process_directive(&line)? {
+        DirectiveAction::Passthrough => Ok(Some(line)),
+        DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
+        DirectiveAction::ReadNextLine => self.read_line(),
+        DirectiveAction::SkipLinesUntilEndIf => todo!(),
+      };
     }
     Ok(Some(line))
   }
@@ -266,6 +271,13 @@ pub enum Chunk<'arena> {
   Section(Section<'arena>),
 }
 
+pub enum DirectiveAction<'arena> {
+  Passthrough,
+  ReadNextLine,
+  SkipLinesUntilEndIf,
+  SubstituteLine(Line<'arena>),
+}
+
 impl From<Diagnostic> for Vec<Diagnostic> {
   fn from(diagnostic: Diagnostic) -> Self {
     vec![diagnostic]
@@ -311,6 +323,7 @@ mod tests {
     "};
     let mut parser = Parser::from_str(input, leaked_bump());
     parser.set_resolver(resolve("bar")); // <-- no newline
+    parser.apply_job_settings(JobSettings::unsafe_());
     let lines = parser.read_lines().unwrap().unwrap();
     assert_eq!(
       reassemble(lines),
@@ -330,6 +343,7 @@ mod tests {
       include::bar.adoc[]
     "};
     let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::unsafe_());
     parser.set_resolver(resolve("bar")); // <-- no newline
     let lines = parser.read_lines().unwrap().unwrap();
     assert_eq!(
@@ -351,6 +365,7 @@ mod tests {
       baz
     "};
     let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::unsafe_());
     parser.set_resolver(resolve("bar\n\n")); // <-- 2 newline
     let lines = parser.read_lines().unwrap().unwrap();
     assert_eq!(
@@ -367,5 +382,76 @@ mod tests {
       }
     );
     assert!(parser.read_lines().unwrap().is_none());
+  }
+
+  #[test]
+  fn invalid_directive_line_passed_thru() {
+    let input = adoc! {"
+      foo
+      include::invalid []
+      bar
+    "};
+
+    let mut parser = Parser::from_str(input, leaked_bump());
+    assert_eq!(
+      reassemble(parser.read_lines().unwrap().unwrap()),
+      input.trim_end()
+    );
+  }
+
+  #[test]
+  fn safe_mode_include_to_link() {
+    let input = adoc! {"
+      foo
+      include::include-file.adoc[]
+      baz
+    "};
+
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::secure());
+    assert_eq!(
+      reassemble(parser.read_lines().unwrap().unwrap()),
+      adoc! {"
+        foo
+        link:include-file.adoc[role=include]
+        baz"
+      }
+    );
+
+    // assert on the tokens and positions
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::secure());
+
+    let mut line = parser.read_line().unwrap().unwrap();
+    expect_eq!(
+      line.consume_current().unwrap(),
+      Token::new(TokenKind::Word, 0..3, bstr!("foo"))
+    );
+    assert!(line.consume_current().is_none());
+
+    assert_eq!(&input[8..13], "ude::");
+    assert_eq!(&input[30..32], "[]");
+
+    let mut line = parser.read_line().unwrap().unwrap();
+    expect_eq!(
+      std::array::from_fn(|_| line.consume_current().unwrap()),
+      [
+        // we "drop" positions 4-7, the `inc` of `include::`
+        // which becomes `••••link:`, keeping rest of token positions
+        Token::new(TokenKind::MacroName, 8..13, bstr!("link:")),
+        Token::new(TokenKind::Word, 13..25, bstr!("include-file")),
+        Token::new(TokenKind::Dots, 25..26, bstr!(".")),
+        Token::new(TokenKind::Word, 26..30, bstr!("adoc")),
+        Token::new(TokenKind::OpenBracket, 30..31, bstr!("[")),
+        // these tokens are inserted, they have no true source so we
+        // represent their position as empty at the insertion point
+        Token::new(TokenKind::Word, 31..31, bstr!("role")),
+        Token::new(TokenKind::EqualSigns, 31..31, bstr!("=")),
+        Token::new(TokenKind::Word, 31..31, bstr!("include")),
+        // /end `role=include` inserted tokens
+        Token::new(TokenKind::CloseBracket, 31..32, bstr!("]")),
+      ]
+    );
+    assert!(line.consume_current().is_none());
   }
 }

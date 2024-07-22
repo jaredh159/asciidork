@@ -20,6 +20,27 @@ impl JobSettings {
       ..Default::default()
     }
   }
+
+  pub fn safe() -> Self {
+    Self {
+      safe_mode: SafeMode::Safe,
+      ..Default::default()
+    }
+  }
+
+  pub fn unsafe_() -> Self {
+    Self {
+      safe_mode: SafeMode::Unsafe,
+      ..Default::default()
+    }
+  }
+
+  pub fn secure() -> Self {
+    Self {
+      safe_mode: SafeMode::Secure,
+      ..Default::default()
+    }
+  }
 }
 
 impl Default for JobSettings {

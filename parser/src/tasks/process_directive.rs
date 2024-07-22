@@ -1,28 +1,112 @@
+use lazy_static::lazy_static;
+use meta::SafeMode;
+use regex::Regex;
+
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'bmp> Parser<'bmp> {
-  pub(crate) fn try_process_directive(&mut self, line: &Line<'bmp>) -> Result<bool> {
+impl<'arena> Parser<'arena> {
+  pub(crate) fn try_process_directive(
+    &mut self,
+    line: &Line<'arena>,
+  ) -> Result<DirectiveAction<'arena>> {
     match line.current_token().unwrap().lexeme.as_str() {
       "include::" => self.try_process_include_directive(line),
       "ifdef::" => todo!(),
       "ifndef::" => todo!(),
       "ifeval::" => todo!(),
+      "endif::" => todo!(),
       _ => unreachable!("Parser::try_process_directive"),
     }
   }
 
-  // IncludeDirectiveRx = /^(\\)?include::([^\s\[](?:[^\[]*[^\s\[])?)\[(#{CC_ANY}+)?\]$/
-  fn try_process_include_directive(&mut self, line: &Line<'bmp>) -> Result<bool> {
-    // consider regex instead?
+  fn substitute_include(&self, line_src: BumpString<'arena>, pos: u32) -> Line<'arena> {
+    let link_src = line_src.replace("include::", "link:");
+    let mut lexer = SourceLexer::from_str(&link_src, self.bump);
+    lexer.offset = pos + 4;
+    let line = lexer.consume_line().unwrap();
+    let mut tokens = Deq::new(self.bump);
+    for token in line.into_tokens() {
+      if token.kind == OpenBracket {
+        let insert_loc = token.loc.clamp_end();
+        tokens.push(token);
+        tokens.push(Token::new(
+          Word,
+          insert_loc,
+          BumpString::from_str_in("role", self.bump),
+        ));
+        tokens.push(Token::new(
+          EqualSigns,
+          insert_loc,
+          BumpString::from_str_in("=", self.bump),
+        ));
+        tokens.push(Token::new(
+          Word,
+          insert_loc,
+          BumpString::from_str_in("include", self.bump),
+        ));
+      } else {
+        tokens.push(token);
+      }
+    }
+    Line::new(tokens)
+  }
+
+  fn try_process_include_directive(
+    &mut self,
+    line: &Line<'arena>,
+  ) -> Result<DirectiveAction<'arena>> {
+    let Some(src) = self.valid_include_directive(line) else {
+      return Ok(DirectiveAction::Passthrough);
+    };
+    if self.document.meta.safe_mode == SafeMode::Secure {
+      return Ok(DirectiveAction::SubstituteLine(
+        self.substitute_include(src, line.current_token().unwrap().loc.start),
+      ));
+    }
+    let Some((first, target, _attrs)) = self.include_directive_data(line)? else {
+      return Ok(DirectiveAction::Passthrough);
+    };
+    let Some(resolver) = self.include_resolver.as_mut() else {
+      // TODO: is this correct?
+      self.err_token_full("No resolver found for include directive", &first)?;
+      return Ok(DirectiveAction::Passthrough);
+    };
+
+    let mut buffer = BumpVec::new_in(self.bump);
+    resolver.resolve(&target, &mut buffer).unwrap();
+    self.lexer.push_source(&target, buffer);
+    Ok(DirectiveAction::ReadNextLine)
+  }
+
+  fn valid_include_directive(&self, line: &Line<'arena>) -> Option<BumpString<'arena>> {
     if line.num_tokens() < 4
       || !line.contains_nonescaped(OpenBracket)
       || !line.ends_with_nonescaped(CloseBracket)
     {
-      return Ok(false);
+      return None;
+    }
+    let src = line.reassemble_src();
+    if VALID_INCLUDE.is_match(&src) {
+      Some(src)
+    } else {
+      None
+    }
+  }
+
+  fn include_directive_data(
+    &mut self,
+    line: &Line<'arena>,
+  ) -> Result<Option<(Token<'arena>, BumpString<'arena>, AttrList<'arena>)>> {
+    // consider regex instead?
+    // IncludeDirectiveRx = /^(\\)?include::([^\s\[](?:[^\[]*[^\s\[])?)\[(#{CC_ANY}+)?\]$/
+    if line.num_tokens() < 4
+      || !line.contains_nonescaped(OpenBracket)
+      || !line.ends_with_nonescaped(CloseBracket)
+    {
+      return Ok(None);
     }
     let mut line = line.clone();
-    let _line_start = line.loc().unwrap();
     line.discard_assert(Directive);
     let mut target = BumpString::with_capacity_in(line.src_len(), self.bump);
     let first = line.consume_current().unwrap();
@@ -37,20 +121,32 @@ impl<'bmp> Parser<'bmp> {
       last_kind = token.kind;
     }
     if !line.current_is(OpenBracket) {
-      return Ok(false);
+      return Ok(None);
     }
     line.discard(1);
-    let _attrs = self.parse_attr_list(&mut line)?;
-    let Some(resolver) = self.include_resolver.as_mut() else {
-      // TODO: is this correct?
-      self.err_token_full("No resolver found for include directive", &first)?;
-      return Ok(false);
-    };
+    let attrs = self.parse_attr_list(&mut line)?;
+    Ok(Some((first, target, attrs)))
+  }
+}
 
-    let mut buffer = BumpVec::new_in(self.bump);
-    resolver.resolve(&target, &mut buffer).unwrap();
-    self.lexer.push_source(&target, buffer);
-    Ok(true)
+lazy_static! {
+  // https://regexr.com/83qcq
+  pub static ref VALID_INCLUDE: Regex = Regex::new(r#"^include::[^\[]+[^\[\s]\[.*\]$"#).unwrap();
+  // ascidoctor impl: /^(\\)?include::([^\s\[](?:[^\[]*[^\s\[])?)\[(.+)?\]$/
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn valid_includes() {
+    assert!(VALID_INCLUDE.is_match("include::valid.adoc[]"));
+  }
+
+  #[test]
+  fn invalid_includes() {
+    assert!(!VALID_INCLUDE.is_match("include::invalid []"));
   }
 }
 

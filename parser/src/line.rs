@@ -176,6 +176,10 @@ impl<'arena> Line<'arena> {
     self.tokens.iter_mut()
   }
 
+  pub fn into_tokens(self) -> impl ExactSizeIterator<Item = Token<'arena>> {
+    self.tokens.into_iter()
+  }
+
   pub fn first_nonescaped(&self, kind: TokenKind) -> Option<&Token> {
     let mut prev: Option<TokenKind> = None;
     for token in self.tokens() {
