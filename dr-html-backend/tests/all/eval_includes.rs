@@ -61,3 +61,21 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  include_inner_para_break,
+  resolving: b"Line-2\n\nLine-3",
+  adoc! {r#"
+    Line-1
+    include::some_file.adoc[]
+    Line-4
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Line-1 Line-2</p>
+    </div>
+    <div class="paragraph">
+      <p>Line-3 Line-4</p>
+    </div>
+  "#}
+);
