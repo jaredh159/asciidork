@@ -66,7 +66,6 @@ impl<'arena> SourceLexer<'arena> {
       Some(ch) if ch.is_ascii_digit() => Some(self.digits()),
       Some(ch) if ch == b';' || ch == b':' => Some(self.maybe_term_delimiter(ch, at_line_start)),
       Some(_) => Some(self.word(at_line_start)),
-      // None => self.token(Eof, self.pos, self.pos),
       None => None,
     }
   }
@@ -87,12 +86,9 @@ impl<'arena> SourceLexer<'arena> {
     if self.is_eof() {
       return None;
     }
-    let start = self.pos;
-    let mut _end = start; // TODO: ... what?
     let mut tokens = Deq::new(self.bump);
     while !self.peek_is(b'\n') && !self.is_eof() {
       let token = self.next_token().unwrap();
-      _end = token.loc.end - self.offset;
       tokens.push(token);
     }
     if self.peek_is(b'\n') {
