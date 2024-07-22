@@ -9,14 +9,14 @@ macro_rules! assert_html {
     #[test]
     fn $name() {
       let actual = _html!($input, $mod_settings, None);
-      ::test_utils::eq!(actual, $expected.to_string(), from: $input);
+      ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
     }
   };
   ($name:ident, resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {
     #[test]
     fn $name() {
       let actual = _html!($input, |_| {}, Some(const_resolver!($bytes)));
-      ::test_utils::eq!(actual, $expected.to_string(), from: $input);
+      ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
     }
   };
   ($name:ident, $input:expr, contains: $($expected:expr),+$(,)?) => {
@@ -73,7 +73,7 @@ macro_rules! assert_standalone_body {
       let mut body = actual.splitn(2, "<body").nth(1).unwrap();
       body = body.splitn(2, "</body>").nth(0).unwrap();
       let body = format!("<body{}</body>", body);
-      ::test_utils::eq!(body, $expected.to_string(), from: $input);
+      ::test_utils::expect_eq!(body, $expected.to_string(), from: $input);
     }
   };
 }

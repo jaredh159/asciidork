@@ -580,7 +580,7 @@ mod tests {
       let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
-      eq!(attr_list, expected, from: input);
+      expect_eq!(attr_list, expected, from: input);
     }
   }
 
@@ -617,7 +617,7 @@ mod tests {
       let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let attr_list = parser.parse_attr_list(&mut line).unwrap();
-      eq!(attr_list, expected);
+      expect_eq!(attr_list, expected);
     }
   }
 
@@ -663,7 +663,7 @@ mod tests {
       let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let diag = parser.parse_attrs(&mut line, formatted).err().unwrap();
-      eq!(diag.plain_text(), expected, from: input);
+      expect_eq!(diag.plain_text(), expected, from: input);
     }
   }
 }

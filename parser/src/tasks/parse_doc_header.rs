@@ -129,7 +129,7 @@ mod tests {
     let bump = &Bump::new();
     for (input, expected) in cases {
       let lines = Parser::from_str(input, bump).read_lines().unwrap().unwrap();
-      eq!(
+      expect_eq!(
         is_doc_header(&lines),
         expected,
         from: input

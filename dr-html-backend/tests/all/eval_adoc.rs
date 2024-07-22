@@ -754,7 +754,7 @@ fn test_non_embedded() {
   let expected = re.replace_all(expected, "");
   let parser = Parser::from_str(input, bump);
   let doc = parser.parse().unwrap().document;
-  eq!(
+  expect_eq!(
     eval(&doc, AsciidoctorHtml::new()).unwrap(),
     expected,
     from: input

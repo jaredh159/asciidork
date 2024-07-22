@@ -198,7 +198,7 @@ impl<T: Json> Json for BumpVec<'_, T> {
 macro_rules! assert_json {
   ($input:expr, $expected:expr$(,)?) => {{
     let json = $input.to_json();
-    test_utils::eq!(json, jsonxf::minimize($expected).unwrap());
+    test_utils::expect_eq!(json, jsonxf::minimize($expected).unwrap());
     // assert that the JSON is valid
     assert!(serde_json::from_str::<serde_json::Value>(&json).is_ok());
   }};

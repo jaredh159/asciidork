@@ -119,6 +119,6 @@ mod tests {
       node!(" "; 9..10),
       node!(Inline::Italic(just!("title", 12..18)), 11..19),
     ];
-    eq!(heading.plain_text(), vec!["Document", " ", "title"]);
+    expect_eq!(heading.plain_text(), vec!["Document", " ", "title"]);
   }
 }

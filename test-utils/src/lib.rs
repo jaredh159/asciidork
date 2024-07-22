@@ -23,11 +23,11 @@ macro_rules! assert_block_core {
 macro_rules! assert_doc_content {
   ($input:expr, $expected:expr$(,)?) => {{
     let content = parse_doc_content!($input);
-    eq!(content, $expected, from: $input);
+    expect_eq!(content, $expected, from: $input);
   }};
   (resolving: $bytes:expr, $input:expr, $expected:expr$(,)?) => {{
     let content = parse_doc_content!($input, $bytes);
-    eq!(content, $expected, from: $input);
+    expect_eq!(content, $expected, from: $input);
   }};
 }
 
@@ -62,7 +62,7 @@ macro_rules! parse_table {
 macro_rules! assert_table {
   ($input:expr, $expected:expr$(,)?) => {{
     let table = parse_table!($input);
-    eq!(table, $expected, from: $input);
+    expect_eq!(table, $expected, from: $input);
   }};
 }
 
@@ -74,7 +74,7 @@ macro_rules! assert_table_loose {
       BlockContent::Table(table) => table,
       _ => panic!("expected table block content"),
     };
-    eq!(table, $expected, from: $input);
+    expect_eq!(table, $expected, from: $input);
   }};
 }
 
@@ -90,7 +90,7 @@ macro_rules! assert_inlines {
 macro_rules! assert_blocks {
   ($input:expr, $expected:expr$(,)?) => {
     let blocks = parse_blocks!($input);
-    eq!(blocks, $expected, from: $input);
+    expect_eq!(blocks, $expected, from: $input);
   };
 }
 
@@ -98,13 +98,13 @@ macro_rules! assert_blocks {
 macro_rules! assert_section {
   ($input:expr, reftext: $reftext:expr, $expected:expr$(,)?) => {
     let (section, refs) = parse_section!($input);
-    eq!(section, $expected);
+    expect_eq!(section, $expected);
     let refs = refs.borrow();
     let xref = refs
       .get(&section.id.clone().expect("section id"))
       .expect("expected parsed section to have xref");
-    eq!(xref.title, section.heading);
-    eq!(xref.reftext, $reftext);
+    expect_eq!(xref.title, section.heading);
+    expect_eq!(xref.reftext, $reftext);
   };
   ($input:expr, $expected:expr$(,)?) => {
     assert_section!($input, reftext: None, $expected);
@@ -238,8 +238,8 @@ macro_rules! empty_document {
 macro_rules! assert_list {
   ($input:expr, $expected_ctx:expr, $expected_items:expr) => {
     let (context, items, ..) = parse_list!($input);
-    eq!(context, $expected_ctx, from: $input);
-    eq!(items, $expected_items, from: $input);
+    expect_eq!(context, $expected_ctx, from: $input);
+    expect_eq!(items, $expected_items, from: $input);
   };
 }
 
@@ -342,7 +342,7 @@ macro_rules! assert_error {
     #[test]
     fn $name() {
       let err = parse_error!($input);
-      eq!(err.plain_text(), $expected, from: $input);
+      expect_eq!(err.plain_text(), $expected, from: $input);
     }
   };
 }
@@ -381,7 +381,7 @@ macro_rules! test_inlines_loose {
 }
 
 #[macro_export]
-macro_rules! eq {
+macro_rules! expect_eq {
   ($left:expr, $right:expr$(,)?) => {{
     ::pretty_assertions::assert_eq!(@ $left, $right, "", "");
   }};

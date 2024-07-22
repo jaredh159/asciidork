@@ -374,9 +374,9 @@ mod tests {
       line.drain_into(&mut tokens);
       let mut tokens = TableTokens::new(tokens);
       let start = parser.consume_cell_start(&mut tokens, *sep);
-      eq!(start, *expected, from: input);
+      expect_eq!(start, *expected, from: input);
       if let Some((_, loc)) = *expected {
-        eq!(
+        expect_eq!(
           input.as_bytes().get(loc as usize),
           remaining.as_bytes().first()
         );
@@ -472,7 +472,7 @@ mod tests {
     let mut parser = Parser::from_str("", leaked_bump());
     for (input, expected) in cases {
       let cols = parser.parse_col_specs(input);
-      eq!(cols, *expected);
+      expect_eq!(cols, *expected);
     }
   }
 }

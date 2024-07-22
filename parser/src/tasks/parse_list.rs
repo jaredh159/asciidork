@@ -242,9 +242,9 @@ mod tests {
       let content = parser.parse().unwrap().document.content;
       match content {
         DocContent::Blocks(blocks) => {
-          eq!( blocks.len(), block_contexts.len(), from: input);
+          expect_eq!( blocks.len(), block_contexts.len(), from: input);
           for (block, context) in blocks.iter().zip(block_contexts.iter()) {
-            eq!(block.context, *context, from: input);
+            expect_eq!(block.context, *context, from: input);
           }
         }
         _ => panic!("expected blocks, got {:?}", content),

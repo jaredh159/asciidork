@@ -288,6 +288,6 @@ fn assert_callout_list(
   let mut blocks = parse_blocks!(input);
   let last = blocks.pop().unwrap();
   let (context, items, ..) = list_block_data!(last).expect("expected list block data");
-  eq!(context, expected_context, from: input);
-  eq!(items, expected_items, from: input);
+  expect_eq!(context, expected_context, from: input);
+  expect_eq!(items, expected_items, from: input);
 }

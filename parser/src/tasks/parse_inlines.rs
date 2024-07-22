@@ -662,24 +662,6 @@ impl<'arena> Parser<'arena> {
     self.parse_inner(token, [token.kind], wrap, state, line, lines)
   }
 
-  // fn merge_inlines(
-  //   &self,
-  //   a: &mut BumpVec<'arena, Inline<'arena>>,
-  //   b: &mut BumpVec<'arena, Inline<'arena>>,
-  //   append: Option<&str>,
-  // ) {
-  //   if let (Some(Text(a_text)), Some(Text(b_text))) = (a.last_mut(), b.first_mut()) {
-  //     a_text.push_str(b_text);
-  //     b.remove(0);
-  //   }
-  //   a.append(b);
-  //   match (append, a.last_mut()) {
-  //     (Some(append), Some(Text(text))) => text.push_str(append),
-  //     (Some(append), _) => a.push(Text(BumpString::from_str_in(append, self.bump))),
-  //     _ => {}
-  //   }
-  // }
-
   fn should_stop_at(&self, line: &Line<'arena>) -> bool {
     if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
       return true;
@@ -1283,7 +1265,7 @@ mod tests {
       let mut parser = Parser::from_str(input, leaked_bump());
       let mut block = parser.read_lines().unwrap().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
-      eq!(inlines, expected, from: input);
+      expect_eq!(inlines, expected, from: input);
     }
   }
 }

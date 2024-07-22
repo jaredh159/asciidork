@@ -235,7 +235,7 @@ mod tests {
       ,===
     "#};
     let table = parse_table!(adoc);
-    eq!(
+    expect_eq!(
       table.header_row,
       Some(Row::new(vecb![cell!(d: "a", 19..20), cell!(d: "b", 21..22)])),
       from: adoc

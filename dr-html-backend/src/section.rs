@@ -80,8 +80,8 @@ mod tests {
       (3, [2, 4, 0, 0, 0], "2.4.1. ", [2, 4, 1, 0, 0]),
     ];
     for (level, mut sect_nums, expected, after_mutation) in cases {
-      eq!(number_prefix(level, &mut sect_nums), expected.to_string());
-      eq!(sect_nums, after_mutation);
+      expect_eq!(number_prefix(level, &mut sect_nums), expected.to_string());
+      expect_eq!(sect_nums, after_mutation);
     }
   }
 }

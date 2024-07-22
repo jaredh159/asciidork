@@ -262,7 +262,7 @@ mod tests {
     for (input, expected) in cases {
       let mut parser = Parser::from_str(input, bump);
       let lines = parser.read_lines().unwrap().unwrap();
-      eq!(lines.is_quoted_paragraph(), expected, from: input);
+      expect_eq!(lines.is_quoted_paragraph(), expected, from: input);
     }
   }
 }

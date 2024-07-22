@@ -598,7 +598,7 @@ mod tests {
     for (input, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      eq!(line.continues_list_item_principle(), expected, from: input);
+      expect_eq!(line.continues_list_item_principle(), expected, from: input);
     }
   }
 
@@ -621,7 +621,7 @@ mod tests {
       }
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      eq!(line.starts_nested_list(&stack), expected, from: input);
+      expect_eq!(line.starts_nested_list(&stack), expected, from: input);
     }
   }
 
@@ -667,7 +667,7 @@ mod tests {
     for (input, marker) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      eq!(line.list_marker(), marker, from: input);
+      expect_eq!(line.list_marker(), marker, from: input);
     }
   }
 
@@ -695,7 +695,7 @@ mod tests {
     for (input, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      eq!(line.starts_list_item(), expected, from: input);
+      expect_eq!(line.starts_list_item(), expected, from: input);
     }
   }
 
@@ -704,14 +704,14 @@ mod tests {
     let bump = &Bump::new();
     let mut lexer = Lexer::from_str(bump, "foo bar\nso baz\n");
     let mut line = lexer.consume_line().unwrap();
-    eq!(line.reassemble_src(), "foo bar");
-    eq!(line.num_tokens(), 3);
+    expect_eq!(line.reassemble_src(), "foo bar");
+    expect_eq!(line.num_tokens(), 3);
     line.discard(1);
-    eq!(line.reassemble_src(), " bar");
-    eq!(line.num_tokens(), 2);
+    expect_eq!(line.reassemble_src(), " bar");
+    expect_eq!(line.num_tokens(), 2);
     line.discard(2);
-    eq!(line.reassemble_src(), "");
-    eq!(line.num_tokens(), 0);
+    expect_eq!(line.reassemble_src(), "");
+    expect_eq!(line.num_tokens(), 0);
   }
 
   #[test]
@@ -719,11 +719,11 @@ mod tests {
     let bump = &Bump::new();
     let mut lexer = Lexer::from_str(bump, "'foo'");
     let mut line = lexer.consume_line().unwrap();
-    eq!(line.reassemble_src(), "'foo'");
+    expect_eq!(line.reassemble_src(), "'foo'");
     line.discard_last();
-    eq!(line.reassemble_src(), "'foo");
+    expect_eq!(line.reassemble_src(), "'foo");
     line.discard_last();
-    eq!(line.reassemble_src(), "'");
+    expect_eq!(line.reassemble_src(), "'");
   }
 
   #[test]
@@ -740,7 +740,7 @@ mod tests {
     for (input, token_types, pos, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      eq!(line.has_seq_at(token_types, pos), expected);
+      expect_eq!(line.has_seq_at(token_types, pos), expected);
     }
 
     // test that it works after shifting elements off of the front
@@ -762,7 +762,7 @@ mod tests {
     for (input, token_type, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      eq!(line.ends_with_nonescaped(token_type), expected);
+      expect_eq!(line.ends_with_nonescaped(token_type), expected);
     }
   }
 
@@ -783,7 +783,7 @@ mod tests {
     for (input, token_types, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      eq!(line.contains_seq(token_types), expected);
+      expect_eq!(line.contains_seq(token_types), expected);
     }
   }
 }

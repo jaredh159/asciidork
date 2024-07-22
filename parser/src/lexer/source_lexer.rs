@@ -561,9 +561,9 @@ mod tests {
     let input = "hello\nworld\n\n";
     let lexer = SourceLexer::from_str(input, &bump);
     let mut lines = lexer.raw_lines();
-    eq!(lines.next(), Some("hello"));
-    eq!(lines.next(), Some("world"));
-    eq!(lines.next(), Some(""));
-    eq!(lines.next(), None);
+    expect_eq!(lines.next(), Some("hello"));
+    expect_eq!(lines.next(), Some("world"));
+    expect_eq!(lines.next(), Some(""));
+    expect_eq!(lines.next(), None);
   }
 }
