@@ -402,6 +402,13 @@ mod tests {
         },
       ),
       (
+        "[id=someid,]", // trailing comma allowed
+        AttrList {
+          id: Some(src!("someid", 4..10)),
+          ..attr_list!(0..12)
+        },
+      ),
+      (
         "[#someid.nowrap]",
         AttrList {
           id: Some(src!("someid", 2..8)),

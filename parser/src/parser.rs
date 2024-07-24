@@ -413,7 +413,7 @@ mod tests {
       reassemble(parser.read_lines().unwrap().unwrap()),
       adoc! {"
         foo
-        link:include-file.adoc[role=include]
+        link:include-file.adoc[role=include,]
         baz"
       }
     );
@@ -448,10 +448,22 @@ mod tests {
         Token::new(TokenKind::Word, 31..31, bstr!("role")),
         Token::new(TokenKind::EqualSigns, 31..31, bstr!("=")),
         Token::new(TokenKind::Word, 31..31, bstr!("include")),
+        Token::new(TokenKind::Comma, 31..31, bstr!(",")),
         // /end `role=include` inserted tokens
         Token::new(TokenKind::CloseBracket, 31..32, bstr!("]")),
       ]
     );
     assert!(line.consume_current().is_none());
+  }
+
+  #[test]
+  fn attrs_preserved_when_replacing_include() {
+    let input = "include::some-file.adoc[leveloffset+=1]";
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::secure());
+    assert_eq!(
+      parser.read_line().unwrap().unwrap().reassemble_src(),
+      "link:some-file.adoc[role=include,leveloffset+=1]"
+    );
   }
 }

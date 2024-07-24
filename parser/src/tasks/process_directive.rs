@@ -20,31 +20,33 @@ impl<'arena> Parser<'arena> {
     }
   }
 
-  fn substitute_include(&self, line_src: BumpString<'arena>, pos: u32) -> Line<'arena> {
+  fn substitute_link_for_include(
+    &self,
+    line_src: BumpString<'arena>,
+    line_start: u32,
+  ) -> Line<'arena> {
     let link_src = line_src.replace("include::", "link:");
     let mut lexer = SourceLexer::from_str(&link_src, self.bump);
-    lexer.offset = pos + 4;
+    lexer.offset = line_start + 4;
     let line = lexer.consume_line().unwrap();
     let mut tokens = Deq::new(self.bump);
     for token in line.into_tokens() {
       if token.kind == OpenBracket {
         let insert_loc = token.loc.clamp_end();
         tokens.push(token);
-        tokens.push(Token::new(
-          Word,
-          insert_loc,
-          BumpString::from_str_in("role", self.bump),
-        ));
-        tokens.push(Token::new(
-          EqualSigns,
-          insert_loc,
-          BumpString::from_str_in("=", self.bump),
-        ));
-        tokens.push(Token::new(
-          Word,
-          insert_loc,
-          BumpString::from_str_in("include", self.bump),
-        ));
+        let insert = [
+          (Word, "role"),
+          (EqualSigns, "="),
+          (Word, "include"),
+          (Comma, ","),
+        ];
+        for (kind, lexeme) in insert.iter() {
+          tokens.push(Token::new(
+            *kind,
+            insert_loc,
+            BumpString::from_str_in(lexeme, self.bump),
+          ));
+        }
       } else {
         tokens.push(token);
       }
@@ -61,7 +63,7 @@ impl<'arena> Parser<'arena> {
     };
     if self.document.meta.safe_mode == SafeMode::Secure {
       return Ok(DirectiveAction::SubstituteLine(
-        self.substitute_include(src, line.current_token().unwrap().loc.start),
+        self.substitute_link_for_include(src, line.current_token().unwrap().loc.start),
       ));
     }
     let Some((first, target, _attrs)) = self.include_directive_data(line)? else {
