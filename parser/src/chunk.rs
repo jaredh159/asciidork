@@ -27,7 +27,7 @@ impl<'arena> ChunkMetaExt<'arena> for ChunkMeta<'arena> {
     // handle inline admonitions, e.g. `TIP: never start a land war in asia`
     if lines
       .current()
-      .map(|line| line.starts_with_seq(&[Word, Colon, Whitespace]))
+      .map(|line| line.starts_with_seq(&[Kind(Word), Kind(Colon), Kind(Whitespace)]))
       .unwrap_or(false)
     {
       let lexeme = &lines.current_token().unwrap().lexeme;

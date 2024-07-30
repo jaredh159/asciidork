@@ -8,7 +8,6 @@ pub enum TokenKind {
   Backtick,
   Backslash,
   Bang,
-  BeginInclude,
   CalloutNumber,
   Caret,
   CloseBrace,
@@ -22,7 +21,6 @@ pub enum TokenKind {
   Discard,
   DoubleQuote,
   Dots,
-  EndInclude,
   EqualSigns,
   #[default]
   Eof,
@@ -38,6 +36,9 @@ pub enum TokenKind {
   Percent,
   Pipe,
   Plus,
+  PreprocBeginInclude,
+  PreprocEndInclude,
+  PreprocPassthru,
   SemiColon,
   SingleQuote,
   Star,
@@ -46,6 +47,27 @@ pub enum TokenKind {
   Underscore,
   Whitespace,
   Word,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TokenSpec {
+  Kind(TokenKind),
+  Len(u8, TokenKind),
+}
+
+impl TokenSpec {
+  pub const fn token_kind(&self) -> TokenKind {
+    match self {
+      TokenSpec::Kind(kind) => *kind,
+      TokenSpec::Len(_, kind) => *kind,
+    }
+  }
+}
+
+impl From<TokenKind> for TokenSpec {
+  fn from(kind: TokenKind) -> Self {
+    TokenSpec::Kind(kind)
+  }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -117,6 +139,13 @@ impl<'arena> Token<'arena> {
       }
     }
     self.loc.start += n;
+  }
+
+  pub fn satisfies(&self, spec: TokenSpec) -> bool {
+    match spec {
+      TokenSpec::Kind(kind) => self.kind == kind,
+      TokenSpec::Len(len, kind) => self.kind == kind && self.len() == len as usize,
+    }
   }
 }
 

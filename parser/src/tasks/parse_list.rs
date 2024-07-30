@@ -84,7 +84,7 @@ impl<'arena> Parser<'arena> {
       *autogen_conum = conum + 1;
     }
 
-    let mut item_lines = Deq::with_capacity(self.bump, 1);
+    let mut item_lines = Deq::with_capacity(1, self.bump);
     item_lines.push(line);
     while lines
       .current()
@@ -170,7 +170,7 @@ impl<'arena> Parser<'arena> {
     mut lines: ContiguousLines<'arena>,
   ) -> Result<Option<ListItem<'arena>>> {
     let principle = {
-      let before_delim = line.extract_line_before(&[TermDelimiter]);
+      let before_delim = line.extract_line_before(&[Kind(TermDelimiter)]);
       self.parse_inlines(&mut before_delim.into_lines())?
     };
 

@@ -772,7 +772,9 @@ impl Backend for AsciidoctorHtml {
       self.push_str("mailto:");
     }
     self.push([target, "\""]);
-    if attrs.is_none() && !matches!(scheme, Some(UrlScheme::Mailto)) {
+    if attrs.as_ref().map(|a| a.named("role") == Some("include")) == Some(true) {
+      self.push_str(" class=\"bare include\">");
+    } else if attrs.is_none() && !matches!(scheme, Some(UrlScheme::Mailto)) {
       self.push_str(" class=\"bare\">");
     } else {
       self.push_ch('>');

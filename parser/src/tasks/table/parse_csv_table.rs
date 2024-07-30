@@ -10,7 +10,7 @@ impl<'arena> Parser<'arena> {
     col_index: usize,
     mut start: u32,
   ) -> Result<Option<Cell<'arena>>> {
-    let mut cell_tokens = Deq::new(self.bump);
+    let mut cell_tokens = Line::empty(self.bump);
     let mut end = start;
 
     let mut quote = {
@@ -43,7 +43,6 @@ impl<'arena> Parser<'arena> {
         .unwrap();
 
       if token.is(Newline) {
-        // see note in Parser::parse_psv_table_cell
         ctx.counting_cols = false
       }
 

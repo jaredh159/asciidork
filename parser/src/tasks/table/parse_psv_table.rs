@@ -95,7 +95,7 @@ impl<'arena> Parser<'arena> {
     }
 
     let mut end = start;
-    let mut cell_tokens = Deq::new(self.bump);
+    let mut cell_tokens = Line::empty(self.bump);
 
     // trim leading whitespace
     while tokens.current().is(TokenKind::Whitespace) {

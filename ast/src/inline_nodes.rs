@@ -20,7 +20,7 @@ impl<'arena> InlineNodes<'arena> {
       Inline::Highlight(nodes) => text.extend(nodes.plain_text()),
       Inline::Macro(_) => {}
       Inline::Italic(nodes) => text.extend(nodes.plain_text()),
-      Inline::InlinePassthrough(nodes) => text.extend(nodes.plain_text()),
+      Inline::InlinePassthru(nodes) => text.extend(nodes.plain_text()),
       Inline::Newline => text.push(" "),
       Inline::LegacyInlineAnchor(_) => {}
       Inline::LineBreak => {}

@@ -57,6 +57,10 @@ impl SourceLocation {
   pub fn decr(&self) -> SourceLocation {
     Self::new_depth(self.start - 1, self.end - 1, self.include_depth)
   }
+
+  pub const fn size(&self) -> u32 {
+    self.end - self.start
+  }
 }
 
 impl From<u32> for SourceLocation {

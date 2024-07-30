@@ -81,7 +81,7 @@ impl<'arena> Parser<'arena> {
       ctx.header_row = HeaderRow::ExplicitlySet;
     } else if meta.has_attr_option("noheader") {
       ctx.header_row = HeaderRow::ExplicitlyUnset;
-    } else if lines.num_lines() != 1 {
+    } else if lines.len() != 1 {
       ctx.header_row = HeaderRow::FoundNone;
     }
 
@@ -166,7 +166,7 @@ impl<'arena> Parser<'arena> {
   pub(crate) fn finish_cell(
     &mut self,
     cell_spec: CellSpec,
-    mut cell_tokens: Deq<'arena, Token<'arena>>,
+    mut cell_tokens: Line<'arena>,
     col_index: usize,
     ctx: &mut TableContext<'arena>,
     mut loc: Range<u32>,
@@ -208,9 +208,8 @@ impl<'arena> Parser<'arena> {
           col_spec: col_spec.cloned(),
         });
       }
-      let mut cell_line = Line::new(cell_tokens);
-      cell_line.trim_for_cell(cell_style);
-      let cell_parser = self.cell_parser(cell_line.into_bytes(), loc.start);
+      cell_tokens.trim_for_cell(cell_style);
+      let cell_parser = self.cell_parser(cell_tokens.into_bytes(), loc.start);
       return match cell_parser.parse() {
         Ok(ParseResult { document, warnings }) => {
           if !warnings.is_empty() {
@@ -279,17 +278,16 @@ impl<'arena> Parser<'arena> {
 
   fn parse_non_asciidoc_cell(
     &mut self,
-    data: ParseCellData<'arena>,
+    mut data: ParseCellData<'arena>,
     cell_style: CellContentStyle,
   ) -> Result<Cell<'arena>> {
     let nodes = if data.cell_tokens.is_empty() {
       InlineNodes::new(self.bump)
     } else {
-      let mut cell_line = Line::new(data.cell_tokens);
-      cell_line.trim_for_cell(cell_style);
+      data.cell_tokens.trim_for_cell(cell_style);
       let prev_subs = self.ctx.subs;
       self.ctx.subs = cell_style.into();
-      let inlines = self.parse_inlines(&mut cell_line.into_lines())?;
+      let inlines = self.parse_inlines(&mut data.cell_tokens.into_lines())?;
       self.ctx.subs = prev_subs;
       inlines
     };
@@ -334,7 +332,7 @@ impl<'arena> Parser<'arena> {
     mut lines: ContiguousLines<'arena>,
     start_delim: &Line<'arena>,
   ) -> Result<TableTokens<'arena>> {
-    let mut tokens = Deq::with_capacity(self.bump, lines.num_tokens());
+    let mut tokens = Deq::with_capacity(lines.num_tokens(), self.bump);
     let delim_loc = start_delim.last_loc().unwrap();
     let mut end = delim_loc.end + 1;
     while let Some(line) = lines.consume_current() {

@@ -51,7 +51,7 @@ impl<'arena> Parser<'arena> {
     }
 
     let mut header_line = lines.consume_current().unwrap();
-    debug_assert!(header_line.starts_with_seq(&[EqualSigns, Whitespace]));
+    debug_assert!(header_line.starts_with_seq(&[Kind(EqualSigns), Kind(Whitespace)]));
     header_line.discard(2);
     self
       .document
@@ -83,9 +83,9 @@ pub fn is_doc_header(lines: &ContiguousLines) -> bool {
     } else if !line.starts(Colon) {
       return false;
     } else {
-      return line.starts_with_seq(&[Colon, Word, Colon])
-        || line.starts_with_seq(&[Colon, MacroName])
-        || line.starts_with_seq(&[Colon, Bang, Word, Colon]);
+      return line.starts_with_seq(&[Kind(Colon), Kind(Word), Kind(Colon)])
+        || line.starts_with_seq(&[Kind(Colon), Kind(MacroName)])
+        || line.starts_with_seq(&[Kind(Colon), Kind(Bang), Kind(Word), Kind(Colon)]);
     }
   }
   false

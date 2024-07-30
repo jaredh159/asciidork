@@ -63,7 +63,7 @@ impl<'arena> Parser<'arena> {
     if ctx.dsv_last_consumed == DsvLastConsumed::Delimiter && trimmed_newline {
       let spec = CellSpec::default();
       return self
-        .finish_cell(spec, Deq::new(self.bump), col_index, ctx, start..start)
+        .finish_cell(spec, Line::empty(self.bump), col_index, ctx, start..start)
         .map(|data| data.map(|(cell, _)| cell));
     }
 
@@ -91,9 +91,8 @@ impl<'arena> Parser<'arena> {
     col_index: usize,
     start: u32,
   ) -> Result<Option<Cell<'arena>>> {
-    let mut cell_tokens = Deq::new(self.bump);
+    let mut cell_tokens = Line::empty(self.bump);
     let mut end = start;
-
     loop {
       if tokens.current().is_none() || self.consume_dsv_delimiter(tokens, ctx) {
         return self
@@ -104,7 +103,6 @@ impl<'arena> Parser<'arena> {
         .consume_splitting(ctx.embeddable_cell_separator)
         .unwrap();
       if token.is(TokenKind::Newline) {
-        // see note in Parser::parse_psv_table_cell
         ctx.counting_cols = false
       }
       end = token.loc.end;

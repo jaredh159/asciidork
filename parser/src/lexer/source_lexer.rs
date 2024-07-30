@@ -7,7 +7,7 @@ pub struct SourceLexer<'arena> {
   pub bump: &'arena Bump,
   pub src: BumpVec<'arena, u8>,
   pub pos: u32,
-  pub offset: u32, // needed?
+  pub offset: u32,
 }
 
 impl<'arena> SourceLexer<'arena> {
@@ -52,7 +52,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'/') => Some(self.repeating(b'/', ForwardSlashes)),
       Some(b'!') => Some(self.single(Bang)),
       Some(b'`') => Some(self.single(Backtick)),
-      Some(b'+') => Some(self.single(Plus)),
+      Some(b'+') => Some(self.repeating(b'+', Plus)),
       Some(b'[') => Some(self.single(OpenBracket)),
       Some(b']') => Some(self.single(CloseBracket)),
       Some(b'{') => Some(self.single(OpenBrace)),
@@ -80,21 +80,6 @@ impl<'arena> SourceLexer<'arena> {
 
   pub fn is_eof(&self) -> bool {
     self.pos == self.src.len() as u32
-  }
-
-  pub fn consume_line(&mut self) -> Option<Line<'arena>> {
-    if self.is_eof() {
-      return None;
-    }
-    let mut tokens = Deq::new(self.bump);
-    while !self.peek_is(b'\n') && !self.is_eof() {
-      let token = self.next_token().unwrap();
-      tokens.push(token);
-    }
-    if self.peek_is(b'\n') {
-      self.advance();
-    }
-    Some(Line::new(tokens))
   }
 
   pub fn consume_empty_lines(&mut self) {

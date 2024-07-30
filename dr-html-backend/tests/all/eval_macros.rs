@@ -61,6 +61,8 @@ assert_html!(
     The text pass:[<u>underline me</u>] is underlined.
 
     Custom pass:q[<u>underline *me*</u>] is underlined.
+
+    link:pass:[My Documents/report.pdf][Get Report]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -68,6 +70,9 @@ assert_html!(
     </div>
     <div class="paragraph">
       <p>Custom <u>underline <strong>me</strong></u> is underlined.</p>
+    </div>
+    <div class="paragraph">
+      <p><a href="My Documents/report.pdf">Get Report</a></p>
     </div>
   "#}
 );

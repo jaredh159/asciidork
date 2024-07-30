@@ -16,6 +16,7 @@ pub struct ParseContext<'arena> {
   pub num_footnotes: Rc<RefCell<u16>>,
   pub saw_toc_macro: bool,
   pub in_asciidoc_table_cell: bool,
+  pub passthrus: BumpVec<'arena, Option<InlineNodes<'arena>>>,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
 }
 
@@ -34,10 +35,11 @@ impl<'arena> ParseContext<'arena> {
       num_footnotes: Rc::new(RefCell::new(0)),
       saw_toc_macro: false,
       in_asciidoc_table_cell: false,
+      passthrus: BumpVec::new_in(bump),
     }
   }
 
-  pub fn clone_for_cell(&self) -> Self {
+  pub fn clone_for_cell(&self, bump: &'arena Bump) -> Self {
     ParseContext {
       subs: Substitutions::default(),
       delimiter: None,
@@ -51,6 +53,7 @@ impl<'arena> ParseContext<'arena> {
       num_footnotes: Rc::clone(&self.num_footnotes),
       saw_toc_macro: false,
       in_asciidoc_table_cell: true,
+      passthrus: BumpVec::new_in(bump),
     }
   }
 

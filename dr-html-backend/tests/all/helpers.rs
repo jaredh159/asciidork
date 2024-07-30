@@ -100,6 +100,7 @@ macro_rules! _html {
   ($input:expr, $mod_settings:expr, $resolver:expr) => {{
     let bump = &::asciidork_parser::prelude::Bump::new();
     let mut settings = ::asciidork_meta::JobSettings::embedded();
+    settings.safe_mode = ::asciidork_meta::SafeMode::Unsafe;
     #[allow(clippy::redundant_closure_call)]
     $mod_settings(&mut settings);
     let mut parser = ::asciidork_parser::Parser::from_str($input, bump);

@@ -77,14 +77,16 @@ impl<'arena> Parser<'arena> {
       }
       SingleQuote
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 3 && line.starts_with_seq(&[SingleQuote, SingleQuote, SingleQuote])
+          line.num_tokens() == 3
+            && line.starts_with_seq(&[Kind(SingleQuote), Kind(SingleQuote), Kind(SingleQuote)])
         }) =>
       {
         return self.parse_break(Context::ThematicBreak, lines, meta);
       }
       LessThan
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 3 && line.starts_with_seq(&[LessThan, LessThan, LessThan])
+          line.num_tokens() == 3
+            && line.starts_with_seq(&[Kind(LessThan), Kind(LessThan), Kind(LessThan)])
         }) =>
       {
         return self.parse_break(Context::PageBreak, lines, meta);

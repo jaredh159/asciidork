@@ -1,3 +1,4 @@
+use asciidork_meta::{JobSettings, SafeMode};
 use test_utils::*;
 
 assert_html!(
@@ -25,6 +26,23 @@ assert_html!(
   html! {r#"
     <div class="paragraph">
       <p>Line-1 Line-2 Line-3</p>
+    </div>
+  "#}
+);
+
+assert_html!(
+  secure_include_to_link,
+  |settings: &mut JobSettings| {
+    settings.safe_mode = SafeMode::Secure;
+  },
+  adoc! {r#"
+    Line-1
+    include::file.adoc[]
+    Line-3
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Line-1 <a href="file.adoc" class="bare include">file.adoc</a> Line-3</p>
     </div>
   "#}
 );

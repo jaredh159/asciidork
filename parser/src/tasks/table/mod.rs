@@ -85,8 +85,8 @@ impl<'arena> TableTokens<'arena> {
     self.0.nth_token(n)
   }
 
-  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: u32) -> bool {
-    self.0.has_seq_at(kinds, offset)
+  pub fn has_seq_at(&self, specs: &[TokenSpec], offset: u32) -> bool {
+    self.0.has_seq_at(specs, offset)
   }
 
   pub fn consume_current(&mut self) -> Option<Token<'arena>> {

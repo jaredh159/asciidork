@@ -22,7 +22,7 @@ pub enum Inline<'arena> {
   Highlight(InlineNodes<'arena>),
   Macro(MacroNode<'arena>),
   Italic(InlineNodes<'arena>),
-  InlinePassthrough(InlineNodes<'arena>),
+  InlinePassthru(InlineNodes<'arena>),
   IncludeBoundary(IncludeBoundaryKind, u16),
   Newline,
   CalloutNum(Callout),
@@ -132,7 +132,7 @@ impl<'arena> Json for Inline<'arena> {
         buf.push_str("Italic\"");
         buf.add_member("children", nodes);
       }
-      Inline::InlinePassthrough(nodes) => {
+      Inline::InlinePassthru(nodes) => {
         buf.push_str("InlinePassthrough\"");
         buf.add_member("children", nodes);
       }
