@@ -20,40 +20,6 @@ impl<'arena> Parser<'arena> {
     }
   }
 
-  fn substitute_link_for_include(
-    &self,
-    line_src: BumpString<'arena>,
-    line_start: u32,
-  ) -> Line<'arena> {
-    let link_src = line_src.replace("include::", "link:");
-    let mut lexer = SourceLexer::from_str(&link_src, self.bump);
-    lexer.offset = line_start + 4;
-    let line = lexer.consume_line().unwrap();
-    let mut tokens = Deq::new(self.bump);
-    for token in line.into_tokens() {
-      if token.kind == OpenBracket {
-        let insert_loc = token.loc.clamp_end();
-        tokens.push(token);
-        let insert = [
-          (Word, "role"),
-          (EqualSigns, "="),
-          (Word, "include"),
-          (Comma, ","),
-        ];
-        for (kind, lexeme) in insert.iter() {
-          tokens.push(Token::new(
-            *kind,
-            insert_loc,
-            BumpString::from_str_in(lexeme, self.bump),
-          ));
-        }
-      } else {
-        tokens.push(token);
-      }
-    }
-    Line::new(tokens)
-  }
-
   fn try_process_include_directive(
     &mut self,
     line: &Line<'arena>,
@@ -128,6 +94,40 @@ impl<'arena> Parser<'arena> {
     line.discard(1);
     let attrs = self.parse_attr_list(&mut line)?;
     Ok(Some((first, target, attrs)))
+  }
+
+  fn substitute_link_for_include(
+    &self,
+    line_src: BumpString<'arena>,
+    line_start: u32,
+  ) -> Line<'arena> {
+    let link_src = line_src.replace("include::", "link:");
+    let mut lexer = Lexer::from_str(self.bump, &link_src);
+    lexer.adjust_offset(line_start + 4);
+    let line = lexer.consume_line().unwrap();
+    let mut tokens = Line::empty(self.bump);
+    for token in line.into_iter() {
+      if token.kind == OpenBracket {
+        let insert_loc = token.loc.clamp_end();
+        tokens.push(token);
+        let insert = [
+          (Word, "role"),
+          (EqualSigns, "="),
+          (Word, "include"),
+          (Comma, ","),
+        ];
+        for (kind, lexeme) in insert.iter() {
+          tokens.push(Token::new(
+            *kind,
+            insert_loc,
+            BumpString::from_str_in(lexeme, self.bump),
+          ));
+        }
+      } else {
+        tokens.push(token);
+      }
+    }
+    tokens
   }
 }
 

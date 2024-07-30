@@ -21,10 +21,6 @@ pub enum MacroNode<'arena> {
     target: SourceString<'arena>,
     attrs: Option<AttrList<'arena>>,
   },
-  Pass {
-    target: Option<SourceString<'arena>>,
-    content: InlineNodes<'arena>,
-  },
   Icon {
     target: SourceString<'arena>,
     attrs: AttrList<'arena>,
@@ -91,11 +87,6 @@ impl Json for MacroNode<'_> {
         buf.add_option_member("scheme", scheme.as_ref());
         buf.add_member("target", target);
         buf.add_option_member("attrs", attrs.as_ref());
-      }
-      MacroNode::Pass { target, content } => {
-        buf.push_str("Pass\"");
-        buf.add_option_member("target", target.as_ref());
-        buf.add_member("content", content);
       }
       MacroNode::Icon { target, attrs } => {
         buf.push_str("Icon\"");

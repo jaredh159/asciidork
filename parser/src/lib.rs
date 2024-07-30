@@ -55,5 +55,6 @@ mod internal {
 pub mod variants {
   pub mod token {
     pub use crate::token::TokenKind::*;
+    pub use crate::token::TokenSpec::*;
   }
 }

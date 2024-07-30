@@ -297,7 +297,7 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_mono(children);
     }
-    InlinePassthrough(children) => {
+    InlinePassthru(children) => {
       backend.enter_inline_passthrough(children);
       children.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_inline_passthrough(children);
@@ -345,9 +345,6 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
         nodes.iter().for_each(|n| eval_inline(n, doc, backend));
       }
       backend.exit_link_macro(target, attrs.as_ref(), *scheme);
-    }
-    Macro(Pass { content, .. }) => {
-      content.iter().for_each(|n| eval_inline(n, doc, backend));
     }
     Macro(Keyboard { keys, .. }) => {
       backend.visit_keyboard_macro(&keys.iter().map(|s| s.as_str()).collect::<Vec<&str>>())

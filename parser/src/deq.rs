@@ -22,12 +22,16 @@ impl<'arena, T> Deq<'arena, T> {
     }
   }
 
-  pub fn with_capacity(bump: &'arena Bump, capacity: usize) -> Self {
+  pub fn with_capacity(capacity: usize, bump: &'arena Bump) -> Self {
     Deq {
       bump,
       buf: BumpVec::with_capacity_in(capacity, bump),
       pos: 0,
     }
+  }
+
+  pub fn from_vec(bump: &'arena Bump, buf: BumpVec<'arena, T>) -> Self {
+    Deq { bump, buf, pos: 0 }
   }
 
   pub fn clear(&mut self) {

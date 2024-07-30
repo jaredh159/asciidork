@@ -115,15 +115,14 @@ impl<'arena> RootLexer<'arena> {
     if self.is_eof() {
       return None;
     }
-    let mut tokens = Deq::new(self.bump);
+    let mut line = Line::empty(self.bump);
     while !self.peek_is(b'\n') && !self.is_eof() {
-      let token = self.next_token();
-      tokens.push(token);
+      line.push(self.next_token());
     }
     if self.peek_is(b'\n') {
       self.sources[self.idx as usize].pos += 1;
     }
-    Some(Line::new(tokens))
+    Some(line)
   }
 
   pub fn next_token(&mut self) -> Token<'arena> {
@@ -136,7 +135,7 @@ impl<'arena> RootLexer<'arena> {
         include_loc.include_depth = self.idx;
         self.source_stack.push(include_loc);
         self.idx = next_idx;
-        Token::new(TokenKind::BeginInclude, include_loc, line)
+        Token::new(TokenKind::PreprocBeginInclude, include_loc, line)
       }
       None => match self.sources[self.idx as usize].next_token() {
         Some(mut token) => {
@@ -152,7 +151,7 @@ impl<'arena> RootLexer<'arena> {
           self.idx = prev_loc.include_depth;
           let mut line = self.line_of(prev_loc.start);
           line.replace_range(0..9, &format!("{{<-{:05}}}", prev_idx));
-          Token::new(TokenKind::EndInclude, prev_loc, line)
+          Token::new(TokenKind::PreprocEndInclude, prev_loc, line)
         }
       },
     }
@@ -234,7 +233,7 @@ mod tests {
     lexer.push_source("bar.adoc", bvec![in bump; b'b', b'a', b'r', b'\n']);
     assert_eq!(
       lexer.next_token(),
-      Token::new(BeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
+      Token::new(PreprocBeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
     );
     assert_eq!(&input[4..23], "include::bar.adoc[]");
 
@@ -248,7 +247,7 @@ mod tests {
     );
     assert_eq!(
       lexer.next_token(),
-      Token::new(EndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
+      Token::new(PreprocEndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
     );
   }
 

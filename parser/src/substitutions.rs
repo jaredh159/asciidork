@@ -40,7 +40,7 @@ impl Substitutions {
         Some(Subs::PostReplacement),
         None,
       ],
-      flags: 0b00111111,
+      flags: 0b_00111111,
     }
   }
 
@@ -55,7 +55,7 @@ impl Substitutions {
         None,
         None,
       ],
-      flags: 0b00001011,
+      flags: 0b_00001011,
     }
   }
 
@@ -70,7 +70,14 @@ impl Substitutions {
         None,
         None,
       ],
-      flags: 0b01000001,
+      flags: 0b_01000001,
+    }
+  }
+
+  pub const fn only_special_chars() -> Self {
+    Self {
+      order: [Some(Subs::SpecialChars), None, None, None, None, None, None],
+      flags: 0b_00000001,
     }
   }
 
@@ -85,7 +92,7 @@ impl Substitutions {
         Some(Subs::PostReplacement),
         Some(Subs::Callouts),
       ],
-      flags: 0b01111111,
+      flags: 0b_01111111,
     }
   }
 
@@ -189,13 +196,13 @@ impl Substitutions {
 
 #[rustfmt::skip]
 impl Subs {
-  const SPECIAL_CHARS:     u8 = 0b00000001;
-  const INLINE_FORMATTING: u8 = 0b00000010;
-  const ATTR_REFS:         u8 = 0b00000100;
-  const CHAR_REPLACEMENT:  u8 = 0b00001000;
-  const MACROS:            u8 = 0b00010000;
-  const POST_REPLACEMENT:  u8 = 0b00100000;
-  const CALLOUTS:          u8 = 0b01000000;
+  const SPECIAL_CHARS:     u8 = 0b_00000001;
+  const INLINE_FORMATTING: u8 = 0b_00000010;
+  const ATTR_REFS:         u8 = 0b_00000100;
+  const CHAR_REPLACEMENT:  u8 = 0b_00001000;
+  const MACROS:            u8 = 0b_00010000;
+  const POST_REPLACEMENT:  u8 = 0b_00100000;
+  const CALLOUTS:          u8 = 0b_01000000;
 
   const fn bitflag_pos(&self) -> u8 {
     match self {

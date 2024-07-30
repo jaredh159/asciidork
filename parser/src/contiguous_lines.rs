@@ -10,7 +10,19 @@ impl<'arena> ContiguousLines<'arena> {
     ContiguousLines { lines }
   }
 
-  pub fn num_lines(&self) -> usize {
+  pub fn empty(bump: &'arena Bump) -> Self {
+    ContiguousLines::new(Deq::new(bump))
+  }
+
+  pub fn with_capacity(capacity: usize, bump: &'arena Bump) -> Self {
+    ContiguousLines::new(Deq::with_capacity(capacity, bump))
+  }
+
+  pub fn push(&mut self, line: Line<'arena>) {
+    self.lines.push(line);
+  }
+
+  pub fn len(&self) -> usize {
     self.lines.len()
   }
 
@@ -91,11 +103,15 @@ impl<'arena> ContiguousLines<'arena> {
     self.lines.iter().any(f)
   }
 
-  pub fn contains_seq(&self, kinds: &[TokenKind]) -> bool {
-    self.lines.iter().any(|line| line.contains_seq(kinds))
+  pub fn contains_seq(&self, specs: &[TokenSpec]) -> bool {
+    self.lines.iter().any(|line| line.contains_seq(specs))
   }
 
-  pub fn terminates_constrained(&self, stop_tokens: &[TokenKind]) -> bool {
+  pub fn contains_len(&self, kind: TokenKind, len: usize) -> bool {
+    self.lines.iter().any(|line| line.contains_len(kind, len))
+  }
+
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec]) -> bool {
     self
       .lines
       .iter()
@@ -124,7 +140,7 @@ impl<'arena> ContiguousLines<'arena> {
       return false;
     }
     let last_line = self.last().unwrap();
-    if !last_line.starts_with_seq(&[Dashes, Whitespace])
+    if !last_line.starts_with_seq(&[TokenSpec::Kind(Dashes), TokenSpec::Kind(Whitespace)])
       || last_line.num_tokens() < 3
       || !last_line.current_is_len(Dashes, 2)
     {
@@ -145,7 +161,7 @@ impl<'arena> ContiguousLines<'arena> {
       .unwrap_or(false)
   }
 
-  pub fn starts_with_seq(&self, kinds: &[TokenKind]) -> bool {
+  pub fn starts_with_seq(&self, kinds: &[TokenSpec]) -> bool {
     self
       .first()
       .map(|line| line.starts_with_seq(kinds))
@@ -166,7 +182,7 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn starts_list_continuation(&self) -> bool {
-    if self.num_lines() < 2 {
+    if self.len() < 2 {
       return false;
     }
     let Some(line) = self.first() else {

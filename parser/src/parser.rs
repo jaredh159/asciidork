@@ -67,7 +67,7 @@ impl<'arena> Parser<'arena> {
     let mut cell_parser = Parser::new(src, self.bump);
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
-    cell_parser.ctx = self.ctx.clone_for_cell();
+    cell_parser.ctx = self.ctx.clone_for_cell(self.bump);
     cell_parser.document.meta = self.document.meta.clone_for_cell();
     cell_parser.document.anchors = Rc::clone(&self.document.anchors);
     cell_parser

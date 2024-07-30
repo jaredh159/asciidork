@@ -1,9 +1,12 @@
 use regex::Regex;
 
+mod inline_preproc;
+mod inline_utils;
+
 use crate::internal::*;
-use crate::tasks::parse_inlines_utils::*;
 use crate::variants::token::*;
 use ast::variants::{inline::*, r#macro::*};
+use inline_utils::*;
 use IncludeBoundaryKind::*;
 
 #[derive(Debug)]
@@ -35,7 +38,7 @@ impl<'arena> Parser<'arena> {
   pub(crate) fn parse_inlines_until(
     &mut self,
     lines: &mut ContiguousLines<'arena>,
-    stop_tokens: &[TokenKind],
+    stop_tokens: &[TokenSpec],
   ) -> Result<InlineNodes<'arena>> {
     let inlines = BumpVec::new_in(self.bump).into();
     if lines.is_empty() {
@@ -71,6 +74,11 @@ impl<'arena> Parser<'arena> {
           acc.commit();
           lines.restore_if_nonempty(line);
           return Ok(acc.inlines);
+        }
+
+        if line.may_contain_inline_pass() {
+          self.replace_inline_pass(&mut line, lines)?;
+          break;
         }
 
         let Some(token) = line.consume_current() else {
@@ -113,7 +121,7 @@ impl<'arena> Parser<'arena> {
               "footnote:" => {
                 let id = line.consume_optional_macro_target(self.bump);
                 lines.restore_if_nonempty(line);
-                let note = self.parse_inlines_until(lines, &[CloseBracket])?;
+                let note = self.parse_inlines_until(lines, &[Kind(CloseBracket)])?;
                 extend(&mut macro_loc, &note, 1);
                 let number = {
                   let mut num_footnotes = self.ctx.num_footnotes.borrow_mut();
@@ -130,7 +138,7 @@ impl<'arena> Parser<'arena> {
                 }
                 self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
                 lines.restore_if_nonempty(line);
-                let nodes = self.parse_inlines_until(lines, &[CloseBracket])?;
+                let nodes = self.parse_inlines_until(lines, &[Kind(CloseBracket)])?;
                 let linktext = if nodes.is_empty() {
                   macro_loc.end = id.loc.end + 2;
                   None
@@ -142,7 +150,9 @@ impl<'arena> Parser<'arena> {
                 break;
               }
               "mailto:" | "link:" => {
-                let target = line.consume_macro_target(self.bump);
+                let target = self
+                  .macro_target_from_passthru(&mut line)
+                  .unwrap_or_else(|| line.consume_macro_target(self.bump));
                 let attrs = self.parse_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 let scheme = token.to_url_scheme();
@@ -161,19 +171,6 @@ impl<'arena> Parser<'arena> {
                   Macro(Link { scheme, target, attrs: Some(attrs) }),
                   macro_loc,
                 );
-              }
-              "pass:" => {
-                let target = line.consume_optional_macro_target(self.bump);
-                self.ctx.subs = Substitutions::from_pass_macro_target(&target);
-                let mut attrs = self.parse_attr_list(&mut line)?;
-                self.ctx.subs = subs;
-                finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
-                let content = if !attrs.positional.is_empty() && attrs.positional[0].is_some() {
-                  attrs.positional[0].take().unwrap()
-                } else {
-                  bvec![in self.bump].into() // ...should probably be a diagnostic
-                };
-                acc.push_node(Macro(Pass { target, content }), macro_loc);
               }
               "icon:" => {
                 let target = line.consume_macro_target(self.bump);
@@ -241,13 +238,13 @@ impl<'arena> Parser<'arena> {
             push_callout_tuck(token, &mut line, &mut acc);
           }
 
-          BeginInclude => {
+          PreprocBeginInclude => {
             let depth: u16 = token.lexeme[3..8].parse().unwrap();
             acc.push_node(IncludeBoundary(Begin, depth), token.loc);
             acc.text.loc = SourceLocation::new_depth(0, 0, depth);
           }
 
-          EndInclude => {
+          PreprocEndInclude => {
             saw_boundary_end = true;
             let depth: u16 = token.lexeme[3..8].parse().unwrap();
             acc.push_node(IncludeBoundary(End, depth), token.loc);
@@ -276,7 +273,7 @@ impl<'arena> Parser<'arena> {
             if line.current_is(Hash) {
               line.discard(1);
             }
-            let mut inner = line.extract_line_before(&[GreaterThan, GreaterThan]);
+            let mut inner = line.extract_line_before(&[Kind(GreaterThan), Kind(GreaterThan)]);
             let id = inner.consume_to_string_until(Comma, self.bump);
             self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
             let mut linktext = None;
@@ -321,42 +318,47 @@ impl<'arena> Parser<'arena> {
 
           Underscore
             if subs.inline_formatting()
-              && starts_constrained(&[Underscore], &token, &line, lines) =>
+              && starts_constrained(&[Kind(Underscore)], &token, &line, lines) =>
           {
-            self.parse_constrained(&token, Italic, &mut acc, line, lines)?;
+            self.parse_node(Italic, [Kind(Underscore)], &token, &mut acc, line, lines)?;
             break;
           }
 
           Underscore
             if subs.inline_formatting()
-              && starts_unconstrained(Underscore, &token, &line, lines) =>
+              && starts_unconstrained(&[Kind(Underscore); 2], &token, &line, lines) =>
           {
-            self.parse_unconstrained(&token, Italic, &mut acc, line, lines)?;
+            self.parse_node(Italic, [Kind(Underscore); 2], &token, &mut acc, line, lines)?;
+
             break;
           }
 
-          Star if subs.inline_formatting() && starts_constrained(&[Star], &token, &line, lines) => {
-            self.parse_constrained(&token, Bold, &mut acc, line, lines)?;
+          Star
+            if subs.inline_formatting()
+              && starts_constrained(&[Kind(Star)], &token, &line, lines) =>
+          {
+            self.parse_node(Bold, [Kind(Star)], &token, &mut acc, line, lines)?;
             break;
           }
 
-          Star if subs.inline_formatting() && starts_unconstrained(Star, &token, &line, lines) => {
-            self.parse_unconstrained(&token, Bold, &mut acc, line, lines)?;
+          Star
+            if subs.inline_formatting()
+              && starts_unconstrained(&[Kind(Star)], &token, &line, lines) =>
+          {
+            self.parse_node(Bold, [Kind(Star); 2], &token, &mut acc, line, lines)?;
             break;
           }
 
-          OpenBracket if subs.inline_formatting() && line.contains_seq(&[CloseBracket, Hash]) => {
+          OpenBracket
+            if subs.inline_formatting() && line.contains_seq(&[Kind(CloseBracket), Kind(Hash)]) =>
+          {
             let mut parse_token = token.clone();
             let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
             debug_assert!(line.current_is(Hash));
             line.discard_assert(Hash);
             parse_token.kind = Hash;
-            let wrap = |inner| TextSpan(attr_list, inner);
-            if starts_unconstrained(Hash, line.current_token().unwrap(), &line, lines) {
-              self.parse_unconstrained(&parse_token, wrap, &mut acc, line, lines)?;
-            } else {
-              self.parse_constrained(&parse_token, wrap, &mut acc, line, lines)?;
-            };
+            let span = |inner| TextSpan(attr_list, inner);
+            self.parse_node(span, [Kind(Hash)], &parse_token, &mut acc, line, lines)?;
             if let Some(InlineNode { content: TextSpan(attrs, nodes), .. }) = acc.inlines.last() {
               if let Some(id) = &attrs.id {
                 self.document.anchors.borrow_mut().insert(
@@ -369,7 +371,8 @@ impl<'arena> Parser<'arena> {
           }
 
           OpenBracket
-            if line.current_is(OpenBracket) && line.contains_seq(&[CloseBracket, CloseBracket]) =>
+            if line.current_is(OpenBracket)
+              && line.contains_seq(&[Kind(CloseBracket), Kind(CloseBracket)]) =>
           {
             let attrs = self.parse_attr_list(&mut line)?;
             let id = attrs.id.clone().expect("malformed legacy attrs").src;
@@ -389,13 +392,11 @@ impl<'arena> Parser<'arena> {
           Backtick
             if subs.inline_formatting()
               && line.current_is(Plus)
-              && contains_seq(&[Plus, Backtick], &line, lines) =>
+              && contains_seq(&[Len(1, Plus), Kind(Backtick)], &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.ctx.subs.remove(Subs::AttrRefs);
-            self.parse_inner(
-              &token,
-              [Plus, Backtick],
+            self.parse_node(
               |mut inner| {
                 assert!(inner.len() == 1, "invalid lit mono");
                 match inner.pop().unwrap() {
@@ -403,6 +404,8 @@ impl<'arena> Parser<'arena> {
                   _ => panic!("invalid lit mono"),
                 }
               },
+              [Len(1, Plus), Kind(Backtick)],
+              &token,
               &mut acc,
               line,
               lines,
@@ -412,34 +415,35 @@ impl<'arena> Parser<'arena> {
           }
 
           Caret if subs.inline_formatting() && line.is_continuous_thru(Caret) => {
-            self.parse_inner(&token, [Caret], Superscript, &mut acc, line, lines)?;
+            self.parse_node(Superscript, [Kind(Caret)], &token, &mut acc, line, lines)?;
             break;
           }
 
           Backtick
             if subs.inline_formatting()
-              && starts_constrained(&[Backtick], &token, &line, lines) =>
+              && starts_constrained(&[Kind(Backtick)], &token, &line, lines) =>
           {
-            self.parse_constrained(&token, Mono, &mut acc, line, lines)?;
+            self.parse_node(Mono, [Kind(Backtick)], &token, &mut acc, line, lines)?;
             break;
           }
 
           Backtick
-            if subs.inline_formatting() && starts_unconstrained(Backtick, &token, &line, lines) =>
+            if subs.inline_formatting()
+              && starts_unconstrained(&[Kind(Backtick)], &token, &line, lines) =>
           {
-            self.parse_unconstrained(&token, Mono, &mut acc, line, lines)?;
+            self.parse_node(Mono, [Kind(Backtick); 2], &token, &mut acc, line, lines)?;
             break;
           }
 
           DoubleQuote
             if subs.inline_formatting()
               && line.current_is(Backtick)
-              && starts_constrained(&[Backtick, DoubleQuote], &token, &line, lines) =>
+              && starts_constrained(&[Kind(Backtick), Kind(DoubleQuote)], &token, &line, lines) =>
           {
-            self.parse_inner(
-              &token,
-              [Backtick, DoubleQuote],
+            self.parse_node(
               |inner| Quote(Double, inner),
+              [Kind(Backtick), Kind(DoubleQuote)],
+              &token,
               &mut acc,
               line,
               lines,
@@ -450,12 +454,12 @@ impl<'arena> Parser<'arena> {
           SingleQuote
             if subs.inline_formatting()
               && line.current_is(Backtick)
-              && starts_constrained(&[Backtick, SingleQuote], &token, &line, lines) =>
+              && starts_constrained(&[Kind(Backtick), Kind(SingleQuote)], &token, &line, lines) =>
           {
-            self.parse_inner(
-              &token,
-              [Backtick, SingleQuote],
+            self.parse_node(
               |inner| Quote(Single, inner),
+              [Kind(Backtick), Kind(SingleQuote)],
+              &token,
               &mut acc,
               line,
               lines,
@@ -464,7 +468,7 @@ impl<'arena> Parser<'arena> {
           }
 
           Tilde if subs.inline_formatting() && line.is_continuous_thru(Tilde) => {
-            self.parse_inner(&token, [Tilde], Subscript, &mut acc, line, lines)?;
+            self.parse_node(Subscript, [Kind(Tilde)], &token, &mut acc, line, lines)?;
             break;
           }
 
@@ -476,7 +480,7 @@ impl<'arena> Parser<'arena> {
           DoubleQuote
             if subs.inline_formatting()
               && line.current_is(Backtick)
-              && stop_tokens != [Backtick] =>
+              && stop_tokens != [Kind(Backtick)] =>
           {
             push_simple(CurlyQuote(LeftDouble), &token, line, &mut acc, lines);
             break;
@@ -490,26 +494,31 @@ impl<'arena> Parser<'arena> {
           SingleQuote
             if subs.inline_formatting()
               && line.current_is(Backtick)
-              && stop_tokens != [Backtick] =>
+              && stop_tokens != [Kind(Backtick)] =>
           {
             push_simple(CurlyQuote(LeftSingle), &token, line, &mut acc, lines);
             break;
           }
 
-          Hash if subs.inline_formatting() && contains_seq(&[Hash], &line, lines) => {
-            self.parse_constrained(&token, Highlight, &mut acc, line, lines)?;
+          Hash
+            if subs.inline_formatting()
+              && starts_unconstrained(&[Kind(Hash); 2], &token, &line, lines) =>
+          {
+            self.parse_node(Highlight, [Kind(Hash); 2], &token, &mut acc, line, lines)?;
             break;
           }
 
-          Plus
-            if line.starts_with_seq(&[Plus, Plus])
-              && contains_seq(&[Plus, Plus, Plus], &line, lines) =>
-          {
+          Hash if subs.inline_formatting() && contains_seq(&[Kind(Hash)], &line, lines) => {
+            self.parse_node(Highlight, [Kind(Hash)], &token, &mut acc, line, lines)?;
+            break;
+          }
+
+          Plus if token.len() == 3 && contains_len(Plus, 3, &line, lines) => {
             self.ctx.subs = Substitutions::none();
-            self.parse_inner(
+            self.parse_node(
+              InlinePassthru,
+              [TokenSpec::Len(3, Plus)],
               &token,
-              [Plus, Plus, Plus],
-              InlinePassthrough,
               &mut acc,
               line,
               lines,
@@ -520,18 +529,35 @@ impl<'arena> Parser<'arena> {
 
           Plus
             if subs.inline_formatting()
-              && line.current_is(Plus)
-              && starts_unconstrained(Plus, &token, &line, lines) =>
+              && token.len() == 2
+              && starts_unconstrained(&[Len(2, Plus)], &token, &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
-            self.parse_unconstrained(&token, InlinePassthrough, &mut acc, line, lines)?;
+            self.parse_node(
+              InlinePassthru,
+              [Len(2, Plus)],
+              &token,
+              &mut acc,
+              line,
+              lines,
+            )?;
             self.ctx.subs = subs;
             break;
           }
 
-          Plus if subs.inline_formatting() && starts_constrained(&[Plus], &token, &line, lines) => {
+          Plus
+            if subs.inline_formatting()
+              && starts_constrained(&[Len(1, Plus)], &token, &line, lines) =>
+          {
             self.ctx.subs.remove(Subs::InlineFormatting);
-            self.parse_constrained(&token, InlinePassthrough, &mut acc, line, lines)?;
+            self.parse_node(
+              InlinePassthru,
+              [Len(1, Plus)],
+              &token,
+              &mut acc,
+              line,
+              lines,
+            )?;
             self.ctx.subs = subs;
             break;
           }
@@ -596,6 +622,12 @@ impl<'arena> Parser<'arena> {
             acc.push_node(Macro(Link { scheme, target, attrs: None }), loc);
           }
 
+          PreprocPassthru => {
+            let index: usize = token.lexeme[1..6].parse().unwrap();
+            let content = self.ctx.passthrus[index].take().unwrap();
+            acc.push_node(InlinePassthru(content), token.loc);
+          }
+
           _ => {
             acc.text.push_token(&token);
           }
@@ -618,48 +650,28 @@ impl<'arena> Parser<'arena> {
     Ok(nodes)
   }
 
-  fn parse_inner<const N: usize>(
+  fn parse_node<const N: usize>(
     &mut self,
-    start: &Token<'arena>,
-    stop_tokens: [TokenKind; N],
     wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
+    stop_tokens: [TokenSpec; N],
+    start: &Token<'arena>,
     state: &mut Accum<'arena>,
     mut line: Line<'arena>,
     lines: &mut ContiguousLines<'arena>,
   ) -> Result<()> {
     let mut loc = start.loc;
-    stop_tokens
-      .iter()
-      .take(N - 1)
-      .for_each(|&kind| line.discard_assert(kind));
+    let mut stop_len = start.len();
+    stop_tokens.iter().take(N - 1).for_each(|spec| {
+      let tok = line.consume_current().unwrap();
+      debug_assert!(tok.kind == spec.token_kind());
+      stop_len += tok.len();
+    });
     lines.restore_if_nonempty(line);
     let inner = self.parse_inlines_until(lines, &stop_tokens)?;
-    extend(&mut loc, &inner, N);
+    extend(&mut loc, &inner, stop_len);
     state.push_node(wrap(inner), loc);
     push_newline_if_needed(state, lines);
     Ok(())
-  }
-
-  fn parse_unconstrained(
-    &mut self,
-    token: &Token<'arena>,
-    wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
-    state: &mut Accum<'arena>,
-    line: Line<'arena>,
-    lines: &mut ContiguousLines<'arena>,
-  ) -> Result<()> {
-    self.parse_inner(token, [token.kind, token.kind], wrap, state, line, lines)
-  }
-
-  fn parse_constrained(
-    &mut self,
-    token: &Token<'arena>,
-    wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
-    state: &mut Accum<'arena>,
-    line: Line<'arena>,
-    lines: &mut ContiguousLines<'arena>,
-  ) -> Result<()> {
-    self.parse_inner(token, [token.kind], wrap, state, line, lines)
   }
 
   fn should_stop_at(&self, line: &Line<'arena>) -> bool {
@@ -767,6 +779,120 @@ mod tests {
   use test_utils::*;
 
   #[test]
+  fn test_inline_passthrus() {
+    let cases = vec![
+      (
+        "+_foo_&+ bar",
+        nodes![
+          node!(
+            InlinePassthru(nodes![
+              node!("_foo_"; 1..6),
+              node!(SpecialChar(SpecialCharKind::Ampersand), 6..7),
+            ]),
+            0..8,
+          ),
+          node!(" bar"; 8..12),
+        ],
+      ),
+      (
+        "baz ++_foo_&++ bar",
+        nodes![
+          node!("baz "; 0..4),
+          node!(
+            InlinePassthru(nodes![
+              node!("_foo_"; 6..11),
+              node!(SpecialChar(SpecialCharKind::Ampersand), 11..12),
+            ]),
+            4..14,
+          ),
+          node!(" bar"; 14..18),
+        ],
+      ),
+      (
+        "baz +++_foo_&+++ bar", // no specialchars subs on +++
+        nodes![
+          node!("baz "; 0..4),
+          node!(InlinePassthru(nodes![node!("_foo_&"; 7..13)]), 4..16,),
+          node!(" bar"; 16..20),
+        ],
+      ),
+      (
+        "+foo+ bar +baz+", // two passthrus on one line
+        nodes![
+          node!(InlinePassthru(just!("foo", 1..4)), 0..5),
+          node!(" bar "; 5..10),
+          node!(InlinePassthru(just!("baz", 11..14)), 10..15),
+        ],
+      ),
+      (
+        "+foo+bar", // single plus = not unconstrained, not a passthrough
+        just!("+foo+bar", 0..8),
+      ),
+      (
+        "+foo\nbar+ baz", // multi-line
+        nodes![
+          node!(
+            InlinePassthru(nodes![
+              node!("foo"; 1..4),
+              node!(Inline::Newline, 4..5),
+              node!("bar"; 5..8),
+            ]),
+            0..9
+          ),
+          node!(" baz"; 9..13),
+        ],
+      ),
+      (
+        "+foo\nbar+baz", // multi-line constrained can't terminate within word
+        nodes![
+          // no InlinePassthrough
+          node!("+foo"; 0..4),
+          node!(Inline::Newline, 4..5),
+          node!("bar+baz"; 5..12),
+        ],
+      ),
+      (
+        "++foo\nbar++", // multi-line unconstrained
+        nodes![node!(
+          InlinePassthru(nodes![
+            node!("foo"; 2..5),
+            node!(Inline::Newline, 5..6),
+            node!("bar"; 6..9),
+          ]),
+          0..11
+        )],
+      ),
+      (
+        "pass:[_foo_]",
+        nodes![node!(InlinePassthru(just!("_foo_", 6..11)), 0..12)],
+      ),
+      (
+        "pass:q[_foo_] bar", // subs=quotes
+        nodes![
+          node!(
+            InlinePassthru(nodes![node!(Italic(just!("foo", 8..11)), 7..12)]),
+            0..13
+          ),
+          node!(" bar"; 13..17),
+        ],
+      ),
+      (
+        "pass:a,c[_foo_\nbar]",
+        nodes![node!(
+          InlinePassthru(nodes![
+            node!("_foo_"; 9..14),
+            node!(Inline::Newline, 14..15),
+            node!("bar"; 15..18),
+          ]),
+          0..19
+        )],
+      ),
+    ];
+
+    run(cases);
+  }
+
+  #[test]
   fn test_line_comments() {
     let cases = vec![(
       "foo\n// baz\nbar",
@@ -870,7 +996,7 @@ mod tests {
       (
         "+_foo_+\nbar",
         nodes![
-          node!(InlinePassthrough(nodes![node!("_foo_"; 1..6)]), 0..7,),
+          node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7,),
           node!(Inline::Newline, 7..8),
           node!("bar"; 8..11),
         ],
@@ -878,7 +1004,7 @@ mod tests {
       (
         "+++_<foo>&_+++\nbar",
         nodes![
-          node!(InlinePassthrough(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
+          node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
           node!(Inline::Newline, 14..15),
           node!("bar"; 15..18),
         ],
@@ -939,7 +1065,7 @@ mod tests {
     let cases = vec![
       (
         "+_foo_+",
-        nodes![node!(InlinePassthrough(nodes![node!("_foo_"; 1..6)]), 0..7,)],
+        nodes![node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7,)],
       ),
       (
         "`*_foo_*`",
@@ -955,7 +1081,7 @@ mod tests {
         "+_foo\nbar_+",
         // not sure if this is "spec", but it's what asciidoctor currently does
         nodes![node!(
-          InlinePassthrough(nodes![
+          InlinePassthru(nodes![
             node!("_foo"; 1..5),
             node!(Inline::Newline, 5..6),
             node!("bar_"; 6..10),
@@ -966,7 +1092,7 @@ mod tests {
       (
         "+_<foo>&_+",
         nodes![node!(
-          InlinePassthrough(nodes![
+          InlinePassthru(nodes![
             node!("_"; 1..2),
             node!(SpecialChar(SpecialCharKind::LessThan), 2..3),
             node!("foo"; 3..6),
@@ -981,21 +1107,21 @@ mod tests {
         "rofl +_foo_+ lol",
         nodes![
           node!("rofl "; 0..5),
-          node!(InlinePassthrough(nodes![node!("_foo_"; 6..11)]), 5..12,),
+          node!(InlinePassthru(nodes![node!("_foo_"; 6..11)]), 5..12,),
           node!(" lol"; 12..16),
         ],
       ),
       (
         "++_foo_++bar",
         nodes![
-          node!(InlinePassthrough(nodes![node!("_foo_"; 2..7)]), 0..9,),
+          node!(InlinePassthru(nodes![node!("_foo_"; 2..7)]), 0..9,),
           node!("bar"; 9..12),
         ],
       ),
       (
         "+++_<foo>&_+++ bar",
         nodes![
-          node!(InlinePassthrough(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
+          node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
           node!(" bar"; 14..18),
         ],
       ),
@@ -1004,6 +1130,14 @@ mod tests {
         nodes![
           node!("foo "; 0..4),
           node!(Highlight(nodes![node!("bar"; 5..8)]), 4..9),
+        ],
+      ),
+      (
+        "foo ##bar##baz",
+        nodes![
+          node!("foo "; 0..4),
+          node!(Highlight(nodes![node!("bar"; 6..9)]), 4..11),
+          node!("baz"; 11..14),
         ],
       ),
       (
@@ -1212,9 +1346,6 @@ mod tests {
         ],
       ),
     ];
-
-    // repeated passes necessary?
-    // yikes: `link:pass:[My Documents/report.pdf][Get Report]`
 
     run(cases);
   }

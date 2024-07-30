@@ -7,12 +7,60 @@ use crate::variants::token::*;
 #[derive(Debug, Clone)]
 pub struct Line<'arena> {
   tokens: Deq<'arena, Token<'arena>>,
-  orig_len: usize,
+  orig_len: u32,
+  pass_tokens: bool,
 }
 
 impl<'arena> Line<'arena> {
   pub fn new(tokens: Deq<'arena, Token<'arena>>) -> Self {
-    Line { orig_len: tokens.len(), tokens }
+    Line {
+      orig_len: tokens.len() as u32,
+      tokens,
+      pass_tokens: false,
+    }
+  }
+
+  pub fn empty(bump: &'arena Bump) -> Self {
+    Line {
+      orig_len: 0,
+      tokens: Deq::new(bump),
+      pass_tokens: false,
+    }
+  }
+
+  pub fn with_capacity(capacity: usize, bump: &'arena Bump) -> Self {
+    Line {
+      orig_len: 0,
+      tokens: Deq::with_capacity(capacity, bump),
+      pass_tokens: false,
+    }
+  }
+
+  pub const fn may_contain_inline_pass(&self) -> bool {
+    self.pass_tokens
+  }
+
+  pub fn push(&mut self, token: Token<'arena>) {
+    match token.kind {
+      MacroName if token.lexeme == "pass:" => self.pass_tokens = true,
+      Plus if self.tokens.last().is_not(Backtick) && token.len() < 4 => self.pass_tokens = true,
+      _ => {}
+    }
+    self.tokens.push(token);
+    self.orig_len += 1;
+  }
+
+  pub fn push_non_pass(&mut self, token: Token<'arena>) {
+    self.tokens.push(token);
+    self.orig_len += 1;
+  }
+
+  pub fn last(&self) -> Option<&Token<'arena>> {
+    self.tokens.last()
+  }
+
+  pub fn pop(&mut self) -> Option<Token<'arena>> {
+    self.tokens.pop()
   }
 
   pub fn drain_into(self, tokens: &mut Deq<'arena, Token<'arena>>) {
@@ -86,7 +134,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn heading_level(&self) -> Option<u8> {
-    if self.starts_with_seq(&[EqualSigns, Whitespace]) && self.num_tokens() > 2 {
+    if self.starts_with_seq(&[Kind(EqualSigns), Kind(Whitespace)]) && self.num_tokens() > 2 {
       Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
     } else {
       None
@@ -106,7 +154,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_block_macro(&self) -> bool {
-    self.starts_with_seq(&[MacroName, Colon])
+    self.starts_with_seq(&[Kind(MacroName), Kind(Colon)])
       && self.contains(OpenBracket)
       && self.ends_with_nonescaped(CloseBracket)
   }
@@ -115,7 +163,7 @@ impl<'arena> Line<'arena> {
     if !self.starts(OpenBracket) || !self.ends_with_nonescaped(CloseBracket) {
       false
     // support legacy [[id,pos]] anchor syntax
-    } else if self.starts_with_seq(&[OpenBracket, OpenBracket]) {
+    } else if self.starts_with_seq(&[Kind(OpenBracket), Kind(OpenBracket)]) {
       self.ends_with_nonescaped(CloseBracket)
         && self.nth_token(self.num_tokens() - 2).is(CloseBracket)
     } else {
@@ -125,7 +173,7 @@ impl<'arena> Line<'arena> {
 
   pub fn is_chunk_title(&self) -> bool {
     // dot followed by at least one non-whitespace token
-    self.starts(Dots) && self.tokens().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
+    self.starts(Dots) && self.iter().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
   }
 
   pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
@@ -161,28 +209,28 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn ends_with_nonescaped(&self, token_type: TokenKind) -> bool {
-    match self.tokens().len() {
+    match self.iter().len() {
       0 => false,
       1 => self.current_is(token_type),
       n => self.last_token().is(token_type) && self.nth_token(n - 2).is_not(Backslash),
     }
   }
 
-  fn tokens(&self) -> impl ExactSizeIterator<Item = &Token<'arena>> {
+  pub fn iter(&self) -> impl ExactSizeIterator<Item = &Token<'arena>> {
     self.tokens.iter()
   }
 
-  fn tokens_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Token<'arena>> {
+  pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Token<'arena>> {
     self.tokens.iter_mut()
   }
 
-  pub fn into_tokens(self) -> impl ExactSizeIterator<Item = Token<'arena>> {
+  pub fn into_iter(self) -> impl ExactSizeIterator<Item = Token<'arena>> {
     self.tokens.into_iter()
   }
 
   pub fn first_nonescaped(&self, kind: TokenKind) -> Option<&Token> {
     let mut prev: Option<TokenKind> = None;
-    for token in self.tokens() {
+    for token in self.iter() {
       if token.is(kind) && prev.map_or(true, |k| k != Backslash) {
         return Some(token);
       }
@@ -191,20 +239,34 @@ impl<'arena> Line<'arena> {
     None
   }
 
-  pub fn has_seq_at(&self, kinds: &[TokenKind], offset: u32) -> bool {
-    if kinds.is_empty() || self.tokens().len() < offset as usize + kinds.len() {
+  pub fn has_seq_at(&self, specs: &[TokenSpec], offset: u32) -> bool {
+    if specs.is_empty() || self.iter().len() < offset as usize + specs.len() {
       return false;
     }
-    for (i, token_type) in kinds.iter().enumerate() {
-      if self.tokens.get(i + offset as usize).unwrap().kind != *token_type {
-        return false;
+    for (i, spec) in specs.iter().enumerate() {
+      let token = self.tokens.get(i + offset as usize).unwrap();
+      match spec {
+        Kind(kind) => {
+          if token.kind != *kind {
+            return false;
+          }
+        }
+        Len(len, kind) => {
+          if token.kind != *kind || token.lexeme.len() != *len as usize {
+            return false;
+          }
+        }
       }
     }
     true
   }
 
   pub fn contains(&self, kind: TokenKind) -> bool {
-    self.tokens().any(|t| t.kind == kind)
+    self.iter().any(|t| t.kind == kind)
+  }
+
+  pub fn contains_len(&self, kind: TokenKind, len: usize) -> bool {
+    self.iter().any(|t| t.kind == kind && t.lexeme.len() == len)
   }
 
   pub fn starts(&self, kind: TokenKind) -> bool {
@@ -223,28 +285,28 @@ impl<'arena> Line<'arena> {
     self.last_token().is(kind)
   }
 
-  pub fn starts_with_seq(&self, kinds: &[TokenKind]) -> bool {
-    self.has_seq_at(kinds, 0)
+  pub fn starts_with_seq(&self, tokens: &[TokenSpec]) -> bool {
+    self.has_seq_at(tokens, 0)
   }
 
-  pub fn contains_seq(&self, kind: &[TokenKind]) -> bool {
-    self.index_of_seq(kind).is_some()
+  pub fn contains_seq(&self, specs: &[TokenSpec]) -> bool {
+    self.index_of_seq(specs).is_some()
   }
 
-  pub fn index_of_seq(&self, kinds: &[TokenKind]) -> Option<usize> {
-    if self.tokens().len() < kinds.len() {
+  pub fn index_of_seq(&self, specs: &[TokenSpec]) -> Option<usize> {
+    if self.iter().len() < specs.len() {
       return None;
     }
-    let Some(first_kind) = kinds.first() else {
+    let Some(first_spec) = specs.first() else {
       return None;
     };
-    'outer: for (i, token) in self.tokens().enumerate() {
-      if token.kind == *first_kind {
-        if self.tokens().len() - i < kinds.len() {
+    'outer: for (i, token) in self.iter().enumerate() {
+      if token.satisfies(*first_spec) {
+        if self.iter().len() - i < specs.len() {
           return None;
         }
-        for (j, kind) in kinds.iter().skip(1).enumerate() {
-          if self.tokens.get(i + j + 1).unwrap().kind != *kind {
+        for (j, spec) in specs.iter().skip(1).enumerate() {
+          if !self.tokens.get(i + j + 1).unwrap().satisfies(*spec) {
             continue 'outer;
           }
         }
@@ -255,7 +317,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn continues_valid_callout_nums(&self) -> bool {
-    for token in self.tokens() {
+    for token in self.iter() {
       if token.is(Whitespace) || token.is(CalloutNumber) {
         continue;
       } else {
@@ -274,7 +336,7 @@ impl<'arena> Line<'arena> {
   pub fn continues_xref_shorthand(&self) -> bool {
     self.current_is(LessThan)
       && self.num_tokens() > 3
-      && self.contains_seq(&[GreaterThan, GreaterThan])
+      && self.contains_seq(&[Kind(GreaterThan), Kind(GreaterThan)])
       && self.nth_token(1).is_not(GreaterThan)
       && self.nth_token(1).is_not(LessThan)
       && self.nth_token(1).is_not(Whitespace)
@@ -282,7 +344,7 @@ impl<'arena> Line<'arena> {
 
   /// true if there is no whitespace until token type, and token type is found
   pub fn is_continuous_thru(&self, kind: TokenKind) -> bool {
-    for token in self.tokens() {
+    for token in self.iter() {
       if token.is(kind) {
         return true;
       } else if token.is(Whitespace) {
@@ -294,14 +356,18 @@ impl<'arena> Line<'arena> {
     false
   }
 
-  pub fn terminates_constrained(&self, stop_tokens: &[TokenKind]) -> bool {
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec]) -> bool {
+    self.terminates_constrained_in(stop_tokens).is_some()
+  }
+
+  pub fn terminates_constrained_in(&self, stop_tokens: &[TokenSpec]) -> Option<usize> {
     match self.index_of_seq(stop_tokens) {
       // constrained sequences can't immediately terminate
       // or else `foo __bar` would include an empty italic node
       // TODO: maybe that's only true for _single_ tok sequences?
-      Some(0) => false,
-      Some(n) if self.nth_token(n).is_not(Word) => true,
-      _ => false,
+      Some(0) => None,
+      Some(n) if self.nth_token(n + 1).is_not(Word) => Some(n),
+      _ => None,
     }
   }
 
@@ -363,7 +429,7 @@ impl<'arena> Line<'arena> {
     let mut loc = start.map_or_else(|| self.loc().unwrap(), |t| t.loc);
     let mut num_tokens = 0;
 
-    for token in self.tokens() {
+    for token in self.iter() {
       match token.kind {
         Whitespace | GreaterThan | OpenBracket => break,
         _ => num_tokens += 1,
@@ -393,7 +459,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn into_lines(self) -> ContiguousLines<'arena> {
-    let mut lines = Deq::with_capacity(self.tokens.bump, 1);
+    let mut lines = Deq::with_capacity(1, self.tokens.bump);
     lines.push(self);
     ContiguousLines::new(lines)
   }
@@ -455,7 +521,7 @@ impl<'arena> Line<'arena> {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
       _ => {
-        for token in self.tokens().skip(offset) {
+        for token in self.iter().skip(offset) {
           if token.is(TermDelimiter) {
             return match token.lexeme.as_str() {
               "::" => Some(ListMarker::Colons(2)),
@@ -527,7 +593,7 @@ impl<'arena> Line<'arena> {
     &mut self,
     bump: &'arena Bump,
   ) -> Option<(bool, SourceString<'arena>)> {
-    if !self.starts(OpenBracket) || !self.has_seq_at(&[CloseBracket, Whitespace], 2) {
+    if !self.starts(OpenBracket) || !self.has_seq_at(&[Kind(CloseBracket), Kind(Whitespace)], 2) {
       return None;
     }
     let inside = self.nth_token(1).unwrap();
@@ -544,20 +610,20 @@ impl<'arena> Line<'arena> {
     Some((checked, SourceString::new(src, loc)))
   }
 
-  pub fn extract_line_before(&mut self, seq: &[TokenKind]) -> Line<'arena> {
-    let mut tokens = Deq::with_capacity(self.tokens.bump, self.num_tokens());
+  pub fn extract_line_before(&mut self, seq: &[TokenSpec]) -> Line<'arena> {
+    let mut line = Line::with_capacity(self.num_tokens(), self.tokens.bump);
     while !self.starts_with_seq(seq) {
-      tokens.push(self.consume_current().unwrap());
+      line.push(self.consume_current().unwrap());
     }
-    Line::new(tokens)
+    line
   }
 
   pub fn is_partially_consumed(&self) -> bool {
-    self.tokens.len() < self.orig_len
+    self.tokens.len() < self.orig_len as usize
   }
 
   pub fn is_fully_unconsumed(&self) -> bool {
-    self.tokens.len() == self.orig_len
+    self.tokens.len() == self.orig_len as usize
   }
 
   pub fn trim_for_cell(&mut self, style: CellContentStyle) {
@@ -580,7 +646,7 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
   use crate::internal::*;
-  use crate::token::{TokenKind::*, *};
+  use crate::token::{TokenKind::*, TokenSpec::*, *};
   use bumpalo::Bump;
   use test_utils::*;
 
@@ -732,13 +798,23 @@ mod tests {
 
   #[test]
   fn test_line_has_seq_at() {
-    let cases: Vec<(&str, &[TokenKind], u32, bool)> = vec![
-      ("foo bar_:", &[Word, Whitespace], 0, true),
-      ("foo bar_:", &[Word, Whitespace], 1, false),
-      ("foo bar", &[Whitespace, Word], 1, true),
-      ("foo bar_:", &[Word, Underscore, Colon], 2, true),
-      ("foo bar_:", &[Word, Underscore, Colon], 0, false),
-      ("#", &[Hash], 0, true),
+    let cases: Vec<(&str, &[TokenSpec], u32, bool)> = vec![
+      ("foo bar_:", &[Kind(Word), Kind(Whitespace)], 0, true),
+      ("foo bar_:", &[Kind(Word), Kind(Whitespace)], 1, false),
+      ("foo bar", &[Kind(Whitespace), Kind(Word)], 1, true),
+      (
+        "foo bar_:",
+        &[Kind(Word), Kind(Underscore), Kind(Colon)],
+        2,
+        true,
+      ),
+      (
+        "foo bar_:",
+        &[Kind(Word), Kind(Underscore), Kind(Colon)],
+        0,
+        false,
+      ),
+      ("#", &[Kind(Hash)], 0, true),
     ];
     let bump = &Bump::new();
     for (input, token_types, pos, expected) in cases {
@@ -751,7 +827,7 @@ mod tests {
     let mut lexer = Lexer::from_str(bump, "foo_#");
     let mut line = lexer.consume_line().unwrap();
     line.discard(2); // `foo` and `_`
-    assert!(line.has_seq_at(&[Hash], 0));
+    assert!(line.has_seq_at(&[Kind(Hash)], 0));
   }
 
   #[test]
@@ -771,23 +847,49 @@ mod tests {
   }
 
   #[test]
+  fn test_line_terminates_constrained_in() {
+    let cases: Vec<(&str, &[TokenSpec], Option<usize>)> = vec![
+      ("foo_ bar", &[Kind(Underscore)], Some(1)),
+      ("foo_bar bar", &[Kind(Underscore)], None),
+    ];
+    let bump = &Bump::new();
+    for (input, specs, expected) in cases {
+      let mut lexer = Lexer::from_str(bump, input);
+      let line = lexer.consume_line().unwrap();
+      expect_eq!(line.terminates_constrained_in(specs), expected, from: input);
+    }
+  }
+
+  #[test]
   fn test_line_contains_seq() {
-    let cases: Vec<(&str, &[TokenKind], bool)> = vec![
-      ("_bar__r", &[Underscore, Underscore], true),
-      ("foo bar_:", &[Word, Whitespace], true),
-      ("foo bar_:", &[Word, Whitespace, Word], true),
-      ("foo bar_:", &[Word], true),
+    let cases: Vec<(&str, &[TokenSpec], bool)> = vec![
+      ("_bar__r", &[Kind(Underscore), Kind(Underscore)], true),
+      ("foo bar_:", &[Kind(Word), Kind(Whitespace)], true),
+      (
+        "foo bar_:",
+        &[Kind(Word), Kind(Whitespace), Kind(Word)],
+        true,
+      ),
+      ("foo bar_:", &[Kind(Word)], true),
       ("foo bar_:", &[], false),
-      ("foo bar_:", &[Underscore, Colon], true),
-      ("foo bar_:", &[Underscore, Word], false),
-      ("foo bar_:", &[Whitespace, Word, Underscore], true),
-      ("foo ", &[Word, Whitespace, Underscore, Colon], false),
+      ("foo bar_:", &[Kind(Underscore), Kind(Colon)], true),
+      ("foo bar_:", &[Kind(Underscore), Kind(Word)], false),
+      (
+        "foo bar_:",
+        &[Kind(Whitespace), Kind(Word), Kind(Underscore)],
+        true,
+      ),
+      (
+        "foo ",
+        &[Kind(Word), Kind(Whitespace), Kind(Underscore), Kind(Colon)],
+        false,
+      ),
     ];
     let bump = &Bump::new();
     for (input, token_types, expected) in cases {
       let mut lexer = Lexer::from_str(bump, input);
       let line = lexer.consume_line().unwrap();
-      expect_eq!(line.contains_seq(token_types), expected);
+      expect_eq!(line.contains_seq(token_types), expected, from: input);
     }
   }
 }

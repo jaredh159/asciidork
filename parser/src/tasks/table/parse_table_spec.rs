@@ -3,7 +3,7 @@ use regex::Regex;
 
 use super::TableTokens;
 use crate::internal::*;
-use TokenKind::*;
+use crate::variants::token::*;
 
 #[derive(Debug)]
 struct CellStart {
@@ -194,7 +194,7 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) -> b
 }
 
 fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
-  if tokens.has_seq_at(&[Digits, Star], *cursor) {
+  if tokens.has_seq_at(&[Kind(Digits), Kind(Star)], *cursor) {
     if let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>()) {
       spec.duplication = Some(digits);
       *cursor += 2;
@@ -203,12 +203,12 @@ fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &
 }
 
 fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
-  if tokens.has_seq_at(&[Digits, Plus], *cursor) {
+  if tokens.has_seq_at(&[Kind(Digits), Kind(Plus)], *cursor) {
     if let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>()) {
       spec.col_span = Some(digits);
       *cursor += 2;
     }
-  } else if tokens.has_seq_at(&[Dots, Digits, Plus], *cursor) {
+  } else if tokens.has_seq_at(&[Kind(Dots), Kind(Digits), Kind(Plus)], *cursor) {
     if !tokens.nth(*cursor as usize).is_len(Dots, 1) {
       return;
     }
@@ -219,7 +219,10 @@ fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32
       spec.row_span = Some(digits);
       *cursor += 3;
     }
-  } else if tokens.has_seq_at(&[Digits, Dots, Digits, Plus], *cursor) {
+  } else if tokens.has_seq_at(
+    &[Kind(Digits), Kind(Dots), Kind(Digits), Kind(Plus)],
+    *cursor,
+  ) {
     if !tokens.nth(*cursor as usize + 1).is_len(Dots, 1) {
       return;
     }
