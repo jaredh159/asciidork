@@ -16,21 +16,21 @@ impl<'arena> Parser<'arena> {
         TokenKind::MacroName if token.lexeme == "pass:" => {
           if let Some((n, subs)) = self.terminates_valid_pass_macro(line, lines) {
             let placeholder = self.pass_placeholder(&token, line, lines, n, subs)?;
-            replaced.push_non_pass(placeholder);
+            replaced.push_nonpass(placeholder);
           } else {
-            replaced.push_non_pass(token);
+            replaced.push_nonpass(token);
           };
         }
         TokenKind::Plus if prev_kind != Some(TokenKind::Backtick) && token.len() < 4 => {
           if let Some(n) = terminates_plus(token.len() as u8, line, lines) {
             let subs = Substitutions::from_pass_plus_token(&token);
             let placeholder = self.pass_placeholder(&token, line, lines, n, subs)?;
-            replaced.push_non_pass(placeholder);
+            replaced.push_nonpass(placeholder);
           } else {
-            replaced.push_non_pass(token);
+            replaced.push_nonpass(token);
           }
         }
-        _ => replaced.push_non_pass(token),
+        _ => replaced.push_nonpass(token),
       }
       prev_kind = Some(kind);
     }
@@ -89,7 +89,7 @@ impl<'arena> Parser<'arena> {
         return passthru;
       }
       if let Some(token) = line.consume_current() {
-        passthru_line.push_non_pass(token);
+        passthru_line.push_nonpass(token);
         num_tokens -= 1;
       } else {
         passthru.push(passthru_line);

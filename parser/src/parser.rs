@@ -466,4 +466,15 @@ mod tests {
       "link:some-file.adoc[role=include,leveloffset+=1]"
     );
   }
+
+  #[test]
+  fn spaces_in_include_file_to_pass_macro_link() {
+    let input = "include::foo bar baz.adoc[]";
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::secure());
+    assert_eq!(
+      parser.read_line().unwrap().unwrap().reassemble_src(),
+      "link:pass:c[foo bar baz.adoc][role=include,]"
+    );
+  }
 }

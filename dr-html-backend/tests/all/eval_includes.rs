@@ -39,10 +39,15 @@ assert_html!(
     Line-1
     include::file.adoc[]
     Line-3
+
+    include::with spaces.adoc[]
   "#},
   html! {r#"
     <div class="paragraph">
       <p>Line-1 <a href="file.adoc" class="bare include">file.adoc</a> Line-3</p>
+    </div>
+    <div class="paragraph">
+      <p><a href="with spaces.adoc" class="bare include">with spaces.adoc</a></p>
     </div>
   "#}
 );

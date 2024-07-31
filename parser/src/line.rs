@@ -50,7 +50,7 @@ impl<'arena> Line<'arena> {
     self.orig_len += 1;
   }
 
-  pub fn push_non_pass(&mut self, token: Token<'arena>) {
+  pub fn push_nonpass(&mut self, token: Token<'arena>) {
     self.tokens.push(token);
     self.orig_len += 1;
   }
@@ -216,6 +216,10 @@ impl<'arena> Line<'arena> {
     }
   }
 
+  pub fn len(&self) -> usize {
+    self.tokens.len()
+  }
+
   pub fn iter(&self) -> impl ExactSizeIterator<Item = &Token<'arena>> {
     self.tokens.iter()
   }
@@ -240,7 +244,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn has_seq_at(&self, specs: &[TokenSpec], offset: u32) -> bool {
-    if specs.is_empty() || self.iter().len() < offset as usize + specs.len() {
+    if specs.is_empty() || self.len() < offset as usize + specs.len() {
       return false;
     }
     for (i, spec) in specs.iter().enumerate() {
@@ -294,15 +298,14 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn index_of_seq(&self, specs: &[TokenSpec]) -> Option<usize> {
-    if self.iter().len() < specs.len() {
+    assert!(!specs.is_empty());
+    if self.len() < specs.len() {
       return None;
     }
-    let Some(first_spec) = specs.first() else {
-      return None;
-    };
+    let first_spec = specs.first().unwrap();
     'outer: for (i, token) in self.iter().enumerate() {
       if token.satisfies(*first_spec) {
-        if self.iter().len() - i < specs.len() {
+        if self.len() - i < specs.len() {
           return None;
         }
         for (j, spec) in specs.iter().skip(1).enumerate() {
@@ -871,7 +874,6 @@ mod tests {
         true,
       ),
       ("foo bar_:", &[Kind(Word)], true),
-      ("foo bar_:", &[], false),
       ("foo bar_:", &[Kind(Underscore), Kind(Colon)], true),
       ("foo bar_:", &[Kind(Underscore), Kind(Word)], false),
       (
