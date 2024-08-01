@@ -62,7 +62,7 @@ impl<'arena> Parser<'arena> {
     use AttrKind::*;
     use Quotes::*;
     let parse_start = line.current_token().unwrap().loc.start;
-    let parse_end = line.first_nonescaped(CloseBracket).unwrap().loc.end - 1;
+    let parse_end = line.first_nonescaped(CloseBracket).unwrap().0.loc.end - 1;
     let mut state = AttrState::new_in(self.bump, formatted_text, (parse_start, parse_end));
 
     if line.current_is(OpenBracket) {
@@ -95,7 +95,7 @@ impl<'arena> Parser<'arena> {
         }
         CloseBracket if state.quotes != Default => {
           state.push_token(token);
-          let parse_end = line.first_nonescaped(CloseBracket).unwrap().loc.end - 1;
+          let parse_end = line.first_nonescaped(CloseBracket).unwrap().0.loc.end - 1;
           state.parse_range.1 = parse_end;
           state.attr_list.loc.end = parse_end + 1;
         }

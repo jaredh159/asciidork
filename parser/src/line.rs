@@ -232,11 +232,11 @@ impl<'arena> Line<'arena> {
     self.tokens.into_iter()
   }
 
-  pub fn first_nonescaped(&self, kind: TokenKind) -> Option<&Token> {
+  pub fn first_nonescaped(&self, kind: TokenKind) -> Option<(&Token, usize)> {
     let mut prev: Option<TokenKind> = None;
-    for token in self.iter() {
+    for (i, token) in self.iter().enumerate() {
       if token.is(kind) && prev.map_or(true, |k| k != Backslash) {
-        return Some(token);
+        return Some((token, i));
       }
       prev = Some(token.kind);
     }

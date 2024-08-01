@@ -41,6 +41,8 @@ assert_html!(
     Line-3
 
     include::with spaces.adoc[]
+
+    include::http://a.us/b.adoc[]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -49,8 +51,17 @@ assert_html!(
     <div class="paragraph">
       <p><a href="with spaces.adoc" class="bare include">with spaces.adoc</a></p>
     </div>
+    <div class="paragraph">
+      <p><a href="http://a.us/b.adoc" class="bare include">http://a.us/b.adoc</a></p>
+    </div>
   "#}
 );
+
+// input = 'include::http://example.org/team.adoc[]'
+// doc = Asciidoctor::Document.new input, safe: :secure
+// reader = doc.reader
+// assert_equal 'link:http://example.org/team.adoc[role=include]', reader.read_line
+// assert_empty logger.messages
 
 assert_html!(
   inline_include_w_newline,
