@@ -57,12 +57,6 @@ assert_html!(
   "#}
 );
 
-// input = 'include::http://example.org/team.adoc[]'
-// doc = Asciidoctor::Document.new input, safe: :secure
-// reader = doc.reader
-// assert_equal 'link:http://example.org/team.adoc[role=include]', reader.read_line
-// assert_empty logger.messages
-
 assert_html!(
   inline_include_w_newline,
   resolving: b"Line-2\n",

@@ -2,10 +2,15 @@ use std::fmt;
 
 use crate::internal::*;
 
+pub enum IncludeTarget<'a> {
+  FilePath(&'a str),
+  Uri(&'a str),
+}
+
 pub trait IncludeResolver {
   fn resolve(
     &mut self,
-    path: &str,
+    target: IncludeTarget,
     buffer: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError>;
 }
@@ -63,7 +68,7 @@ pub struct ErrorResolver(pub ResolveError);
 impl IncludeResolver for ErrorResolver {
   fn resolve(
     &mut self,
-    _: &str,
+    _: IncludeTarget,
     _: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
     println!("ErrorResolver::resolve");

@@ -8,7 +8,7 @@ use crate::variants::token::*;
 struct Directive<'a> {
   line_src: BumpString<'a>,
   first_token: Token<'a>,
-  target: BumpString<'a>,
+  target_str: BumpString<'a>,
   target_has_spaces: bool,
   target_is_uri: bool,
   attrs: AttrList<'a>,
@@ -51,7 +51,7 @@ impl<'arena> Parser<'arena> {
       self.err_at(
         "Cannot include URL contents (allow-uri-read not enabled)",
         directive.first_token.loc.end,
-        directive.first_token.loc.end + directive.target.len() as u32,
+        directive.first_token.loc.end + directive.target_str.len() as u32,
       )?;
       return Ok(DirectiveAction::SubstituteLine(
         self.substitute_link_for_include(&directive),
@@ -67,9 +67,9 @@ impl<'arena> Parser<'arena> {
     };
 
     let mut buffer = BumpVec::new_in(self.bump);
-    match resolver.resolve(&directive.target, &mut buffer) {
+    match resolver.resolve(directive.target(), &mut buffer) {
       Ok(_) => {
-        self.lexer.push_source(&directive.target, buffer);
+        self.lexer.push_source(&directive.target_str, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(error) => {
@@ -104,7 +104,7 @@ impl<'arena> Parser<'arena> {
       Ok(Some(Directive {
         line_src: src,
         first_token,
-        target,
+        target_str: target,
         target_has_spaces: has_spaces,
         target_is_uri,
         attrs: self.parse_attr_list(line)?,
@@ -145,6 +145,16 @@ impl<'arena> Parser<'arena> {
       }
     }
     tokens
+  }
+}
+
+impl<'a> Directive<'a> {
+  fn target(&self) -> IncludeTarget {
+    if self.target_is_uri {
+      IncludeTarget::Uri(self.target_str.as_str())
+    } else {
+      IncludeTarget::FilePath(self.target_str.as_str())
+    }
   }
 }
 

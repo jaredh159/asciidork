@@ -460,7 +460,7 @@ macro_rules! const_resolver {
     impl asciidork_parser::include_resolver::IncludeResolver for MockResolver {
       fn resolve(
         &mut self,
-        _path: &str,
+        _: asciidork_parser::include_resolver::IncludeTarget,
         buffer: &mut dyn asciidork_parser::include_resolver::IncludeBuffer,
       ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
         buffer.initialize(self.0.len());

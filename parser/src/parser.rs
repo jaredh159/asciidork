@@ -294,7 +294,7 @@ mod tests {
     impl IncludeResolver for MockResolver {
       fn resolve(
         &mut self,
-        _path: &str,
+        _: IncludeTarget,
         buffer: &mut dyn IncludeBuffer,
       ) -> std::result::Result<usize, ResolveError> {
         buffer.initialize(self.0.len());
