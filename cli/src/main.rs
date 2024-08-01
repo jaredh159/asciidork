@@ -15,6 +15,22 @@ mod args;
 
 use args::{Args, Output};
 
+use asciidork_parser::include_resolver::IncludeResolver;
+struct RoflResolver(pub Vec<u8>);
+
+impl IncludeResolver for RoflResolver {
+  fn resolve(
+    &mut self,
+    _path: &str,
+    buffer: &mut dyn asciidork_parser::include_resolver::IncludeBuffer,
+  ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
+    buffer.initialize(self.0.len());
+    let bytes = buffer.as_bytes_mut();
+    bytes.copy_from_slice(&self.0);
+    Ok(self.0.len())
+  }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
   let args = Args::parse();
   let src = {
@@ -40,6 +56,9 @@ fn main() -> Result<(), Box<dyn Error>> {
   let bump = &Bump::with_capacity(src.len());
   let mut parser = Parser::from_str(&src, bump);
   parser.apply_job_settings(args.clone().into());
+  parser.set_resolver(Box::new(RoflResolver(Vec::from(
+    b"from include resolver\n",
+  ))));
 
   let result = parser.parse();
   let parse_time = parse_start.elapsed();

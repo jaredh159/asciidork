@@ -66,7 +66,6 @@ impl IncludeResolver for ErrorResolver {
     _: &str,
     _: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
-    println!("ErrorResolver::resolve");
     Err(self.0.clone())
   }
 }

@@ -49,7 +49,7 @@ impl From<Args> for JobSettings {
       safe_mode: args.safe_mode,
       doctype: Some(args.doctype),
       embedded: args.embedded,
-      strict: false,
+      strict: true,
       ..JobSettings::default()
     }
   }
