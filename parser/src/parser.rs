@@ -83,11 +83,11 @@ impl<'arena> Parser<'arena> {
 
   pub(crate) fn read_line(&mut self) -> Result<Option<Line<'arena>>> {
     debug_assert!(self.peeked_lines.is_none());
-    let Some(line) = self.lexer.consume_line() else {
+    let Some(mut line) = self.lexer.consume_line() else {
       return Ok(None);
     };
     if line.starts(TokenKind::Directive) {
-      return match self.try_process_directive(&line)? {
+      return match self.try_process_directive(&mut line)? {
         DirectiveAction::Passthrough => Ok(Some(line)),
         DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
         DirectiveAction::ReadNextLine => self.read_line(),
@@ -476,5 +476,45 @@ mod tests {
       parser.read_line().unwrap().unwrap().reassemble_src(),
       "link:pass:c[foo bar baz.adoc][role=include,]"
     );
+  }
+
+  #[test]
+  fn uri_read_not_allowed_include() {
+    let input = "include::https://my.com/foo.adoc[]";
+    let mut parser = Parser::from_str(input, leaked_bump());
+    parser.apply_job_settings(JobSettings::unsafe_());
+    let err = parser.read_line().err().unwrap();
+    let expected_err = error! {"
+      1: include::https://my.com/foo.adoc[]
+                  ^^^^^^^^^^^^^^^^^^^^^^^ Cannot include URL contents (allow-uri-read not enabled)
+    "};
+    expect_eq!(err.plain_text(), expected_err, from: input);
+  }
+
+  #[test]
+  fn include_resolver_error_uri_read_not_supported() {
+    let mut parser = Parser::from_str("include::http://a.com/b[]", leaked_bump());
+    let mut settings = JobSettings::unsafe_();
+    settings
+      .job_attrs
+      .insert_unchecked("allow-uri-read", asciidork_meta::JobAttr::readonly(true));
+    parser.apply_job_settings(settings);
+    parser.set_resolver(Box::new(ErrorResolver(ResolveError::UriReadNotSupported)));
+    let expected_err = error! {"
+      1: include::http://a.com/b[]
+         ^^^^^^^^^ Include resolver returned error: URI read not supported
+    "};
+    expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
+  }
+
+  #[test]
+  fn include_resolver_error_no_resolver() {
+    let mut parser = Parser::from_str("include::file.adoc[]", leaked_bump());
+    parser.apply_job_settings(JobSettings::unsafe_());
+    let expected_err = error! {"
+      1: include::file.adoc[]
+         ^^^^^^^^^ No resolver supplied for include directive
+    "};
+    expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
   }
 }

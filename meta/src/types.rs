@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, PartialOrd, Ord)]
 pub enum SafeMode {
   Unsafe,
   Safe,
@@ -40,12 +40,7 @@ pub struct Author {
 
 impl Author {
   pub fn fullname(&self) -> String {
-    let mut name = String::with_capacity(
-      self.first_name.len()
-        + self.last_name.len()
-        + self.middle_name.as_ref().map_or(0, |s| s.len())
-        + 2,
-    );
+    let mut name = String::with_capacity(64);
     name.push_str(&self.first_name);
     if let Some(middle_name) = &self.middle_name {
       name.push(' ');

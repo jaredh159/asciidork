@@ -5,10 +5,19 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
+struct Directive<'a> {
+  line_src: BumpString<'a>,
+  first_token: Token<'a>,
+  target: BumpString<'a>,
+  target_has_spaces: bool,
+  target_is_uri: bool,
+  attrs: AttrList<'a>,
+}
+
 impl<'arena> Parser<'arena> {
   pub(crate) fn try_process_directive(
     &mut self,
-    line: &Line<'arena>,
+    line: &mut Line<'arena>,
   ) -> Result<DirectiveAction<'arena>> {
     match line.current_token().unwrap().lexeme.as_str() {
       "include::" => self.try_process_include_directive(line),
@@ -22,96 +31,99 @@ impl<'arena> Parser<'arena> {
 
   fn try_process_include_directive(
     &mut self,
-    line: &Line<'arena>,
+    line: &mut Line<'arena>,
   ) -> Result<DirectiveAction<'arena>> {
-    let Some((src, has_spaces)) = self.valid_include_directive(line) else {
+    let Some(directive) = self.valid_include_directive(line)? else {
       return Ok(DirectiveAction::Passthrough);
     };
+
     if self.document.meta.safe_mode == SafeMode::Secure {
+      // TODO: maybe warn?
       return Ok(DirectiveAction::SubstituteLine(
-        self.substitute_link_for_include(src, has_spaces, line.current_token().unwrap().loc.start),
+        self.substitute_link_for_include(&directive),
       ));
     }
-    let Some((first, target, _attrs)) = self.include_directive_data(line)? else {
-      return Ok(DirectiveAction::Passthrough);
-    };
+
+    if directive.target_is_uri
+      && (self.document.meta.safe_mode > SafeMode::Server
+        || !self.document.meta.is_true("allow-uri-read"))
+    {
+      self.err_at(
+        "Cannot include URL contents (allow-uri-read not enabled)",
+        directive.first_token.loc.end,
+        directive.first_token.loc.end + directive.target.len() as u32,
+      )?;
+      return Ok(DirectiveAction::SubstituteLine(
+        self.substitute_link_for_include(&directive),
+      ));
+    }
+
     let Some(resolver) = self.include_resolver.as_mut() else {
-      // TODO: is this correct?
-      self.err_token_full("No resolver found for include directive", &first)?;
+      self.err_token_full(
+        "No resolver supplied for include directive",
+        &directive.first_token,
+      )?;
       return Ok(DirectiveAction::Passthrough);
     };
 
     let mut buffer = BumpVec::new_in(self.bump);
-    resolver.resolve(&target, &mut buffer).unwrap();
-    self.lexer.push_source(&target, buffer);
-    Ok(DirectiveAction::ReadNextLine)
+    match resolver.resolve(&directive.target, &mut buffer) {
+      Ok(_) => {
+        self.lexer.push_source(&directive.target, buffer);
+        Ok(DirectiveAction::ReadNextLine)
+      }
+      Err(error) => {
+        self.err_token_full(
+          format!("Include resolver returned error: {}", error),
+          &directive.first_token,
+        )?;
+        Ok(DirectiveAction::Passthrough)
+      }
+    }
   }
 
-  fn valid_include_directive(&self, line: &Line<'arena>) -> Option<(BumpString<'arena>, bool)> {
+  fn valid_include_directive(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<Option<Directive<'arena>>> {
     if line.num_tokens() < 4
       || !line.contains_nonescaped(OpenBracket)
       || !line.ends_with_nonescaped(CloseBracket)
     {
-      return None;
+      return Ok(None);
     }
     let src = line.reassemble_src();
     if let Some(captures) = VALID_INCLUDE.captures(&src) {
-      let has_spaces = captures.get(1).unwrap().as_str().contains(' ');
-      Some((src, has_spaces))
+      let target = captures.get(1).unwrap().as_str();
+      let has_spaces = target.contains(' ');
+      let target = BumpString::from_str_in(target, self.bump);
+      let first_token = line.consume_current().unwrap();
+      let target_is_uri = line.current_token().is_url_scheme();
+      let num_target_tokens = line.first_nonescaped(TokenKind::OpenBracket).unwrap().1;
+      line.discard(num_target_tokens + 1); // including open bracket
+      Ok(Some(Directive {
+        line_src: src,
+        first_token,
+        target,
+        target_has_spaces: has_spaces,
+        target_is_uri,
+        attrs: self.parse_attr_list(line)?,
+      }))
     } else {
-      None
+      Ok(None)
     }
   }
 
-  fn include_directive_data(
-    &mut self,
-    line: &Line<'arena>,
-  ) -> Result<Option<(Token<'arena>, BumpString<'arena>, AttrList<'arena>)>> {
-    // consider regex instead?
-    // IncludeDirectiveRx = /^(\\)?include::([^\s\[](?:[^\[]*[^\s\[])?)\[(#{CC_ANY}+)?\]$/
-    if line.num_tokens() < 4
-      || !line.contains_nonescaped(OpenBracket)
-      || !line.ends_with_nonescaped(CloseBracket)
-    {
-      return Ok(None);
-    }
-    let mut line = line.clone();
-    line.discard_assert(Directive);
-    let mut target = BumpString::with_capacity_in(line.src_len(), self.bump);
-    let first = line.consume_current().unwrap();
-    target.push_str(&first.lexeme);
-    let mut last_kind = first.kind;
-    loop {
-      if line.is_empty() || (line.current_is(OpenBracket) && last_kind != Backslash) {
-        break;
-      }
-      let token = line.consume_current().unwrap();
-      target.push_str(&token.lexeme);
-      last_kind = token.kind;
-    }
-    if !line.current_is(OpenBracket) {
-      return Ok(None);
-    }
-    line.discard(1);
-    let attrs = self.parse_attr_list(&mut line)?;
-    Ok(Some((first, target, attrs)))
-  }
-
-  fn substitute_link_for_include(
-    &self,
-    line_src: BumpString<'arena>,
-    target_has_spaces: bool,
-    line_start: u32,
-  ) -> Line<'arena> {
-    let link_src = line_src.replace("include::", "link:");
+  fn substitute_link_for_include(&self, directive: &Directive<'arena>) -> Line<'arena> {
+    let link_src = directive.line_src.replace("include::", "link:");
     let mut lexer = Lexer::from_str(self.bump, &link_src);
-    lexer.adjust_offset(line_start + 4);
+    lexer.adjust_offset(directive.first_token.loc.start + 4);
     let mut line = lexer.consume_line().unwrap();
     let mut tokens = Line::empty(self.bump);
     let first_token = line.consume_current().unwrap();
     let first_loc = first_token.loc;
     tokens.push(first_token);
-    if target_has_spaces {
+    if directive.target_has_spaces {
       let loc = first_loc.clamp_end();
       tokens.push(tok(MacroName, "pass:", loc, self.bump));
       tokens.push_nonpass(tok(Word, "c", loc, self.bump));
@@ -120,7 +132,7 @@ impl<'arena> Parser<'arena> {
     for token in line.into_iter() {
       if token.kind == OpenBracket {
         let loc = token.loc.clamp_end();
-        if target_has_spaces {
+        if directive.target_has_spaces {
           tokens.push_nonpass(tok(CloseBracket, "]", loc, self.bump));
         }
         tokens.push_nonpass(token);

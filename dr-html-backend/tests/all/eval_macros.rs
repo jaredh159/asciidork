@@ -30,6 +30,8 @@ assert_html!(
 
     Email me at me@example.com as well.
 
+    link:https://example.org/dist/info.adoc[role=include]
+
     [subs=-macros]
     Not processed: https://site.com
   "#},
@@ -48,6 +50,11 @@ assert_html!(
     </div>
     <div class="paragraph">
       <p>Email me at <a href="mailto:me@example.com">me@example.com</a> as well.</p>
+    </div>
+    <div class="paragraph">
+      <p>
+        <a href="https://example.org/dist/info.adoc" class="bare include">https://example.org/dist/info.adoc</a>
+      </p>
     </div>
     <div class="paragraph">
       <p>Not processed: https://site.com</p>

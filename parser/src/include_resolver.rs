@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::internal::*;
 
 pub trait IncludeResolver {
@@ -35,8 +37,36 @@ impl<'a> IncludeBuffer for BumpVec<'a, u8> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ResolveError {
   NotFound,
-  Io(std::io::Error),
+  Io(String),
+  UriReadNotSupported,
+}
+
+impl fmt::Display for ResolveError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      ResolveError::NotFound => write!(f, "File not found"),
+      ResolveError::Io(e) => write!(f, "I/O error: {}", e),
+      ResolveError::UriReadNotSupported => write!(f, "URI read not supported"),
+    }
+  }
+}
+
+// test helpers
+
+#[cfg(test)]
+pub struct ErrorResolver(pub ResolveError);
+
+#[cfg(test)]
+impl IncludeResolver for ErrorResolver {
+  fn resolve(
+    &mut self,
+    _: &str,
+    _: &mut dyn IncludeBuffer,
+  ) -> std::result::Result<usize, ResolveError> {
+    println!("ErrorResolver::resolve");
+    Err(self.0.clone())
+  }
 }

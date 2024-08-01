@@ -124,6 +124,12 @@ impl DocumentMeta {
     key: &str,
     value: impl Into<AttrValue>,
   ) -> Result<(), String> {
+    if JOB_ONLY.contains(key) {
+      return Err(format!(
+        "Attribute `{}` may only be set at the job level (CLI/API)",
+        key
+      ));
+    }
     let value: AttrValue = value.into();
     match key {
       "doctype" => {
@@ -147,6 +153,12 @@ impl DocumentMeta {
   }
 
   pub fn insert_doc_attr(&mut self, key: &str, value: impl Into<AttrValue>) -> Result<(), String> {
+    if JOB_ONLY.contains(key) {
+      return Err(format!(
+        "Attribute `{}` may only be set at the job level (CLI/API)",
+        key
+      ));
+    }
     if HEADER_ONLY.contains(key) {
       return Err(format!(
         "Attribute `{}` may only be set in the document header",
@@ -210,6 +222,16 @@ impl ReadAttr for DocumentMeta {
       },
     }
   }
+}
+
+lazy_static::lazy_static! {
+  static ref JOB_ONLY: HashSet<&'static str> = {
+    HashSet::from_iter(vec![
+      "allow-uri-read",
+      "max-attribute-value-size",
+      "max-include-depth",
+    ])
+  };
 }
 
 lazy_static::lazy_static! {

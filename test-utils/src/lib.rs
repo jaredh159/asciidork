@@ -474,6 +474,23 @@ macro_rules! const_resolver {
 }
 
 #[macro_export]
+macro_rules! error_resolver {
+  ($error:expr) => {{
+    struct ErrorResolver(ResolveError);
+    impl asciidork_parser::include_resolver::IncludeResolver for ErrorResolver {
+      fn resolve(
+        &mut self,
+        _: &str,
+        _: &mut dyn IncludeBuffer,
+      ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
+        Err(self.0.clone())
+      }
+    }
+    Box::new(ErrorResolver($error))
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_doc_content {
   ($input:expr) => {{
     let parser = Parser::from_str($input, leaked_bump());
