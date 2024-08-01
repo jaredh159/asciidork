@@ -21,9 +21,17 @@ struct RoflResolver(pub Vec<u8>);
 impl IncludeResolver for RoflResolver {
   fn resolve(
     &mut self,
-    _path: &str,
+    path: &str,
     buffer: &mut dyn asciidork_parser::include_resolver::IncludeBuffer,
   ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
+    if path.starts_with("http") {
+      let response = minreq::get(path).send().unwrap();
+      let adoc = response.as_bytes();
+      buffer.initialize(adoc.len());
+      let bytes = buffer.as_bytes_mut();
+      bytes.copy_from_slice(adoc);
+      return Ok(adoc.len());
+    }
     buffer.initialize(self.0.len());
     let bytes = buffer.as_bytes_mut();
     bytes.copy_from_slice(&self.0);

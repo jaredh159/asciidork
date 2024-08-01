@@ -45,12 +45,16 @@ pub enum Output {
 
 impl From<Args> for JobSettings {
   fn from(args: Args) -> Self {
-    JobSettings {
+    let mut settings = JobSettings {
       safe_mode: args.safe_mode,
       doctype: Some(args.doctype),
       embedded: args.embedded,
       strict: true,
       ..JobSettings::default()
-    }
+    };
+    settings
+      .job_attrs
+      .insert_unchecked("allow-uri-read", asciidork_meta::JobAttr::readonly(true));
+    settings
   }
 }
