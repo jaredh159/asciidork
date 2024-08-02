@@ -498,7 +498,7 @@ macro_rules! parse_doc_content {
   }};
   ($input:expr, $bytes:expr) => {{
     let mut parser = Parser::from_str($input, leaked_bump());
-    parser.apply_job_settings(asciidork_meta::JobSettings::unsafe_());
+    parser.apply_job_settings(asciidork_meta::JobSettings::r#unsafe());
     parser.set_resolver(const_resolver!($bytes));
     parser.parse().unwrap().document.content
   }};

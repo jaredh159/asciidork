@@ -265,6 +265,19 @@ impl<'arena> Parser<'arena> {
   }
 }
 
+pub trait HasArena<'arena> {
+  fn bump(&self) -> &'arena Bump;
+  fn token(&self, kind: TokenKind, lexeme: &str, loc: SourceLocation) -> Token<'arena> {
+    Token::new(kind, loc, BumpString::from_str_in(lexeme, self.bump()))
+  }
+}
+
+impl<'arena> HasArena<'arena> for Parser<'arena> {
+  fn bump(&self) -> &'arena Bump {
+    self.bump
+  }
+}
+
 #[derive(Debug)]
 pub enum Chunk<'arena> {
   Block(Block<'arena>),
@@ -323,7 +336,7 @@ mod tests {
     "};
     let mut parser = Parser::from_str(input, leaked_bump());
     parser.set_resolver(resolve("bar")); // <-- no newline
-    parser.apply_job_settings(JobSettings::unsafe_());
+    parser.apply_job_settings(JobSettings::r#unsafe());
     let lines = parser.read_lines().unwrap().unwrap();
     assert_eq!(
       reassemble(lines),
@@ -343,7 +356,7 @@ mod tests {
       include::bar.adoc[]
     "};
     let mut parser = Parser::from_str(input, leaked_bump());
-    parser.apply_job_settings(JobSettings::unsafe_());
+    parser.apply_job_settings(JobSettings::r#unsafe());
     parser.set_resolver(resolve("bar")); // <-- no newline
     let lines = parser.read_lines().unwrap().unwrap();
     assert_eq!(
@@ -365,7 +378,7 @@ mod tests {
       baz
     "};
     let mut parser = Parser::from_str(input, leaked_bump());
-    parser.apply_job_settings(JobSettings::unsafe_());
+    parser.apply_job_settings(JobSettings::r#unsafe());
     parser.set_resolver(resolve("bar\n\n")); // <-- 2 newline
     let lines = parser.read_lines().unwrap().unwrap();
     assert_eq!(
@@ -483,7 +496,7 @@ mod tests {
     // strict mode error
     let input = "include::https://my.com/foo.adoc[]";
     let mut parser = Parser::from_str(input, leaked_bump());
-    parser.apply_job_settings(JobSettings::unsafe_());
+    parser.apply_job_settings(JobSettings::r#unsafe());
     let err = parser.read_line().err().unwrap();
     let expected_err = error! {"
       1: include::https://my.com/foo.adoc[]
@@ -494,7 +507,7 @@ mod tests {
     // non-strict mode replaced with link
     let input = "include::https://my.com/foo bar.adoc[]";
     let mut parser = Parser::from_str(input, leaked_bump());
-    let mut settings = JobSettings::unsafe_();
+    let mut settings = JobSettings::r#unsafe();
     settings.strict = false;
     parser.apply_job_settings(settings);
     expect_eq!(
@@ -507,7 +520,7 @@ mod tests {
   #[test]
   fn include_resolver_error_uri_read_not_supported() {
     let mut parser = Parser::from_str("include::http://a.com/b[]", leaked_bump());
-    let mut settings = JobSettings::unsafe_();
+    let mut settings = JobSettings::r#unsafe();
     settings
       .job_attrs
       .insert_unchecked("allow-uri-read", asciidork_meta::JobAttr::readonly(true));
@@ -523,11 +536,50 @@ mod tests {
   #[test]
   fn include_resolver_error_no_resolver() {
     let mut parser = Parser::from_str("include::file.adoc[]", leaked_bump());
-    parser.apply_job_settings(JobSettings::unsafe_());
+    parser.apply_job_settings(JobSettings::r#unsafe());
     let expected_err = error! {"
       1: include::file.adoc[]
          ^^^^^^^^^ No resolver supplied for include directive
     "};
     expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
+  }
+
+  #[test]
+  fn include_resolver_error_bad_encoding() {
+    let mut parser = Parser::from_str("include::file.adoc[]", leaked_bump());
+    parser.apply_job_settings(JobSettings::r#unsafe());
+    let invalid_utf8 = vec![0xFF, 0xFE, 0x68, 0x00, 0xFF, 0xDC];
+    parser.set_resolver(Box::new(ConstResolver(invalid_utf8)));
+    let expected_err = error! {"
+      1: include::file.adoc[]
+                  ^^^^^^^^^ Error resolving file contents: Invalid UTF-16 (LE)
+    "};
+    expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
+  }
+
+  #[test]
+  fn include_resolver_gets_passed_correct_target() {
+    struct AssertResolver(&'static str);
+    impl IncludeResolver for AssertResolver {
+      fn resolve(
+        &mut self,
+        target: IncludeTarget,
+        _: &mut dyn IncludeBuffer,
+      ) -> std::result::Result<usize, ResolveError> {
+        assert_eq!(target, IncludeTarget::FilePath(self.0));
+        Ok(0)
+      }
+    }
+    let cases = [
+      ("include::spaced file.adoc[]", "spaced file.adoc"),
+      ("include::with{sp}attr.adoc[]", "with attr.adoc"),
+      (":myfile: foo.adoc\n\ninclude::{myfile}[]", "foo.adoc"),
+    ];
+    for (input, expected) in cases {
+      let mut parser = Parser::from_str(input, leaked_bump());
+      parser.apply_job_settings(JobSettings::r#unsafe());
+      parser.set_resolver(Box::new(AssertResolver(expected)));
+      assert!(parser.parse().is_ok());
+    }
   }
 }

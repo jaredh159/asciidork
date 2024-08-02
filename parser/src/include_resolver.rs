@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::internal::*;
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum IncludeTarget<'a> {
   FilePath(&'a str),
   Uri(&'a str),
@@ -62,6 +63,23 @@ impl fmt::Display for ResolveError {
 // test helpers
 
 #[cfg(test)]
+pub struct ConstResolver(pub Vec<u8>);
+
+#[cfg(test)]
+impl IncludeResolver for ConstResolver {
+  fn resolve(
+    &mut self,
+    _: IncludeTarget,
+    buffer: &mut dyn IncludeBuffer,
+  ) -> std::result::Result<usize, ResolveError> {
+    buffer.initialize(self.0.len());
+    let bytes = buffer.as_bytes_mut();
+    bytes.copy_from_slice(&self.0);
+    Ok(self.0.len())
+  }
+}
+
+#[cfg(test)]
 pub struct ErrorResolver(pub ResolveError);
 
 #[cfg(test)]
@@ -71,7 +89,6 @@ impl IncludeResolver for ErrorResolver {
     _: IncludeTarget,
     _: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
-    println!("ErrorResolver::resolve");
     Err(self.0.clone())
   }
 }

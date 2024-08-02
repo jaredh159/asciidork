@@ -73,6 +73,21 @@ assert_html!(
 );
 
 assert_html!(
+  include_strips_bom,
+  resolving: [0xEF, 0xBB, 0xBF, 0xE4, 0xBA, 0xBA, 0x0A],
+  adoc! {r#"
+    Line-1
+    include::some_file.adoc[]
+    Line-3
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Line-1 人 Line-3</p>
+    </div>
+  "#}
+);
+
+assert_html!(
   inline_include_w_2_newlines,
   resolving: b"Line-2\n\n", // <-- 2 newlines
   adoc! {r#"

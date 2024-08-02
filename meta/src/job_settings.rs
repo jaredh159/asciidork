@@ -28,7 +28,7 @@ impl JobSettings {
     }
   }
 
-  pub fn unsafe_() -> Self {
+  pub fn r#unsafe() -> Self {
     Self {
       safe_mode: SafeMode::Unsafe,
       ..Default::default()

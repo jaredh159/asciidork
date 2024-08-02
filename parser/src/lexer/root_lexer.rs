@@ -131,7 +131,7 @@ impl<'arena> RootLexer<'arena> {
         let mut include_loc = self.loc().decr();
         let mut line = self.line_of(include_loc.start);
         line.replace_range(0..9, &format!("{{->{:05}}}", next_idx));
-        include_loc.start -= line.len() as u32;
+        include_loc.start -= u32::min(include_loc.start, line.len() as u32);
         include_loc.include_depth = self.idx;
         self.source_stack.push(include_loc);
         self.idx = next_idx;
@@ -144,14 +144,18 @@ impl<'arena> RootLexer<'arena> {
         }
         None => {
           let Some(prev_loc) = self.source_stack.pop() else {
-            let empty = BumpString::from_str_in("", self.bump);
-            return Token::new(TokenKind::Eof, self.loc(), empty);
+            return self.token(TokenKind::Eof, "", self.loc());
           };
           let prev_idx = self.idx;
           self.idx = prev_loc.include_depth;
           let mut line = self.line_of(prev_loc.start);
-          line.replace_range(0..9, &format!("{{<-{:05}}}", prev_idx));
-          Token::new(TokenKind::PreprocEndInclude, prev_loc, line)
+          if line.is_empty() {
+            // this means the include directive ended the whole doc
+            self.token(TokenKind::Eof, "", self.loc())
+          } else {
+            line.replace_range(0..9, &format!("{{<-{:05}}}", prev_idx));
+            Token::new(TokenKind::PreprocEndInclude, prev_loc, line)
+          }
         }
       },
     }
@@ -159,6 +163,12 @@ impl<'arena> RootLexer<'arena> {
 
   pub fn truncate(&mut self) {
     self.sources[self.idx as usize].truncate();
+  }
+}
+
+impl<'arena> HasArena<'arena> for RootLexer<'arena> {
+  fn bump(&self) -> &'arena Bump {
+    self.bump
   }
 }
 

@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
-struct Directive<'a> {
+struct IncludeDirective<'a> {
   line_src: BumpString<'a>,
   first_token: Token<'a>,
   target_str: BumpString<'a>,
@@ -15,21 +15,7 @@ struct Directive<'a> {
 }
 
 impl<'arena> Parser<'arena> {
-  pub(crate) fn try_process_directive(
-    &mut self,
-    line: &mut Line<'arena>,
-  ) -> Result<DirectiveAction<'arena>> {
-    match line.current_token().unwrap().lexeme.as_str() {
-      "include::" => self.try_process_include_directive(line),
-      "ifdef::" => todo!(),
-      "ifndef::" => todo!(),
-      "ifeval::" => todo!(),
-      "endif::" => todo!(),
-      _ => unreachable!("Parser::try_process_directive"),
-    }
-  }
-
-  fn try_process_include_directive(
+  pub(super) fn try_process_include_directive(
     &mut self,
     line: &mut Line<'arena>,
   ) -> Result<DirectiveAction<'arena>> {
@@ -69,6 +55,16 @@ impl<'arena> Parser<'arena> {
     let mut buffer = BumpVec::new_in(self.bump);
     match resolver.resolve(directive.target(), &mut buffer) {
       Ok(_) => {
+        if let Err(msg) = self.normalize_include_bytes(&mut buffer) {
+          self.err_at(
+            format!("Error resolving file contents: {msg}"),
+            directive.first_token.loc.end,
+            directive.first_token.loc.end + directive.target_str.len() as u32,
+          )?;
+          return Ok(DirectiveAction::SubstituteLine(
+            self.substitute_link_for_include(&directive),
+          ));
+        }
         self.lexer.push_source(&directive.target_str, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
@@ -85,7 +81,7 @@ impl<'arena> Parser<'arena> {
   fn valid_include_directive(
     &mut self,
     line: &mut Line<'arena>,
-  ) -> Result<Option<Directive<'arena>>> {
+  ) -> Result<Option<IncludeDirective<'arena>>> {
     if line.num_tokens() < 4
       || !line.contains_nonescaped(OpenBracket)
       || !line.ends_with_nonescaped(CloseBracket)
@@ -96,12 +92,15 @@ impl<'arena> Parser<'arena> {
     if let Some(captures) = VALID_INCLUDE.captures(&src) {
       let target = captures.get(1).unwrap().as_str();
       let has_spaces = target.contains(' ');
-      let target = BumpString::from_str_in(target, self.bump);
+      let mut target = BumpString::from_str_in(target, self.bump);
+      if target.contains('{') {
+        target = self.expand_target_attr_refs(target)?;
+      }
       let first_token = line.consume_current().unwrap();
       let target_is_uri = line.current_token().is_url_scheme();
       let num_target_tokens = line.first_nonescaped(TokenKind::OpenBracket).unwrap().1;
       line.discard(num_target_tokens + 1); // including open bracket
-      Ok(Some(Directive {
+      Ok(Some(IncludeDirective {
         line_src: src,
         first_token,
         target_str: target,
@@ -114,7 +113,20 @@ impl<'arena> Parser<'arena> {
     }
   }
 
-  fn substitute_link_for_include(&self, directive: &Directive<'arena>) -> Line<'arena> {
+  fn expand_target_attr_refs(&self, target: BumpString<'arena>) -> Result<BumpString<'arena>> {
+    let expanded = ATTR_REF.replace_all(&target, |caps: &regex::Captures| {
+      let attr_name = caps.get(1).unwrap().as_str();
+      if let Some(value) = self.document.meta.string(attr_name) {
+        value
+      } else {
+        println!("Missing attribute: {}", attr_name);
+        format!("{{{}}}", attr_name.to_lowercase())
+      }
+    });
+    Ok(BumpString::from_str_in(&expanded, self.bump))
+  }
+
+  fn substitute_link_for_include(&self, directive: &IncludeDirective<'arena>) -> Line<'arena> {
     let link_src = directive.line_src.replace("include::", "link:");
     let mut lexer = Lexer::from_str(self.bump, &link_src);
     lexer.adjust_offset(directive.first_token.loc.start + 4);
@@ -125,21 +137,21 @@ impl<'arena> Parser<'arena> {
     tokens.push(first_token);
     if directive.target_has_spaces {
       let loc = first_loc.clamp_end();
-      tokens.push(tok(MacroName, "pass:", loc, self.bump));
-      tokens.push_nonpass(tok(Word, "c", loc, self.bump));
-      tokens.push_nonpass(tok(OpenBracket, "[", loc, self.bump));
+      tokens.push(self.token(MacroName, "pass:", loc));
+      tokens.push_nonpass(self.token(Word, "c", loc));
+      tokens.push_nonpass(self.token(OpenBracket, "[", loc));
     }
     for token in line.into_iter() {
       if token.kind == OpenBracket {
         let loc = token.loc.clamp_end();
         if directive.target_has_spaces {
-          tokens.push_nonpass(tok(CloseBracket, "]", loc, self.bump));
+          tokens.push_nonpass(self.token(CloseBracket, "]", loc));
         }
         tokens.push_nonpass(token);
-        tokens.push_nonpass(tok(Word, "role", loc, self.bump));
-        tokens.push_nonpass(tok(EqualSigns, "=", loc, self.bump));
-        tokens.push_nonpass(tok(Word, "include", loc, self.bump));
-        tokens.push_nonpass(tok(Comma, ",", loc, self.bump));
+        tokens.push_nonpass(self.token(Word, "role", loc));
+        tokens.push_nonpass(self.token(EqualSigns, "=", loc));
+        tokens.push_nonpass(self.token(Word, "include", loc));
+        tokens.push_nonpass(self.token(Comma, ",", loc));
       } else {
         tokens.push(token);
       }
@@ -148,7 +160,7 @@ impl<'arena> Parser<'arena> {
   }
 }
 
-impl<'a> Directive<'a> {
+impl<'a> IncludeDirective<'a> {
   fn target(&self) -> IncludeTarget {
     if self.target_is_uri {
       IncludeTarget::Uri(self.target_str.as_str())
@@ -158,13 +170,13 @@ impl<'a> Directive<'a> {
   }
 }
 
-fn tok<'a>(kind: TokenKind, lexeme: &str, loc: SourceLocation, bump: &'a Bump) -> Token<'a> {
-  Token::new(kind, loc, BumpString::from_str_in(lexeme, bump))
-}
-
 lazy_static! {
   pub static ref VALID_INCLUDE: Regex = Regex::new(r#"^include::([^\[]+[^\[\s])\[.*\]$"#).unwrap();
   // ascidoctor impl: /^(\\)?include::([^\s\[](?:[^\[]*[^\s\[])?)\[(.+)?\]$/
+}
+
+lazy_static! {
+  pub static ref ATTR_REF: Regex = Regex::new(r#"\{(\w[\w-]*)\}"#).unwrap();
 }
 
 #[cfg(test)]
