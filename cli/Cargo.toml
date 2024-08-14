@@ -18,6 +18,8 @@ asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.6.0" }
 colored = "2.0.4"
 bumpalo = { version = "3.15.4", features = ["collections"] }
 clap = { version = "4.5.4", features = ["derive"] }
+lazy_static = "1.4.0"
+regex = { version = "1.10.2", features = ["std", "use_std"] }
 
 [lints]
 workspace = true

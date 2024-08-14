@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len());
   let mut parser = Parser::from_str(&src, bump);
-  parser.apply_job_settings(args.clone().into());
+  parser.apply_job_settings(args.clone().try_into()?);
 
   let result = parser.parse();
   let parse_time = parse_start.elapsed();

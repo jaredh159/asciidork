@@ -92,6 +92,8 @@ dependencies = [
  "bumpalo",
  "clap",
  "colored",
+ "lazy_static",
+ "regex",
 ]
 
 [[package]]
