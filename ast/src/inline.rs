@@ -15,7 +15,6 @@ impl<'arena> InlineNode<'arena> {
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Inline<'arena> {
-  AttributeReference(BumpString<'arena>),
   Bold(InlineNodes<'arena>),
   CurlyQuote(CurlyKind),
   Discarded,
@@ -103,10 +102,6 @@ impl<'arena> Json for Inline<'arena> {
     buf.push_str(r#","variant":""#);
     match self {
       Inline::IncludeBoundary(..) => todo!(),
-      Inline::AttributeReference(s) => {
-        buf.push_str("AttributeReference\"");
-        buf.add_member("name", s);
-      }
       Inline::Bold(nodes) => {
         buf.push_str("Bold\"");
         buf.add_member("children", nodes);

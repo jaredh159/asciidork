@@ -485,7 +485,7 @@ impl<'arena> Line<'arena> {
 
   pub fn reassemble_src(&self) -> BumpString<'arena> {
     let mut src = BumpString::with_capacity_in(self.src_len(), self.tokens.bump);
-    for token in self.tokens.iter() {
+    for token in self.tokens.iter().filter(|t| t.kind != AttrRef) {
       src.push_str(&token.lexeme);
     }
     src
@@ -638,6 +638,24 @@ impl<'arena> Line<'arena> {
     }
     while self.last_token().is_whitespaceish() {
       self.discard_last();
+    }
+  }
+
+  // for asciidoc cells, we get a new document context
+  // so we need to throw away the resolved attr refs and re-resolve
+  // instead of dropping the tokens, we can blank out the lexeme
+  // because we create a new lexer from the reassembled lexemes as src
+  pub fn remove_resolved_attr_refs(&mut self) {
+    let mut attr_loc: Option<SourceLocation> = None;
+    let bump = self.tokens.bump;
+    for token in self.iter_mut() {
+      if token.is(AttrRef) {
+        attr_loc = Some(token.loc);
+      } else if attr_loc.map_or(false, |loc| loc == token.loc) {
+        token.lexeme = BumpString::from_str_in("", bump);
+      } else {
+        attr_loc = None;
+      }
     }
   }
 }

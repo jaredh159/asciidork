@@ -435,6 +435,7 @@ assert_html!(
   subs_table_content,
   adoc! {r#"
     :show_title: Cool new show
+
     |===
     |{show_title} |Coming soon...
     |===

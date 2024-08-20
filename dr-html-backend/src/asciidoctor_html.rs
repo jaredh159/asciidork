@@ -701,24 +701,6 @@ impl Backend for AsciidoctorHtml {
     }
   }
 
-  fn visit_attribute_reference(&mut self, name: &str) {
-    if let Some(val) = self.doc_meta.string(name) {
-      self.push_str(&val);
-      return;
-    }
-    match self.doc_meta.str("attribute-missing") {
-      Some("drop") => {}
-      Some("warn") => { /* TODO: warning */ }
-      Some("drop-line") => { /* TODO: not supported */ }
-      _ => {
-        // `skip` is default
-        self.push_str("{");
-        self.push_str(name);
-        self.push_ch('}');
-      }
-    }
-  }
-
   fn visit_linebreak(&mut self) {
     self.push_str("<br> ");
   }

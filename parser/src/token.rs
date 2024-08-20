@@ -5,6 +5,7 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum TokenKind {
   Ampersand,
+  AttrRef,
   Backtick,
   Backslash,
   Bang,
@@ -146,6 +147,11 @@ impl<'arena> Token<'arena> {
       TokenSpec::Kind(kind) => self.kind == kind,
       TokenSpec::Len(len, kind) => self.kind == kind && self.len() == len as usize,
     }
+  }
+
+  pub fn attr_name(&self) -> &str {
+    assert_eq!(self.kind, TokenKind::AttrRef);
+    &self.lexeme[1..self.lexeme.len() - 1]
   }
 }
 

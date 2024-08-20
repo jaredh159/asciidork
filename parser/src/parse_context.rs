@@ -15,9 +15,16 @@ pub struct ParseContext<'arena> {
   pub xrefs: Rc<RefCell<HashMap<BumpString<'arena>, SourceLocation>>>,
   pub num_footnotes: Rc<RefCell<u16>>,
   pub saw_toc_macro: bool,
-  pub in_asciidoc_table_cell: bool,
+  pub table_cell_ctx: TableCellContext,
   pub passthrus: BumpVec<'arena, Option<InlineNodes<'arena>>>,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum TableCellContext {
+  None,
+  Cell,
+  AsciiDocCell,
 }
 
 impl<'arena> ParseContext<'arena> {
@@ -34,7 +41,7 @@ impl<'arena> ParseContext<'arena> {
       xrefs: Rc::new(RefCell::new(HashMap::new())),
       num_footnotes: Rc::new(RefCell::new(0)),
       saw_toc_macro: false,
-      in_asciidoc_table_cell: false,
+      table_cell_ctx: TableCellContext::None,
       passthrus: BumpVec::new_in(bump),
     }
   }
@@ -52,7 +59,7 @@ impl<'arena> ParseContext<'arena> {
       xrefs: Rc::clone(&self.xrefs),
       num_footnotes: Rc::clone(&self.num_footnotes),
       saw_toc_macro: false,
-      in_asciidoc_table_cell: true,
+      table_cell_ctx: TableCellContext::AsciiDocCell,
       passthrus: BumpVec::new_in(bump),
     }
   }

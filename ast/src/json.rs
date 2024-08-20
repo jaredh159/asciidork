@@ -220,14 +220,6 @@ mod tests {
         }"#,
       ),
       (
-        Inline::AttributeReference(bstr!("foo\"bar\"")),
-        r#"{
-          "type": "Inline",
-          "variant": "AttributeReference",
-          "name": "foo\"bar\""
-        }"#,
-      ),
-      (
         Inline::CurlyQuote(CurlyKind::LeftDouble),
         r#"{
           "type": "Inline",

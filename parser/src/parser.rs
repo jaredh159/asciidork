@@ -83,9 +83,44 @@ impl<'arena> Parser<'arena> {
 
   pub(crate) fn read_line(&mut self) -> Result<Option<Line<'arena>>> {
     debug_assert!(self.peeked_lines.is_none());
-    let Some(mut line) = self.lexer.consume_line() else {
+    if self.lexer.is_eof() {
       return Ok(None);
-    };
+    }
+    let mut drop_line = false;
+    let mut line = Line::empty(self.bump);
+    while !self.lexer.peek_is(b'\n') && !self.lexer.is_eof() {
+      let mut token = self.lexer.next_token();
+      if token.is(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
+        match self.document.meta.get(token.attr_name()) {
+          Some(AttrValue::String(attr_val)) => {
+            if !attr_val.is_empty() {
+              self.lexer.buffer_attr_ref(attr_val.clone(), token.loc);
+            }
+            line.push(token);
+          }
+          _ => match self.document.meta.str("attribute-missing") {
+            Some("drop") => {}
+            Some("drop-line") => drop_line = true,
+            val => {
+              token.kind = TokenKind::Word;
+              if val == Some("warn") {
+                self.err_token_full("Skipping reference to missing attribute", &token)?;
+              }
+              // `skip` is default, but we push also for `warn`
+              line.push(token);
+            }
+          },
+        }
+      } else {
+        line.push(token);
+      }
+    }
+    if self.lexer.peek_is(b'\n') {
+      self.lexer.skip_byte();
+    }
+    if drop_line {
+      return self.read_line();
+    }
     if line.starts(TokenKind::Directive) {
       return match self.try_process_directive(&mut line)? {
         DirectiveAction::Passthrough => Ok(Some(line)),
@@ -232,7 +267,7 @@ impl<'arena> Parser<'arena> {
   }
 
   fn diagnose_document(&self) -> Result<()> {
-    if !self.ctx.in_asciidoc_table_cell {
+    if self.ctx.table_cell_ctx == TableCellContext::None {
       for (ref_id, ref_loc) in self.ctx.xrefs.borrow().iter() {
         if !self.document.anchors.borrow().contains_key(ref_id) {
           self.err_at_loc(
@@ -347,6 +382,36 @@ mod tests {
       }
     );
     assert!(parser.read_lines().unwrap().is_none());
+  }
+
+  #[test]
+  fn test_attr_ref() {
+    let mut parser = Parser::from_str("hello {foo} world", leaked_bump());
+    parser
+      .document
+      .meta
+      .insert_doc_attr("foo", "_bar_")
+      .unwrap();
+    let mut lines = parser.read_lines().unwrap().unwrap();
+    let line = lines.consume_current().unwrap();
+    let tokens = line.into_iter().collect::<Vec<_>>();
+    expect_eq!(
+      &tokens,
+      &[
+        Token::new(TokenKind::Word, 0..5, bstr!("hello")),
+        Token::new(TokenKind::Whitespace, 5..6, bstr!(" ")),
+        Token::new(TokenKind::AttrRef, 6..11, bstr!("{foo}")),
+        // these are inserted as an inline preprocessing step
+        // NB: we will use the source loc of the attr ref token to know how
+        // to skip over the resolve attribute in no-attr-ref subs contexts
+        Token::new(TokenKind::Underscore, 6..11, bstr!("_")),
+        Token::new(TokenKind::Word, 6..11, bstr!("bar")),
+        Token::new(TokenKind::Underscore, 6..11, bstr!("_")),
+        // end inserted.
+        Token::new(TokenKind::Whitespace, 11..12, bstr!(" ")),
+        Token::new(TokenKind::Word, 12..17, bstr!("world")),
+      ]
+    );
   }
 
   #[test]

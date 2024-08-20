@@ -145,7 +145,6 @@ pub trait Backend {
     warn_unimplemented!(exit_link_macro);
   }
 
-  fn visit_attribute_reference(&mut self, name: &str);
   fn visit_callout(&mut self, callout: Callout);
   fn visit_callout_tuck(&mut self, comment: &str);
   fn enter_inline_italic(&mut self, children: &[InlineNode]);

@@ -55,7 +55,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'+') => Some(self.repeating(b'+', Plus)),
       Some(b'[') => Some(self.single(OpenBracket)),
       Some(b']') => Some(self.single(CloseBracket)),
-      Some(b'{') => Some(self.single(OpenBrace)),
+      Some(b'{') => Some(self.maybe_attr_ref()),
       Some(b'}') => Some(self.single(CloseBrace)),
       Some(b'#') => Some(self.single(Hash)),
       Some(b'%') => Some(self.single(Percent)),
@@ -435,6 +435,33 @@ impl<'arena> SourceLexer<'arena> {
         | (Some(b':'), Some(b' ' | b'\t' | b'\n') | None, _)
         | (Some(b':'), Some(b':'), Some(b' ' | b'\t' | b'\n') | None)
     )
+  }
+
+  // according to asciidoctor docs, attr ref names must:
+  //   - be only a-z, A-Z, 0-9, -, and _
+  //   - be at least one letter long
+  fn maybe_attr_ref(&mut self) -> Token<'arena> {
+    if self.pos >= 2 && self.src.get((self.pos - 2) as usize).copied() == Some(b'\\') {
+      return self.single(OpenBrace);
+    }
+    let mut len: u32 = 0;
+    let peek = self.src[self.pos as usize..].iter();
+    for c in peek {
+      match *c {
+        b'}' => {
+          if len == 0 {
+            return self.single(OpenBrace);
+          }
+          let token = self.token(AttrRef, self.pos - 1, self.pos + len + 1);
+          self.pos += len + 1;
+          return token;
+        }
+        b'-' | b'_' => len += 1,
+        c if c.is_ascii_alphanumeric() => len += 1,
+        _ => return self.single(OpenBrace),
+      }
+    }
+    self.single(OpenBrace)
   }
 
   fn maybe_callout_number(&mut self) -> Token<'arena> {

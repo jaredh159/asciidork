@@ -147,7 +147,7 @@ mod tests {
       (":foo: bar \\\n", ("foo", "bar".into())),
     ];
     for (input, (expected_key, expected_val)) in cases {
-      let mut parser = crate::Parser::from_str(input, b);
+      let mut parser = Parser::from_str(input, b);
       parser
         .document
         .meta

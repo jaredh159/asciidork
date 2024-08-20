@@ -13,7 +13,6 @@ impl<'arena> InlineNodes<'arena> {
   pub fn plain_text(&self) -> Vec<&str> {
     let mut text = Vec::new();
     self.iter().for_each(|node| match &node.content {
-      Inline::AttributeReference(_) => {}
       Inline::Bold(nodes) => text.extend(nodes.plain_text()),
       Inline::CurlyQuote(_) => {}
       Inline::Discarded => {}

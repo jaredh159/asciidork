@@ -211,6 +211,30 @@ impl<'arena> Parser<'arena> {
             }
           }
 
+          AttrRef if !subs.attr_refs() => {
+            // turns out we didn't need to resolve the attr ref
+            // probably because we're inside a pass macro, so
+            // discard the resolved tokens and push the raw attr
+            while let Some(peek) = line.current_token() {
+              if peek.loc == token.loc {
+                line.discard(1);
+              } else {
+                break;
+              }
+            }
+            acc.text.push_token(&token);
+          }
+
+          // we're in a table cell, and we have a blank attr ref
+          // we need to preserve a node for the crazy table cell paragraph logic
+          AttrRef
+            if self.ctx.table_cell_ctx != TableCellContext::None
+              // we know it was blank if there's no inserted token w/ same loc
+              && line.current_token().map_or(false, |t| t.loc != token.loc) =>
+          {
+            acc.push_node(Discarded, token.loc)
+          }
+
           TermDelimiter
             if subs.callouts()
               && token.len() == 2
@@ -594,17 +618,9 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
-          OpenBrace if subs.attr_refs() && line.is_continuous_thru(CloseBrace) => {
-            let mut loc = token.loc;
-            let aref = line.consume_to_string_until(CloseBrace, self.bump).src;
-            let close_brace = line.consume_current().unwrap();
-            loc.end = close_brace.loc.end;
-            acc.push_node(AttributeReference(aref), loc);
-          }
-
           TokenKind::Newline => acc.push_node(Inline::Newline, token.loc),
 
-          Discard => acc.text.loc = token.loc.clamp_end(),
+          Discard | AttrRef => acc.text.loc = token.loc.clamp_end(),
 
           Backslash if !line.is_empty() => {
             acc.push_node(Discarded, token.loc);
@@ -909,13 +925,15 @@ mod tests {
   #[test]
   fn test_joining_newlines() {
     let cases = vec![
-      (
-        "{foo}",
-        nodes![node!(AttributeReference(bstr!("foo")), 0..5)],
-      ),
+      ("{foo}", just!("{foo}", 0..5)),
       (
         "\\{foo}",
         nodes![node!(Discarded, 0..1), node!("{foo}"; 1..6)],
+      ),
+      ("{attribute-missing}", just!("skip", 0..19)),
+      (
+        "\\{attribute-missing}",
+        nodes![node!(Discarded, 0..1), node!("{attribute-missing}"; 1..20)],
       ),
       (
         "_foo_\nbar",
@@ -1066,6 +1084,17 @@ mod tests {
       (
         "+_foo_+",
         nodes![node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7,)],
+      ),
+      (
+        "+_{foo}_+",
+        nodes![node!(InlinePassthru(nodes![node!("_{foo}_"; 1..8)]), 0..9,)],
+      ),
+      (
+        "+_{attribute-missing}_+",
+        nodes![node!(
+          InlinePassthru(nodes![node!("_{attribute-missing}_"; 1..22)]),
+          0..23,
+        )],
       ),
       (
         "`*_foo_*`",

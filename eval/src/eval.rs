@@ -374,7 +374,6 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     }
     LegacyInlineAnchor(id) => backend.visit_legacy_inline_anchor(id),
     LineBreak => backend.visit_linebreak(),
-    AttributeReference(name) => backend.visit_attribute_reference(name),
     CalloutNum(callout) => backend.visit_callout(*callout),
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),
     TextSpan(attrs, nodes) => {

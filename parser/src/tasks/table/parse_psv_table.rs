@@ -111,7 +111,7 @@ impl<'arena> Parser<'arena> {
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       };
 
-      if token.is(TokenKind::Newline) {
+      if ctx.counting_cols && token.is(TokenKind::Newline) {
         // once we've seen one newline, we finish the current cell (even if
         // it continues multiple lines) but we're done counting newlines
         // doesn't exactly match asciidoctor docs, but matches behavior

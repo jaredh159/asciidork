@@ -209,6 +209,7 @@ impl<'arena> Parser<'arena> {
         });
       }
       cell_tokens.trim_for_cell(cell_style);
+      cell_tokens.remove_resolved_attr_refs();
       let cell_parser = self.cell_parser(cell_tokens.into_bytes(), loc.start);
       return match cell_parser.parse() {
         Ok(ParseResult { document, warnings }) => {
@@ -285,10 +286,13 @@ impl<'arena> Parser<'arena> {
       InlineNodes::new(self.bump)
     } else {
       data.cell_tokens.trim_for_cell(cell_style);
+      let prev_tbl_ctx = self.ctx.table_cell_ctx;
+      self.ctx.table_cell_ctx = TableCellContext::Cell;
       let prev_subs = self.ctx.subs;
       self.ctx.subs = cell_style.into();
       let inlines = self.parse_inlines(&mut data.cell_tokens.into_lines())?;
       self.ctx.subs = prev_subs;
+      self.ctx.table_cell_ctx = prev_tbl_ctx;
       inlines
     };
 

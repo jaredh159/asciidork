@@ -8,6 +8,7 @@ pub struct RootLexer<'arena> {
   next_idx: Option<u16>,
   source_stack: Vec<SourceLocation>,
   sources: BumpVec<'arena, SourceLexer<'arena>>,
+  attr_ctx: Option<(SourceLexer<'arena>, SourceLocation)>,
 }
 
 impl<'arena> RootLexer<'arena> {
@@ -18,6 +19,7 @@ impl<'arena> RootLexer<'arena> {
       next_idx: None,
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::new(src, bump)],
+      attr_ctx: None,
     }
   }
 
@@ -28,6 +30,7 @@ impl<'arena> RootLexer<'arena> {
       next_idx: None,
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_str(src, bump)],
+      attr_ctx: None,
     }
   }
 
@@ -38,6 +41,7 @@ impl<'arena> RootLexer<'arena> {
       next_idx: None,
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_byte_slice(bytes, bump)],
+      attr_ctx: None,
     }
   }
 
@@ -53,11 +57,20 @@ impl<'arena> RootLexer<'arena> {
     self.next_idx = Some(next_idx);
   }
 
+  pub fn buffer_attr_ref(&mut self, attr_ref: String, location: SourceLocation) {
+    let attr_lexer = SourceLexer::from_str(&attr_ref, self.bump); // don't clone the source file
+    self.attr_ctx = Some((attr_lexer, location));
+  }
+
   pub fn adjust_offset(&mut self, offset_adjustment: u32) {
     self.sources[self.idx as usize].offset = offset_adjustment;
   }
 
   pub fn peek(&self) -> Option<u8> {
+    if let Some((attr_lexer, _)) = &self.attr_ctx {
+      return attr_lexer.peek();
+    }
+
     // case: we're about to switch to a new source
     if self.next_idx.is_some() {
       return Some(b'{'); // fake peek the generated boundary start include-token
@@ -111,6 +124,11 @@ impl<'arena> RootLexer<'arena> {
     self.sources[self.idx as usize].line_number_with_offset(location)
   }
 
+  pub fn skip_byte(&mut self) {
+    self.sources[self.idx as usize].pos += 1;
+  }
+
+  // TODO: 👍 ideally, remove, but intertwined with current impl of include directives
   pub fn consume_line(&mut self) -> Option<Line<'arena>> {
     if self.is_eof() {
       return None;
@@ -126,6 +144,15 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn next_token(&mut self) -> Token<'arena> {
+    if let Some((mut attr_lexer, attr_loc)) = self.attr_ctx.take() {
+      if let Some(mut token) = attr_lexer.next_token() {
+        token.loc = attr_loc;
+        if !attr_lexer.is_eof() {
+          self.attr_ctx = Some((attr_lexer, attr_loc));
+        }
+        return token;
+      }
+    }
     match self.next_idx.take() {
       Some(next_idx) => {
         let mut include_loc = self.loc().decr();
@@ -194,10 +221,12 @@ mod tests {
             loc: SourceLocation::from(start..end),
             lexeme: BumpString::from_str_in(lexeme, bump),
           };
-          assert_eq!(lexer.next_token(), expected_token);
+          let actual = lexer.next_token();
+          assert_eq!(actual, expected_token);
           index = end;
         }
-        assert_eq!(lexer.next_token().kind, Eof);
+        let next = lexer.next_token();
+        assert_eq!(next.kind, Eof);
       }
     }};
   }
@@ -316,10 +345,6 @@ mod tests {
         vec![(Word, "foo"), (Whitespace, " "), (Word, "él")],
       ),
       ("{}", vec![(OpenBrace, "{"), (CloseBrace, "}")]),
-      (
-        "{foo}",
-        vec![(OpenBrace, "{"), (Word, "foo"), (CloseBrace, "}")],
-      ),
       ("  ", vec![(Whitespace, "  ")]),
       (".", vec![(Dots, ".")]),
       ("..", vec![(Dots, "..")]),
@@ -508,6 +533,25 @@ mod tests {
       ),
     ];
     assert_token_cases!(cases);
+  }
+
+  #[test]
+  fn test_attr_refs() {
+    assert_token_cases!([
+      ("{foo}", vec![(AttrRef, "{foo}")]),
+      ("{foo-bar}", vec![(AttrRef, "{foo-bar}")]),
+      ("{foo123}", vec![(AttrRef, "{foo123}")]),
+    ]);
+
+    refute_produces_token!(
+      AttrRef,
+      [
+        "\\{foo}",    // escaped
+        "foo {}",     // must be one char long
+        "foo {a\nb}", // newline
+        "foo {hi@}",  // only a-z,A-Z,0-9,-,_ allowed
+      ]
+    );
   }
 
   #[test]
