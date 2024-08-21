@@ -371,8 +371,7 @@ mod tests {
 
     let parser = Parser::from_str("", leaked_bump());
     for (sep, input, remaining, expected) in &cases {
-      let mut lexer = Lexer::from_str(leaked_bump(), input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       let mut tokens = Deq::new(leaked_bump());
       line.drain_into(&mut tokens);
       let mut tokens = TableTokens::new(tokens);

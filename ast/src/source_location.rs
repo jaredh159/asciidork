@@ -58,6 +58,10 @@ impl SourceLocation {
     Self::new_depth(self.start - 1, self.end - 1, self.include_depth)
   }
 
+  pub fn offset(&self, offset: u32) -> SourceLocation {
+    Self::new_depth(self.start + offset, self.end + offset, self.include_depth)
+  }
+
   pub const fn size(&self) -> u32 {
     self.end - self.start
   }

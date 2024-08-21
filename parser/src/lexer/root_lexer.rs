@@ -8,7 +8,13 @@ pub struct RootLexer<'arena> {
   next_idx: Option<u16>,
   source_stack: Vec<SourceLocation>,
   sources: BumpVec<'arena, SourceLexer<'arena>>,
-  attr_ctx: Option<(SourceLexer<'arena>, SourceLocation)>,
+  tmp_buf: Option<(SourceLexer<'arena>, BufLoc)>,
+}
+
+#[derive(Debug)]
+pub enum BufLoc {
+  Repeat(SourceLocation),
+  Offset(u32),
 }
 
 impl<'arena> RootLexer<'arena> {
@@ -19,7 +25,7 @@ impl<'arena> RootLexer<'arena> {
       next_idx: None,
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::new(src, bump)],
-      attr_ctx: None,
+      tmp_buf: None,
     }
   }
 
@@ -30,7 +36,7 @@ impl<'arena> RootLexer<'arena> {
       next_idx: None,
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_str(src, bump)],
-      attr_ctx: None,
+      tmp_buf: None,
     }
   }
 
@@ -41,7 +47,7 @@ impl<'arena> RootLexer<'arena> {
       next_idx: None,
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_byte_slice(bytes, bump)],
-      attr_ctx: None,
+      tmp_buf: None,
     }
   }
 
@@ -57,9 +63,8 @@ impl<'arena> RootLexer<'arena> {
     self.next_idx = Some(next_idx);
   }
 
-  pub fn buffer_attr_ref(&mut self, attr_ref: String, location: SourceLocation) {
-    let attr_lexer = SourceLexer::from_str(&attr_ref, self.bump); // don't clone the source file
-    self.attr_ctx = Some((attr_lexer, location));
+  pub fn set_tmp_buf(&mut self, buf: &str, loc: BufLoc) {
+    self.tmp_buf = Some((SourceLexer::from_str(buf, self.bump), loc));
   }
 
   pub fn adjust_offset(&mut self, offset_adjustment: u32) {
@@ -67,7 +72,7 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn peek(&self) -> Option<u8> {
-    if let Some((attr_lexer, _)) = &self.attr_ctx {
+    if let Some((attr_lexer, _)) = &self.tmp_buf {
       return attr_lexer.peek();
     }
 
@@ -125,30 +130,25 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn skip_byte(&mut self) {
-    self.sources[self.idx as usize].pos += 1;
-  }
-
-  // TODO: 👍 ideally, remove, but intertwined with current impl of include directives
-  pub fn consume_line(&mut self) -> Option<Line<'arena>> {
-    if self.is_eof() {
-      return None;
-    }
-    let mut line = Line::empty(self.bump);
-    while !self.peek_is(b'\n') && !self.is_eof() {
-      line.push(self.next_token());
-    }
-    if self.peek_is(b'\n') {
+    if let Some((tmp_lexer, _)) = &mut self.tmp_buf {
+      tmp_lexer.pos += 1;
+      if tmp_lexer.is_eof() {
+        self.tmp_buf = None;
+      }
+    } else {
       self.sources[self.idx as usize].pos += 1;
     }
-    Some(line)
   }
 
   pub fn next_token(&mut self) -> Token<'arena> {
-    if let Some((mut attr_lexer, attr_loc)) = self.attr_ctx.take() {
-      if let Some(mut token) = attr_lexer.next_token() {
-        token.loc = attr_loc;
-        if !attr_lexer.is_eof() {
-          self.attr_ctx = Some((attr_lexer, attr_loc));
+    if let Some((ref mut buf_lexer, ref buf_loc)) = self.tmp_buf {
+      if let Some(mut token) = buf_lexer.next_token() {
+        match buf_loc {
+          BufLoc::Repeat(loc) => token.loc = *loc,
+          BufLoc::Offset(offset) => token.loc = token.loc.offset(*offset),
+        }
+        if buf_lexer.is_eof() {
+          self.tmp_buf = None
         }
         return token;
       }
@@ -288,15 +288,6 @@ mod tests {
       lexer.next_token(),
       Token::new(PreprocEndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
     );
-  }
-
-  #[test]
-  fn test_consume_line() {
-    let bump = &Bump::new();
-    let mut lexer = RootLexer::from_str(bump, "foo bar\nso baz\n");
-    assert_eq!(lexer.consume_line().unwrap().reassemble_src(), "foo bar");
-    assert_eq!(lexer.consume_line().unwrap().reassemble_src(), "so baz");
-    assert!(lexer.consume_line().is_none());
   }
 
   #[test]

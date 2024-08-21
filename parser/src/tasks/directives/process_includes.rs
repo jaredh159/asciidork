@@ -92,10 +92,7 @@ impl<'arena> Parser<'arena> {
     if let Some(captures) = VALID_INCLUDE.captures(&src) {
       let target = captures.get(1).unwrap().as_str();
       let has_spaces = target.contains(' ');
-      let mut target = BumpString::from_str_in(target, self.bump);
-      if target.contains('{') {
-        target = self.expand_target_attr_refs(target)?;
-      }
+      let target = BumpString::from_str_in(target, self.bump);
       let first_token = line.consume_current().unwrap();
       let target_is_uri = line.current_token().is_url_scheme();
       let num_target_tokens = line.first_nonescaped(TokenKind::OpenBracket).unwrap().1;
@@ -113,24 +110,12 @@ impl<'arena> Parser<'arena> {
     }
   }
 
-  fn expand_target_attr_refs(&self, target: BumpString<'arena>) -> Result<BumpString<'arena>> {
-    let expanded = ATTR_REF.replace_all(&target, |caps: &regex::Captures| {
-      let attr_name = caps.get(1).unwrap().as_str();
-      if let Some(value) = self.document.meta.string(attr_name) {
-        value
-      } else {
-        println!("Missing attribute: {}", attr_name);
-        format!("{{{}}}", attr_name.to_lowercase())
-      }
-    });
-    Ok(BumpString::from_str_in(&expanded, self.bump))
-  }
-
-  fn substitute_link_for_include(&self, directive: &IncludeDirective<'arena>) -> Line<'arena> {
-    let link_src = directive.line_src.replace("include::", "link:");
-    let mut lexer = Lexer::from_str(self.bump, &link_src);
-    lexer.adjust_offset(directive.first_token.loc.start + 4);
-    let mut line = lexer.consume_line().unwrap();
+  fn substitute_link_for_include(&mut self, directive: &IncludeDirective<'arena>) -> Line<'arena> {
+    let mut link_src = directive.line_src.replace("include::", "link:");
+    link_src.push('\n');
+    let offset = directive.first_token.loc.start + 4;
+    self.lexer.set_tmp_buf(&link_src, BufLoc::Offset(offset));
+    let mut line = self.read_line().unwrap().unwrap();
     let mut tokens = Line::empty(self.bump);
     let first_token = line.consume_current().unwrap();
     let first_loc = first_token.loc;
@@ -173,10 +158,6 @@ impl<'a> IncludeDirective<'a> {
 lazy_static! {
   pub static ref VALID_INCLUDE: Regex = Regex::new(r#"^include::([^\[]+[^\[\s])\[.*\]$"#).unwrap();
   // ascidoctor impl: /^(\\)?include::([^\s\[](?:[^\[]*[^\s\[])?)\[(.+)?\]$/
-}
-
-lazy_static! {
-  pub static ref ATTR_REF: Regex = Regex::new(r#"\{(\w[\w-]*)\}"#).unwrap();
 }
 
 #[cfg(test)]

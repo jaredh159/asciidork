@@ -668,7 +668,6 @@ lazy_static! {
 mod tests {
   use crate::internal::*;
   use crate::token::{TokenKind::*, TokenSpec::*, *};
-  use bumpalo::Bump;
   use test_utils::*;
 
   #[test]
@@ -685,10 +684,8 @@ mod tests {
       ("term::", false),
       ("term:: desc", false),
     ];
-    let bump = &Bump::new();
     for (input, expected) in cases {
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.continues_list_item_principle(), expected, from: input);
     }
   }
@@ -704,14 +701,12 @@ mod tests {
       ("2. foo", &[Digits(1)], false),
       ("<2> bar", &[Callout(Some(1))], false),
     ];
-    let bump = &Bump::new();
     for (input, markers, expected) in cases {
       let mut stack = ListStack::default();
       for marker in markers {
         stack.push(*marker);
       }
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.starts_nested_list(&stack), expected, from: input);
     }
   }
@@ -754,10 +749,8 @@ mod tests {
       ("<!--3--> foo", None), // CalloutNumber token, but not a list marker
       ("<255> foo", Some(Callout(Some(255)))),
     ];
-    let bump = &Bump::new();
     for (input, marker) in cases {
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.list_marker(), marker, from: input);
     }
   }
@@ -782,19 +775,15 @@ mod tests {
       (".foo", false),
       ("-foo", false),
     ];
-    let bump = &Bump::new();
     for (input, expected) in cases {
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.starts_list_item(), expected, from: input);
     }
   }
 
   #[test]
   fn test_discard() {
-    let bump = &Bump::new();
-    let mut lexer = Lexer::from_str(bump, "foo bar\nso baz\n");
-    let mut line = lexer.consume_line().unwrap();
+    let mut line = read_line!("foo bar\nso baz\n");
     expect_eq!(line.reassemble_src(), "foo bar");
     expect_eq!(line.num_tokens(), 3);
     line.discard(1);
@@ -807,9 +796,7 @@ mod tests {
 
   #[test]
   fn test_discard_last() {
-    let bump = &Bump::new();
-    let mut lexer = Lexer::from_str(bump, "'foo'");
-    let mut line = lexer.consume_line().unwrap();
+    let mut line = read_line!("'foo'");
     expect_eq!(line.reassemble_src(), "'foo'");
     line.discard_last();
     expect_eq!(line.reassemble_src(), "'foo");
@@ -837,16 +824,13 @@ mod tests {
       ),
       ("#", &[Kind(Hash)], 0, true),
     ];
-    let bump = &Bump::new();
     for (input, token_types, pos, expected) in cases {
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.has_seq_at(token_types, pos), expected);
     }
 
     // test that it works after shifting elements off of the front
-    let mut lexer = Lexer::from_str(bump, "foo_#");
-    let mut line = lexer.consume_line().unwrap();
+    let mut line = read_line!("foo_#");
     line.discard(2); // `foo` and `_`
     assert!(line.has_seq_at(&[Kind(Hash)], 0));
   }
@@ -859,10 +843,8 @@ mod tests {
       ("\\]", CloseBracket, false),
       ("l]", CloseBracket, true),
     ];
-    let bump = &Bump::new();
     for (input, token_type, expected) in cases {
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.ends_with_nonescaped(token_type), expected);
     }
   }
@@ -873,10 +855,8 @@ mod tests {
       ("foo_ bar", &[Kind(Underscore)], Some(1)),
       ("foo_bar bar", &[Kind(Underscore)], None),
     ];
-    let bump = &Bump::new();
     for (input, specs, expected) in cases {
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.terminates_constrained_in(specs), expected, from: input);
     }
   }
@@ -905,10 +885,8 @@ mod tests {
         false,
       ),
     ];
-    let bump = &Bump::new();
     for (input, token_types, expected) in cases {
-      let mut lexer = Lexer::from_str(bump, input);
-      let line = lexer.consume_line().unwrap();
+      let line = read_line!(input);
       expect_eq!(line.contains_seq(token_types), expected, from: input);
     }
   }

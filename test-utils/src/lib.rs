@@ -11,6 +11,14 @@ pub fn leaked_bump() -> &'static Bump {
 }
 
 #[macro_export]
+macro_rules! read_line {
+  ($input:expr) => {{
+    let mut parser = Parser::from_str($input, leaked_bump());
+    parser.read_line().unwrap().unwrap()
+  }};
+}
+
+#[macro_export]
 macro_rules! assert_block_core {
   ($input:expr, $expected_ctx:expr, $expected_content:expr$(,)?) => {
     let block = parse_single_block!($input);

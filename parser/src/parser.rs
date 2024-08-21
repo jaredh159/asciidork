@@ -82,19 +82,21 @@ impl<'arena> Parser<'arena> {
   }
 
   pub(crate) fn read_line(&mut self) -> Result<Option<Line<'arena>>> {
-    debug_assert!(self.peeked_lines.is_none());
+    assert!(self.peeked_lines.is_none());
     if self.lexer.is_eof() {
       return Ok(None);
     }
+
     let mut drop_line = false;
     let mut line = Line::empty(self.bump);
     while !self.lexer.peek_is(b'\n') && !self.lexer.is_eof() {
       let mut token = self.lexer.next_token();
+
       if token.is(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
         match self.document.meta.get(token.attr_name()) {
           Some(AttrValue::String(attr_val)) => {
             if !attr_val.is_empty() {
-              self.lexer.buffer_attr_ref(attr_val.clone(), token.loc);
+              self.lexer.set_tmp_buf(attr_val, BufLoc::Repeat(token.loc));
             }
             line.push(token);
           }
