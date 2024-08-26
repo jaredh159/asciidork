@@ -225,7 +225,7 @@ impl<'arena> Parser<'arena> {
             acc.text.push_token(&token);
           }
 
-          // we're in a table cell, and we have a blank attr ref
+          // if we're in a table cell, and we have a blank attr ref
           // we need to preserve a node for the crazy table cell paragraph logic
           AttrRef
             if self.ctx.table_cell_ctx != TableCellContext::None
@@ -1422,7 +1422,7 @@ mod tests {
 
   fn run(cases: Vec<(&str, InlineNodes)>) {
     for (input, expected) in cases {
-      let mut parser = Parser::from_str(input, leaked_bump());
+      let mut parser = test_parser!(input);
       let mut block = parser.read_lines().unwrap().unwrap();
       let inlines = parser.parse_inlines(&mut block).unwrap();
       expect_eq!(inlines, expected, from: input);

@@ -27,3 +27,6 @@ reset-wasm:
 
 publish type:
   @cargo workspaces publish {{type}} --message "release v%v" --no-individual-tags
+
+fixtures:
+  @cd cli/tests/all && bash make-fixtures.sh

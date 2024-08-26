@@ -13,8 +13,22 @@ pub fn leaked_bump() -> &'static Bump {
 #[macro_export]
 macro_rules! read_line {
   ($input:expr) => {{
-    let mut parser = Parser::from_str($input, leaked_bump());
+    let mut parser = test_parser!($input);
     parser.read_line().unwrap().unwrap()
+  }};
+}
+
+#[macro_export]
+macro_rules! test_parser {
+  ($input:expr) => {{
+    Parser::from_str($input, SourceFile::Tmp, leaked_bump())
+  }};
+}
+
+#[macro_export]
+macro_rules! test_lexer {
+  ($input:expr) => {{
+    Lexer::from_str(leaked_bump(), SourceFile::Tmp, $input)
   }};
 }
 
@@ -372,7 +386,7 @@ macro_rules! test_inlines_loose {
     fn $name() {
       let mut settings = ::asciidork_meta::JobSettings::embedded();
       settings.strict = false;
-      let mut parser = Parser::from_str($input, leaked_bump());
+      let mut parser = test_parser!($input);
       parser.apply_job_settings(settings);
       let content = parser.parse().unwrap().document.content;
       let blocks = content.blocks().expect("expected blocks").clone();
@@ -469,6 +483,7 @@ macro_rules! const_resolver {
       fn resolve(
         &mut self,
         _: asciidork_parser::include_resolver::IncludeTarget,
+        _: &asciidork_parser::prelude::SourceFile,
         buffer: &mut dyn asciidork_parser::include_resolver::IncludeBuffer,
       ) -> std::result::Result<usize, asciidork_parser::include_resolver::ResolveError> {
         buffer.initialize(self.0.len());
@@ -501,11 +516,11 @@ macro_rules! error_resolver {
 #[macro_export]
 macro_rules! parse_doc_content {
   ($input:expr) => {{
-    let parser = Parser::from_str($input, leaked_bump());
+    let parser = test_parser!($input);
     parser.parse().unwrap().document.content
   }};
   ($input:expr, $bytes:expr) => {{
-    let mut parser = Parser::from_str($input, leaked_bump());
+    let mut parser = test_parser!($input);
     parser.apply_job_settings(asciidork_meta::JobSettings::r#unsafe());
     parser.set_resolver(const_resolver!($bytes));
     parser.parse().unwrap().document.content
@@ -517,7 +532,7 @@ macro_rules! parse_doc_content_loose {
   ($input:expr) => {{
     let mut settings = ::asciidork_meta::JobSettings::embedded();
     settings.strict = false;
-    let mut parser = Parser::from_str($input, leaked_bump());
+    let mut parser = test_parser!($input);
     parser.apply_job_settings(settings);
     parser.parse().unwrap().document.content
   }};
@@ -526,7 +541,7 @@ macro_rules! parse_doc_content_loose {
 #[macro_export]
 macro_rules! parse {
   ($input:expr) => {{
-    let parser = Parser::from_str($input, leaked_bump());
+    let parser = test_parser!($input);
     parser.parse()
   }};
 }
@@ -534,7 +549,7 @@ macro_rules! parse {
 #[macro_export]
 macro_rules! parse_doc {
   ($input:expr) => {{
-    let parser = Parser::from_str($input, leaked_bump());
+    let parser = test_parser!($input);
     parser.parse().unwrap().document
   }};
 }
@@ -542,7 +557,7 @@ macro_rules! parse_doc {
 #[macro_export]
 macro_rules! parse_toc {
   ($input:expr) => {{
-    let parser = Parser::from_str($input, leaked_bump());
+    let parser = test_parser!($input);
     parser.parse().unwrap().document.toc.expect("expected toc")
   }};
 }
@@ -558,7 +573,7 @@ macro_rules! parse_errors {
 #[macro_export]
 macro_rules! parse_error {
   ($input:expr) => {{
-    let parser = Parser::from_str($input, leaked_bump());
+    let parser = test_parser!($input);
     let mut diagnostics = parser.parse().err().expect(&format!(
       indoc::indoc! {"
         expected PARSE ERROR, but got none. input was:

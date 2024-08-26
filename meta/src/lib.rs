@@ -3,6 +3,7 @@ mod doctype;
 mod document_meta;
 mod job_attrs;
 mod job_settings;
+mod path;
 mod types;
 mod validate;
 
@@ -15,6 +16,7 @@ mod internal {
     pub use crate::document_meta::*;
     pub use crate::job_attrs::*;
     pub use crate::job_settings::*;
+    pub use crate::path::*;
     pub use crate::types::*;
   }
   pub use types::*;

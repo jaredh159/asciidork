@@ -113,7 +113,7 @@ mod tests {
 
       bar
     "};
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     let section = parser.parse_section().unwrap().unwrap();
     assert_eq!(
       section,

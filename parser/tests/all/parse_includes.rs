@@ -1,5 +1,5 @@
 use asciidork_ast::{prelude::*, IncludeBoundaryKind as Boundary};
-use asciidork_parser::Parser;
+use asciidork_parser::prelude::*;
 use test_utils::*;
 
 #[test]
@@ -18,7 +18,6 @@ fn include_no_trailing_newline() {
           node!(Inline::Newline, 6..7),
           node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
-          // node!(Inline::Newline, 7..8, depth: 1),
           node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
         ]),
         ..empty_block!(0)

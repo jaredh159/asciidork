@@ -132,6 +132,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use meta::JobAttr;
   use test_utils::*;
   use ColWidth::*;
 
@@ -199,6 +200,7 @@ mod tests {
               meta: {
                 let mut m = DocumentMeta::default();
                 m.set_doctype(DocType::Article);
+                m.insert_job_attr("docdir", JobAttr::readonly("")).unwrap();
                 m
               },
               ..Document::new(leaked_bump())
@@ -234,6 +236,7 @@ mod tests {
           meta: {
             let mut m = DocumentMeta::default();
             m.set_doctype(DocType::Article);
+            m.insert_job_attr("docdir", JobAttr::readonly("")).unwrap();
             m
           },
           ..Document::new(leaked_bump())

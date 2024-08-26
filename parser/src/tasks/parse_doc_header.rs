@@ -126,9 +126,8 @@ mod tests {
         false,
       ),
     ];
-    let bump = &Bump::new();
     for (input, expected) in cases {
-      let lines = Parser::from_str(input, bump).read_lines().unwrap().unwrap();
+      let lines = test_parser!(input).read_lines().unwrap().unwrap();
       expect_eq!(
         is_doc_header(&lines),
         expected,

@@ -168,6 +168,14 @@ impl DocumentMeta {
     self.doc_attrs.insert(key, value.into())
   }
 
+  pub fn insert_job_attr(
+    &mut self,
+    key: impl Into<String>,
+    job_attr: JobAttr,
+  ) -> Result<(), String> {
+    self.job_attrs.insert(key.into(), job_attr)
+  }
+
   pub fn clear_doc_attrs(&mut self) {
     self.doc_attrs = Attrs::empty();
   }
@@ -230,6 +238,7 @@ lazy_static::lazy_static! {
       "allow-uri-read",
       "max-attribute-value-size",
       "max-include-depth",
+      "doc"
     ])
   };
 }

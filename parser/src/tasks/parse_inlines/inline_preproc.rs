@@ -205,7 +205,7 @@ mod tests {
 
   #[test]
   fn test_replace_inline_pass() {
-    let mut parser = Parser::from_str("foo +bar+ baz", leaked_bump());
+    let mut parser = test_parser!("foo +bar+ baz");
     let mut lines = parser.read_lines().unwrap().unwrap();
     let mut line = lines.consume_current().unwrap();
     assert!(line.may_contain_inline_pass());

@@ -127,7 +127,6 @@ mod tests {
 
   #[test]
   fn test_parse_doc_attr() {
-    let b = &bumpalo::Bump::new();
     let cases = vec![
       (":foo: bar", ("foo", "bar".into())),
       (":foo:", ("foo", true.into())),
@@ -147,7 +146,7 @@ mod tests {
       (":foo: bar \\\n", ("foo", "bar".into())),
     ];
     for (input, (expected_key, expected_val)) in cases {
-      let mut parser = Parser::from_str(input, b);
+      let mut parser = test_parser!(input);
       parser
         .document
         .meta

@@ -1,3 +1,4 @@
+use asciidork_parser::prelude::*;
 use test_utils::*;
 
 assert_standalone_body!(

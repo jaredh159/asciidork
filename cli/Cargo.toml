@@ -21,5 +21,10 @@ clap = { version = "4.5.4", features = ["derive"] }
 lazy_static = "1.4.0"
 regex = { version = "1.10.2", features = ["std", "use_std"] }
 
+[dev-dependencies]
+test-utils = { path = "../test-utils" }
+indoc = "2.0.4"
+pretty_assertions = "1.4.0"
+
 [lints]
 workspace = true

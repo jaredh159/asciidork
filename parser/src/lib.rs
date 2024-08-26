@@ -21,8 +21,9 @@ extern crate asciidork_meta as meta;
 
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
-  pub use crate::parser::Parser;
+  pub use crate::parser::{Parser, SourceFile};
   pub use asciidork_ast::Json;
+  pub use asciidork_meta::Path;
   pub use bumpalo::Bump;
 }
 
@@ -47,7 +48,7 @@ mod internal {
   pub use crate::token::*;
   pub use crate::utils::bump::*;
   pub use ast::*;
-  pub use meta::{Author, DocType, JobSettings, ReadAttr};
+  pub use meta::{Author, DocType, JobAttr, JobSettings, Path, ReadAttr, SafeMode};
   pub use smallvec::SmallVec;
   pub type Result<T> = std::result::Result<T, Diagnostic>;
 }

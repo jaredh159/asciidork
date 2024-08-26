@@ -321,7 +321,7 @@ mod tests {
 
   #[test]
   fn test_parse_doc_attr_entry() {
-    let mut parser = Parser::from_str(":!figure-caption:\n\n", leaked_bump());
+    let mut parser = test_parser!(":!figure-caption:\n\n");
     let block = parser.parse_block().unwrap().unwrap();
     let expected = Block {
       context: Context::DocumentAttributeDecl,
@@ -339,7 +339,7 @@ mod tests {
       second para (ignored)
     "};
 
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::inline());
     let result = parser.parse().unwrap();
     let blocks = result.document.content.blocks().unwrap();

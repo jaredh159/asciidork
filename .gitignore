@@ -1,6 +1,6 @@
 .DS_Store
 target
 Session.vim
-*.adoc
+scratch.adoc
 !kitchen-sink.adoc
 

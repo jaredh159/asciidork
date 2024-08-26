@@ -26,37 +26,34 @@ pub(crate) struct ListContext {
 }
 
 impl<'arena> Parser<'arena> {
-  pub fn new(src: BumpVec<'arena, u8>, bump: &'arena Bump) -> Self {
-    Parser {
-      bump,
-      lexer: Lexer::new(src, bump),
-      document: Document::new(bump),
-      peeked_lines: None,
-      peeked_meta: None,
-      ctx: ParseContext::new(bump),
-      errors: RefCell::new(Vec::new()),
-      strict: true,
-      include_resolver: None,
-    }
+  pub fn new(src: BumpVec<'arena, u8>, file: SourceFile, bump: &'arena Bump) -> Self {
+    Parser::from_lexer(Lexer::new(src, file, bump))
   }
 
-  pub fn from_str(src: &str, bump: &'arena Bump) -> Self {
-    Parser {
-      bump,
-      lexer: Lexer::from_str(bump, src),
-      document: Document::new(bump),
+  pub fn from_str(src: &str, file: SourceFile, bump: &'arena Bump) -> Self {
+    Parser::from_lexer(Lexer::from_str(bump, file, src))
+  }
+
+  fn from_lexer(lexer: Lexer<'arena>) -> Self {
+    let mut parser = Parser {
+      bump: lexer.bump,
+      document: Document::new(lexer.bump),
       peeked_lines: None,
       peeked_meta: None,
-      ctx: ParseContext::new(bump),
+      ctx: ParseContext::new(lexer.bump),
       errors: RefCell::new(Vec::new()),
       strict: true,
       include_resolver: None,
-    }
+      lexer,
+    };
+    parser.set_source_file_attrs();
+    parser
   }
 
   pub fn apply_job_settings(&mut self, settings: JobSettings) {
     self.strict = settings.strict;
     self.document.meta = settings.into();
+    self.set_source_file_attrs();
   }
 
   pub fn set_resolver(&mut self, resolver: Box<dyn IncludeResolver>) {
@@ -64,7 +61,7 @@ impl<'arena> Parser<'arena> {
   }
 
   pub fn cell_parser(&mut self, src: BumpVec<'arena, u8>, offset: u32) -> Parser<'arena> {
-    let mut cell_parser = Parser::new(src, self.bump);
+    let mut cell_parser = Parser::new(src, self.lexer.source_file().clone(), self.bump);
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
     cell_parser.ctx = self.ctx.clone_for_cell(self.bump);
@@ -91,7 +88,6 @@ impl<'arena> Parser<'arena> {
     let mut line = Line::empty(self.bump);
     while !self.lexer.peek_is(b'\n') && !self.lexer.is_eof() {
       let mut token = self.lexer.next_token();
-
       if token.is(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
         match self.document.meta.get(token.attr_name()) {
           Some(AttrValue::String(attr_val)) => {
@@ -108,7 +104,6 @@ impl<'arena> Parser<'arena> {
               if val == Some("warn") {
                 self.err_token_full("Skipping reference to missing attribute", &token)?;
               }
-              // `skip` is default, but we push also for `warn`
               line.push(token);
             }
           },
@@ -124,8 +119,9 @@ impl<'arena> Parser<'arena> {
       return self.read_line();
     }
     if line.starts(TokenKind::Directive) {
+      let copy = line.clone();
       return match self.try_process_directive(&mut line)? {
-        DirectiveAction::Passthrough => Ok(Some(line)),
+        DirectiveAction::Passthrough => Ok(Some(copy)),
         DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
         DirectiveAction::ReadNextLine => self.read_line(),
         DirectiveAction::SkipLinesUntilEndIf => todo!(),
@@ -247,6 +243,7 @@ impl<'arena> Parser<'arena> {
     if let Some(meta) = self.peeked_meta.take() {
       return Ok(meta);
     }
+    assert!(!lines.is_empty());
     let start = lines.current_token().unwrap().loc.start;
     let mut attrs = None;
     let mut title = None;
@@ -328,6 +325,13 @@ pub enum DirectiveAction<'arena> {
   SubstituteLine(Line<'arena>),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourceFile {
+  Stdin { cwd: Path },
+  Path(Path),
+  Tmp,
+}
+
 impl From<Diagnostic> for Vec<Diagnostic> {
   fn from(diagnostic: Diagnostic) -> Self {
     vec![diagnostic]
@@ -345,6 +349,7 @@ mod tests {
       fn resolve(
         &mut self,
         _: IncludeTarget,
+        _: &SourceFile,
         buffer: &mut dyn IncludeBuffer,
       ) -> std::result::Result<usize, ResolveError> {
         buffer.initialize(self.0.len());
@@ -371,7 +376,7 @@ mod tests {
       include::bar.adoc[]
       baz
     "};
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.set_resolver(resolve("bar")); // <-- no newline
     parser.apply_job_settings(JobSettings::r#unsafe());
     let lines = parser.read_lines().unwrap().unwrap();
@@ -388,7 +393,7 @@ mod tests {
 
   #[test]
   fn test_attr_ref() {
-    let mut parser = Parser::from_str("hello {foo} world", leaked_bump());
+    let mut parser = test_parser!("hello {foo} world");
     parser
       .document
       .meta
@@ -422,7 +427,7 @@ mod tests {
       foo
       include::bar.adoc[]
     "};
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::r#unsafe());
     parser.set_resolver(resolve("bar")); // <-- no newline
     let lines = parser.read_lines().unwrap().unwrap();
@@ -444,7 +449,7 @@ mod tests {
       include::bar.adoc[]
       baz
     "};
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::r#unsafe());
     parser.set_resolver(resolve("bar\n\n")); // <-- 2 newline
     let lines = parser.read_lines().unwrap().unwrap();
@@ -472,7 +477,7 @@ mod tests {
       bar
     "};
 
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     assert_eq!(
       reassemble(parser.read_lines().unwrap().unwrap()),
       input.trim_end()
@@ -487,7 +492,7 @@ mod tests {
       baz
     "};
 
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::secure());
     assert_eq!(
       reassemble(parser.read_lines().unwrap().unwrap()),
@@ -499,7 +504,7 @@ mod tests {
     );
 
     // assert on the tokens and positions
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::secure());
 
     let mut line = parser.read_line().unwrap().unwrap();
@@ -539,7 +544,7 @@ mod tests {
   #[test]
   fn attrs_preserved_when_replacing_include() {
     let input = "include::some-file.adoc[leveloffset+=1]";
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::secure());
     assert_eq!(
       parser.read_line().unwrap().unwrap().reassemble_src(),
@@ -550,7 +555,7 @@ mod tests {
   #[test]
   fn spaces_in_include_file_to_pass_macro_link() {
     let input = "include::foo bar baz.adoc[]";
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::secure());
     assert_eq!(
       parser.read_line().unwrap().unwrap().reassemble_src(),
@@ -562,7 +567,7 @@ mod tests {
   fn uri_read_not_allowed_include() {
     // strict mode error
     let input = "include::https://my.com/foo.adoc[]";
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::r#unsafe());
     let err = parser.read_line().err().unwrap();
     let expected_err = error! {"
@@ -573,7 +578,7 @@ mod tests {
 
     // non-strict mode replaced with link
     let input = "include::https://my.com/foo bar.adoc[]";
-    let mut parser = Parser::from_str(input, leaked_bump());
+    let mut parser = test_parser!(input);
     let mut settings = JobSettings::r#unsafe();
     settings.strict = false;
     parser.apply_job_settings(settings);
@@ -586,7 +591,7 @@ mod tests {
 
   #[test]
   fn include_resolver_error_uri_read_not_supported() {
-    let mut parser = Parser::from_str("include::http://a.com/b[]", leaked_bump());
+    let mut parser = test_parser!("include::http://a.com/b[]");
     let mut settings = JobSettings::r#unsafe();
     settings
       .job_attrs
@@ -595,14 +600,14 @@ mod tests {
     parser.set_resolver(Box::new(ErrorResolver(ResolveError::UriReadNotSupported)));
     let expected_err = error! {"
       1: include::http://a.com/b[]
-         ^^^^^^^^^ Include resolver returned error: URI read not supported
+                  ^^^^^^^^^^^^^^ Include resolver returned error: URI read not supported
     "};
     expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
   }
 
   #[test]
   fn include_resolver_error_no_resolver() {
-    let mut parser = Parser::from_str("include::file.adoc[]", leaked_bump());
+    let mut parser = test_parser!("include::file.adoc[]");
     parser.apply_job_settings(JobSettings::r#unsafe());
     let expected_err = error! {"
       1: include::file.adoc[]
@@ -613,7 +618,7 @@ mod tests {
 
   #[test]
   fn include_resolver_error_bad_encoding() {
-    let mut parser = Parser::from_str("include::file.adoc[]", leaked_bump());
+    let mut parser = test_parser!("include::file.adoc[]");
     parser.apply_job_settings(JobSettings::r#unsafe());
     let invalid_utf8 = vec![0xFF, 0xFE, 0x68, 0x00, 0xFF, 0xDC];
     parser.set_resolver(Box::new(ConstResolver(invalid_utf8)));
@@ -631,9 +636,10 @@ mod tests {
       fn resolve(
         &mut self,
         target: IncludeTarget,
+        _: &SourceFile,
         _: &mut dyn IncludeBuffer,
       ) -> std::result::Result<usize, ResolveError> {
-        assert_eq!(target, IncludeTarget::FilePath(self.0));
+        assert_eq!(target, IncludeTarget::FilePath(Path::new(self.0)));
         Ok(0)
       }
     }
@@ -643,7 +649,7 @@ mod tests {
       (":myfile: foo.adoc\n\ninclude::{myfile}[]", "foo.adoc"),
     ];
     for (input, expected) in cases {
-      let mut parser = Parser::from_str(input, leaked_bump());
+      let mut parser = test_parser!(input);
       parser.apply_job_settings(JobSettings::r#unsafe());
       parser.set_resolver(Box::new(AssertResolver(expected)));
       assert!(parser.parse().is_ok());

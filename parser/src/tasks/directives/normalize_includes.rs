@@ -61,7 +61,6 @@ impl<'arena> Parser<'arena> {
 fn from_utf16_in(utf16: BumpVec<u16>, dest: &mut BumpVec<u8>, bump: &Bump) -> bool {
   match BumpString::from_utf16_in(&utf16, bump) {
     Ok(string) => {
-      dbg!(&string);
       dest.clear();
       dest.extend_from_slice(string.as_bytes());
       true
@@ -77,7 +76,7 @@ mod tests {
 
   #[test]
   fn strips_utf8_bom() {
-    let mut parser = Parser::from_str("", leaked_bump());
+    let mut parser = test_parser!("");
     let mut bytes = vecb![0xEF, 0xBB, 0xBF, 0x68, 0x69];
     parser.normalize_include_bytes(&mut bytes).unwrap();
     assert_eq!(bytes.as_slice(), b"hi");
@@ -85,7 +84,7 @@ mod tests {
 
   #[test]
   fn converts_little_endian_utf16_to_utf8() {
-    let mut parser = Parser::from_str("", leaked_bump());
+    let mut parser = test_parser!("");
     let mut bytes = vecb![0xFF, 0xFE, 0x68, 0x00, 0x69, 0x00];
     parser.normalize_include_bytes(&mut bytes).unwrap();
     assert_eq!(bytes.as_slice(), b"hi");
@@ -93,7 +92,7 @@ mod tests {
 
   #[test]
   fn converts_big_endian_utf16_to_utf8() {
-    let mut parser = Parser::from_str("", leaked_bump());
+    let mut parser = test_parser!("");
     let mut bytes = vecb![0xFE, 0xFF, 0x00, 0x68, 0x00, 0x69];
     parser.normalize_include_bytes(&mut bytes).unwrap();
     assert_eq!(bytes.as_slice(), b"hi");

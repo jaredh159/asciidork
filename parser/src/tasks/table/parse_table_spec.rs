@@ -369,7 +369,7 @@ mod tests {
       ),
     ];
 
-    let parser = Parser::from_str("", leaked_bump());
+    let parser = test_parser!("");
     for (sep, input, remaining, expected) in &cases {
       let line = read_line!(input);
       let mut tokens = Deq::new(leaked_bump());
@@ -471,7 +471,7 @@ mod tests {
         ],
       ),
     ];
-    let mut parser = Parser::from_str("", leaked_bump());
+    let mut parser = test_parser!("");
     for (input, expected) in cases {
       let cols = parser.parse_col_specs(input);
       expect_eq!(cols, *expected);

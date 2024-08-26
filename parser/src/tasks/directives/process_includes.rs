@@ -5,6 +5,7 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
+#[derive(Debug)]
 struct IncludeDirective<'a> {
   line_src: BumpString<'a>,
   first_token: Token<'a>,
@@ -53,7 +54,7 @@ impl<'arena> Parser<'arena> {
     };
 
     let mut buffer = BumpVec::new_in(self.bump);
-    match resolver.resolve(directive.target(), &mut buffer) {
+    match resolver.resolve(directive.target(), self.lexer.source_file(), &mut buffer) {
       Ok(_) => {
         if let Err(msg) = self.normalize_include_bytes(&mut buffer) {
           self.err_at(
@@ -65,13 +66,15 @@ impl<'arena> Parser<'arena> {
             self.substitute_link_for_include(&directive),
           ));
         }
-        self.lexer.push_source(&directive.target_str, buffer);
+        let path = Path::new(directive.target_str.as_str());
+        self.lexer.push_source(path, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(error) => {
-        self.err_token_full(
+        self.err_at(
           format!("Include resolver returned error: {}", error),
-          &directive.first_token,
+          directive.first_token.loc.end,
+          directive.first_token.loc.end + directive.target_str.len() as u32,
         )?;
         Ok(DirectiveAction::Passthrough)
       }
@@ -148,9 +151,9 @@ impl<'arena> Parser<'arena> {
 impl<'a> IncludeDirective<'a> {
   fn target(&self) -> IncludeTarget {
     if self.target_is_uri {
-      IncludeTarget::Uri(self.target_str.as_str())
+      IncludeTarget::Uri(Path::new(self.target_str.as_str()))
     } else {
-      IncludeTarget::FilePath(self.target_str.as_str())
+      IncludeTarget::FilePath(Path::new(self.target_str.as_str()))
     }
   }
 }

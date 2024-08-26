@@ -629,6 +629,44 @@ assert_html!(
   "#}
 );
 
+assert_html!(
+  attr_ref_behavior,
+  adoc! {r#"
+    :attribute-missing: drop-line
+
+    foo bar
+    whoops {missing}
+    baz
+
+    :attribute-missing: skip
+
+    foo bar
+    whoops {missing}
+    baz
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>foo bar baz</p>
+    </div>
+    <div class="paragraph">
+      <p>foo bar whoops {missing} baz</p>
+    </div>
+  "#}
+);
+
+assert_error!(
+  missing_attr_ref,
+  adoc! {"
+    :attribute-missing: warn
+
+    whoops {missing}
+  "},
+  error! {"
+    3: whoops {missing}
+              ^^^^^^^^^ Skipping reference to missing attribute
+  "}
+);
+
 enum SubstrTest {
   Contains(&'static str),
   DoesNotContain(&'static str),
@@ -684,11 +722,10 @@ fn test_head_opts() {
       Contains(r#"<link rel="icon" type="image/png" href="custom/my/icon.png">"#),
     ),
   ];
-  let bump = &Bump::new();
 
   for (opts, expectation) in cases {
     let input = format!("= Doc Header\n{}\n\nignore me\n\n", opts);
-    let parser = Parser::from_str(&input, bump);
+    let parser = test_parser!(&input);
     let document = parser.parse().unwrap().document;
     let html = eval(&document, AsciidoctorHtml::new()).unwrap();
     match expectation {
@@ -709,7 +746,7 @@ fn test_head_opts() {
     }
   }
   // one test with no doc header
-  let parser = Parser::from_str("without doc header", bump);
+  let parser = test_parser!("without doc header");
   let document = parser.parse().unwrap().document;
   let html = eval(&document, AsciidoctorHtml::new()).unwrap();
   assert!(html.contains("<title>Untitled</title>"));
@@ -752,10 +789,9 @@ fn test_non_embedded() {
       </body>
     </html>
   "#};
-  let bump = &Bump::new();
   let re = Regex::new(r"(?m)\n\s*").unwrap();
   let expected = re.replace_all(expected, "");
-  let parser = Parser::from_str(input, bump);
+  let parser = test_parser!(input);
   let doc = parser.parse().unwrap().document;
   expect_eq!(
     eval(&doc, AsciidoctorHtml::new()).unwrap(),

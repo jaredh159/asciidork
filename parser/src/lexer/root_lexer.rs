@@ -3,7 +3,7 @@ use crate::internal::*;
 
 #[derive(Debug)]
 pub struct RootLexer<'arena> {
-  bump: &'arena Bump,
+  pub bump: &'arena Bump,
   idx: u16,
   next_idx: Option<u16>,
   source_stack: Vec<SourceLocation>,
@@ -18,57 +18,66 @@ pub enum BufLoc {
 }
 
 impl<'arena> RootLexer<'arena> {
-  pub fn new(src: BumpVec<'arena, u8>, bump: &'arena Bump) -> Self {
+  pub fn new(src: BumpVec<'arena, u8>, file: SourceFile, bump: &'arena Bump) -> Self {
     Self {
       bump,
       idx: 0,
       next_idx: None,
       source_stack: Vec::new(),
-      sources: bvec![in bump; SourceLexer::new(src, bump)],
+      sources: bvec![in bump; SourceLexer::new(src, file, bump)],
       tmp_buf: None,
     }
   }
 
-  pub fn from_str(bump: &'arena Bump, src: &str) -> Self {
+  pub fn from_str(bump: &'arena Bump, file: SourceFile, src: &str) -> Self {
     Self {
       bump,
       idx: 0,
       next_idx: None,
       source_stack: Vec::new(),
-      sources: bvec![in bump; SourceLexer::from_str(src, bump)],
+      sources: bvec![in bump; SourceLexer::from_str(src, file, bump)],
       tmp_buf: None,
     }
   }
 
-  pub fn from_byte_slice(bytes: &[u8], bump: &'arena Bump) -> Self {
+  pub fn from_byte_slice(bytes: &[u8], file: SourceFile, bump: &'arena Bump) -> Self {
     Self {
       bump,
       idx: 0,
       next_idx: None,
       source_stack: Vec::new(),
-      sources: bvec![in bump; SourceLexer::from_byte_slice(bytes, bump)],
+      sources: bvec![in bump; SourceLexer::from_byte_slice(bytes, file, bump)],
       tmp_buf: None,
     }
   }
 
-  pub fn push_source(&mut self, _filename: &str, mut src: BumpVec<'arena, u8>) {
+  pub fn push_source(&mut self, path: Path, mut src: BumpVec<'arena, u8>) {
     // match asciidoctor - its include processor returns an array of lines
     // so even if the source has no trailing newline, it's inserted as a full line
     // NB: the include resolver has taken care of reserving space for the newline
     if src.last() != Some(&b'\n') {
       src.push(b'\n');
     }
-    self.sources.push(SourceLexer::new(src, self.bump));
+    self
+      .sources
+      .push(SourceLexer::new(src, SourceFile::Path(path), self.bump));
     let next_idx = self.sources.len() as u16 - 1;
     self.next_idx = Some(next_idx);
   }
 
   pub fn set_tmp_buf(&mut self, buf: &str, loc: BufLoc) {
-    self.tmp_buf = Some((SourceLexer::from_str(buf, self.bump), loc));
+    self.tmp_buf = Some((SourceLexer::from_str(buf, SourceFile::Tmp, self.bump), loc));
+    // pub fn buffer_attr_ref(&mut self, attr_ref: String, location: SourceLocation) {
+    //   let attr_lexer = SourceLexer::from_str(&attr_ref, SourceFile::Tmp, self.bump);
+    //   self.attr_ctx = Some((attr_lexer, location));
   }
 
   pub fn adjust_offset(&mut self, offset_adjustment: u32) {
     self.sources[self.idx as usize].offset = offset_adjustment;
+  }
+
+  pub fn source_file(&self) -> &SourceFile {
+    &self.sources[self.idx as usize].file
   }
 
   pub fn peek(&self) -> Option<u8> {
@@ -209,9 +218,8 @@ mod tests {
 
   macro_rules! assert_token_cases {
     ($cases:expr) => {{
-      let bump = &Bump::new();
       for (input, expected) in $cases {
-        let mut lexer = RootLexer::from_str(bump, input);
+        let mut lexer = test_lexer!(input);
         let mut index = 0;
         for (token_type, lexeme) in expected {
           let start = index;
@@ -219,7 +227,7 @@ mod tests {
           let expected_token = Token {
             kind: token_type,
             loc: SourceLocation::from(start..end),
-            lexeme: BumpString::from_str_in(lexeme, bump),
+            lexeme: bstr!(lexeme),
           };
           let actual = lexer.next_token();
           assert_eq!(actual, expected_token);
@@ -234,8 +242,7 @@ mod tests {
   macro_rules! refute_produces_token {
     ($kind:ident, $cases:expr) => {{
       for input in $cases {
-        let bump = &Bump::new();
-        let mut lexer = RootLexer::from_str(bump, input);
+        let mut lexer = test_lexer!(input);
         loop {
           match lexer.next_token().kind {
             Eof => {
@@ -257,8 +264,7 @@ mod tests {
       include::bar.adoc[]
       baz
     "};
-    let bump = &Bump::new();
-    let mut lexer = RootLexer::from_str(bump, input);
+    let mut lexer = test_lexer!(input);
 
     // parse up to the end of the include directive
     (0..7).for_each(|_| _ = lexer.next_token());
@@ -269,7 +275,7 @@ mod tests {
     assert_eq!(lexer.next_token(), Token::new(Newline, 23..24, bstr!("\n")));
 
     // now mimic the parser resolving the include directive with `b"bar\n"`
-    lexer.push_source("bar.adoc", bvec![in bump; b'b', b'a', b'r', b'\n']);
+    lexer.push_source(Path::new("bar.adoc"), vecb![b'b', b'a', b'r', b'\n']);
     assert_eq!(
       lexer.next_token(),
       Token::new(PreprocBeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
@@ -617,14 +623,13 @@ mod tests {
   #[test]
   fn test_tokens_full() {
     let input = "&^foobar[//";
-    let bump = &Bump::new();
-    let mut lexer = RootLexer::from_str(bump, input);
+    let mut lexer = test_lexer!(input);
     assert_eq!(
       lexer.next_token(),
       Token {
         kind: TokenKind::Ampersand,
         loc: SourceLocation::new(0, 1),
-        lexeme: BumpString::from_str_in("&", bump),
+        lexeme: bstr!("&"),
       }
     );
     assert_eq!(
@@ -632,7 +637,7 @@ mod tests {
       Token {
         kind: TokenKind::Caret,
         loc: SourceLocation::new(1, 2),
-        lexeme: BumpString::from_str_in("^", bump),
+        lexeme: bstr!("^"),
       }
     );
     assert_eq!(
@@ -640,7 +645,7 @@ mod tests {
       Token {
         kind: TokenKind::Word,
         loc: SourceLocation::new(2, 8),
-        lexeme: BumpString::from_str_in("foobar", bump),
+        lexeme: bstr!("foobar"),
       }
     );
     assert_eq!(
@@ -648,7 +653,7 @@ mod tests {
       Token {
         kind: TokenKind::OpenBracket,
         loc: SourceLocation::new(8, 9),
-        lexeme: BumpString::from_str_in("[", bump),
+        lexeme: bstr!("["),
       }
     );
     assert_eq!(
@@ -656,7 +661,7 @@ mod tests {
       Token {
         kind: TokenKind::ForwardSlashes,
         loc: SourceLocation::new(9, 11),
-        lexeme: BumpString::from_str_in("//", bump),
+        lexeme: bstr!("//"),
       }
     );
     assert_eq!(
@@ -664,16 +669,14 @@ mod tests {
       Token {
         kind: TokenKind::Eof,
         loc: SourceLocation::new(12, 12),
-        lexeme: BumpString::from_str_in("", bump),
+        lexeme: bstr!(""),
       }
     );
   }
 
   #[test]
   fn test_line_of() {
-    let bump = &Bump::new();
-    let input = "foo\nbar\n\nbaz\n";
-    let lexer = RootLexer::from_str(bump, input);
+    let lexer = test_lexer!("foo\nbar\n\nbaz\n");
     assert_eq!(lexer.line_of(1), "foo");
     assert_eq!(lexer.line_of(2), "foo");
     assert_eq!(lexer.line_of(3), "foo"); // newline
@@ -686,14 +689,13 @@ mod tests {
 
   #[test]
   fn test_line_num() {
-    let input = "= :
-foo
+    let input = adoc! {
+      "= :
+      foo
 
-;
-";
-    let bump = &Bump::new();
-    let mut lexer = RootLexer::from_str(bump, input);
-
+      ;"
+    };
+    let mut lexer = test_lexer!(input);
     assert_next_token_line(&mut lexer, 1, EqualSigns);
     assert_next_token_line(&mut lexer, 1, Whitespace);
     assert_next_token_line(&mut lexer, 1, Colon);
@@ -711,9 +713,7 @@ foo
 
   #[test]
   fn test_consume_empty_lines() {
-    let bump = &Bump::new();
-    let input = "\n\n\n\n\n";
-    let mut lexer = RootLexer::from_str(bump, input);
+    let mut lexer = test_lexer!("\n\n\n\n\n");
     lexer.consume_empty_lines();
     assert!(lexer.is_eof());
   }

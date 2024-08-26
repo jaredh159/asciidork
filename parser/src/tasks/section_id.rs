@@ -129,7 +129,7 @@ mod tests {
       ("State-of-the-art design", "_state_of_the_art_design"),
       ("Section 1.1.1", "_section_1_1_1"),
     ];
-    let parser = Parser::from_str("", leaked_bump());
+    let parser = test_parser!("");
     for (input, expected) in cases {
       let id = parser.autogen_sect_id(input, "_", Some('_'), false);
       assert_eq!(id, *expected);
@@ -158,7 +158,7 @@ mod tests {
     ];
 
     for (line, id_prefix, id_sep, prev, expected) in cases {
-      let parser = Parser::from_str("", leaked_bump());
+      let parser = test_parser!("");
       for s in prev {
         parser.ctx.anchor_ids.borrow_mut().insert(bstr!(s));
       }

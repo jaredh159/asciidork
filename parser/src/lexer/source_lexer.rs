@@ -8,23 +8,25 @@ pub struct SourceLexer<'arena> {
   pub src: BumpVec<'arena, u8>,
   pub pos: u32,
   pub offset: u32,
+  pub file: SourceFile,
 }
 
 impl<'arena> SourceLexer<'arena> {
-  pub fn new(src: BumpVec<'arena, u8>, bump: &'arena Bump) -> Self {
-    Self { bump, src, pos: 0, offset: 0 }
+  pub fn new(src: BumpVec<'arena, u8>, file: SourceFile, bump: &'arena Bump) -> Self {
+    Self { bump, src, pos: 0, offset: 0, file }
   }
 
-  pub fn from_str(s: &str, bump: &'arena Bump) -> Self {
-    Self::from_byte_slice(s.as_bytes(), bump)
+  pub fn from_str(s: &str, file: SourceFile, bump: &'arena Bump) -> Self {
+    Self::from_byte_slice(s.as_bytes(), file, bump)
   }
 
-  pub fn from_byte_slice(bytes: &[u8], bump: &'arena Bump) -> Self {
+  pub fn from_byte_slice(bytes: &[u8], file: SourceFile, bump: &'arena Bump) -> Self {
     Self {
       bump,
       src: BumpVec::from_iter_in(bytes.iter().copied(), bump),
       pos: 0,
       offset: 0,
+      file,
     }
   }
 
@@ -567,7 +569,7 @@ mod tests {
   fn test_raw_lines() {
     let bump = Bump::new();
     let input = "hello\nworld\n\n";
-    let lexer = SourceLexer::from_str(input, &bump);
+    let lexer = SourceLexer::from_str(input, SourceFile::Tmp, &bump);
     let mut lines = lexer.raw_lines();
     expect_eq!(lines.next(), Some("hello"));
     expect_eq!(lines.next(), Some("world"));

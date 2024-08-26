@@ -92,8 +92,11 @@ dependencies = [
  "bumpalo",
  "clap",
  "colored",
+ "indoc",
  "lazy_static",
+ "pretty_assertions",
  "regex",
+ "test-utils",
 ]
 
 [[package]]

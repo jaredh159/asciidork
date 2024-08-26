@@ -274,9 +274,8 @@ mod tests {
       ("\"foo bar\nso baz\"\n-- ", false),
       ("\"foo bar\nso baz\"\nme -- too", false),
     ];
-    let bump = &Bump::new();
     for (input, expected) in cases {
-      let mut parser = Parser::from_str(input, bump);
+      let mut parser = test_parser!(input);
       let lines = parser.read_lines().unwrap().unwrap();
       expect_eq!(lines.is_quoted_paragraph(), expected, from: input);
     }

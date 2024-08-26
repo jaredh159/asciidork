@@ -1,4 +1,4 @@
-use asciidork_parser::Parser;
+use asciidork_parser::prelude::*;
 use test_utils::*;
 
 assert_html!(

@@ -236,9 +236,8 @@ mod tests {
       ),
     ];
 
-    let bump = &Bump::new();
     for (input, block_contexts) in cases {
-      let parser = Parser::from_str(input, bump);
+      let parser = test_parser!(input);
       let content = parser.parse().unwrap().document.content;
       match content {
         DocContent::Blocks(blocks) => {

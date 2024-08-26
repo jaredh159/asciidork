@@ -98,6 +98,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::*;
 
   #[test]
   fn test_parse_revision_lines() {
@@ -123,8 +124,7 @@ mod tests {
     ];
 
     for (input, rev, date, remark) in cases {
-      let b = &bumpalo::Bump::new();
-      let mut parser = Parser::from_str(input, b);
+      let mut parser = test_parser!(input);
       let mut block = parser.read_lines().unwrap().unwrap();
       parser.parse_revision_line(&mut block);
       assert_eq!(

@@ -4,7 +4,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::str::FromStr;
 
-// TODO: add  `-a, --attribute name[=value]`
 #[derive(Parser, Debug, Clone)]
 #[command(version, about = "🤓 Asciidork CLI")]
 #[command(name = "asciidork", bin_name = "asciidork")]
@@ -23,6 +22,9 @@ pub struct Args {
 
   #[arg(value_parser = parse_attr)]
   #[clap(short, long = "attribute")]
+  #[clap(
+    help = "Set a document attribute (i.e., name=value, name@=value, name!, name) - may be set more than once"
+  )]
   pub attributes: Vec<(String, JobAttr)>,
 
   #[arg(value_parser = SafeMode::from_str)]
@@ -36,6 +38,16 @@ pub struct Args {
   #[clap(short, long, default_value = "false")]
   #[clap(help = "Supress enclosing document structure")]
   pub embedded: bool,
+
+  #[clap(long, default_value = "false")]
+  pub strict: bool,
+
+  #[clap(
+    short = 'B',
+    long,
+    help = "Base directory for includes, resources (default: directory of entry file)"
+  )]
+  pub base_dir: Option<std::path::PathBuf>,
 
   #[clap(short = 't', long, default_value = "false")]
   #[clap(help = "Print timing/perf info\n")]
@@ -104,7 +116,7 @@ impl TryFrom<Args> for JobSettings {
       safe_mode: args.safe_mode,
       doctype: Some(args.doctype),
       embedded: args.embedded,
-      strict: false,
+      strict: args.strict,
       job_attrs: JobAttrs::empty(),
     };
     for (key, attr) in args.attributes {

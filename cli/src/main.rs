@@ -9,37 +9,52 @@ use clap::Parser as ClapParser;
 use colored::*;
 
 use asciidork_dr_html_backend::*;
+use asciidork_meta::Path;
 use asciidork_parser::prelude::*;
 
 mod args;
+mod resolver;
 
 use args::{Args, Output};
+use resolver::CliResolver;
 
 fn main() -> Result<(), Box<dyn Error>> {
   let args = Args::parse();
-  let src = {
+  run(args, std::io::stdin(), std::io::stdout(), std::io::stderr())
+}
+
+fn run(
+  args: Args,
+  mut stdin: impl Read,
+  mut stdout: impl Write,
+  mut stderr: impl Write,
+) -> Result<(), Box<dyn Error>> {
+  let (src, source_file) = {
     // TODO: for perf, better to read the file straight into a BumpVec<u8>
     // have an initializer on Parser that takes ownership of it
-    if let Some(file) = &args.input {
-      let mut file = fs::File::open(file)?;
+    if let Some(pathbuf) = &args.input {
+      let abspath = fs::canonicalize(pathbuf)?;
+      let mut file = fs::File::open(pathbuf.clone())?;
       let mut src = file
         .metadata()
         .ok()
         .map(|metadata| String::with_capacity(metadata.len() as usize))
         .unwrap_or_else(String::new);
       file.read_to_string(&mut src)?;
-      src
+      (src, SourceFile::Path(abspath.into()))
     } else {
       let mut src = String::new();
-      std::io::stdin().read_to_string(&mut src)?;
-      src
+      let cwd = Path::new(std::env::current_dir()?.to_str().unwrap_or(""));
+      stdin.read_to_string(&mut src)?;
+      (src, SourceFile::Stdin { cwd })
     }
   };
 
   let parse_start = Instant::now();
-  let bump = &Bump::with_capacity(src.len());
-  let mut parser = Parser::from_str(&src, bump);
+  let bump = &Bump::with_capacity(src.len() * 2);
+  let mut parser = Parser::from_str(&src, source_file, bump);
   parser.apply_job_settings(args.clone().try_into()?);
+  parser.set_resolver(Box::new(CliResolver::new(args.base_dir.clone())));
 
   let result = parser.parse();
   let parse_time = parse_start.elapsed();
@@ -57,62 +72,82 @@ fn main() -> Result<(), Box<dyn Error>> {
         if let Some(file) = &args.output {
           fs::write(file, html)?;
         } else {
-          eprintln_if(prettify);
-          println!("{html}");
+          if prettify {
+            writeln!(stderr)?;
+          }
+          writeln!(stdout, "{html}")?;
         }
         if args.print_timings {
-          eprintln_if(!prettify);
-          print_timings(src.len(), parse_time, Some(convert_time));
+          if !prettify {
+            writeln!(stderr)?;
+          }
+          print_timings(&mut stderr, src.len(), parse_time, Some(convert_time));
         }
       }
       Output::Ast => {
         let json = parse_result.document.to_json();
-        println!("{json}");
+        writeln!(stdout, "{json}")?;
         if args.print_timings {
-          eprintln!();
-          print_timings(src.len(), parse_time, None);
+          writeln!(stderr)?;
+          print_timings(&mut stderr, src.len(), parse_time, None);
         }
       }
     },
     Err(diagnostics) => {
-      print_diagnostics(diagnostics);
+      print_diagnostics(&mut stderr, diagnostics);
+      return Err("Parse error".into());
     }
   }
   Ok(())
 }
 
-fn print_timings(len: usize, parse_time: Duration, convert_time: Option<Duration>) {
+fn print_timings(
+  dest: &mut impl Write,
+  len: usize,
+  parse_time: Duration,
+  convert_time: Option<Duration>,
+) {
   if cfg!(debug_assertions) {
-    eprintln!(
+    writeln!(
+      dest,
       " {} {}\n",
       "WARN:".red().bold(),
       "This is a debug build, will be MUCH slower than a release build!"
         .white()
         .dimmed()
-    );
+    )
+    .unwrap();
   }
-  eprintln!(
+  writeln!(
+    dest,
     " {} {} {}",
     "Input size:   ".white().dimmed(),
     format!("{:.2?}", len).green().bold(),
     "bytes".white().dimmed()
-  );
-  eprintln!(
+  )
+  .unwrap();
+  writeln!(
+    dest,
     " {} {}",
     "Parse time:   ".white().dimmed(),
     format!("{:.2?}", parse_time).green().bold()
-  );
+  )
+  .unwrap();
   if let Some(convert_time) = convert_time {
-    eprintln!(
+    writeln!(
+      dest,
       " {} {}",
       "Convert time: ".white().dimmed(),
       format!("{:.2?}", convert_time).green().bold()
-    );
-    eprintln!(
+    )
+    .unwrap();
+    writeln!(
+      dest,
       " {} {}",
       "Total time:   ".white().dimmed(),
       format!("{:.2?}", parse_time + convert_time,).green().bold()
-    );
+    )
+    .unwrap();
   }
 }
 
@@ -132,15 +167,9 @@ fn format_html(html: String) -> String {
   String::from_utf8_lossy(&output.stdout).to_string()
 }
 
-fn print_diagnostics(diagnostics: Vec<Diagnostic>) {
+fn print_diagnostics(dest: &mut impl Write, diagnostics: Vec<Diagnostic>) {
   for diagnostic in diagnostics {
-    println!("\n{}", diagnostic.plain_text_with(Colorizer));
-  }
-}
-
-fn eprintln_if(condition: bool) {
-  if condition {
-    eprintln!();
+    writeln!(dest, "\n{}", diagnostic.plain_text_with(Colorizer)).unwrap();
   }
 }
 

@@ -2,7 +2,7 @@ use asciidork_ast::short::block::*;
 use asciidork_ast::variants::inline::*;
 use asciidork_ast::{prelude::*, Inline};
 use asciidork_meta::{DocType, DocumentMeta};
-use asciidork_parser::Parser;
+use asciidork_parser::prelude::*;
 use test_utils::*;
 
 #[test]
@@ -286,6 +286,8 @@ fn test_globally_unique_callouts() {
               meta: {
                 let mut m = DocumentMeta::default();
                 m.set_doctype(DocType::Article);
+                m.insert_job_attr("docdir", asciidork_meta::JobAttr::readonly(""))
+                  .unwrap();
                 m
               },
               ..Document::new(leaked_bump())

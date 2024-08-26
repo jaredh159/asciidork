@@ -1,7 +1,7 @@
 use asciidork_ast::prelude::*;
 use asciidork_ast::short::block::*;
 use asciidork_ast::ListVariant;
-use asciidork_parser::Parser;
+use asciidork_parser::prelude::*;
 use test_utils::*;
 
 #[test]
