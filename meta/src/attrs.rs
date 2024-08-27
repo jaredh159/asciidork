@@ -91,8 +91,14 @@ pub trait ReadAttr {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct Attrs(HashMap<String, AttrValue>);
+
+impl std::fmt::Debug for Attrs {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "Attrs(<num attrs: {}>)", self.0.len())
+  }
+}
 
 impl AsRef<HashMap<String, AttrValue>> for Attrs {
   fn as_ref(&self) -> &HashMap<String, AttrValue> {

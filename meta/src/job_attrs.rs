@@ -19,7 +19,7 @@ impl JobAttr {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct JobAttrs(HashMap<String, JobAttr>);
 
 impl JobAttrs {
@@ -45,6 +45,12 @@ impl JobAttrs {
 
   pub fn remove(&mut self, key: &str) {
     self.0.remove(key);
+  }
+}
+
+impl std::fmt::Debug for JobAttrs {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "JobAttrs(<num attrs: {}>)", self.0.len())
   }
 }
 
