@@ -25,6 +25,23 @@ impl<'arena> Accum<'arena> {
     self.inlines.push(InlineNode::new(node, loc));
     self.text.loc = loc.clamp_end();
   }
+
+  fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {
+    if lines.is_empty()
+      // special case: we ended an include, so we have the faux-node and thats all
+      // the backend will skip the boundary and we don't want to insert the newline
+      || (self.inlines.len() == 1
+        && matches!(
+          self.inlines[0].content,
+          IncludeBoundary(IncludeBoundaryKind::End, _)
+        ))
+    {
+      return;
+    }
+    self.commit();
+    self.text.loc.end += 1;
+    self.push_node(Inline::Newline, self.text.loc);
+  }
 }
 
 impl<'arena> Parser<'arena> {
@@ -82,11 +99,7 @@ impl<'arena> Parser<'arena> {
         }
 
         let Some(token) = line.consume_current() else {
-          if !lines.is_empty() {
-            acc.commit();
-            acc.text.loc.end += 1;
-            acc.push_node(Inline::Newline, acc.text.loc);
-          }
+          acc.maybe_push_joining_newline(lines);
           break;
         };
 

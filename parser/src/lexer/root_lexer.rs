@@ -67,9 +67,6 @@ impl<'arena> RootLexer<'arena> {
 
   pub fn set_tmp_buf(&mut self, buf: &str, loc: BufLoc) {
     self.tmp_buf = Some((SourceLexer::from_str(buf, SourceFile::Tmp, self.bump), loc));
-    // pub fn buffer_attr_ref(&mut self, attr_ref: String, location: SourceLocation) {
-    //   let attr_lexer = SourceLexer::from_str(&attr_ref, SourceFile::Tmp, self.bump);
-    //   self.attr_ctx = Some((attr_lexer, location));
   }
 
   pub fn adjust_offset(&mut self, offset_adjustment: u32) {
@@ -81,24 +78,41 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn peek(&self) -> Option<u8> {
-    if let Some((attr_lexer, _)) = &self.tmp_buf {
-      return attr_lexer.peek();
+    self.peek_with_boundary().map(|(c, _)| c)
+  }
+
+  fn peek_with_boundary(&self) -> Option<(u8, Option<u8>)> {
+    if let Some((tmp_buf, _)) = &self.tmp_buf {
+      return tmp_buf.peek().map(|c| (c, None));
     }
 
     // case: we're about to switch to a new source
     if self.next_idx.is_some() {
-      return Some(b'{'); // fake peek the generated boundary start include-token
+      return Some((b'{', None)); // fake peek the generated boundary start include-token
     }
     // case: normal path: we're peeking at the current source, and have bytes
     if let Some(c) = self.sources[self.idx as usize].peek() {
-      return Some(c);
+      return Some((c, None));
     }
     // case: we're out of bytes, check if we're returning to a previous source
     if !self.source_stack.is_empty() {
-      return Some(b'{'); // fake peek the generated boundary end include-token
+      let next_idx = self.source_stack.last().unwrap().include_depth;
+      // fake peek the generated boundary end include-token, w/ next peek
+      return Some((b'{', self.sources[next_idx as usize].peek()));
     }
     // case: nothing left in any source, root EOF
     None
+  }
+
+  pub fn skip_byte(&mut self) {
+    if let Some((tmp_lexer, _)) = &mut self.tmp_buf {
+      tmp_lexer.pos += 1;
+      if tmp_lexer.is_eof() {
+        self.tmp_buf = None;
+      }
+    } else if self.sources[self.idx as usize].peek().is_some() {
+      self.sources[self.idx as usize].pos += 1;
+    }
   }
 
   pub fn consume_empty_lines(&mut self) {
@@ -125,6 +139,12 @@ impl<'arena> RootLexer<'arena> {
     self.peek() == Some(c)
   }
 
+  pub fn peek_boundary_is(&self, c: u8) -> bool {
+    self
+      .peek_with_boundary()
+      .map_or(false, |(ch, resume_peek)| ch == c || resume_peek == Some(c))
+  }
+
   pub fn line_of(&self, location: u32) -> BumpString<'arena> {
     self.sources[self.idx as usize].line_of(location)
   }
@@ -136,17 +156,6 @@ impl<'arena> RootLexer<'arena> {
 
   pub fn line_number_with_offset(&self, location: u32) -> (u32, u32) {
     self.sources[self.idx as usize].line_number_with_offset(location)
-  }
-
-  pub fn skip_byte(&mut self) {
-    if let Some((tmp_lexer, _)) = &mut self.tmp_buf {
-      tmp_lexer.pos += 1;
-      if tmp_lexer.is_eof() {
-        self.tmp_buf = None;
-      }
-    } else {
-      self.sources[self.idx as usize].pos += 1;
-    }
   }
 
   pub fn next_token(&mut self) -> Token<'arena> {

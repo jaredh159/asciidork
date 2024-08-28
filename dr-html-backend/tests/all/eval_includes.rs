@@ -31,6 +31,23 @@ assert_html!(
 );
 
 assert_html!(
+  include_separated_paras,
+  resolving: b"included\n",
+  adoc! {r#"
+    para1
+
+    include::some_file.adoc[]
+
+    para2
+  "#},
+  html! {r#"
+    <div class="paragraph"><p>para1</p></div>
+    <div class="paragraph"><p>included</p></div>
+    <div class="paragraph"><p>para2</p></div>
+  "#}
+);
+
+assert_html!(
   secure_include_to_link,
   |settings: &mut JobSettings| {
     settings.safe_mode = SafeMode::Secure;

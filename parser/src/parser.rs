@@ -112,7 +112,7 @@ impl<'arena> Parser<'arena> {
         line.push(token);
       }
     }
-    if self.lexer.peek_is(b'\n') {
+    if self.lexer.peek_boundary_is(b'\n') {
       self.lexer.skip_byte();
     }
     if drop_line {
@@ -141,7 +141,7 @@ impl<'arena> Parser<'arena> {
     let mut lines = Deq::new(self.bump);
     while let Some(line) = self.read_line()? {
       lines.push(line);
-      if self.lexer.peek_is(b'\n') {
+      if self.lexer.peek_boundary_is(b'\n') {
         break;
       }
     }
