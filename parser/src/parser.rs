@@ -87,30 +87,8 @@ impl<'arena> Parser<'arena> {
     let mut drop_line = false;
     let mut line = Line::empty(self.bump);
     while !self.lexer.peek_is(b'\n') && !self.lexer.is_eof() {
-      let mut token = self.lexer.next_token();
-      if token.is(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
-        match self.document.meta.get(token.attr_name()) {
-          Some(AttrValue::String(attr_val)) => {
-            if !attr_val.is_empty() {
-              self.lexer.set_tmp_buf(attr_val, BufLoc::Repeat(token.loc));
-            }
-            line.push(token);
-          }
-          _ => match self.document.meta.str("attribute-missing") {
-            Some("drop") => {}
-            Some("drop-line") => drop_line = true,
-            val => {
-              token.kind = TokenKind::Word;
-              if val == Some("warn") {
-                self.err_token_full("Skipping reference to missing attribute", &token)?;
-              }
-              line.push(token);
-            }
-          },
-        }
-      } else {
-        line.push(token);
-      }
+      let token = self.lexer.next_token();
+      self.push_token_replacing_attr_ref(token, &mut line, &mut drop_line)?;
     }
     if self.lexer.peek_boundary_is(b'\n') {
       self.lexer.skip_byte();
