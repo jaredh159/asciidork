@@ -28,6 +28,35 @@ fn test_cli_app_single_include() {
   );
 }
 
+#[test]
+fn test_cli_app_doc_attrs() {
+  let stdout = run_cli(
+    &["--embedded", "--strict", "--safe-mode", "unsafe"],
+    "tests/all/fixtures/attrs.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="paragraph">
+        <p>f: <em>fixtures/attrs.adoc</em></p>
+      </div>
+      <div class="paragraph">
+        <p>docdir: {cwd}/tests/all/fixtures</p>
+      </div>
+      <div class="paragraph">
+        <p>docfile: {cwd}/tests/all/fixtures/attrs.adoc</p>
+      </div>
+      <div class="paragraph">
+        <p>docfilesuffix: .adoc</p>
+      </div>
+      <div class="paragraph">
+        <p>docname: attrs</p>
+      </div>
+    "#}
+    .replace("{cwd}", &cwd())
+  );
+}
+
 fn run_cli(args: &[&str], input: &str) -> String {
   let child = Command::new("cargo")
     .arg("run")

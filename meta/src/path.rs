@@ -37,6 +37,14 @@ impl Path {
       .unwrap_or(&self.0)
   }
 
+  pub fn basename_no_ext(&self) -> &str {
+    self
+      .basename()
+      .rsplit_once('.')
+      .map(|(before, _)| before)
+      .unwrap_or(self.basename())
+  }
+
   pub fn is_absolute(&self) -> bool {
     self.0.starts_with('/') // TODO: Windows
   }

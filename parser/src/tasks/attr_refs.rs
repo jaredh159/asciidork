@@ -3,14 +3,24 @@ use crate::internal::*;
 impl<'arena> Parser<'arena> {
   pub(crate) fn set_source_file_attrs(&mut self) {
     let source_file = self.lexer.source_file().clone();
-    match self.document.meta.safe_mode {
-      SafeMode::Server | SafeMode::Secure => self.insert_file_attr("docdir", ""),
-      SafeMode::Safe | SafeMode::Unsafe => match source_file {
-        SourceFile::Stdin { .. } => {}
-        SourceFile::Path(path) => self.insert_file_attr("docdir", path.parent().to_string()),
-        SourceFile::Tmp => {}
-      },
-    }
+    match source_file {
+      SourceFile::Stdin { .. } => {}
+      SourceFile::Path(path) => {
+        self.insert_file_attr("docfilesuffix", path.ext().to_string());
+        self.insert_file_attr("docname", path.basename_no_ext().to_string());
+        match self.document.meta.safe_mode {
+          SafeMode::Server | SafeMode::Secure => {
+            self.insert_file_attr("docdir", "");
+            self.insert_file_attr("docfile", "");
+          }
+          SafeMode::Safe | SafeMode::Unsafe => {
+            self.insert_file_attr("docfile", path.to_string());
+            self.insert_file_attr("docdir", path.parent().to_string());
+          }
+        }
+      }
+      SourceFile::Tmp => {}
+    };
   }
 
   pub(crate) fn push_token_replacing_attr_ref(

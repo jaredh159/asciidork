@@ -238,7 +238,13 @@ lazy_static::lazy_static! {
       "allow-uri-read",
       "max-attribute-value-size",
       "max-include-depth",
-      "doc"
+      "doc",
+      "docdir",
+      "docfile",
+      "docdate",
+      "docdatetime",
+      "docfilesuffix",
+      "docname",
     ])
   };
 }

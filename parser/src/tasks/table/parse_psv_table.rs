@@ -132,12 +132,17 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use meta::JobAttr;
   use test_utils::*;
   use ColWidth::*;
 
   const fn w(width: u8) -> ColWidth {
     Proportional(width)
+  }
+
+  fn doc_meta(doctype: DocType) -> DocumentMeta {
+    let mut m = DocumentMeta::default();
+    m.set_doctype(doctype);
+    m
   }
 
   #[test]
@@ -197,12 +202,7 @@ mod tests {
                 },
                 context: BlockContext::UnorderedList,
               }]),
-              meta: {
-                let mut m = DocumentMeta::default();
-                m.set_doctype(DocType::Article);
-                m.insert_job_attr("docdir", JobAttr::readonly("")).unwrap();
-                m
-              },
+              meta: doc_meta(DocType::Article),
               ..Document::new(leaked_bump())
             }),
             ..empty_cell!()
@@ -233,12 +233,7 @@ mod tests {
             content: BlockContent::Simple(just!("literal", 23..30)),
             ..empty_block!(21)
           }]),
-          meta: {
-            let mut m = DocumentMeta::default();
-            m.set_doctype(DocType::Article);
-            m.insert_job_attr("docdir", JobAttr::readonly("")).unwrap();
-            m
-          },
+          meta: doc_meta(DocType::Article),
           ..Document::new(leaked_bump())
         },),
         ..empty_cell!()

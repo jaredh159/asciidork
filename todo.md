@@ -3,6 +3,7 @@
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref
 
+- [ ] rest of doc-attrs-ref, date stuff, output file things
 - [ ] resolving the {email} attr is example of "multiple passes", as it gets turned into
       an autolink in asciidoctor html5, test `{email}` vs `[subs=-macros]\n{email}`
 - [ ] syntax for undefining an attribute: `{set:foo!}`, see
@@ -18,7 +19,7 @@
 - [ ] finish fleshing out customizing substitutions, handling append/prepend, etc., see
       `customize_subs.rs`
 - [ ] i don't run substitutions in an _order_. i need to search out some test cases of why
-      (if?) this is naive/problematic, and fix
+      (if?) this is naive/problematic, and fix (see inferred_doc_title_attr test)
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
 - [ ] work through this (and similar) lists, carefully adding/removing substutitions, with

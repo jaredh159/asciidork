@@ -286,8 +286,6 @@ fn test_globally_unique_callouts() {
               meta: {
                 let mut m = DocumentMeta::default();
                 m.set_doctype(DocType::Article);
-                m.insert_job_attr("docdir", asciidork_meta::JobAttr::readonly(""))
-                  .unwrap();
                 m
               },
               ..Document::new(leaked_bump())
