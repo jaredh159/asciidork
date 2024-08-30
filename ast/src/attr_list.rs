@@ -91,10 +91,14 @@ impl<'arena> AttrList<'arena> {
     self.source_language().is_some()
   }
 
-  // TODO: this is incorrect, see https://github.com/jaredh159/asciidork/issues/4
   pub fn source_language(&self) -> Option<&str> {
-    match (self.str_positional_at(0), self.str_positional_at(1)) {
-      (None | Some("source"), Some(lang)) => Some(lang),
+    match (
+      self.str_positional_at(0),
+      self.str_positional_at(1),
+      self.id.is_some(),
+    ) {
+      (None | Some("source"), Some(lang), false) => Some(lang),
+      (Some(lang), None, true) => Some(lang),
       _ => None,
     }
   }

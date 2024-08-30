@@ -1019,10 +1019,17 @@ impl AsciidoctorHtml {
       .meta
       .attrs
       .as_ref()
-      .map(|a| (a.str_positional_at(0), a.str_positional_at(1)))
-      .unwrap_or((None, None))
+      .map(|a| {
+        (
+          a.str_positional_at(0),
+          a.str_positional_at(1),
+          a.id.is_some(),
+        )
+      })
+      .unwrap_or((None, None, false))
     {
-      (None | Some("source"), Some(lang)) => Some(Cow::Borrowed(lang)),
+      (None | Some("source"), Some(lang), false) => Some(Cow::Borrowed(lang)),
+      (Some(lang), None, true) => Some(Cow::Borrowed(lang)),
       _ => self
         .doc_meta
         .str("source-language")
