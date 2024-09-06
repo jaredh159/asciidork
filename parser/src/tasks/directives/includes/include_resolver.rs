@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::internal::*;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum IncludeTarget {
   FilePath(String),
   Uri(String),
@@ -15,6 +15,13 @@ impl IncludeTarget {
 
   pub const fn is_uri(&self) -> bool {
     matches!(self, IncludeTarget::Uri(_))
+  }
+
+  pub fn path(&self) -> Path {
+    match self {
+      IncludeTarget::FilePath(path) => Path::new(path),
+      IncludeTarget::Uri(uri) => Path::new(uri),
+    }
   }
 }
 

@@ -29,6 +29,25 @@ fn test_cli_app_single_include() {
 }
 
 #[test]
+fn test_relative_includes() {
+  let stdout = run_cli(
+    &["--embedded", "--strict", "--safe-mode", "unsafe"],
+    "tests/all/fixtures/parent-include.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="paragraph"><p>first line of parent</p></div>
+      <div class="paragraph"><p>first line of child</p></div>
+      <div class="paragraph"><p>first line of grandchild</p></div>
+      <div class="paragraph"><p>last line of grandchild</p></div>
+      <div class="paragraph"><p>last line of child</p></div>
+      <div class="paragraph"><p>last line of parent</p></div>
+    "#}
+  );
+}
+
+#[test]
 fn test_cli_app_doc_attrs() {
   let stdout = run_cli(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],

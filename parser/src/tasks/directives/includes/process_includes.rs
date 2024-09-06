@@ -69,6 +69,7 @@ impl<'arena> Parser<'arena> {
       }
     };
 
+    let target_abspath = target.path();
     let mut buffer = BumpVec::new_in(self.bump);
     match resolver.resolve(target, &mut buffer) {
       Ok(_) => {
@@ -78,15 +79,11 @@ impl<'arena> Parser<'arena> {
             self.substitute_link_for_include(&directive),
           ));
         }
-        let path = Path::new(directive.target_str.as_str());
-        self.lexer.push_source(path, buffer);
+        self.lexer.push_source(target_abspath, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(error) => {
-        self.target_err(
-          format!("Include resolver returned error: {}", error),
-          &directive,
-        )?;
+        self.target_err(format!("Include resolver error: {}", error), &directive)?;
         Ok(DirectiveAction::Passthrough)
       }
     }

@@ -580,7 +580,7 @@ mod tests {
     parser.set_resolver(Box::new(ErrorResolver(ResolveError::UriReadNotSupported)));
     let expected_err = error! {"
       1: include::http://a.com/b[]
-                  ^^^^^^^^^^^^^^ Include resolver returned error: URI read not supported
+                  ^^^^^^^^^^^^^^ Include resolver error: URI read not supported
     "};
     expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
   }
