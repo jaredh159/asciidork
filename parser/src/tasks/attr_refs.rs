@@ -6,8 +6,8 @@ impl<'arena> Parser<'arena> {
     match source_file {
       SourceFile::Stdin { .. } => {}
       SourceFile::Path(path) => {
-        self.insert_file_attr("docfilesuffix", path.ext().to_string());
-        self.insert_file_attr("docname", path.basename_no_ext().to_string());
+        self.insert_file_attr("docfilesuffix", path.extension().to_string());
+        self.insert_file_attr("docname", path.file_stem().to_string());
         match self.document.meta.safe_mode {
           SafeMode::Server | SafeMode::Secure => {
             self.insert_file_attr("docdir", "");
@@ -15,7 +15,7 @@ impl<'arena> Parser<'arena> {
           }
           SafeMode::Safe | SafeMode::Unsafe => {
             self.insert_file_attr("docfile", path.to_string());
-            self.insert_file_attr("docdir", path.parent().to_string());
+            self.insert_file_attr("docdir", path.dirname().to_string());
           }
         }
       }

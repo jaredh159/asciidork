@@ -16,7 +16,7 @@ struct IncludeDirective<'a> {
 }
 
 impl<'arena> Parser<'arena> {
-  pub(super) fn try_process_include_directive(
+  pub(crate) fn try_process_include_directive(
     &mut self,
     line: &mut Line<'arena>,
   ) -> Result<DirectiveAction<'arena>> {
@@ -35,10 +35,9 @@ impl<'arena> Parser<'arena> {
       && (self.document.meta.safe_mode > SafeMode::Server
         || !self.document.meta.is_true("allow-uri-read"))
     {
-      self.err_at(
+      self.target_err(
         "Cannot include URL contents (allow-uri-read not enabled)",
-        directive.first_token.loc.end,
-        directive.first_token.loc.end + directive.target_str.len() as u32,
+        &directive,
       )?;
       return Ok(DirectiveAction::SubstituteLine(
         self.substitute_link_for_include(&directive),
@@ -53,15 +52,28 @@ impl<'arena> Parser<'arena> {
       return Ok(DirectiveAction::Passthrough);
     };
 
+    let target = match super::target::prepare(
+      directive.target_str.as_str(),
+      directive.target_is_uri,
+      self.lexer.source_file(),
+      self.lexer.source_is_primary(),
+      resolver.get_base_dir().map(Path::new),
+      self.document.meta.safe_mode,
+    ) {
+      Ok(target) => target,
+      Err(err) => {
+        self.target_err(format!("Error preparing target: {}", err), &directive)?;
+        return Ok(DirectiveAction::SubstituteLine(
+          self.substitute_link_for_include(&directive),
+        ));
+      }
+    };
+
     let mut buffer = BumpVec::new_in(self.bump);
-    match resolver.resolve(directive.target(), self.lexer.source_file(), &mut buffer) {
+    match resolver.resolve(target, &mut buffer) {
       Ok(_) => {
         if let Err(msg) = self.normalize_include_bytes(&mut buffer) {
-          self.err_at(
-            format!("Error resolving file contents: {msg}"),
-            directive.first_token.loc.end,
-            directive.first_token.loc.end + directive.target_str.len() as u32,
-          )?;
+          self.target_err(format!("Error resolving file contents: {msg}"), &directive)?;
           return Ok(DirectiveAction::SubstituteLine(
             self.substitute_link_for_include(&directive),
           ));
@@ -71,10 +83,9 @@ impl<'arena> Parser<'arena> {
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(error) => {
-        self.err_at(
+        self.target_err(
           format!("Include resolver returned error: {}", error),
-          directive.first_token.loc.end,
-          directive.first_token.loc.end + directive.target_str.len() as u32,
+          &directive,
         )?;
         Ok(DirectiveAction::Passthrough)
       }
@@ -146,15 +157,17 @@ impl<'arena> Parser<'arena> {
     }
     tokens
   }
-}
 
-impl<'a> IncludeDirective<'a> {
-  fn target(&self) -> IncludeTarget {
-    if self.target_is_uri {
-      IncludeTarget::Uri(Path::new(self.target_str.as_str()))
-    } else {
-      IncludeTarget::FilePath(Path::new(self.target_str.as_str()))
-    }
+  fn target_err(
+    &mut self,
+    msg: impl Into<String>,
+    directive: &IncludeDirective<'arena>,
+  ) -> Result<()> {
+    self.err_at(
+      msg,
+      directive.first_token.loc.end,
+      directive.first_token.loc.end + directive.target_str.len() as u32,
+    )
   }
 }
 

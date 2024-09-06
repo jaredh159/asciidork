@@ -1,3 +1,4 @@
+use std::env;
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::result::Result;
@@ -29,9 +30,7 @@ fn run(
   mut stdout: impl Write,
   mut stderr: impl Write,
 ) -> Result<(), Box<dyn Error>> {
-  let (src, source_file) = {
-    // TODO: for perf, better to read the file straight into a BumpVec<u8>
-    // have an initializer on Parser that takes ownership of it
+  let (src, src_file, base_dir) = {
     if let Some(pathbuf) = &args.input {
       let abspath = fs::canonicalize(pathbuf)?;
       let mut file = fs::File::open(pathbuf.clone())?;
@@ -40,21 +39,29 @@ fn run(
         .ok()
         .map(|metadata| String::with_capacity(metadata.len() as usize))
         .unwrap_or_else(String::new);
+      // TODO: for perf, better to read the file straight into a BumpVec<u8>
+      // have an initializer on Parser that takes ownership of it
       file.read_to_string(&mut src)?;
-      (src, SourceFile::Path(abspath.into()))
+      let base_dir = args
+        .base_dir
+        .as_ref()
+        .cloned()
+        .or_else(|| abspath.parent().map(|p| p.to_path_buf()));
+      (src, SourceFile::Path(abspath.into()), base_dir)
     } else {
       let mut src = String::new();
-      let cwd = Path::new(std::env::current_dir()?.to_str().unwrap_or(""));
       stdin.read_to_string(&mut src)?;
-      (src, SourceFile::Stdin { cwd })
+      let cwd_buf = env::current_dir()?;
+      let cwd = Path::new(cwd_buf.to_str().unwrap_or(""));
+      (src, SourceFile::Stdin { cwd }, Some(cwd_buf))
     }
   };
 
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len() * 2);
-  let mut parser = Parser::from_str(&src, source_file, bump);
+  let mut parser = Parser::from_str(&src, src_file, bump);
   parser.apply_job_settings(args.clone().try_into()?);
-  parser.set_resolver(Box::new(CliResolver::new(args.base_dir.clone())));
+  parser.set_resolver(Box::new(CliResolver::new(base_dir)));
 
   let result = parser.parse();
   let parse_time = parse_start.elapsed();

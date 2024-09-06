@@ -327,13 +327,15 @@ mod tests {
       fn resolve(
         &mut self,
         _: IncludeTarget,
-        _: &SourceFile,
         buffer: &mut dyn IncludeBuffer,
       ) -> std::result::Result<usize, ResolveError> {
         buffer.initialize(self.0.len());
         let bytes = buffer.as_bytes_mut();
         bytes.copy_from_slice(&self.0);
         Ok(self.0.len())
+      }
+      fn get_base_dir(&self) -> Option<String> {
+        Some("/".to_string())
       }
     }
     Box::new(MockResolver(Vec::from(src.as_bytes())))
@@ -614,11 +616,13 @@ mod tests {
       fn resolve(
         &mut self,
         target: IncludeTarget,
-        _: &SourceFile,
         _: &mut dyn IncludeBuffer,
       ) -> std::result::Result<usize, ResolveError> {
-        assert_eq!(target, IncludeTarget::FilePath(Path::new(self.0)));
+        assert_eq!(target, IncludeTarget::FilePath(self.0.to_string()));
         Ok(0)
+      }
+      fn get_base_dir(&self) -> Option<String> {
+        Some("".to_string())
       }
     }
     let cases = [

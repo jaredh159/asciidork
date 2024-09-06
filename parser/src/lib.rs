@@ -5,7 +5,6 @@ mod contiguous_lines;
 mod delimiter;
 mod deq;
 mod diagnostic;
-pub mod include_resolver;
 mod lexer;
 mod line;
 mod list_stack;
@@ -18,6 +17,10 @@ mod utils;
 
 extern crate asciidork_ast as ast;
 extern crate asciidork_meta as meta;
+
+pub mod includes {
+  pub use crate::tasks::directives::includes::*;
+}
 
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
@@ -36,7 +39,6 @@ mod internal {
   pub use crate::delimiter::*;
   pub use crate::deq::*;
   pub use crate::diagnostic::*;
-  pub use crate::include_resolver::*;
   pub use crate::lexer::*;
   pub use crate::line::*;
   pub use crate::list_stack::*;
@@ -45,6 +47,7 @@ mod internal {
   pub use crate::substitutions::*;
   pub use crate::tasks::collect_text::*;
   pub use crate::tasks::customize_subs;
+  pub use crate::tasks::directives::includes::*;
   pub use crate::token::*;
   pub use crate::utils::bump::*;
   pub use ast::*;

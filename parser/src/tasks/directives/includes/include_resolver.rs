@@ -4,8 +4,8 @@ use crate::internal::*;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum IncludeTarget {
-  FilePath(Path),
-  Uri(Path),
+  FilePath(String),
+  Uri(String),
 }
 
 impl IncludeTarget {
@@ -22,9 +22,12 @@ pub trait IncludeResolver {
   fn resolve(
     &mut self,
     target: IncludeTarget,
-    source: &SourceFile,
     buffer: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError>;
+
+  fn get_base_dir(&self) -> Option<String> {
+    None
+  }
 }
 
 pub trait IncludeBuffer {
@@ -54,7 +57,7 @@ impl<'a> IncludeBuffer for BumpVec<'a, u8> {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolveError {
   NotFound,
   Io(String),
@@ -69,7 +72,10 @@ impl fmt::Display for ResolveError {
       ResolveError::Io(e) => write!(f, "I/O error: {}", e),
       ResolveError::UriReadNotSupported => write!(f, "URI read not supported"),
       ResolveError::BaseDirRequired => {
-        write!(f, "Includes from <stdin> must specify a base directory")
+        write!(
+          f,
+          "Include resolvers must supply a base_dir for relative includes from primary document"
+        )
       }
     }
   }
@@ -91,13 +97,16 @@ impl IncludeResolver for ConstResolver {
   fn resolve(
     &mut self,
     _: IncludeTarget,
-    _: &SourceFile,
     buffer: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
     buffer.initialize(self.0.len());
     let bytes = buffer.as_bytes_mut();
     bytes.copy_from_slice(&self.0);
     Ok(self.0.len())
+  }
+
+  fn get_base_dir(&self) -> Option<String> {
+    Some("/".to_string())
   }
 }
 
@@ -109,7 +118,6 @@ impl IncludeResolver for ErrorResolver {
   fn resolve(
     &mut self,
     _: IncludeTarget,
-    _: &SourceFile,
     _: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
     Err(self.0.clone())

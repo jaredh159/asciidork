@@ -77,6 +77,10 @@ impl<'arena> RootLexer<'arena> {
     &self.sources[self.idx as usize].file
   }
 
+  pub const fn source_is_primary(&self) -> bool {
+    self.idx == 0
+  }
+
   pub fn peek(&self) -> Option<u8> {
     self.peek_with_boundary().map(|(c, _)| c)
   }

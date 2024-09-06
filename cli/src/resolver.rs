@@ -2,12 +2,10 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::PathBuf;
 
-use asciidork_parser::include_resolver::*;
-use asciidork_parser::prelude::*;
+use asciidork_parser::includes::*;
 
 use IncludeTarget as Target;
 use ResolveError::*;
-use SourceFile as Src;
 
 pub struct CliResolver {
   base_dir: Option<PathBuf>,
@@ -17,26 +15,19 @@ impl IncludeResolver for CliResolver {
   fn resolve(
     &mut self,
     target: IncludeTarget,
-    source: &SourceFile,
     buffer: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
-    match (source, target, self.base_dir.as_ref()) {
-      // not sure if this is correct, possibly should use cwd...
-      (Src::Stdin { .. }, Target::FilePath(_), None) => Err(BaseDirRequired),
-      (Src::Stdin { .. }, Target::FilePath(target), Some(base_dir)) => {
-        let pathbuf = base_dir.join(target);
-        self.resolve_path(pathbuf, buffer)
-      }
-      (Src::Path(src), Target::FilePath(target), _base_dir) => {
-        let abspath = if target.is_relative() {
-          src.clone().parent().join(target)
-        } else {
-          target
-        };
-        self.resolve_path(abspath, buffer)
-      }
+    match target {
+      Target::FilePath(target) => self.resolve_filepath(target, buffer),
       _ => Err(NotFound),
     }
+  }
+
+  fn get_base_dir(&self) -> Option<String> {
+    self
+      .base_dir
+      .clone()
+      .map(|pathbuf| pathbuf.to_string_lossy().into())
   }
 }
 
@@ -45,13 +36,13 @@ impl CliResolver {
     Self { base_dir }
   }
 
-  fn resolve_path(
+  fn resolve_filepath(
     &self,
-    path: impl Into<Path>,
+    path: String,
     buffer: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
-    let path: Path = path.into();
-    if path.exists_fs() {
+    let path = PathBuf::from(path);
+    if path.exists() {
       let file = File::open(path)?;
       let len = file.metadata().map(|m| m.len() as usize)?;
       buffer.initialize(len);

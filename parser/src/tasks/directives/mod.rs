@@ -1,5 +1,4 @@
-mod normalize_includes;
-mod process_includes;
+pub mod includes;
 
 use crate::internal::*;
 
