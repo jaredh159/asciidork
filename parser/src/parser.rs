@@ -565,6 +565,16 @@ mod tests {
                   ^^^^^^^^^ Error resolving file contents: Invalid UTF-16 (LE)
     "};
     expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
+
+    let mut parser = test_parser!("include::file.adoc[]");
+    parser.apply_job_settings(JobSettings::r#unsafe());
+    let invalid_utf8 = vec![0x68, 0x00, 0xFF, 0xDC]; // <-- no BOM
+    parser.set_resolver(Box::new(ConstResolver(invalid_utf8)));
+    let expected_err = error! {"
+      1: include::file.adoc[]
+                  ^^^^^^^^^ Error resolving file contents: Invalid UTF-8
+    "};
+    expect_eq!(parser.read_line().err().unwrap().plain_text(), expected_err);
   }
 
   #[test]

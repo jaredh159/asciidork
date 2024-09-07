@@ -105,6 +105,21 @@ assert_html!(
 );
 
 assert_html!(
+  include_honors_encoding,
+  resolving: [0x68, 0x00, 0x69, 0x00], // <-- "hi" in UTF-16 LE
+  adoc! {r#"
+    Line-1
+    include::some_file.adoc[encoding=utf-16]
+    Line-3
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Line-1 hi Line-3</p>
+    </div>
+  "#}
+);
+
+assert_html!(
   inline_include_w_2_newlines,
   resolving: b"Line-2\n\n", // <-- 2 newlines
   adoc! {r#"
@@ -139,4 +154,3 @@ assert_html!(
     </div>
   "#}
 );
-

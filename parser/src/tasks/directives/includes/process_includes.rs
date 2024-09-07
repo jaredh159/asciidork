@@ -73,7 +73,9 @@ impl<'arena> Parser<'arena> {
     let mut buffer = BumpVec::new_in(self.bump);
     match resolver.resolve(target, &mut buffer) {
       Ok(_) => {
-        if let Err(msg) = self.normalize_include_bytes(&target_abspath, &mut buffer) {
+        if let Err(msg) =
+          self.normalize_include_bytes(&target_abspath, &directive.attrs, &mut buffer)
+        {
           self.target_err(format!("Error resolving file contents: {msg}"), &directive)?;
           return Ok(DirectiveAction::SubstituteLine(
             self.substitute_link_for_include(&directive),

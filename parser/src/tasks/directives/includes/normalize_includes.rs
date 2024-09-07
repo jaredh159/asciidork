@@ -6,9 +6,10 @@ impl<'arena> Parser<'arena> {
   pub(super) fn normalize_include_bytes(
     &mut self,
     path: &Path,
+    include_attrs: &AttrList,
     bytes: &mut BumpVec<'arena, u8>,
   ) -> std::result::Result<(), &'static str> {
-    self.normalize_byte_order(bytes)?;
+    self.normalize_encoding(include_attrs.named("encoding"), bytes)?;
     self.normalize_asciidoc(path, bytes);
     Ok(())
   }
@@ -32,10 +33,15 @@ impl<'arena> Parser<'arena> {
     std::mem::swap(bytes, &mut dest);
   }
 
-  fn normalize_byte_order(
+  fn normalize_encoding(
     &mut self,
+    encoding: Option<&str>,
     bytes: &mut BumpVec<u8>,
   ) -> std::result::Result<(), &'static str> {
+    if let Some("utf-16" | "utf16" | "UTF-16" | "UTF16") = encoding {
+      return self.convert_utf16_le(bytes);
+    }
+
     // UTF-8 BOM
     if bytes.len() >= 3 && bytes[0..3] == [0xEF, 0xBB, 0xBF] {
       bytes.drain(0..3);
@@ -45,23 +51,7 @@ impl<'arena> Parser<'arena> {
     // UTF-16 BOM, little endian
     if bytes.len() >= 2 && bytes[0..2] == [0xFF, 0xFE] {
       bytes.drain(0..2);
-
-      // SAFETY: because we ensure the len is even, it's fine to transmute to u16
-      // because we're going to check that it's valid going back to utf8 anyway
-      let utf16: BumpVec<u16> = unsafe {
-        if bytes.len() % 2 != 0 {
-          bytes.push(0x00);
-        }
-        let ptr = bytes.as_ptr() as *const u16;
-        let len = bytes.len() / 2;
-        BumpVec::from_raw_parts_in(ptr as *mut u16, len, len, self.bump)
-      };
-
-      if from_utf16_in(utf16, bytes, self.bump) {
-        return Ok(());
-      } else {
-        return Err("Invalid UTF-16 (LE)");
-      }
+      return self.convert_utf16_le(bytes);
     }
 
     // UTF-16 BOM, big endian
@@ -83,7 +73,32 @@ impl<'arena> Parser<'arena> {
       }
     }
 
+    // TODO: doctor supports iso-8859-1, + all encodings ruby supports
+    // we could use encoding_rs for this, but might not be any demand
+    if std::str::from_utf8(bytes).is_err() {
+      return Err("Invalid UTF-8");
+    }
+
     Ok(())
+  }
+
+  fn convert_utf16_le(&self, bytes: &mut BumpVec<u8>) -> std::result::Result<(), &'static str> {
+    // SAFETY: because we ensure the len is even, it's fine to transmute to u16
+    // because we're going to check that it's valid going back to utf8 anyway
+    let utf16: BumpVec<u16> = unsafe {
+      if bytes.len() % 2 != 0 {
+        bytes.push(0x00);
+      }
+      let ptr = bytes.as_ptr() as *const u16;
+      let len = bytes.len() / 2;
+      BumpVec::from_raw_parts_in(ptr as *mut u16, len, len, self.bump)
+    };
+
+    if from_utf16_in(utf16, bytes, self.bump) {
+      Ok(())
+    } else {
+      Err("Invalid UTF-16 (LE)")
+    }
   }
 }
 
@@ -119,7 +134,7 @@ mod tests {
   fn strips_utf8_bom() {
     let mut parser = test_parser!("");
     let mut bytes = vecb![0xEF, 0xBB, 0xBF, 0x68, 0x69];
-    parser.normalize_byte_order(&mut bytes).unwrap();
+    parser.normalize_encoding(None, &mut bytes).unwrap();
     assert_eq!(bytes.as_slice(), b"hi");
   }
 
@@ -127,7 +142,7 @@ mod tests {
   fn converts_little_endian_utf16_to_utf8() {
     let mut parser = test_parser!("");
     let mut bytes = vecb![0xFF, 0xFE, 0x68, 0x00, 0x69, 0x00];
-    parser.normalize_byte_order(&mut bytes).unwrap();
+    parser.normalize_encoding(None, &mut bytes).unwrap();
     assert_eq!(bytes.as_slice(), b"hi");
   }
 
@@ -135,7 +150,7 @@ mod tests {
   fn converts_big_endian_utf16_to_utf8() {
     let mut parser = test_parser!("");
     let mut bytes = vecb![0xFE, 0xFF, 0x00, 0x68, 0x00, 0x69];
-    parser.normalize_byte_order(&mut bytes).unwrap();
+    parser.normalize_encoding(None, &mut bytes).unwrap();
     assert_eq!(bytes.as_slice(), b"hi");
   }
 }
