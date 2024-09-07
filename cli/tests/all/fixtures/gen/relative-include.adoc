@@ -1,0 +1,5 @@
+first line of outer
+
+include::sub/middle.adoc[]
+
+last line of outer

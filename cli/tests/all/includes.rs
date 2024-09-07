@@ -48,6 +48,24 @@ fn test_relative_includes() {
 }
 
 #[test]
+fn test_relative_nested_includes() {
+  let stdout = run_cli(
+    &["--embedded", "--strict", "--safe-mode", "unsafe"],
+    "tests/all/fixtures/gen/relative-include.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="paragraph"><p>first line of outer</p></div>
+      <div class="paragraph"><p>first line of middle</p></div>
+      <div class="paragraph"><p>only line of inner</p></div>
+      <div class="paragraph"><p>last line of middle</p></div>
+      <div class="paragraph"><p>last line of outer</p></div>
+    "#}
+  );
+}
+
+#[test]
 fn test_url_includes() {
   let stdout = run_cli(
     &[
