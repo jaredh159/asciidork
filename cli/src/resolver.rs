@@ -19,7 +19,16 @@ impl IncludeResolver for CliResolver {
   ) -> std::result::Result<usize, ResolveError> {
     match target {
       Target::FilePath(target) => self.resolve_filepath(target, buffer),
-      _ => Err(NotFound),
+      Target::Uri(uri) => match minreq::get(uri).send() {
+        Ok(response) => {
+          let adoc = response.as_bytes();
+          buffer.initialize(adoc.len());
+          let bytes = buffer.as_bytes_mut();
+          bytes.copy_from_slice(adoc);
+          Ok(adoc.len())
+        }
+        Err(err) => Err(ResolveError::UriRead(err.to_string())),
+      },
     }
   }
 

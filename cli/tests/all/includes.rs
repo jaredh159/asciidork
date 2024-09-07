@@ -6,22 +6,22 @@ use test_utils::*;
 fn test_cli_app_single_include() {
   let stdout = run_cli(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
-    "tests/all/fixtures/a.adoc",
+    "tests/all/fixtures/gen/a.adoc",
   );
   expect_eq!(
     stdout.trim(),
     html! {r#"
       <div class="paragraph">
-        <p>docdir: {cwd}/tests/all/fixtures</p>
+        <p>docdir: {cwd}/tests/all/fixtures/gen</p>
       </div>
       <div class="paragraph">
-        <p>f: <em>fixtures/a.adoc</em></p>
+        <p>f: <em>fixtures/gen/a.adoc</em></p>
       </div>
       <div class="paragraph">
-        <p>docdir: {cwd}/tests/all/fixtures</p>
+        <p>docdir: {cwd}/tests/all/fixtures/gen</p>
       </div>
       <div class="paragraph">
-        <p>f: <em>fixtures/b.adoc</em></p>
+        <p>f: <em>fixtures/gen/b.adoc</em></p>
       </div>
     "#}
     .replace("{cwd}", &cwd())
@@ -32,7 +32,7 @@ fn test_cli_app_single_include() {
 fn test_relative_includes() {
   let stdout = run_cli(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
-    "tests/all/fixtures/parent-include.adoc",
+    "tests/all/fixtures/gen/parent-include.adoc",
   );
   expect_eq!(
     stdout.trim(),
@@ -48,22 +48,44 @@ fn test_relative_includes() {
 }
 
 #[test]
+fn test_url_includes() {
+  let stdout = run_cli(
+    &[
+      "--embedded",
+      "--strict",
+      "--safe-mode",
+      "unsafe",
+      "--attribute",
+      "allow-uri-read",
+    ],
+    "tests/all/fixtures/remote.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="paragraph"><p>line 1</p></div>
+      <div class="paragraph"><p>from <em>github</em></p></div>
+    "#}
+  );
+}
+
+#[test]
 fn test_cli_app_doc_attrs() {
   let stdout = run_cli(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
-    "tests/all/fixtures/attrs.adoc",
+    "tests/all/fixtures/gen/attrs.adoc",
   );
   expect_eq!(
     stdout.trim(),
     html! {r#"
       <div class="paragraph">
-        <p>f: <em>fixtures/attrs.adoc</em></p>
+        <p>f: <em>fixtures/gen/attrs.adoc</em></p>
       </div>
       <div class="paragraph">
-        <p>docdir: {cwd}/tests/all/fixtures</p>
+        <p>docdir: {cwd}/tests/all/fixtures/gen</p>
       </div>
       <div class="paragraph">
-        <p>docfile: {cwd}/tests/all/fixtures/attrs.adoc</p>
+        <p>docfile: {cwd}/tests/all/fixtures/gen/attrs.adoc</p>
       </div>
       <div class="paragraph">
         <p>docfilesuffix: .adoc</p>

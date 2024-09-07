@@ -1,0 +1,10 @@
+f: _fixtures/gen/attrs.adoc_
+
+docdir: {docdir}
+
+docfile: {docfile}
+
+docfilesuffix: {docfilesuffix}
+
+docname: {docname}
+

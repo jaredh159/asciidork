@@ -69,6 +69,7 @@ pub enum ResolveError {
   NotFound,
   Io(String),
   UriReadNotSupported,
+  UriRead(String),
   BaseDirRequired,
 }
 
@@ -78,6 +79,7 @@ impl fmt::Display for ResolveError {
       ResolveError::NotFound => write!(f, "File not found"),
       ResolveError::Io(e) => write!(f, "I/O error: {}", e),
       ResolveError::UriReadNotSupported => write!(f, "URI read not supported"),
+      ResolveError::UriRead(e) => write!(f, "Error reading URI: {}", e),
       ResolveError::BaseDirRequired => {
         write!(
           f,
