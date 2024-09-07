@@ -1,4 +1,5 @@
 use asciidork_meta::{JobSettings, SafeMode};
+use asciidork_parser::includes::*;
 use test_utils::*;
 
 assert_html!(
@@ -115,6 +116,28 @@ assert_html!(
   html! {r#"
     <div class="paragraph">
       <p>Line-1 hi Line-3</p>
+    </div>
+  "#}
+);
+
+assert_html!(
+  include_err_on_missing_file,
+  resolving_err: ResolveError::NotFound,
+  "include::404.adoc[]",
+  html! {r#"
+    <div class="paragraph">
+      <p>Unresolved directive in test.adoc - include::404.adoc[]</p>
+    </div>
+  "#}
+);
+
+assert_html!(
+  include_err_on_io,
+  resolving_err: ResolveError::Io("permission denied".into()),
+  "include::404.adoc[]",
+  html! {r#"
+    <div class="paragraph">
+      <p>Unresolved directive in test.adoc - include::404.adoc[]</p>
     </div>
   "#}
 );

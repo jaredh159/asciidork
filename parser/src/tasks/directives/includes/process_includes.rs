@@ -88,6 +88,17 @@ impl<'arena> Parser<'arena> {
         // TODO: when we have info/trace logging, emit a log
         Ok(DirectiveAction::ReadNextLine)
       }
+      Err(err @ ResolveError::NotFound | err @ ResolveError::Io(..)) => {
+        self.target_err(format!("Include resolver error: {}", err), &directive)?;
+        let mut msg = BumpString::from_str_in("+++Unresolved directive in ", self.bump);
+        msg.push_str(&self.lexer.source_file().file_name());
+        msg.push_str(" - ");
+        let offset = directive.first_token.loc.start + msg.len() as u32;
+        msg.push_str(directive.line_src.as_str());
+        msg.push_str("+++");
+        self.lexer.set_tmp_buf(&msg, BufLoc::Offset(offset));
+        Ok(DirectiveAction::ReadNextLine)
+      }
       Err(error) => {
         self.target_err(format!("Include resolver error: {}", error), &directive)?;
         Ok(DirectiveAction::Passthrough)

@@ -19,6 +19,13 @@ macro_rules! assert_html {
       ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
     }
   };
+  ($name:ident, resolving_err: $err:expr, $input:expr, $expected:expr$(,)?) => {
+    #[test]
+    fn $name() {
+      let actual = _html!($input, |s: &mut JobSettings| {s.strict = false}, Some(error_resolver!($err)));
+      ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
+    }
+  };
   ($name:ident, resolving: $bytes:expr, $input:expr, contains: $($expected:expr),+$(,)?) => {
     #[test]
     fn $name() {
@@ -115,9 +122,10 @@ macro_rules! _html {
     settings.safe_mode = ::asciidork_meta::SafeMode::Unsafe;
     #[allow(clippy::redundant_closure_call)]
     $mod_settings(&mut settings);
+    let path = ::asciidork_meta::Path::new("test.adoc");
     let mut parser = ::asciidork_parser::Parser::from_str(
       $input,
-      ::asciidork_parser::prelude::SourceFile::Tmp,
+      ::asciidork_parser::prelude::SourceFile::Path(path),
       bump,
     );
     parser.apply_job_settings(settings);

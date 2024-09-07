@@ -478,40 +478,14 @@ macro_rules! parse_single_block_loose {
 #[macro_export]
 macro_rules! const_resolver {
   ($bytes:expr) => {{
-    struct MockResolver(pub Vec<u8>);
-    impl asciidork_parser::includes::IncludeResolver for MockResolver {
-      fn resolve(
-        &mut self,
-        _: asciidork_parser::includes::IncludeTarget,
-        buffer: &mut dyn asciidork_parser::includes::IncludeBuffer,
-      ) -> std::result::Result<usize, asciidork_parser::includes::ResolveError> {
-        buffer.initialize(self.0.len());
-        let bytes = buffer.as_bytes_mut();
-        bytes.copy_from_slice(&self.0);
-        Ok(self.0.len())
-      }
-      fn get_base_dir(&self) -> Option<String> {
-        Some("".to_string())
-      }
-    }
-    Box::new(MockResolver(Vec::from($bytes)))
+    Box::new(asciidork_parser::includes::ConstResolver(Vec::from($bytes)))
   }};
 }
 
 #[macro_export]
 macro_rules! error_resolver {
   ($error:expr) => {{
-    struct ErrorResolver(ResolveError);
-    impl asciidork_parser::includes::IncludeResolver for ErrorResolver {
-      fn resolve(
-        &mut self,
-        _: &str,
-        _: &mut dyn IncludeBuffer,
-      ) -> std::result::Result<usize, asciidork_parser::includes::ResolveError> {
-        Err(self.0.clone())
-      }
-    }
-    Box::new(ErrorResolver($error))
+    Box::new(asciidork_parser::includes::ErrorResolver($error))
   }};
 }
 

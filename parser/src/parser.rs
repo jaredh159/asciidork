@@ -320,6 +320,16 @@ pub enum SourceFile {
   Tmp,
 }
 
+impl SourceFile {
+  pub fn file_name(&self) -> String {
+    match self {
+      SourceFile::Stdin { .. } => "<stdin>".to_string(),
+      SourceFile::Path(path) => path.file_name().to_string(),
+      SourceFile::Tmp => "<temp-buffer>".to_string(),
+    }
+  }
+}
+
 impl From<Diagnostic> for Vec<Diagnostic> {
   fn from(diagnostic: Diagnostic) -> Self {
     vec![diagnostic]
