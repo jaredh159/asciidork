@@ -96,10 +96,8 @@ impl From<std::io::Error> for ResolveError {
 
 // test helpers
 
-#[cfg(test)]
+#[cfg(not(release))]
 pub struct ConstResolver(pub Vec<u8>);
-
-#[cfg(test)]
 impl IncludeResolver for ConstResolver {
   fn resolve(
     &mut self,
@@ -117,10 +115,8 @@ impl IncludeResolver for ConstResolver {
   }
 }
 
-#[cfg(test)]
+#[cfg(not(release))]
 pub struct ErrorResolver(pub ResolveError);
-
-#[cfg(test)]
 impl IncludeResolver for ErrorResolver {
   fn resolve(
     &mut self,
@@ -128,5 +124,9 @@ impl IncludeResolver for ErrorResolver {
     _: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
     Err(self.0.clone())
+  }
+
+  fn get_base_dir(&self) -> Option<String> {
+    Some("/".to_string())
   }
 }

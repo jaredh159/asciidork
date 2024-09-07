@@ -1,4 +1,6 @@
 use asciidork_ast::{prelude::*, IncludeBoundaryKind as Boundary};
+use asciidork_meta::{JobAttr, JobSettings};
+use asciidork_parser::includes::*;
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -183,10 +185,106 @@ fn include_with_2_trailing_newlines() {
   );
 }
 
-// https://github.com/opendevise/asciidoc-parsing-lab/blob/main/test/tests/block/include/trailing-include-output.json
-// https://github.com/opendevise/asciidoc-parsing-lab/blob/main/test/tests/block/include/trailing-newline-after-include-output.json
+#[test]
+fn optional_include_not_found() {
+  let mut parser = test_parser!("include::nope.adoc[%optional]");
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(ErrorResolver(ResolveError::NotFound)));
+  assert!(parser.parse().is_ok());
+}
 
-// docattr target: `include::{foo}[]`
+#[test]
+fn include_resolver_gets_passed_correct_target() {
+  struct AssertResolver(&'static str);
+  impl IncludeResolver for AssertResolver {
+    fn resolve(
+      &mut self,
+      target: IncludeTarget,
+      _: &mut dyn IncludeBuffer,
+    ) -> std::result::Result<usize, ResolveError> {
+      assert_eq!(target, IncludeTarget::FilePath(self.0.to_string()));
+      Ok(0)
+    }
+    fn get_base_dir(&self) -> Option<String> {
+      Some("".to_string())
+    }
+  }
+  let cases = [
+    ("include::spaced file.adoc[]", "spaced file.adoc"),
+    ("include::with{sp}attr.adoc[]", "with attr.adoc"),
+    (":myfile: foo.adoc\n\ninclude::{myfile}[]", "foo.adoc"),
+  ];
+  for (input, expected) in cases {
+    let mut parser = test_parser!(input);
+    parser.apply_job_settings(JobSettings::r#unsafe());
+    parser.set_resolver(Box::new(AssertResolver(expected)));
+    assert!(parser.parse().is_ok());
+  }
+}
+
+#[test]
+fn include_resolver_error_bad_encoding() {
+  let mut parser = test_parser!("include::file.adoc[]");
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  let invalid_utf8 = vec![0xFF, 0xFE, 0x68, 0x00, 0xFF, 0xDC];
+  parser.set_resolver(Box::new(ConstResolver(invalid_utf8)));
+  let expected_err = error! {"
+    1: include::file.adoc[]
+                ^^^^^^^^^ Error resolving file contents: Invalid UTF-16 (LE)
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
+
+  let mut parser = test_parser!("include::file.adoc[]");
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  let invalid_utf8 = vec![0x68, 0x00, 0xFF, 0xDC]; // <-- no BOM
+  parser.set_resolver(Box::new(ConstResolver(invalid_utf8)));
+  let expected_err = error! {"
+    1: include::file.adoc[]
+                ^^^^^^^^^ Error resolving file contents: Invalid UTF-8
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
+}
+
+#[test]
+fn include_resolver_error_no_resolver() {
+  let mut parser = test_parser!("include::file.adoc[]");
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  let expected_err = error! {"
+    1: include::file.adoc[]
+       ^^^^^^^^^ No resolver supplied for include directive
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
+}
+
+#[test]
+fn include_resolver_error_uri_read_not_supported() {
+  let mut parser = test_parser!("include::http://a.com/b[]");
+  let mut settings = JobSettings::r#unsafe();
+  settings
+    .job_attrs
+    .insert_unchecked("allow-uri-read", JobAttr::readonly(true));
+  parser.apply_job_settings(settings);
+  parser.set_resolver(Box::new(ErrorResolver(ResolveError::UriReadNotSupported)));
+  let expected_err = error! {"
+    1: include::http://a.com/b[]
+                ^^^^^^^^^^^^^^ Include resolver error: URI read not supported
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
+}
+
+#[test]
+fn uri_read_not_allowed_include() {
+  // strict mode error
+  let input = "include::https://my.com/foo.adoc[]";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  let expected_err = error! {"
+    1: include::https://my.com/foo.adoc[]
+                ^^^^^^^^^^^^^^^^^^^^^^^ Cannot include URL contents (allow-uri-read not enabled)
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err, from: input);
+}
+
 // attrs, encodings, etc
 // include on last line of para
 // consecutive includes to define attrs

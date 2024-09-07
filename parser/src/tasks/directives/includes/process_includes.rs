@@ -84,6 +84,10 @@ impl<'arena> Parser<'arena> {
         self.lexer.push_source(target_abspath, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
+      Err(ResolveError::NotFound) if directive.attrs.has_option("optional") => {
+        // TODO: when we have info/trace logging, emit a log
+        Ok(DirectiveAction::ReadNextLine)
+      }
       Err(error) => {
         self.target_err(format!("Include resolver error: {}", error), &directive)?;
         Ok(DirectiveAction::Passthrough)
