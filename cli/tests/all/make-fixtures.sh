@@ -22,3 +22,7 @@ printf "include::gchild-include.adoc[]\n\n" >> fixtures/child-include.adoc
 printf "last line of child\n"               >> fixtures/child-include.adoc
 printf "first line of grandchild\n\n"       >> fixtures/gchild-include.adoc
 printf "last line of grandchild\n"          >> fixtures/gchild-include.adoc
+
+printf "with trailing space    \n"          >> fixtures/trailing.adoc
+printf -- "----\ninclude::trailing.adoc[]\n">> fixtures/preproc.adoc
+printf -- "----\n\n"                        >> fixtures/preproc.adoc

@@ -203,7 +203,6 @@ impl<'arena> Parser<'arena> {
       if ctx.header_row.is_unknown() || trimmed_implicit_header {
         ctx.header_reparse_cells.push(ParseCellData {
           cell_tokens: cell_tokens.clone(),
-          loc: loc.clone().into(),
           cell_spec: cell_spec.clone(),
           col_spec: col_spec.cloned(),
         });
@@ -233,7 +232,6 @@ impl<'arena> Parser<'arena> {
 
     let cell_data = ParseCellData {
       cell_tokens,
-      loc: loc.into(),
       cell_spec,
       col_spec: col_spec.cloned(),
     };

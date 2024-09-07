@@ -19,6 +19,19 @@ macro_rules! assert_html {
       ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
     }
   };
+  ($name:ident, resolving: $bytes:expr, $input:expr, contains: $($expected:expr),+$(,)?) => {
+    #[test]
+    fn $name() {
+      let actual = _html!($input, |_| {}, Some(const_resolver!($bytes)));
+      $(assert!(
+        actual.contains($expected),
+        "\n`{}` was NOT found when expected\n\n\x1b[2m```adoc\x1b[0m\n{}\n\x1b[2m```\x1b[0m\n\n\x1b[2m```html\x1b[0m\n{}\n\x1b[2m```\x1b[0m",
+        $expected,
+        $input.trim(),
+        actual.replace('>', ">\n").trim()
+      );)+
+    }
+  };
   ($name:ident, $input:expr, contains: $($expected:expr),+$(,)?) => {
     assert_html!($name, |_| {}, $input, contains: $($expected),+);
   };

@@ -3,6 +3,54 @@ use asciidork_parser::prelude::*;
 use test_utils::*;
 
 #[test]
+fn trims_trailing_from_adoc() {
+  assert_doc_content!(
+    resolving: b"windows \r\nand unix \t \n",
+    adoc! {"
+      ----
+      include::some_file.adoc[]
+      ----
+    "},
+    DocContent::Blocks(vecb![
+      Block {
+        context: BlockContext::Listing,
+        content: BlockContent::Simple(nodes![
+          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 5..30),
+          node!("windows"; 0..7, depth: 1), // <-- trimmed
+          node!(Inline::Newline, 7..8, depth: 1),
+          node!("and unix"; 8..16, depth: 1), // <-- trimmed
+          node!(Inline::IncludeBoundary(Boundary::End, 1), 5..30),
+        ]),
+        ..empty_block!(0)
+      }
+    ])
+  );
+}
+
+#[test]
+fn no_trim_trailing_non_adoc() {
+  assert_doc_content!(
+    resolving: b"text \n",
+    adoc! {"
+      ----
+      include::some_file.rs[]
+      ----
+    "},
+    DocContent::Blocks(vecb![
+      Block {
+        context: BlockContext::Listing,
+        content: BlockContent::Simple(nodes![
+          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 5..28),
+          node!("text "; 0..5, depth: 1), // <-- not trimmed
+          node!(Inline::IncludeBoundary(Boundary::End, 1), 5..28),
+        ]),
+        ..empty_block!(0)
+      }
+    ])
+  );
+}
+
+#[test]
 fn include_no_trailing_newline() {
   assert_doc_content!(
     resolving: b"Line-2!",

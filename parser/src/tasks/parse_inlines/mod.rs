@@ -9,41 +9,6 @@ use ast::variants::{inline::*, r#macro::*};
 use inline_utils::*;
 use IncludeBoundaryKind::*;
 
-#[derive(Debug)]
-struct Accum<'arena> {
-  inlines: InlineNodes<'arena>,
-  text: CollectText<'arena>,
-}
-
-impl<'arena> Accum<'arena> {
-  fn commit(&mut self) {
-    self.text.commit_inlines(&mut self.inlines);
-  }
-
-  fn push_node(&mut self, node: Inline<'arena>, loc: SourceLocation) {
-    self.commit();
-    self.inlines.push(InlineNode::new(node, loc));
-    self.text.loc = loc.clamp_end();
-  }
-
-  fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {
-    if lines.is_empty()
-      // special case: we ended an include, so we have the faux-node and thats all
-      // the backend will skip the boundary and we don't want to insert the newline
-      || (self.inlines.len() == 1
-        && matches!(
-          self.inlines[0].content,
-          IncludeBoundary(IncludeBoundaryKind::End, _)
-        ))
-    {
-      return;
-    }
-    self.commit();
-    self.text.loc.end += 1;
-    self.push_node(Inline::Newline, self.text.loc);
-  }
-}
-
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_inlines(
     &mut self,
@@ -71,7 +36,7 @@ impl<'arena> Parser<'arena> {
       if self.should_stop_at(&line) {
         acc.inlines.remove_trailing_newline();
         lines.restore_if_nonempty(line);
-        return Ok(acc.inlines);
+        return Ok(acc.final_nodes(saw_boundary_end));
       }
 
       if line.is_comment() && !subs.callouts() {
@@ -665,18 +630,7 @@ impl<'arena> Parser<'arena> {
     }
 
     acc.commit();
-
-    // handle case where we failed to trim the final newline because
-    // the paragraph ended at the end of an include, so we got an artificial
-    // "line" of the boundary end token, which is only for tracking positions
-    let mut nodes = acc.inlines;
-    if saw_boundary_end && matches!(nodes.last().unwrap().content, IncludeBoundary(End, _)) {
-      let boundary = nodes.pop().unwrap();
-      nodes.remove_trailing_newline();
-      nodes.push(boundary);
-    }
-
-    Ok(nodes)
+    Ok(acc.final_nodes(saw_boundary_end))
   }
 
   fn parse_node<const N: usize>(
@@ -800,6 +754,51 @@ fn push_simple<'arena>(
   lines.restore_if_nonempty(line);
   state.push_node(inline_node, loc);
   push_newline_if_needed(state, lines);
+}
+
+#[derive(Debug)]
+struct Accum<'arena> {
+  inlines: InlineNodes<'arena>,
+  text: CollectText<'arena>,
+}
+
+impl<'arena> Accum<'arena> {
+  fn commit(&mut self) {
+    self.text.commit_inlines(&mut self.inlines);
+  }
+
+  fn push_node(&mut self, node: Inline<'arena>, loc: SourceLocation) {
+    self.commit();
+    self.inlines.push(InlineNode::new(node, loc));
+    self.text.loc = loc.clamp_end();
+  }
+
+  fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {
+    if lines.is_empty()
+      // special case: dangling include boundary shouldn't produce newlines
+      || matches!(
+          self.inlines.last().map(|n| &n.content),
+          Some(IncludeBoundary(IncludeBoundaryKind::End, _)))
+    {
+      return;
+    }
+    self.commit();
+    self.text.loc.end += 1;
+    self.push_node(Inline::Newline, self.text.loc);
+  }
+
+  fn final_nodes(self, saw_boundary_end: bool) -> InlineNodes<'arena> {
+    let mut nodes = self.inlines;
+    // handle case where we failed to trim the final newline because
+    // the paragraph ended at the end of an include, so we got an artificial
+    // "line" of the boundary end token, which is only for tracking positions
+    if saw_boundary_end && matches!(nodes.last().unwrap().content, IncludeBoundary(End, _)) {
+      let boundary = nodes.pop().unwrap();
+      nodes.remove_trailing_newline();
+      nodes.push(boundary);
+    }
+    nodes
+  }
 }
 
 #[cfg(test)]

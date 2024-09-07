@@ -150,6 +150,23 @@ assert_html!(
 );
 
 assert_html!(
+  include_non_adoc_doesnt_trim_tabs,
+  resolving: b"a\t\nc\td\n",
+  adoc! {"
+    [format=tsv]
+    |===
+    include::file.tsv[]
+    |===
+  "},
+  contains:
+    r#"col style="width: 50%;">"#, // <-- 2 cols, b/c tab not trimmed
+    r#"<p class="tableblock">a</p>"#,
+    r#"<p class="tableblock"></p>"#, // <-- empty
+    r#"<p class="tableblock">c</p>"#,
+    r#"<p class="tableblock">d</p>"#,
+);
+
+assert_html!(
   csv_custom_separator,
   adoc! {"
     [format=csv,separator=;]

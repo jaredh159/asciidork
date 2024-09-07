@@ -44,7 +44,6 @@ impl HeaderRow {
 #[derive(Debug, Clone)]
 pub struct ParseCellData<'arena> {
   pub cell_tokens: Line<'arena>,
-  pub loc: SourceLocation,
   pub cell_spec: CellSpec,
   pub col_spec: Option<ColSpec>,
 }

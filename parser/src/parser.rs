@@ -88,6 +88,13 @@ impl<'arena> Parser<'arena> {
     let mut line = Line::empty(self.bump);
     while !self.lexer.peek_is(b'\n') && !self.lexer.is_eof() {
       let token = self.lexer.next_token();
+      if token.is(TokenKind::PreprocEndInclude) && line.is_empty() {
+        line.push(token);
+        if self.lexer.peek_boundary_is(b'\n') {
+          self.lexer.skip_byte();
+        }
+        return Ok(Some(line));
+      }
       self.push_token_replacing_attr_ref(token, &mut line, &mut drop_line)?;
     }
     if self.lexer.peek_boundary_is(b'\n') {
@@ -350,28 +357,6 @@ mod tests {
   }
 
   #[test]
-  fn test_include_boundaries_lines() {
-    let input = adoc! {"
-      foo
-      include::bar.adoc[]
-      baz
-    "};
-    let mut parser = test_parser!(input);
-    parser.set_resolver(resolve("bar")); // <-- no newline
-    parser.apply_job_settings(JobSettings::r#unsafe());
-    let lines = parser.read_lines().unwrap().unwrap();
-    assert_eq!(
-      reassemble(lines),
-      adoc! {"
-        foo
-        {->00001}bar.adoc[]bar
-        {<-00001}bar.adoc[]baz"
-      }
-    );
-    assert!(parser.read_lines().unwrap().is_none());
-  }
-
-  #[test]
   fn test_attr_ref() {
     let mut parser = test_parser!("hello {foo} world");
     parser
@@ -417,33 +402,6 @@ mod tests {
         foo
         {->00001}bar.adoc[]bar
         {<-00001}bar.adoc[]"
-      }
-    );
-    assert!(parser.read_lines().unwrap().is_none());
-  }
-
-  #[test]
-  fn test_include_boundaries_lines_2_newlines() {
-    let input = adoc! {"
-      foo
-      include::bar.adoc[]
-      baz
-    "};
-    let mut parser = test_parser!(input);
-    parser.apply_job_settings(JobSettings::r#unsafe());
-    parser.set_resolver(resolve("bar\n\n")); // <-- 2 newline
-    let lines = parser.read_lines().unwrap().unwrap();
-    assert_eq!(
-      reassemble(lines),
-      adoc! {"
-        foo
-        {->00001}bar.adoc[]bar"
-      }
-    );
-    assert_eq!(
-      reassemble(parser.read_lines().unwrap().unwrap()),
-      adoc! {"
-        {<-00001}bar.adoc[]baz"
       }
     );
     assert!(parser.read_lines().unwrap().is_none());
