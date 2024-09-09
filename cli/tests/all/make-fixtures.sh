@@ -1,3 +1,6 @@
+# NB: we generate these with bash commands for easily replicating tests
+# inside of an asciidoctor docker container, to verify compatibility
+
 rm -rf fixtures/gen
 mkdir -p fixtures/gen/sub
 

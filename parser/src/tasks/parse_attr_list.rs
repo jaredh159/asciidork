@@ -108,6 +108,7 @@ impl<'arena> Parser<'arena> {
         }
         Dots
           if state.quotes == Default
+            && token.len() == 1
             && (state.kind == Role || state.kind == Id || state.prev_token != Some(Word)) =>
         {
           state.commit_prev(self)?;
@@ -361,6 +362,13 @@ mod tests {
             just!("https://example.com", 6..25),
           )]),
           ..attr_list!(0..26)
+        },
+      ),
+      (
+        "[lines=1;3..4;6..-1]",
+        AttrList {
+          named: Named::from(vecb![(src!("lines", 1..6), just!("1;3..4;6..-1", 7..19),)]),
+          ..attr_list!(0..20)
         },
       ),
       (

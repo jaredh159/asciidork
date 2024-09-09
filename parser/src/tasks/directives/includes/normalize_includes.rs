@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use bumpalo::collections::CollectIn;
 
 use crate::internal::*;
@@ -11,6 +13,7 @@ impl<'arena> Parser<'arena> {
   ) -> std::result::Result<(), &'static str> {
     self.normalize_encoding(include_attrs.named("encoding"), bytes)?;
     self.normalize_asciidoc(path, bytes);
+    self.select_line_ranges(include_attrs.named("lines"), bytes);
     Ok(())
   }
 
@@ -31,6 +34,25 @@ impl<'arena> Parser<'arena> {
       }
     }
     std::mem::swap(bytes, &mut dest);
+  }
+
+  fn select_line_ranges(&mut self, lines: Option<&str>, bytes: &mut BumpVec<'arena, u8>) {
+    let Some(lines) = lines else {
+      return;
+    };
+    let ranges = parse_line_ranges(lines);
+    if ranges.is_empty() {
+      return;
+    }
+
+    let mut selected = BumpVec::with_capacity_in(bytes.len(), self.bump);
+    for (i, line) in bytes.split(|&b| b == b'\n').enumerate() {
+      if ranges.iter().any(|range| range.contains(&(i + 1))) {
+        selected.extend(line);
+        selected.push(b'\n');
+      }
+    }
+    std::mem::swap(bytes, &mut selected);
   }
 
   fn normalize_encoding(
@@ -121,6 +143,28 @@ fn from_utf16_in(utf16: BumpVec<u16>, dest: &mut BumpVec<u8>, bump: &Bump) -> bo
   }
 }
 
+fn parse_line_ranges(s: &str) -> Vec<Range<usize>> {
+  let mut ranges = Vec::new();
+  s.split(|c| c == ',' || c == ';').for_each(|part| {
+    let part = part.trim();
+    if let Some((low, high)) = part.split_once("..") {
+      let Ok(low_n) = low.parse::<usize>() else {
+        return;
+      };
+      if high == "-1" || high.is_empty() {
+        ranges.push(low_n..usize::MAX);
+      } else if let Ok(high_n) = high.parse::<usize>() {
+        if low_n <= high_n {
+          ranges.push(low_n..high_n + 1);
+        }
+      }
+    } else if let Ok(n) = part.parse::<usize>() {
+      ranges.push(n..n + 1);
+    }
+  });
+  ranges
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -152,5 +196,25 @@ mod tests {
     let mut bytes = vecb![0xFE, 0xFF, 0x00, 0x68, 0x00, 0x69];
     parser.normalize_encoding(None, &mut bytes).unwrap();
     assert_eq!(bytes.as_slice(), b"hi");
+  }
+
+  #[test]
+  fn test_parse_line_ranges() {
+    assert_eq!(parse_line_ranges("1"), vec![1..2]);
+    assert_eq!(parse_line_ranges("1;2"), vec![1..2, 2..3]);
+    assert_eq!(parse_line_ranges("1 ; 2"), vec![1..2, 2..3]);
+    assert_eq!(parse_line_ranges(" 1 ,  2  "), vec![1..2, 2..3]);
+    assert_eq!(parse_line_ranges("1..3"), vec![1..4]);
+    assert_eq!(parse_line_ranges("17..-1"), vec![17..usize::MAX]);
+    assert_eq!(parse_line_ranges("17..-1,howdy"), vec![17..usize::MAX]);
+    assert_eq!(parse_line_ranges("17.."), vec![17..usize::MAX]);
+    assert_eq!(parse_line_ranges("1..3;5..7"), vec![1..4, 5..8]);
+    assert_eq!(parse_line_ranges("1..3,5..7"), vec![1..4, 5..8]);
+    assert_eq!(
+      parse_line_ranges("1;3..4;6..-1"),
+      vec![1..2, 3..5, 6..usize::MAX]
+    );
+    assert!(parse_line_ranges("17..15").is_empty()); // invalid range
+    assert!(parse_line_ranges("hello").is_empty());
   }
 }

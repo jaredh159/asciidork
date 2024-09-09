@@ -177,3 +177,12 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  selecting_line_range,
+  resolving: b"line1\nline2\nline3\nline4\nline5\nline6\n",
+  adoc! {r#"
+    include::some_file.adoc[lines=1;3;5..-1]
+  "#},
+  contains: "<p>line1 line3 line5 line6</p>"
+);
