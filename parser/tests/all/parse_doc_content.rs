@@ -14,7 +14,7 @@ fn test_not_sectioned() {
       simple_text_block!("Para 1", 0..6),
       simple_text_block!("Para 2", 8..14),
     ])
-  )
+  );
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn test_sectioned_w_preamble() {
         blocks: vecb![simple_text_block!("Para 1", 21..27)]
       }]
     }
-  )
+  );
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn test_sectioned_no_preamble() {
         blocks: vecb![simple_text_block!("Para 1", 11..17)]
       }]
     }
-  )
+  );
 }
 
 assert_error!(

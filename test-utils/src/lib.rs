@@ -6,6 +6,7 @@ lazy_static! {
   pub static ref NEWLINES_RE: Regex = Regex::new(r"(?m)\n\s*").unwrap();
 }
 
+#[must_use]
 pub fn leaked_bump() -> &'static Bump {
   Box::leak(Box::new(Bump::new()))
 }
@@ -367,6 +368,37 @@ macro_rules! assert_error {
       expect_eq!(err.plain_text(), $expected, from: $input);
     }
   };
+  ($name:ident, resolving: $bytes:expr, $input:expr, $expected:expr) => {
+    #[test]
+    fn $name() {
+      let err = parse_error!($input, resolving: $bytes);
+      expect_eq!(err.plain_text(), $expected, from: $input);
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! assert_no_error {
+  ($name:ident, $input:expr) => {
+    #[test]
+    fn $name() {
+      let mut parser = test_parser!($input);
+      let result = parser.parse().expect("expected parse success");
+      expect_eq!(result.warnings.is_empty(), true, from: $input);
+    }
+  };
+  ($name:ident, resolving: $bytes:expr, $input:expr) => {
+    #[test]
+    fn $name() {
+      let mut parser = test_parser!($input);
+      parser.apply_job_settings(asciidork_meta::JobSettings::r#unsafe());
+      parser.set_resolver(Box::new(asciidork_parser::includes::ConstResolver(
+        Vec::from($bytes),
+      )));
+      let result = parser.parse().expect("expected parse success");
+      expect_eq!(result.warnings.is_empty(), true, from: $input);
+    }
+  };
 }
 
 #[macro_export]
@@ -550,6 +582,27 @@ macro_rules! parse_errors {
 macro_rules! parse_error {
   ($input:expr) => {{
     let parser = test_parser!($input);
+    let mut diagnostics = parser.parse().err().expect(&format!(
+      indoc::indoc! {"
+        expected PARSE ERROR, but got none. input was:
+
+        \x1b[2m```adoc\x1b[0m
+        {}{}\x1b[2m```\x1b[0m
+      "},
+      $input,
+      if $input.ends_with('\n') { "" } else { "\n" }
+    ));
+    if diagnostics.len() != 1 {
+      panic!("expected 1 diagnostic, found {}", diagnostics.len());
+    }
+    diagnostics.pop().unwrap()
+  }};
+  ($input:expr, resolving: $bytes:expr) => {{
+    let mut parser = test_parser!($input);
+    parser.apply_job_settings(asciidork_meta::JobSettings::r#unsafe());
+    parser.set_resolver(Box::new(asciidork_parser::includes::ConstResolver(
+      Vec::from($bytes),
+    )));
     let mut diagnostics = parser.parse().err().expect(&format!(
       indoc::indoc! {"
         expected PARSE ERROR, but got none. input was:

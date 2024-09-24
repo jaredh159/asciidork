@@ -68,6 +68,19 @@ impl<'arena> AttrList<'arena> {
       .and_then(|s| if s.is_empty() { Some("") } else { s.single_text() })
   }
 
+  pub fn named_with_loc(&self, key: &str) -> Option<(&str, SourceLocation)> {
+    self.named.get_with_src(key).and_then(|(src, nodes)| {
+      if nodes.is_empty() {
+        Some(("", src.loc))
+      } else {
+        let first = nodes.first().unwrap();
+        let last = nodes.last().unwrap();
+        let loc = SourceLocation::new(first.loc.start, last.loc.end);
+        nodes.single_text().map(|t| (t, loc))
+      }
+    })
+  }
+
   pub fn str_positional_at(&self, index: usize) -> Option<&str> {
     let Some(Some(nodes)) = self.positional.get(index) else {
       return None;
@@ -129,6 +142,13 @@ impl<'arena> Named<'arena> {
       .0
       .iter()
       .find_map(|(k, v)| if k == key { Some(v) } else { None })
+  }
+
+  pub fn get_with_src(&self, key: &str) -> Option<(SourceString<'arena>, &InlineNodes<'arena>)> {
+    self
+      .0
+      .iter()
+      .find_map(|(k, v)| if k == key { Some((k.clone(), v)) } else { None })
   }
 }
 

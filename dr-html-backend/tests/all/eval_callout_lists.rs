@@ -215,5 +215,5 @@ fn wrap_source_appending(lang: &str, inner: &str, rest: String) -> String {
     r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
     inner.trim(),
   ));
-  format!("{}{}", listing, rest)
+  format!("{listing}{rest}")
 }

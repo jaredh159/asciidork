@@ -13,8 +13,21 @@ impl<'arena> Parser<'arena> {
   ) -> std::result::Result<(), &'static str> {
     self.normalize_encoding(include_attrs.named("encoding"), bytes)?;
     self.normalize_asciidoc(path, bytes);
-    self.select_line_ranges(include_attrs.named("lines"), bytes);
     Ok(())
+  }
+
+  pub(super) fn select_lines(
+    &mut self,
+    include_attrs: &AttrList,
+    bytes: &mut BumpVec<'arena, u8>,
+  ) -> Result<()> {
+    // NB: selecting lines takes precedence over tags
+    if let Some(lines) = include_attrs.named("lines") {
+      self.select_line_ranges(lines, bytes);
+      Ok(())
+    } else {
+      self.select_tagged_lines(include_attrs, bytes)
+    }
   }
 
   fn normalize_asciidoc(&mut self, path: &Path, bytes: &mut BumpVec<'arena, u8>) {
@@ -36,10 +49,7 @@ impl<'arena> Parser<'arena> {
     std::mem::swap(bytes, &mut dest);
   }
 
-  fn select_line_ranges(&mut self, lines: Option<&str>, bytes: &mut BumpVec<'arena, u8>) {
-    let Some(lines) = lines else {
-      return;
-    };
+  fn select_line_ranges(&mut self, lines: &str, bytes: &mut BumpVec<'arena, u8>) {
     let ranges = parse_line_ranges(lines);
     if ranges.is_empty() {
       return;

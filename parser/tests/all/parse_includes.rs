@@ -193,6 +193,38 @@ fn optional_include_not_found() {
   assert!(parser.parse().is_ok());
 }
 
+assert_error!(
+  include_warns_on_missing_tag,
+  resolving: b"",
+  adoc! {"
+    include::file.adoc[tag=foo]
+  "},
+  error! {"
+    1: include::file.adoc[tag=foo]
+                              ^^^ Tag `foo` not found in included file
+  "}
+);
+
+assert_error!(
+  include_warns_on_missing_tags,
+  resolving: b"",
+  adoc! {"
+    include::file.adoc[tags=foo;bar]
+  "},
+  error! {"
+    1: include::file.adoc[tags=foo;bar]
+                               ^^^^^^^ Tags `bar`, `foo` not found in included file
+  "}
+);
+
+assert_no_error!(
+  no_error_for_negated_missing_tag,
+  resolving: b"bar",
+  adoc! {"
+    include::file.adoc[tag=!foo]
+  "}
+);
+
 #[test]
 fn include_resolver_gets_passed_correct_target() {
   struct AssertResolver(&'static str);
@@ -206,7 +238,7 @@ fn include_resolver_gets_passed_correct_target() {
       Ok(0)
     }
     fn get_base_dir(&self) -> Option<String> {
-      Some("".to_string())
+      Some(String::new())
     }
   }
   let cases = [

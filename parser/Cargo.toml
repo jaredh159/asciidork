@@ -18,6 +18,7 @@ doctest = false
 
 [dev-dependencies]
 indoc = "2.0.4"
+unindent = "0.2.3"
 pretty_assertions = "1.4.0"
 test-utils = { path = "../test-utils" }
 

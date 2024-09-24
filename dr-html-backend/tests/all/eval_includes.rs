@@ -186,3 +186,55 @@ assert_html!(
   "#},
   contains: "<p>line1 line3 line5 line6</p>"
 );
+
+assert_html!(
+  selecting_tags_no_error_for_missing_negated,
+  resolving: TAGGED_RUBY_CLASS,
+  adoc! {r#"
+    ----
+    include::file.rb[tags=all;!no-such-tag;!unknown-tag]
+    ----
+  "#},
+  contains: &indoc::indoc! {r#"
+    class Dog
+      def initialize breed
+        @breed = breed
+      end
+
+      def bark
+        if @breed == 'beagle'
+          'woof woof woof woof woof'
+        else
+          'woof woof'
+        end
+      end
+    end
+  "#}.trim()
+);
+
+const TAGGED_RUBY_CLASS: &[u8] = b"#tag::all[]
+class Dog
+  #tag::init[]
+  def initialize breed
+    @breed = breed
+  end
+  #end::init[]
+  #tag::bark[]
+
+  def bark
+    #tag::bark-beagle[]
+    if @breed == 'beagle'
+      'woof woof woof woof woof'
+    #end::bark-beagle[]
+    #tag::bark-other[]
+    else
+      'woof woof'
+    #end::bark-other[]
+    #tag::bark-all[]
+    end
+    #end::bark-all[]
+  end
+  #end::bark[]
+end
+#end::all[]
+";

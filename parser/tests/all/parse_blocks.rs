@@ -370,7 +370,7 @@ fn test_parse_delimited_sidebar_block() {
       }]),
       ..empty_block!(0)
     },
-  )
+  );
 }
 
 #[test]

@@ -80,7 +80,7 @@ fn test_simple_blockquote() {
     context: Context::BlockQuote,
     content: Content::Simple(nodes![node!("foo"; 24.. 27)]),
   };
-  assert_block!(input, expected,)
+  assert_block!(input, expected,);
 }
 
 #[test]

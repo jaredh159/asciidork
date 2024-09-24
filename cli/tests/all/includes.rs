@@ -133,7 +133,7 @@ fn run_cli(args: &[&str], input: &str) -> String {
 
   if !output.status.success() {
     let stderr = String::from_utf8_lossy(&output.stderr);
-    println!("{}", stderr);
+    println!("{stderr}");
     panic!("\nCommand failed: {:?}", output.status);
   }
   stdout.to_string()

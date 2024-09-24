@@ -17,3 +17,5 @@ resolver = "2"
 
 [workspace.lints.clippy]
 missing-const-for-fn = "warn"
+option-map-unit-fn = "allow"
+if-same-then-else = "allow"

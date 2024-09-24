@@ -39,7 +39,7 @@ fn test_parse_delimited_literal_block() {
       ]),
       ..empty_block!(0)
     }
-  )
+  );
 }
 
 #[test]
