@@ -69,7 +69,9 @@ assert_error!(
     ==== ch 2
   "},
   error! {"
-    3: ==== ch 2
-       ^^^^ Section title out of sequence: expected level 2 `===`
+     --> test.adoc:3:1
+      |
+    3 | ==== ch 2
+      | ^^^^ Section title out of sequence: expected level 2 `===`
   "}
 );

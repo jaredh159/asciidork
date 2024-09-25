@@ -121,7 +121,9 @@ assert_error!(
   xref_unknown_anchor,
   "<<foo>>",
   error! {r"
-    1: <<foo>>
-         ^^^ Invalid cross reference, no anchor found for `foo`
+     --> test.adoc:1:3
+      |
+    1 | <<foo>>
+      |   ^^^ Invalid cross reference, no anchor found for `foo`
   "}
 );

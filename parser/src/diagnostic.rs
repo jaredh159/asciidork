@@ -7,6 +7,7 @@ pub struct Diagnostic {
   pub message: String,
   pub underline_start: u32,
   pub underline_width: u32,
+  pub source_file: SourceFile,
 }
 
 impl<'arena> Parser<'arena> {
@@ -18,6 +19,7 @@ impl<'arena> Parser<'arena> {
       message: message.into(),
       underline_start: offset,
       underline_width: end - start,
+      source_file: self.lexer.source_file().clone(),
     })
   }
 
@@ -34,6 +36,7 @@ impl<'arena> Parser<'arena> {
       underline_start: offset,
       underline_width: line.len() as u32,
       line,
+      source_file: self.lexer.source_file().clone(),
     })
   }
 
@@ -59,6 +62,7 @@ impl<'arena> Parser<'arena> {
           message: message.into(),
           underline_start: 0,
           underline_width: line.len() as u32,
+          source_file: self.lexer.source_file().clone(),
         });
       }
     }
@@ -81,6 +85,7 @@ impl<'arena> Parser<'arena> {
         message: message.into(),
         underline_start: idx as u32,
         underline_width: pattern.len() as u32,
+        source_file: self.lexer.source_file().clone(),
       });
     }
     self.handle_err(Diagnostic {
@@ -89,6 +94,7 @@ impl<'arena> Parser<'arena> {
       message: message.into(),
       underline_start: 0,
       underline_width: line.len() as u32,
+      source_file: self.lexer.source_file().clone(),
     })
   }
 
@@ -104,6 +110,7 @@ impl<'arena> Parser<'arena> {
       message: message.into(),
       underline_start: offset,
       underline_width: token.lexeme.len() as u32,
+      source_file: self.lexer.source_file().clone(),
     })
   }
 
@@ -115,6 +122,7 @@ impl<'arena> Parser<'arena> {
       message: message.into(),
       underline_start: offset,
       underline_width: 1,
+      source_file: self.lexer.source_file().clone(),
     })
   }
 
@@ -127,6 +135,7 @@ impl<'arena> Parser<'arena> {
       message: message.into(),
       underline_start: offset,
       underline_width: 1,
+      source_file: self.lexer.source_file().clone(),
     })
   }
 
@@ -164,19 +173,29 @@ impl Diagnostic {
 
   pub fn plain_text_with<C: DiagnosticColor>(&self, colorizer: C) -> String {
     let line_num_pad = match self.line_num {
-      n if n < 10 => 3,
-      n if n < 100 => 4,
-      n if n < 1000 => 5,
-      n if n < 10000 => 6,
-      n if n < 100000 => 7,
+      n if n < 10 => 4,
+      n if n < 100 => 5,
+      n if n < 1000 => 6,
+      n if n < 10000 => 7,
       _ => 8,
     };
     format!(
-      "{}{} {}\n{}{} {}\n",
+      "{}{}{}{}{}{}{}\n{}{}\n{} {} {}\n{}{} {}{} {}\n",
+      " ".repeat((line_num_pad - 3) as usize),
+      colorizer.line_num("--> "),
+      colorizer.line_num(self.source_file.file_name()),
+      colorizer.line_num(":"),
       colorizer.line_num(self.line_num.to_string()),
       colorizer.line_num(":"),
+      colorizer.line_num((self.underline_start + 1).to_string()),
+      " ".repeat((line_num_pad - 2) as usize),
+      colorizer.line_num("|"),
+      colorizer.line_num(self.line_num.to_string()),
+      colorizer.line_num("|"),
       colorizer.line(&self.line),
-      " ".repeat((self.underline_start + line_num_pad) as usize),
+      " ".repeat((line_num_pad - 2) as usize),
+      colorizer.line_num("|"),
+      " ".repeat(self.underline_start as usize),
       colorizer.location("^".repeat(self.underline_width as usize)),
       colorizer.message(&self.message),
     )

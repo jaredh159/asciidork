@@ -249,8 +249,10 @@ mod tests {
       ,===
     "#},
     error! { r#"
-      2: one,"two
-             ^ Unclosed CSV quote
+       --> test.adoc:2:5
+        |
+      2 | one,"two
+        |     ^ Unclosed CSV quote
     "#}
   );
 
@@ -262,8 +264,10 @@ mod tests {
       ,===
     "#},
     error! { r#"
-      2: one,two "foo
-                 ^ Double quote not allowed here, entire field must be quoted
+       --> test.adoc:2:9
+        |
+      2 | one,two "foo
+        |         ^ Double quote not allowed here, entire field must be quoted
     "#}
   );
 }

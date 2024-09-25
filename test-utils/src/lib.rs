@@ -22,7 +22,24 @@ macro_rules! read_line {
 #[macro_export]
 macro_rules! test_parser {
   ($input:expr) => {{
-    Parser::from_str($input, SourceFile::Tmp, leaked_bump())
+    Parser::from_str(
+      $input,
+      SourceFile::Path(Path::new("test.adoc")),
+      leaked_bump(),
+    )
+  }};
+}
+
+#[macro_export]
+macro_rules! doc_meta {
+  ($doctype:expr) => {{
+    let mut m = DocumentMeta::default();
+    m.set_doctype($doctype);
+    _ = m.insert_job_attr("docname", JobAttr::readonly("test"));
+    _ = m.insert_job_attr("docdir", JobAttr::readonly(""));
+    _ = m.insert_job_attr("docfilesuffix", JobAttr::readonly(".adoc"));
+    _ = m.insert_job_attr("docfile", JobAttr::readonly(""));
+    m
   }};
 }
 

@@ -481,7 +481,9 @@ assert_error!(
     foo
   "},
   error! {"
-    1: --
-       ^^ This delimiter was never closed
+     --> test.adoc:1:1
+      |
+    1 | --
+      | ^^ This delimiter was never closed
   "}
 );

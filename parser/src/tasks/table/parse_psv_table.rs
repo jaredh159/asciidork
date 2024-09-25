@@ -139,12 +139,6 @@ mod tests {
     Proportional(width)
   }
 
-  fn doc_meta(doctype: DocType) -> DocumentMeta {
-    let mut m = DocumentMeta::default();
-    m.set_doctype(doctype);
-    m
-  }
-
   #[test]
   fn test_parse_table() {
     assert_table!(
@@ -202,7 +196,7 @@ mod tests {
                 },
                 context: BlockContext::UnorderedList,
               }]),
-              meta: doc_meta(DocType::Article),
+              meta: doc_meta!(DocType::Article),
               ..Document::new(leaked_bump())
             }),
             ..empty_cell!()
@@ -233,7 +227,7 @@ mod tests {
             content: BlockContent::Simple(just!("literal", 23..30)),
             ..empty_block!(21)
           }]),
-          meta: doc_meta(DocType::Article),
+          meta: doc_meta!(DocType::Article),
           ..Document::new(leaked_bump())
         },),
         ..empty_cell!()
@@ -876,8 +870,10 @@ mod tests {
       |c1, r1
     "},
     error! {r"
-      1: |===
-         ^^^^ Table never closed, started here
+       --> test.adoc:1:1
+        |
+      1 | |===
+        | ^^^^ Table never closed, started here
     "}
   );
 
@@ -889,8 +885,10 @@ mod tests {
       |===
     "},
     error! {r"
-      2: foo
-         ^ Expected cell separator `|`
+       --> test.adoc:2:1
+        |
+      2 | foo
+        | ^ Expected cell separator `|`
     "}
   );
 
@@ -903,8 +901,10 @@ mod tests {
       |===
     "#},
     error! {r"
-      3: 3+|foo
-         ^^ Cell column span (3) exceeds number of columns (2)
+       --> test.adoc:3:1
+        |
+      3 | 3+|foo
+        | ^^ Cell column span (3) exceeds number of columns (2)
     "}
   );
 }

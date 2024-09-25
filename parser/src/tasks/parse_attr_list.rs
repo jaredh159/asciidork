@@ -643,32 +643,40 @@ mod tests {
         "[#foo#bar]",
         true,
         error! {"
-          1: [#foo#bar]
-                  ^ More than one id attribute
+           --> test.adoc:1:6
+            |
+          1 | [#foo#bar]
+            |      ^ More than one id attribute
         "},
       ),
       (
         "[#foo#bar]",
         false,
         error! {"
-          1: [#foo#bar]
-                  ^ More than one id attribute
+           --> test.adoc:1:6
+            |
+          1 | [#foo#bar]
+            |      ^ More than one id attribute
         "},
       ),
       (
         "[foobar]",
         true,
         error! {"
-          1: [foobar]
-              ^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
+           --> test.adoc:1:2
+            |
+          1 | [foobar]
+            |  ^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
         "},
       ),
       (
         "[#a,b=c]",
         true,
         error! {"
-          1: [#a,b=c]
-              ^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
+           --> test.adoc:1:2
+            |
+          1 | [#a,b=c]
+            |  ^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
         "},
       ),
     ];

@@ -168,8 +168,10 @@ mod tests {
       para
     "},
     error! {"
-      1: :doctype: bad
-         ^^^^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
+       --> test.adoc:1:1
+        |
+      1 | :doctype: bad
+        | ^^^^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
     "}
   );
 
@@ -181,8 +183,10 @@ mod tests {
       para
     "},
     error! {"
-      1: :!doctype:
-         ^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
+       --> test.adoc:1:1
+        |
+      1 | :!doctype:
+        | ^^^^^^^^^^ Invalid doctype: expected `article`, `book`, `manpage`, or `inline`
     "}
   );
 
@@ -195,8 +199,10 @@ mod tests {
       para
     "},
     error! {"
-      2: :chapter-refsig: Capitulo
-         ^^^^^^^^^^^^^^^^^^^^^^^^^ Attribute `chapter-refsig` may only be set when doctype is `book`
+       --> test.adoc:2:1
+        |
+      2 | :chapter-refsig: Capitulo
+        | ^^^^^^^^^^^^^^^^^^^^^^^^^ Attribute `chapter-refsig` may only be set when doctype is `book`
     "}
   );
 }

@@ -393,8 +393,10 @@ mod tests {
       |===
     "# },
     error! { r#"
-      1: [separator="||"]
-                     ^^ Cell separator must be exactly one character
+       --> test.adoc:1:13
+        |
+      1 | [separator="||"]
+        |             ^^ Cell separator must be exactly one character
     "#}
   );
 
@@ -407,8 +409,10 @@ mod tests {
       |===
     "# },
     error! { r#"
-      1: [separator=""]
-          ^^^^^^^^^ Cell separator must be exactly one character
+       --> test.adoc:1:2
+        |
+      1 | [separator=""]
+        |  ^^^^^^^^^ Cell separator must be exactly one character
     "#}
   );
 }

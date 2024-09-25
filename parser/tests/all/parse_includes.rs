@@ -200,8 +200,10 @@ assert_error!(
     include::file.adoc[tag=foo]
   "},
   error! {"
-    1: include::file.adoc[tag=foo]
-                              ^^^ Tag `foo` not found in included file
+     --> test.adoc:1:24
+      |
+    1 | include::file.adoc[tag=foo]
+      |                        ^^^ Tag `foo` not found in included file
   "}
 );
 
@@ -212,8 +214,10 @@ assert_error!(
     include::file.adoc[tags=foo;bar]
   "},
   error! {"
-    1: include::file.adoc[tags=foo;bar]
-                               ^^^^^^^ Tags `bar`, `foo` not found in included file
+     --> test.adoc:1:25
+      |
+    1 | include::file.adoc[tags=foo;bar]
+      |                         ^^^^^^^ Tags `bar`, `foo` not found in included file
   "}
 );
 
@@ -261,8 +265,10 @@ fn include_resolver_error_bad_encoding() {
   let invalid_utf8 = vec![0xFF, 0xFE, 0x68, 0x00, 0xFF, 0xDC];
   parser.set_resolver(Box::new(ConstResolver(invalid_utf8)));
   let expected_err = error! {"
-    1: include::file.adoc[]
-                ^^^^^^^^^ Error resolving file contents: Invalid UTF-16 (LE)
+     --> test.adoc:1:10
+      |
+    1 | include::file.adoc[]
+      |          ^^^^^^^^^ Error resolving file contents: Invalid UTF-16 (LE)
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
 
@@ -271,8 +277,10 @@ fn include_resolver_error_bad_encoding() {
   let invalid_utf8 = vec![0x68, 0x00, 0xFF, 0xDC]; // <-- no BOM
   parser.set_resolver(Box::new(ConstResolver(invalid_utf8)));
   let expected_err = error! {"
-    1: include::file.adoc[]
-                ^^^^^^^^^ Error resolving file contents: Invalid UTF-8
+     --> test.adoc:1:10
+      |
+    1 | include::file.adoc[]
+      |          ^^^^^^^^^ Error resolving file contents: Invalid UTF-8
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
 }
@@ -282,8 +290,10 @@ fn include_resolver_error_no_resolver() {
   let mut parser = test_parser!("include::file.adoc[]");
   parser.apply_job_settings(JobSettings::r#unsafe());
   let expected_err = error! {"
-    1: include::file.adoc[]
-       ^^^^^^^^^ No resolver supplied for include directive
+     --> test.adoc:1:1
+      |
+    1 | include::file.adoc[]
+      | ^^^^^^^^^ No resolver supplied for include directive
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
 }
@@ -298,8 +308,10 @@ fn include_resolver_error_uri_read_not_supported() {
   parser.apply_job_settings(settings);
   parser.set_resolver(Box::new(ErrorResolver(ResolveError::UriReadNotSupported)));
   let expected_err = error! {"
-    1: include::http://a.com/b[]
-                ^^^^^^^^^^^^^^ Include resolver error: URI read not supported
+     --> test.adoc:1:10
+      |
+    1 | include::http://a.com/b[]
+      |          ^^^^^^^^^^^^^^ Include resolver error: URI read not supported
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
 }
@@ -311,8 +323,10 @@ fn uri_read_not_allowed_include() {
   let mut parser = test_parser!(input);
   parser.apply_job_settings(JobSettings::r#unsafe());
   let expected_err = error! {"
-    1: include::https://my.com/foo.adoc[]
-                ^^^^^^^^^^^^^^^^^^^^^^^ Cannot include URL contents (allow-uri-read not enabled)
+     --> test.adoc:1:10
+      |
+    1 | include::https://my.com/foo.adoc[]
+      |          ^^^^^^^^^^^^^^^^^^^^^^^ Cannot include URL contents (allow-uri-read not enabled)
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err, from: input);
 }

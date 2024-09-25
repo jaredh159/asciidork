@@ -108,7 +108,9 @@ assert_error!(
     unclosed comment
   "#},
   error! {"
-    3: ////
-       ^^^^ This delimiter was never closed
+     --> test.adoc:3:1
+      |
+    3 | ////
+      | ^^^^ This delimiter was never closed
   "}
 );

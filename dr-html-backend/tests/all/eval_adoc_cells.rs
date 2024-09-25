@@ -394,8 +394,10 @@ assert_error!(
     |===
   "#},
   error! {r"
-    2: a|<<foo>>
-           ^^^ Invalid cross reference, no anchor found for `foo`
+     --> test.adoc:2:5
+      |
+    2 | a|<<foo>>
+      |     ^^^ Invalid cross reference, no anchor found for `foo`
   "}
 );
 

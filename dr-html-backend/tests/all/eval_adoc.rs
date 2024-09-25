@@ -662,8 +662,10 @@ assert_error!(
     whoops {missing}
   "},
   error! {"
-    3: whoops {missing}
-              ^^^^^^^^^ Skipping reference to missing attribute
+     --> test.adoc:3:8
+      |
+    3 | whoops {missing}
+      |        ^^^^^^^^^ Skipping reference to missing attribute
   "}
 );
 

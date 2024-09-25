@@ -196,8 +196,10 @@ assert_error!(
     == sect 1
   "},
   error! {"
-    1: :toc: preamble
-       ^^^^^^^^^^^^^^ Table of Contents set to `preamble` but no preamble found
+     --> test.adoc:1:1
+      |
+    1 | :toc: preamble
+      | ^^^^^^^^^^^^^^ Table of Contents set to `preamble` but no preamble found
   "}
 );
 
@@ -209,8 +211,10 @@ assert_error!(
     == sect 1
   "},
   error! {"
-    1: :toc: macro
-       ^^^^^^^^^^^ Table of Contents set to `macro` but macro (`toc::[]`) not found
+     --> test.adoc:1:1
+      |
+    1 | :toc: macro
+      | ^^^^^^^^^^^ Table of Contents set to `macro` but macro (`toc::[]`) not found
   "}
 );
 
@@ -224,7 +228,9 @@ assert_error!(
     toc::[]
   "},
   error! {"
-    5: toc::[]
-       ^^^^^^^ Found macro placing Table of Contents, but TOC not enabled
+     --> test.adoc:5:1
+      |
+    5 | toc::[]
+      | ^^^^^^^ Found macro placing Table of Contents, but TOC not enabled
   "}
 );

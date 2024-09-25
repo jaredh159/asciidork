@@ -241,8 +241,10 @@ assert_error!(
     <2> foo
   "#},
   error! {"
-    5: <2> foo
-       ^^^ Unexpected callout number, expected `<1>`
+     --> test.adoc:5:1
+      |
+    5 | <2> foo
+      | ^^^ Unexpected callout number, expected `<1>`
   "}
 );
 
@@ -258,8 +260,10 @@ assert_error!(
     <3> foo
   "#},
   error! {"
-    7: <3> foo
-       ^^^ Unexpected callout number, expected `<2>`
+     --> test.adoc:7:1
+      |
+    7 | <3> foo
+      | ^^^ Unexpected callout number, expected `<2>`
   "}
 );
 
@@ -273,8 +277,10 @@ assert_error!(
     <2> foo
   "#},
   error! {"
-    5: <2> foo
-       ^^^ No callout found for number `2`
+     --> test.adoc:5:1
+      |
+    5 | <2> foo
+      | ^^^ No callout found for number `2`
   "}
 );
 

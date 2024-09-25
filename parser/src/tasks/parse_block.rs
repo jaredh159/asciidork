@@ -362,8 +362,10 @@ mod tests {
       :doctype: book
     "},
     error! {"
-      3: :doctype: book
-         ^^^^^^^^^^^^^^ Attribute `doctype` may only be set in the document header
+       --> test.adoc:3:1
+        |
+      3 | :doctype: book
+        | ^^^^^^^^^^^^^^ Attribute `doctype` may only be set in the document header
     "}
   );
 }

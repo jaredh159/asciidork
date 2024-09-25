@@ -1,7 +1,7 @@
 use asciidork_ast::short::block::*;
 use asciidork_ast::variants::inline::*;
 use asciidork_ast::{prelude::*, Inline};
-use asciidork_meta::{DocType, DocumentMeta};
+use asciidork_meta::{DocType, DocumentMeta, JobAttr};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -283,11 +283,7 @@ fn test_globally_unique_callouts() {
                 ]),
                 ..empty_block!(39)
               }]),
-              meta: {
-                let mut m = DocumentMeta::default();
-                m.set_doctype(DocType::Article);
-                m
-              },
+              meta: doc_meta!(DocType::Article),
               ..Document::new(leaked_bump())
             }),
             ..empty_cell!()
