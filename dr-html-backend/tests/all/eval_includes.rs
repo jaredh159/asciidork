@@ -188,6 +188,36 @@ assert_html!(
 );
 
 assert_html!(
+  ignores_empty_tag,
+  resolving: bytes! {"
+    // tag::a[]
+    a
+    // end::a[]
+  "},
+  adoc! {r#"
+    ----
+    include::file.rb[tag=]
+    ----
+  "#},
+  contains: "tag::a[]"
+);
+
+assert_html!(
+  ignores_empty_tags,
+  resolving: bytes! {"
+    // tag::a[]
+    a
+    // end::a[]
+  "},
+  adoc! {r#"
+    ----
+    include::file.rb[tags=]
+    ----
+  "#},
+  contains: "tag::a[]"
+);
+
+assert_html!(
   selecting_tags_no_error_for_missing_negated,
   resolving: TAGGED_RUBY_CLASS,
   adoc! {r#"

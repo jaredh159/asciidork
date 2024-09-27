@@ -126,7 +126,7 @@ impl<'arena> Parser<'arena> {
     })
   }
 
-  pub(crate) fn err(&self, message: impl Into<String>, token: Option<&Token>) -> Result<()> {
+  pub(crate) fn err_token(&self, message: impl Into<String>, token: Option<&Token>) -> Result<()> {
     let location = token.map_or_else(|| self.lexer.loc(), |t| t.loc);
     let (line_num, offset) = self.lexer.line_number_with_offset(location.start);
     self.handle_err(Diagnostic {
@@ -137,6 +137,10 @@ impl<'arena> Parser<'arena> {
       underline_width: 1,
       source_file: self.lexer.source_file().clone(),
     })
+  }
+
+  pub(crate) fn err(&self, diagnostic: Diagnostic) -> Result<()> {
+    self.handle_err(diagnostic)
   }
 
   fn handle_err(&self, err: Diagnostic) -> Result<()> {

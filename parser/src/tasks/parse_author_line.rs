@@ -34,7 +34,7 @@ impl<'arena> Parser<'arena> {
 
     let num_bytes = src.bytes().len();
     if first_start == usize::MAX {
-      self.err("invalid author line", line.current_token())
+      self.err_token("invalid author line", line.current_token())
     } else if first_start > 0 {
       let start = line.current_token().unwrap().loc.start;
       self.err_at("invalid author line", start, start + first_start as u32)

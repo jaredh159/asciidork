@@ -81,7 +81,7 @@ impl<'arena> Parser<'arena> {
             self.substitute_link_for_include(&directive),
           ));
         }
-        self.select_lines(&directive.attrs, &mut buffer)?;
+        self.select_lines(&directive.attrs, &target_abspath, &mut buffer)?;
         self.lexer.push_source(target_abspath, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }

@@ -208,6 +208,24 @@ assert_error!(
 );
 
 assert_error!(
+  include_warns_on_selecting_unclosed_tag,
+  resolving: bytes! {"
+    x
+    // tag::unclosed[]
+    a
+  "},
+  adoc! {"
+    include::other.adoc[tag=unclosed]
+  "},
+  error! {"
+     --> other.adoc:2:9
+      |
+    2 | // tag::unclosed[]
+      |         ^^^^^^^^ Tag `unclosed` was not closed
+  "}
+);
+
+assert_error!(
   include_warns_on_missing_tags,
   resolving: b"",
   adoc! {"
@@ -226,6 +244,46 @@ assert_no_error!(
   resolving: b"bar",
   adoc! {"
     include::file.adoc[tag=!foo]
+  "}
+);
+
+assert_error!(
+  mismatched_tags,
+  resolving: bytes! {"
+    // tag::a[]
+    a
+    // tag::b[]
+    b
+    // end::a[]
+    // end::b[]
+  "},
+  adoc! {"
+    include::other.adoc[tags=a;b]
+  "},
+  error! {"
+     --> other.adoc:5:9
+      |
+    5 | // end::a[]
+      |         ^ Mismatched end tag, expected `b` but found `a`
+  "}
+);
+
+assert_error!(
+  unexpected_end_tag,
+  resolving: bytes! {"
+    // tag::a[]
+    a
+    // end::a[]
+    // end::a[]
+  "},
+  adoc! {"
+    include::other.adoc[tag=a]
+  "},
+  error! {"
+     --> other.adoc:4:9
+      |
+    4 | // end::a[]
+      |         ^ Unexpected end tag `a`
   "}
 );
 
@@ -330,8 +388,3 @@ fn uri_read_not_allowed_include() {
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err, from: input);
 }
-
-// attrs, encodings, etc
-// include on last line of para
-// consecutive includes to define attrs
-// error messages

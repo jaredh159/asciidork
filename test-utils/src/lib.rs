@@ -363,6 +363,13 @@ macro_rules! adoc {
 }
 
 #[macro_export]
+macro_rules! bytes {
+  ($s:expr) => {
+    ::indoc::indoc!($s).as_bytes()
+  };
+}
+
+#[macro_export]
 macro_rules! raw_html {
   ($s:expr) => {
     ::indoc::indoc!($s)

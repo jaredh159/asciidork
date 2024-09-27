@@ -26,7 +26,7 @@ enum Strategy {
 }
 
 impl Spec {
-  fn satisfied_by(&self, stack: &[String]) -> bool {
+  fn satisfied_by(&self, stack: &TagStack) -> bool {
     match self {
       Spec::AllNonTagDirectiveLines => true,
       Spec::NoLines => false,
@@ -34,10 +34,10 @@ impl Spec {
       Spec::AllUntaggedRegions => stack.is_empty(),
       Spec::Tag(tag) => stack.contains(tag),
       Spec::AllLinesExcl(tag) => !stack.contains(tag),
-      Spec::TagExclAllNested(tag) => stack.last() == Some(tag),
+      Spec::TagExclAllNested(tag) => stack.last_is(tag),
       Spec::TagExclNested(incl, excl) => stack.contains(incl) && !stack.contains(excl),
       Spec::AllTaggedExcl(tag) => !stack.is_empty() && !stack.contains(tag),
-      Spec::AllUntaggedIncl(tag) => stack.is_empty() || stack.last() == Some(tag),
+      Spec::AllUntaggedIncl(tag) => stack.is_empty() || stack.last_is(tag),
     }
   }
 }
@@ -163,18 +163,21 @@ impl<'arena> Parser<'arena> {
   pub(super) fn select_tagged_lines(
     &mut self,
     attr_list: &AttrList,
+    src_path: &Path,
     src: &mut BumpVec<'arena, u8>,
   ) -> Result<()> {
-    if let Some((tag, loc)) = attr_list.named_with_loc("tag") {
-      let Some(selection) = parse_spec(tag) else {
-        // TODO: possibly warn?
-        return Ok(());
-      };
-      let selection = TagSpecs(vec![selection]);
-      self._select_tagged_lines(selection, src, loc)
-    } else if let Some((tags, loc)) = attr_list.named_with_loc("tags") {
+    if let Some((selection, loc)) = attr_list
+      .named_with_loc("tag")
+      .filter(|(tag, _)| !tag.is_empty())
+      .and_then(|(tag, loc)| parse_spec(tag).map(|sel| (sel, loc)))
+    {
+      self._select_tagged_lines(TagSpecs(vec![selection]), src, src_path, loc)
+    } else if let Some((tags, loc)) = attr_list
+      .named_with_loc("tags")
+      .filter(|(tags, _)| !tags.is_empty())
+    {
       let selection = parse_selection(tags);
-      self._select_tagged_lines(selection, src, loc)
+      self._select_tagged_lines(selection, src, src_path, loc)
     } else {
       Ok(())
     }
@@ -184,24 +187,37 @@ impl<'arena> Parser<'arena> {
     &mut self,
     selection: TagSpecs,
     src: &mut BumpVec<'arena, u8>,
-    loc: SourceLocation,
+    src_path: &Path,
+    attr_loc: SourceLocation,
   ) -> Result<()> {
     let mut dest = BumpVec::with_capacity_in(src.len(), self.bump);
-    let mut tag_stack = Vec::with_capacity(2);
+    let mut tag_stack = TagStack::new();
     let lines = src.split(|&c| c == b'\n');
     let strategy = selection.strategy();
     let mut expected_tags = selection.expected_tags();
-    for line in lines {
+    for (idx, line) in lines.enumerate() {
       match tag_directive(line) {
         Some(TagDirective::Start(tag)) => {
           expected_tags.remove(&tag);
-          tag_stack.push(tag);
+          tag_stack.push(tag, idx);
         }
         Some(TagDirective::End(tag)) => {
-          if tag_stack.last() == Some(&tag) {
+          if tag_stack.last_is(&tag) {
             tag_stack.pop();
-          } else {
-            // TODO: emit error
+          } else if selection.expected_tags().contains(&tag) {
+            let line = nth_line(src, idx).unwrap().to_string();
+            let underline_start = line.find(&tag).unwrap_or(0) as u32;
+            self.err(Diagnostic {
+              line_num: (idx as u32) + 1,
+              line,
+              message: tag_stack.last().map_or_else(
+                || format!("Unexpected end tag `{}`", tag),
+                |t| format!("Mismatched end tag, expected `{}` but found `{}`", t.0, tag),
+              ),
+              underline_start,
+              underline_width: tag.len() as u32,
+              source_file: SourceFile::Path(src_path.clone()),
+            })?;
           }
         }
         None => {
@@ -217,7 +233,20 @@ impl<'arena> Parser<'arena> {
       }
     }
 
-    std::mem::swap(src, &mut dest);
+    if let Some((tag, line_idx)) = tag_stack.last() {
+      if selection.expected_tags().contains(tag) {
+        let line = nth_line(src, *line_idx).unwrap().to_string();
+        let underline_start = line.find(tag).unwrap_or(0) as u32;
+        self.err(Diagnostic {
+          line_num: (*line_idx as u32) + 1,
+          line,
+          message: format!("Tag `{}` was not closed", tag),
+          underline_start,
+          underline_width: tag.len() as u32,
+          source_file: SourceFile::Path(src_path.clone()),
+        })?;
+      }
+    }
 
     if !expected_tags.is_empty() {
       let mut tags = expected_tags.into_iter().collect::<Vec<_>>();
@@ -228,11 +257,53 @@ impl<'arena> Parser<'arena> {
           if tags.len() > 1 { "s" } else { "" },
           tags.join("`, `"),
         ),
-        loc,
+        attr_loc,
       )?;
     }
 
+    std::mem::swap(src, &mut dest);
+
     Ok(())
+  }
+}
+
+fn nth_line(src: &[u8], n: usize) -> Option<&str> {
+  src
+    .split(|&c| c == b'\n')
+    .nth(n)
+    .and_then(|line| std::str::from_utf8(line).ok())
+}
+
+#[derive(Debug)]
+struct TagStack(Vec<(String, usize)>);
+
+impl TagStack {
+  fn new() -> Self {
+    TagStack(Vec::with_capacity(3))
+  }
+
+  fn push(&mut self, tag: String, line_idx: usize) {
+    self.0.push((tag, line_idx));
+  }
+
+  fn pop(&mut self) {
+    self.0.pop();
+  }
+
+  fn is_empty(&self) -> bool {
+    self.0.is_empty()
+  }
+
+  fn last_is(&self, tag: &str) -> bool {
+    self.0.last().map(|(t, _)| t == tag).unwrap_or(false)
+  }
+
+  fn last(&self) -> Option<&(String, usize)> {
+    self.0.last()
+  }
+
+  fn contains(&self, tag: &str) -> bool {
+    self.0.iter().any(|(t, _)| t == tag)
   }
 }
 
@@ -699,7 +770,12 @@ mod test {
       let mut parser = test_parser!("");
       assert_eq!(parse_selection(unparsed), selection);
       parser
-        ._select_tagged_lines(selection, &mut file, SourceLocation::new(0, 1))
+        ._select_tagged_lines(
+          selection,
+          &mut file,
+          &Path::new(""),
+          SourceLocation::new(0, 1),
+        )
         .unwrap();
       let expected = unindent::unindent(expected);
       assert_eq!(std::str::from_utf8(&file).unwrap(), expected);

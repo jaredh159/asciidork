@@ -19,6 +19,7 @@ impl<'arena> Parser<'arena> {
   pub(super) fn select_lines(
     &mut self,
     include_attrs: &AttrList,
+    src_path: &Path,
     bytes: &mut BumpVec<'arena, u8>,
   ) -> Result<()> {
     // NB: selecting lines takes precedence over tags
@@ -26,7 +27,7 @@ impl<'arena> Parser<'arena> {
       self.select_line_ranges(lines, bytes);
       Ok(())
     } else {
-      self.select_tagged_lines(include_attrs, bytes)
+      self.select_tagged_lines(include_attrs, src_path, bytes)
     }
   }
 
