@@ -168,6 +168,15 @@ impl<'arena> Parser<'arena> {
         .read_lines_until(delimiter)?
         .unwrap_or_else(|| ContiguousLines::new(Deq::new(self.bump)));
 
+      if let Some(indent) = meta
+        .attr_named("indent")
+        .and_then(|s| s.parse::<usize>().ok())
+      {
+        let delimiter = lines.pop();
+        lines.set_indentation(indent);
+        delimiter.map(|d| lines.push(d));
+      }
+
       if context == Context::Listing || context == Context::Literal {
         if let Some(comment) = meta.attrs.as_ref().and_then(|a| a.named("line-comment")) {
           self.ctx.custom_line_comment = Some(SmallVec::from_slice(comment.as_bytes()));

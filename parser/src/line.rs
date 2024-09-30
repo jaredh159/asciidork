@@ -658,6 +658,44 @@ impl<'arena> Line<'arena> {
       }
     }
   }
+
+  pub fn get_indentation(&self) -> usize {
+    self
+      .current_token()
+      .filter(|t| t.is(Whitespace))
+      .map_or(0, |t| t.lexeme.len())
+  }
+
+  pub fn set_indentation(&mut self, indent: usize) {
+    let Some(token) = self.current_token_mut() else {
+      return;
+    };
+    let token_len = token.len();
+    if token.is(Whitespace) && token_len > indent {
+      let delta = token_len - indent;
+      if delta == token_len {
+        self.tokens.pop_front();
+      } else {
+        token.loc.start += delta as u32;
+        for _ in 0..delta {
+          token.lexeme.pop();
+        }
+      }
+    } else if token.is(Whitespace) && token_len < indent {
+      // this is a little hinky, as the source locations are lying now
+      // maybe would be better to have an explicit token type to formalize
+      // a indentation created out of thin air with no source location ?
+      token.lexeme.push_str(&" ".repeat(indent - token_len));
+    } else if !token.is(Whitespace) && indent != 0 {
+      let loc = token.loc.clamp_start();
+      // ... also hinky
+      self.tokens.slowly_push_front(Token::new(
+        Whitespace,
+        loc,
+        BumpString::from_str_in(&" ".repeat(indent), self.tokens.bump),
+      ));
+    }
+  }
 }
 
 lazy_static! {
@@ -669,6 +707,25 @@ mod tests {
   use crate::internal::*;
   use crate::token::{TokenKind::*, TokenSpec::*, *};
   use test_utils::*;
+
+  #[test]
+  fn set_indentation() {
+    let cases = vec![
+      ("    foo", 2, "  foo", 2..4),
+      ("    foo", 1, " foo", 3..4),
+      ("  foo", 2, "  foo", 0..2),
+      ("  foo", 0, "foo", 2..5),
+      ("foo  ", 2, "  foo  ", 0..0),
+      ("  foo", 4, "    foo", 0..2),
+      ("foo", 4, "    foo", 0..0),
+    ];
+    for (input, indent, expected, range) in cases {
+      let mut line = read_line!(input);
+      line.set_indentation(indent);
+      expect_eq!(line.reassemble_src(), expected, from: input);
+      expect_eq!(line.current_token().unwrap().loc, range.into(), from: input);
+    }
+  }
 
   #[test]
   fn test_continues_list_item_principle() {

@@ -35,6 +35,8 @@
       `{docdate}` example, see also
       https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#note-docdatetime
 - [ ] h1 subtitle
+- [ ] `tabsize`, see
+      https://docs.asciidoctor.org/asciidoc/latest/directives/include-with-indent/#the-indent-attribute
 - [√] indented listing/literal blocks
 - [√] breaks
 - [√] hard breaks

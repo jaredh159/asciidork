@@ -108,9 +108,13 @@ impl<'arena, T> Deq<'arena, T> {
   // should only be called when we know we have a slot to overwrite
   // which is why there is a debug_assert! to catch misuse
   pub fn push_front(&mut self, item: T) {
+    assert!(self.pos != 0, "unexpected O(n) push_front in Deq");
+    self.slowly_push_front(item); // not actually slow if assert didn't fire
+  }
+
+  pub fn slowly_push_front(&mut self, item: T) {
     if self.pos == 0 {
       self.buf.insert(0, item);
-      debug_assert!(false, "unexpected O(n) push_front in Deq");
     } else {
       self.pos -= 1;
       self.buf[self.pos] = item;

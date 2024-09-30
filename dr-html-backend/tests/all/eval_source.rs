@@ -43,6 +43,39 @@ assert_html!(
 );
 
 assert_html!(
+  source_block_indent_0,
+  adoc! {r#"
+    [source,ruby,indent=0]
+    ----
+      get '/hi' do
+        "Hello World!"
+      end
+    ----
+  "#},
+  wrap_source(
+    "ruby",
+    raw_html! {r#"
+      get '/hi' do
+        "Hello World!"
+      end
+    "#}
+  )
+);
+
+assert_html!(
+  source_block_indent_2,
+  adoc! {r#"
+    [source,ruby,indent=2]
+    ----
+    get '/hi' do
+      "Hello World!"
+    end
+    ----
+  "#},
+  contains: ">  get '/hi' do\n    \"Hello World!\"\n  end<"
+);
+
+assert_html!(
   source_block_from_style_no_delims,
   adoc! {r#"
     [source,ruby]

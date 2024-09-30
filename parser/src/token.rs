@@ -2,6 +2,13 @@ use std::cmp::Ordering;
 
 use crate::internal::*;
 
+#[derive(Clone, PartialEq, Eq)]
+pub struct Token<'arena> {
+  pub kind: TokenKind,
+  pub loc: SourceLocation,
+  pub lexeme: BumpString<'arena>,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum TokenKind {
   Ampersand,
@@ -69,13 +76,6 @@ impl From<TokenKind> for TokenSpec {
   fn from(kind: TokenKind) -> Self {
     TokenSpec::Kind(kind)
   }
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct Token<'arena> {
-  pub kind: TokenKind,
-  pub loc: SourceLocation,
-  pub lexeme: BumpString<'arena>,
 }
 
 impl<'arena> Token<'arena> {

@@ -252,6 +252,34 @@ impl<'arena> ContiguousLines<'arena> {
     }
     true
   }
+
+  pub fn get_indentation(&self) -> usize {
+    let mut indent = usize::MAX;
+    for line in self.iter() {
+      let line_indent = line.get_indentation();
+      if line_indent < indent {
+        indent = line_indent;
+      }
+    }
+    if indent == usize::MAX {
+      0
+    } else {
+      indent
+    }
+  }
+
+  pub fn set_indentation(&mut self, indent: usize) {
+    let current = self.get_indentation();
+    if current == indent {
+      return;
+    }
+    self.lines.iter_mut().for_each(|line| {
+      let line_indent = line.get_indentation();
+      if line_indent >= current {
+        line.set_indentation(line_indent - current + indent);
+      }
+    });
+  }
 }
 
 impl<'arena> DefaultIn<'arena> for Line<'arena> {

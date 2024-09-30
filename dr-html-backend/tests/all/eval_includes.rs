@@ -218,6 +218,24 @@ assert_html!(
 );
 
 assert_html!(
+  lines_attr_overrides_tags,
+  resolving: bytes! {"
+    Line 1
+    // tag::a[]
+    Tag a
+    // end::a[]
+  "},
+  adoc! {r#"
+    include::other.adoc[lines=1,tag=a]
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Line 1</p>
+    </div>
+  "#}
+);
+
+assert_html!(
   selecting_tags_no_error_for_missing_negated,
   resolving: TAGGED_RUBY_CLASS,
   adoc! {r#"
