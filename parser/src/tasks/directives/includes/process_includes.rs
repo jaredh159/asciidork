@@ -82,6 +82,7 @@ impl<'arena> Parser<'arena> {
           ));
         }
         self.select_lines(&directive.attrs, &target_abspath, &mut buffer)?;
+        self.set_include_indentation(&directive.attrs, &mut buffer);
         self.lexer.push_source(target_abspath, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
@@ -184,6 +185,44 @@ impl<'arena> Parser<'arena> {
       directive.first_token.loc.end + directive.target_str.len() as u32,
     )
   }
+
+  fn set_include_indentation(&self, attrs: &AttrList, buf: &mut BumpVec<'arena, u8>) {
+    if let Some(indent) = attrs.named("indent").and_then(|s| s.parse::<usize>().ok()) {
+      _set_indentation(indent, buf, self.bump);
+    };
+  }
+}
+
+fn _set_indentation<'arena>(indent: usize, buf: &mut BumpVec<'arena, u8>, bump: &'arena Bump) {
+  let mut trimmed = buf.as_slice();
+  if trimmed.last() == Some(&b'\n') {
+    trimmed = &trimmed[..trimmed.len() - 1];
+  }
+  let Some(min_indent) = trimmed
+    .split(|&c| c == b'\n')
+    .fold(Option::<usize>::None, |acc, line| {
+      let line_indent = line.iter().take_while(|&&c| c == b' ').count();
+      match acc {
+        Some(current) => Some(current.min(line_indent)),
+        None => Some(line_indent),
+      }
+    })
+  else {
+    return;
+  };
+  if indent != min_indent {
+    let mut dest = BumpVec::with_capacity_in(buf.len(), bump);
+    buf.split(|&c| c == b'\n').for_each(|line| {
+      let line_indent = line.iter().take_while(|&&c| c == b' ').count();
+      if line_indent >= min_indent {
+        dest.extend(std::iter::repeat(b' ').take(line_indent - min_indent + indent));
+        dest.extend(line.iter().skip(line_indent));
+        dest.push(b'\n');
+      }
+    });
+    dest.pop();
+    std::mem::swap(buf, &mut dest);
+  }
 }
 
 lazy_static! {
@@ -194,6 +233,23 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use test_utils::*;
+
+  #[test]
+  fn test_indent_to_0() {
+    let input = "  foo\n    bar\n  baz";
+    let mut buf = BumpVec::from_iter_in(input.bytes(), leaked_bump());
+    _set_indentation(0, &mut buf, leaked_bump());
+    assert_eq!(std::str::from_utf8(&buf).unwrap(), "foo\n  bar\nbaz");
+  }
+
+  #[test]
+  fn test_indent_to_2() {
+    let input = "foo\n  bar\nbaz";
+    let mut buf = BumpVec::from_iter_in(input.bytes(), leaked_bump());
+    _set_indentation(2, &mut buf, leaked_bump());
+    assert_eq!(std::str::from_utf8(&buf).unwrap(), "  foo\n    bar\n  baz");
+  }
 
   #[test]
   fn valid_includes() {
@@ -205,12 +261,3 @@ mod tests {
     assert!(!VALID_INCLUDE.is_match("include::invalid []"));
   }
 }
-
-// include::target[
-//    leveloffset=offset,
-//    lines=ranges,
-//    tag(s)=name(s),
-//    indent=depth,
-//    encoding=encoding,
-//    opts=optional
-// ]

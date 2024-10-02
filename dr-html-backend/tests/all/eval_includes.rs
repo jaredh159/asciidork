@@ -260,6 +260,32 @@ assert_html!(
   "#}.trim()
 );
 
+assert_html!(
+  include_indentation_remove,
+  resolving: TAGGED_RUBY_CLASS,
+  adoc! {r#"
+    ----
+    include::file.rb[tags=init,indent=0]
+    ----
+  "#},
+  contains: &indoc::indoc! {r#"
+    def initialize breed
+      @breed = breed
+    end
+  "#}.trim()
+);
+
+assert_html!(
+  include_indentation_increase,
+  resolving: TAGGED_RUBY_CLASS,
+  adoc! {r#"
+    ----
+    include::file.rb[tags=init,indent=4]
+    ----
+  "#},
+  contains: "<pre>    def initialize breed\n      @breed = breed\n    end</pre>"
+);
+
 const TAGGED_RUBY_CLASS: &[u8] = b"#tag::all[]
 class Dog
   #tag::init[]
