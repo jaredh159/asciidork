@@ -7,13 +7,14 @@ impl<'arena> Parser<'arena> {
       return Ok(());
     };
 
-    if !is_doc_header(&block) {
+    if !self.is_doc_header(&block) {
       self.peeked_lines = Some(block);
       return Ok(());
     }
 
     block.discard_leading_comment_lines();
 
+    self.parse_doc_attrs(&mut block)?;
     self.parse_doc_title_author_revision(&mut block)?;
     self.parse_doc_attrs(&mut block)?;
     self.setup_toc();
@@ -44,15 +45,17 @@ impl<'arena> Parser<'arena> {
   }
 
   fn parse_doc_title_author_revision(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
-    let first_line = lines.current().expect("non-empty doc header");
-    if !first_line.is_heading_level(0) {
+    if !lines
+      .current()
+      .map_or(false, |first| self.ctx.line_heading_level(first) == Some(0))
+    {
       // author and revision must follow doc title, so if non title, skip
       return Ok(());
     }
 
     let mut header_line = lines.consume_current().unwrap();
     debug_assert!(header_line.starts_with_seq(&[Kind(EqualSigns), Kind(Whitespace)]));
-    header_line.discard(2);
+    header_line.discard(2); // equals, whitespace
     self
       .document
       .meta
@@ -72,23 +75,23 @@ impl<'arena> Parser<'arena> {
 
     Ok(())
   }
-}
 
-pub fn is_doc_header(lines: &ContiguousLines) -> bool {
-  for line in lines.iter() {
-    if line.is_heading_level(0) {
-      return true;
-    } else if line.is_comment() {
-      continue;
-    } else if !line.starts(Colon) {
-      return false;
-    } else {
-      return line.starts_with_seq(&[Kind(Colon), Kind(Word), Kind(Colon)])
-        || line.starts_with_seq(&[Kind(Colon), Kind(MacroName)])
-        || line.starts_with_seq(&[Kind(Colon), Kind(Bang), Kind(Word), Kind(Colon)]);
+  fn is_doc_header(&self, lines: &ContiguousLines) -> bool {
+    for line in lines.iter() {
+      if self.ctx.line_heading_level(line) == Some(0) {
+        return true;
+      } else if line.is_comment() {
+        continue;
+      } else if !line.starts(Colon) {
+        return false;
+      } else {
+        return line.starts_with_seq(&[Kind(Colon), Kind(Word), Kind(Colon)])
+          || line.starts_with_seq(&[Kind(Colon), Kind(MacroName)])
+          || line.starts_with_seq(&[Kind(Colon), Kind(Bang), Kind(Word), Kind(Colon)]);
+      }
     }
+    false
   }
-  false
 }
 
 #[cfg(test)]
@@ -127,9 +130,10 @@ mod tests {
       ),
     ];
     for (input, expected) in cases {
-      let lines = test_parser!(input).read_lines().unwrap().unwrap();
+      let mut parser = test_parser!(input);
+      let lines = parser.read_lines().unwrap().unwrap();
       expect_eq!(
-        is_doc_header(&lines),
+        parser.is_doc_header(&lines),
         expected,
         from: input
       );

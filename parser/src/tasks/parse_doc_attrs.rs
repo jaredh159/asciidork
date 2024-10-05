@@ -23,7 +23,7 @@ impl<'arena> Parser<'arena> {
   }
 
   pub(super) fn parse_doc_attr(
-    &self,
+    &mut self,
     lines: &mut ContiguousLines<'arena>,
   ) -> Result<Option<(String, AttrValue, u32)>> {
     let Some(line) = lines.current() else {
@@ -73,11 +73,31 @@ impl<'arena> Parser<'arena> {
       AttrValue::Bool(!is_negated)
     };
 
+    if key == "leveloffset" {
+      self.set_leveloffset(&attr);
+    }
+
     Ok(Some((
       key.to_string(),
       attr,
       line.last_location().unwrap().end,
     )))
+  }
+
+  pub(crate) fn set_leveloffset(&mut self, value: &AttrValue) {
+    match value {
+      AttrValue::String(s) => {
+        if let Some(add) = s.strip_prefix('+') {
+          self.ctx.leveloffset += add.parse::<i8>().unwrap_or(0);
+        } else if let Some(sub) = s.strip_prefix('-') {
+          self.ctx.leveloffset -= sub.parse::<i8>().unwrap_or(0);
+        } else {
+          self.ctx.leveloffset = s.parse::<i8>().unwrap_or(self.ctx.leveloffset);
+        }
+      }
+      AttrValue::Bool(false) => self.ctx.leveloffset = 0,
+      AttrValue::Bool(true) => {}
+    }
   }
 
   fn join_wrapped_value(
@@ -124,6 +144,27 @@ lazy_static! {
 mod tests {
   use super::*;
   use test_utils::*;
+
+  #[test]
+  fn test_leveloffset() {
+    let cases = vec![
+      (0, AttrValue::String("1".into()), 1),
+      (0, AttrValue::String("+1".into()), 1),
+      (0, AttrValue::String("+4".into()), 4),
+      (1, AttrValue::String("+1".into()), 2),
+      (2, AttrValue::String("-1".into()), 1),
+      (2, AttrValue::String("-6".into()), -4),
+      (0, AttrValue::Bool(false), 0),
+      (1, AttrValue::Bool(false), 0),
+      (4, AttrValue::Bool(false), 0),
+    ];
+    let mut parser = test_parser!("");
+    for (initial, attr_value, expected) in cases {
+      parser.ctx.leveloffset = initial;
+      parser.set_leveloffset(&attr_value);
+      assert_eq!(parser.ctx.leveloffset, expected);
+    }
+  }
 
   #[test]
   fn test_parse_doc_attr() {

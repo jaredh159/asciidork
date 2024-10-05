@@ -14,7 +14,7 @@ impl<'arena> Parser<'arena> {
 
     let meta = self.parse_chunk_meta(&mut lines)?;
 
-    match lines.section_start_level(&meta) {
+    match self.ctx.section_start_level(&lines, &meta) {
       Some(level) if level <= self.ctx.section_level => {
         self.restore_peeked(lines, meta);
         return Ok(None);
@@ -107,7 +107,7 @@ impl<'arena> Parser<'arena> {
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     let mut line = lines.consume_current().unwrap();
-    let level = line.heading_level().unwrap();
+    let level = self.ctx.line_heading_level(&line).unwrap();
     line.discard_assert(TokenKind::EqualSigns);
     line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&line, meta.attrs.as_ref());

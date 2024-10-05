@@ -6,10 +6,10 @@ use test_utils::*;
 fn test_parse_section() {
   assert_section!(
     adoc! {"
-        == foo
+      == foo
 
-        bar
-      "},
+      bar
+    "},
     Section {
       meta: ChunkMeta::empty(0),
       level: 1,

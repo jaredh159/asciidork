@@ -51,6 +51,9 @@ impl<'arena> Parser<'arena> {
   }
 
   pub fn apply_job_settings(&mut self, settings: JobSettings) {
+    if let Some(leveloffset) = settings.job_attrs.get("leveloffset") {
+      self.set_leveloffset(&leveloffset.value);
+    }
     self.strict = settings.strict;
     self.document.meta = settings.into();
     self.set_source_file_attrs();

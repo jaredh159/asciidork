@@ -76,21 +76,43 @@ fn test_parse_paragraph_comment_block() {
 }
 
 #[test]
-fn test_parse_discrete_heading() {
-  assert_block!(
+fn test_parse_discrete_headings() {
+  assert_blocks!(
     adoc! {"
       [discrete]
       ==== A discrete heading
+
+      :leveloffset: 1
+
+      [float]
+      === Another discrete heading
     "},
-    Block {
-      meta: ChunkMeta::new(Some(attrs::pos("discrete", 1..9)), None, 0),
-      context: Context::DiscreteHeading,
-      content: Content::Empty(EmptyMetadata::DiscreteHeading {
-        level: 3,
-        content: just!("A discrete heading", 16..34),
-        id: Some(bstr!("_a_discrete_heading")),
-      }),
-    }
+    &[
+      Block {
+        meta: ChunkMeta::new(Some(attrs::pos("discrete", 1..9)), None, 0),
+        context: Context::DiscreteHeading,
+        content: Content::Empty(EmptyMetadata::DiscreteHeading {
+          level: 3,
+          content: just!("A discrete heading", 16..34),
+          id: Some(bstr!("_a_discrete_heading")),
+        }),
+      },
+      Block {
+        content: Content::DocumentAttribute("leveloffset".to_string(), "1".into()),
+        context: Context::DocumentAttributeDecl,
+        ..empty_block!(36)
+      },
+      Block {
+        //                                    vvvvv - synonym for `discrete`
+        meta: ChunkMeta::new(Some(attrs::pos("float", 54..59)), None, 53),
+        context: Context::DiscreteHeading,
+        content: Content::Empty(EmptyMetadata::DiscreteHeading {
+          level: 3, // <- discrete headings are subject to `leveloffset`
+          content: just!("Another discrete heading", 65..89),
+          id: Some(bstr!("_another_discrete_heading")),
+        }),
+      }
+    ]
   );
 }
 

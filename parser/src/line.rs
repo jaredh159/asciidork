@@ -133,7 +133,7 @@ impl<'arena> Line<'arena> {
     self.current_token().is_len(kind, len)
   }
 
-  pub fn heading_level(&self) -> Option<u8> {
+  pub fn unadjusted_heading_level(&self) -> Option<u8> {
     if self.starts_with_seq(&[Kind(EqualSigns), Kind(Whitespace)]) && self.num_tokens() > 2 {
       Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
     } else {
@@ -146,11 +146,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_heading(&self) -> bool {
-    self.heading_level().is_some()
-  }
-
-  pub fn is_heading_level(&self, level: u8) -> bool {
-    self.heading_level() == Some(level)
+    self.unadjusted_heading_level().is_some()
   }
 
   pub fn is_block_macro(&self) -> bool {

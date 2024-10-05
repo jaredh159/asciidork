@@ -214,26 +214,6 @@ impl<'arena> ContiguousLines<'arena> {
     }
   }
 
-  pub fn starts_section(&self, meta: &ChunkMeta<'arena>) -> bool {
-    self.section_start_level(meta).is_some()
-  }
-
-  pub fn section_start_level(&self, meta: &ChunkMeta<'arena>) -> Option<u8> {
-    for line in self.iter() {
-      if line.is_attr_list() || line.is_chunk_title() {
-        continue;
-      } else if let Some(level) = line.heading_level() {
-        return match meta.attrs_has_str_positional("discrete") {
-          true => None,
-          false => Some(level),
-        };
-      } else {
-        return None;
-      }
-    }
-    None
-  }
-
   pub fn trim_uniform_leading_whitespace(&mut self) -> bool {
     if self.is_empty() || !self.first().unwrap().starts(TokenKind::Whitespace) {
       return false;

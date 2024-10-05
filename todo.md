@@ -37,6 +37,7 @@
 - [ ] h1 subtitle
 - [ ] `tabsize`, see
       https://docs.asciidoctor.org/asciidoc/latest/directives/include-with-indent/#the-indent-attribute
+- [ ] doctype=book, special rules
 - [√] indented listing/literal blocks
 - [√] breaks
 - [√] hard breaks

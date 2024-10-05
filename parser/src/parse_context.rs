@@ -9,6 +9,7 @@ pub struct ParseContext<'arena> {
   pub delimiter: Option<Delimiter>,
   pub list: ListContext,
   pub section_level: u8,
+  pub leveloffset: i8,
   pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
   pub anchor_ids: Rc<RefCell<HashSet<BumpString<'arena>>>>,
@@ -34,6 +35,7 @@ impl<'arena> ParseContext<'arena> {
       delimiter: None,
       list: ListContext::default(),
       section_level: 0,
+      leveloffset: 0,
       can_nest_blocks: true,
       callouts: Rc::new(RefCell::new(bvec![in bump])),
       custom_line_comment: None,
@@ -52,6 +54,7 @@ impl<'arena> ParseContext<'arena> {
       delimiter: None,
       list: ListContext::default(),
       section_level: 0,
+      leveloffset: 0,
       can_nest_blocks: true,
       callouts: Rc::clone(&self.callouts),
       custom_line_comment: None,
@@ -126,5 +129,45 @@ impl<'arena> ParseContext<'arena> {
     // says that subs element is only valid on leaf blocks
     self.subs = customize_subs::from_meta(self.subs, &meta.attrs);
     restore
+  }
+
+  const fn apply_leveloffset(&self, level: u8) -> u8 {
+    if self.leveloffset == 0 {
+      return level;
+    }
+    let new_level = (level as i8) + self.leveloffset;
+    if new_level < 0 {
+      0
+    } else {
+      new_level as u8
+    }
+  }
+
+  pub fn section_start_level(
+    &self,
+    lines: &ContiguousLines<'arena>,
+    meta: &ChunkMeta<'arena>,
+  ) -> Option<u8> {
+    for line in lines.iter() {
+      if line.is_attr_list() || line.is_chunk_title() {
+        continue;
+      } else if let Some(level) = self.line_heading_level(line) {
+        return match meta.attrs_has_str_positional("discrete")
+          || meta.attrs_has_str_positional("float")
+        {
+          true => None,
+          false => Some(level),
+        };
+      } else {
+        return None;
+      }
+    }
+    None
+  }
+
+  pub fn line_heading_level(&self, line: &Line) -> Option<u8> {
+    line
+      .unadjusted_heading_level()
+      .map(|l| self.apply_leveloffset(l))
   }
 }

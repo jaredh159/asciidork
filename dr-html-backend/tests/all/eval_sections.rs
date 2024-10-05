@@ -580,3 +580,40 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  leveloffset,
+  adoc! {r#"
+    == Section 1
+
+    :leveloffset: +1
+
+    = Section 2
+
+    :leveloffset!:
+
+    == Section 3
+
+    :leveloffset: 2
+
+    = Section 4
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_section_1">Section 1</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_section_2">Section 2</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_section_3">Section 3</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_section_4">Section 4</h3>
+        </div>
+      </div>
+    </div>
+  "#}
+);
