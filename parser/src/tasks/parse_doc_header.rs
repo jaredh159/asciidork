@@ -47,7 +47,7 @@ impl<'arena> Parser<'arena> {
   fn parse_doc_title_author_revision(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
     if !lines
       .current()
-      .map_or(false, |first| self.ctx.line_heading_level(first) == Some(0))
+      .map_or(false, |first| self.line_heading_level(first) == Some(0))
     {
       // author and revision must follow doc title, so if non title, skip
       return Ok(());
@@ -78,7 +78,7 @@ impl<'arena> Parser<'arena> {
 
   fn is_doc_header(&self, lines: &ContiguousLines) -> bool {
     for line in lines.iter() {
-      if self.ctx.line_heading_level(line) == Some(0) {
+      if self.line_heading_level(line) == Some(0) {
         return true;
       } else if line.is_comment() {
         continue;

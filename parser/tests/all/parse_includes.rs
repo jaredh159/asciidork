@@ -174,11 +174,16 @@ fn include_with_2_trailing_newlines() {
         ..empty_block!(0)
       },
       Block {
+        context: BlockContext::Comment,
+        content: BlockContent::Empty(EmptyMetadata::IncludeBoundary {
+          kind: Boundary::End,
+          depth: 1
+        }),
+        ..empty_block!(7)
+      },
+      Block {
         context: BlockContext::Paragraph,
-        content: BlockContent::Simple(nodes![
-          node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
-          node!("Line-3"; 33..39),
-        ]),
+        content: BlockContent::Simple(just!("Line-3", 33..39)),
         ..empty_block!(7)
       }
     ])

@@ -9,11 +9,24 @@ pub struct SourceLexer<'arena> {
   pub pos: u32,
   pub offset: u32,
   pub file: SourceFile,
+  pub leveloffset: i8,
 }
 
 impl<'arena> SourceLexer<'arena> {
-  pub fn new(src: BumpVec<'arena, u8>, file: SourceFile, bump: &'arena Bump) -> Self {
-    Self { bump, src, pos: 0, offset: 0, file }
+  pub fn new(
+    src: BumpVec<'arena, u8>,
+    file: SourceFile,
+    leveloffset: i8,
+    bump: &'arena Bump,
+  ) -> Self {
+    Self {
+      bump,
+      src,
+      pos: 0,
+      offset: 0,
+      leveloffset,
+      file,
+    }
   }
 
   pub fn from_str(s: &str, file: SourceFile, bump: &'arena Bump) -> Self {
@@ -26,6 +39,7 @@ impl<'arena> SourceLexer<'arena> {
       src: BumpVec::from_iter_in(bytes.iter().copied(), bump),
       pos: 0,
       offset: 0,
+      leveloffset: 0,
       file,
     }
   }
@@ -532,6 +546,7 @@ impl<'arena> Debug for SourceLexer<'arena> {
       .field("src", &String::from_utf8_lossy(&self.src))
       .field("pos", &self.pos)
       .field("offset", &self.offset)
+      .field("leveloffset", &self.leveloffset)
       .finish()
   }
 }

@@ -286,6 +286,47 @@ assert_html!(
   contains: "<pre>    def initialize breed\n      @breed = breed\n    end</pre>"
 );
 
+assert_html!(
+  include_leveloffset,
+  resolving: bytes! {"
+    = Section 2
+  "},
+  adoc! {r#"
+    == Section 1
+
+    include::file.adoc[leveloffset=+1]
+
+    == Section 3
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_section_1">Section 1</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_section_2">Section 2</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_section_3">Section 3</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  include_leveloffset_alt,
+  resolving: bytes! {"
+    = Section 2
+  "},
+  adoc! {r#"
+    == Section 1
+
+    include::file.adoc[leveloffset=+1]
+  "#},
+   contains: r#"<h2 id="_section_2">Section 2</h2>"#
+);
+
 const TAGGED_RUBY_CLASS: &[u8] = b"#tag::all[]
 class Dog
   #tag::init[]

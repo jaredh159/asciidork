@@ -130,44 +130,4 @@ impl<'arena> ParseContext<'arena> {
     self.subs = customize_subs::from_meta(self.subs, &meta.attrs);
     restore
   }
-
-  const fn apply_leveloffset(&self, level: u8) -> u8 {
-    if self.leveloffset == 0 {
-      return level;
-    }
-    let new_level = (level as i8) + self.leveloffset;
-    if new_level < 0 {
-      0
-    } else {
-      new_level as u8
-    }
-  }
-
-  pub fn section_start_level(
-    &self,
-    lines: &ContiguousLines<'arena>,
-    meta: &ChunkMeta<'arena>,
-  ) -> Option<u8> {
-    for line in lines.iter() {
-      if line.is_attr_list() || line.is_chunk_title() {
-        continue;
-      } else if let Some(level) = self.line_heading_level(line) {
-        return match meta.attrs_has_str_positional("discrete")
-          || meta.attrs_has_str_positional("float")
-        {
-          true => None,
-          false => Some(level),
-        };
-      } else {
-        return None;
-      }
-    }
-    None
-  }
-
-  pub fn line_heading_level(&self, line: &Line) -> Option<u8> {
-    line
-      .unadjusted_heading_level()
-      .map(|l| self.apply_leveloffset(l))
-  }
 }

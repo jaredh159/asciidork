@@ -8,25 +8,27 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    if let Some(comment_block) = self.parse_line_comment_block(&mut lines) {
-      return Ok(Some(comment_block));
+    if let Some(empty_block) = self.parse_empty_block(&mut lines) {
+      self.restore_lines(lines);
+      return Ok(Some(empty_block));
     }
 
     let meta = self.parse_chunk_meta(&mut lines)?;
 
-    match self.ctx.section_start_level(&lines, &meta) {
-      Some(level) if level <= self.ctx.section_level => {
+    match self.section_start_level(&lines, &meta) {
+      Some(0) => {} // skip document titles
+      Some(level) => {
         self.restore_peeked(lines, meta);
-        return Ok(None);
-      }
-      Some(_) => {
-        self.restore_peeked(lines, meta);
-        let section = self.parse_section()?.unwrap();
-        return Ok(Some(Block {
-          meta: ChunkMeta::empty(section.meta.start),
-          context: Context::Section,
-          content: Content::Section(section),
-        }));
+        if level <= self.ctx.section_level {
+          return Ok(None);
+        } else {
+          let section = self.parse_section()?.unwrap();
+          return Ok(Some(Block {
+            meta: ChunkMeta::empty(section.meta.start),
+            context: Context::Section,
+            content: Content::Section(section),
+          }));
+        }
       }
       _ => {}
     }
@@ -107,7 +109,7 @@ impl<'arena> Parser<'arena> {
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     let mut line = lines.consume_current().unwrap();
-    let level = self.ctx.line_heading_level(&line).unwrap();
+    let level = self.line_heading_level(&line).unwrap();
     line.discard_assert(TokenKind::EqualSigns);
     line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&line, meta.attrs.as_ref());
@@ -122,10 +124,7 @@ impl<'arena> Parser<'arena> {
 
   // important to represent these as an ast node because
   // they are the documented way to separate adjacent lists
-  fn parse_line_comment_block(
-    &mut self,
-    lines: &mut ContiguousLines<'arena>,
-  ) -> Option<Block<'arena>> {
+  fn parse_empty_block(&mut self, lines: &mut ContiguousLines<'arena>) -> Option<Block<'arena>> {
     if lines.starts_with_comment_line() {
       let start = lines.current_token().unwrap().loc.start;
       lines.consume_current();
@@ -138,7 +137,30 @@ impl<'arena> Parser<'arena> {
         });
       }
     }
-    None
+    let Some(token) = lines.current_token() else {
+      return None;
+    };
+
+    use TokenKind::*;
+    if matches!(token.kind, PreprocBeginInclude | PreprocEndInclude) {
+      let kind = match token.kind {
+        PreprocBeginInclude => IncludeBoundaryKind::Begin,
+        PreprocEndInclude => IncludeBoundaryKind::End,
+        _ => unreachable!(),
+      };
+      let mut line = lines.consume_current().unwrap();
+      let token = line.consume_current().unwrap();
+      lines.restore_if_nonempty(line);
+      let depth: u16 = token.lexeme[3..8].parse().unwrap();
+      let start = token.loc.start;
+      Some(Block {
+        meta: ChunkMeta::empty(start),
+        context: Context::Comment,
+        content: Content::Empty(EmptyMetadata::IncludeBoundary { kind, depth }),
+      })
+    } else {
+      None
+    }
   }
 
   fn parse_delimited_block(

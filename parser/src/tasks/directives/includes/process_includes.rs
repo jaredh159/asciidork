@@ -83,7 +83,15 @@ impl<'arena> Parser<'arena> {
         }
         self.select_lines(&directive.attrs, &target_abspath, &mut buffer)?;
         self.set_include_indentation(&directive.attrs, &mut buffer);
-        self.lexer.push_source(target_abspath, buffer);
+        let mut leveloffset = 0;
+        if let Some(offset_attr) = directive
+          .attrs
+          .named("leveloffset")
+          .map(|s| AttrValue::String(s.to_string()))
+        {
+          Parser::adjust_leveloffset(&mut leveloffset, &offset_attr);
+        }
+        self.lexer.push_source(target_abspath, leveloffset, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(ResolveError::NotFound) if directive.attrs.has_option("optional") => {

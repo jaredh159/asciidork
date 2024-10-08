@@ -74,7 +74,7 @@ impl<'arena> Parser<'arena> {
     };
 
     if key == "leveloffset" {
-      self.set_leveloffset(&attr);
+      Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &attr);
     }
 
     Ok(Some((
@@ -82,22 +82,6 @@ impl<'arena> Parser<'arena> {
       attr,
       line.last_location().unwrap().end,
     )))
-  }
-
-  pub(crate) fn set_leveloffset(&mut self, value: &AttrValue) {
-    match value {
-      AttrValue::String(s) => {
-        if let Some(add) = s.strip_prefix('+') {
-          self.ctx.leveloffset += add.parse::<i8>().unwrap_or(0);
-        } else if let Some(sub) = s.strip_prefix('-') {
-          self.ctx.leveloffset -= sub.parse::<i8>().unwrap_or(0);
-        } else {
-          self.ctx.leveloffset = s.parse::<i8>().unwrap_or(self.ctx.leveloffset);
-        }
-      }
-      AttrValue::Bool(false) => self.ctx.leveloffset = 0,
-      AttrValue::Bool(true) => {}
-    }
   }
 
   fn join_wrapped_value(
@@ -158,11 +142,9 @@ mod tests {
       (1, AttrValue::Bool(false), 0),
       (4, AttrValue::Bool(false), 0),
     ];
-    let mut parser = test_parser!("");
-    for (initial, attr_value, expected) in cases {
-      parser.ctx.leveloffset = initial;
-      parser.set_leveloffset(&attr_value);
-      assert_eq!(parser.ctx.leveloffset, expected);
+    for (mut initial, attr_value, expected) in cases {
+      Parser::adjust_leveloffset(&mut initial, &attr_value);
+      assert_eq!(initial, expected);
     }
   }
 

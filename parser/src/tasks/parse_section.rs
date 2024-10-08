@@ -12,7 +12,7 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    let Some(level) = self.ctx.line_heading_level(line) else {
+    let Some(level) = self.line_heading_level(line) else {
       self.restore_peeked(lines, meta);
       return Ok(None);
     };

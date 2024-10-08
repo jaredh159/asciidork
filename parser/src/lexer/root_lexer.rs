@@ -24,7 +24,7 @@ impl<'arena> RootLexer<'arena> {
       idx: 0,
       next_idx: None,
       source_stack: Vec::new(),
-      sources: bvec![in bump; SourceLexer::new(src, file, bump)],
+      sources: bvec![in bump; SourceLexer::new(src, file, 0, bump)],
       tmp_buf: None,
     }
   }
@@ -51,16 +51,19 @@ impl<'arena> RootLexer<'arena> {
     }
   }
 
-  pub fn push_source(&mut self, path: Path, mut src: BumpVec<'arena, u8>) {
+  pub fn push_source(&mut self, path: Path, leveloffset: i8, mut src: BumpVec<'arena, u8>) {
     // match asciidoctor - its include processor returns an array of lines
     // so even if the source has no trailing newline, it's inserted as a full line
     // NB: the include resolver has taken care of reserving space for the newline
     if src.last() != Some(&b'\n') {
       src.push(b'\n');
     }
-    self
-      .sources
-      .push(SourceLexer::new(src, SourceFile::Path(path), self.bump));
+    self.sources.push(SourceLexer::new(
+      src,
+      SourceFile::Path(path),
+      leveloffset,
+      self.bump,
+    ));
     let next_idx = self.sources.len() as u16 - 1;
     self.next_idx = Some(next_idx);
   }
@@ -79,6 +82,10 @@ impl<'arena> RootLexer<'arena> {
 
   pub const fn source_is_primary(&self) -> bool {
     self.idx == 0
+  }
+
+  pub fn leveloffset(&self, idx: u16) -> i8 {
+    self.sources[idx as usize].leveloffset
   }
 
   pub fn peek(&self) -> Option<u8> {
@@ -288,7 +295,7 @@ mod tests {
     assert_eq!(lexer.next_token(), Token::new(Newline, 23..24, bstr!("\n")));
 
     // now mimic the parser resolving the include directive with `b"bar\n"`
-    lexer.push_source(Path::new("bar.adoc"), vecb![b'b', b'a', b'r', b'\n']);
+    lexer.push_source(Path::new("bar.adoc"), 0, vecb![b'b', b'a', b'r', b'\n']);
     assert_eq!(
       lexer.next_token(),
       Token::new(PreprocBeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
