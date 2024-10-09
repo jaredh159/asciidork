@@ -294,20 +294,6 @@ assert_error!(
 
 #[test]
 fn include_resolver_gets_passed_correct_target() {
-  struct AssertResolver(&'static str);
-  impl IncludeResolver for AssertResolver {
-    fn resolve(
-      &mut self,
-      target: IncludeTarget,
-      _: &mut dyn IncludeBuffer,
-    ) -> std::result::Result<usize, ResolveError> {
-      assert_eq!(target, IncludeTarget::FilePath(self.0.to_string()));
-      Ok(0)
-    }
-    fn get_base_dir(&self) -> Option<String> {
-      Some(String::new())
-    }
-  }
   let cases = [
     ("include::spaced file.adoc[]", "spaced file.adoc"),
     ("include::with{sp}attr.adoc[]", "with attr.adoc"),
@@ -316,9 +302,23 @@ fn include_resolver_gets_passed_correct_target() {
   for (input, expected) in cases {
     let mut parser = test_parser!(input);
     parser.apply_job_settings(JobSettings::r#unsafe());
-    parser.set_resolver(Box::new(AssertResolver(expected)));
+    parser.set_resolver(Box::new(AssertResolver::new(expected)));
     assert!(parser.parse().is_ok());
   }
+}
+
+#[test]
+fn include_directive_resolves_attr_refs() {
+  let input = adoc! {"
+    :fixturesdir: fixtures/dir
+    :ext: adoc
+
+    include::{fixturesdir}/other.{ext}[]
+  "};
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(AssertResolver::new("fixtures/dir/other.adoc")));
+  assert!(parser.parse().is_ok());
 }
 
 #[test]
@@ -392,4 +392,39 @@ fn uri_read_not_allowed_include() {
       |          ^^^^^^^^^^^^^^^^^^^^^^^ Cannot include URL contents (allow-uri-read not enabled)
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err, from: input);
+}
+
+struct AssertResolver {
+  expected: String,
+  resolve_called: bool,
+}
+
+impl AssertResolver {
+  fn new(expected: impl Into<String>) -> Self {
+    Self {
+      expected: expected.into(),
+      resolve_called: false,
+    }
+  }
+}
+
+impl IncludeResolver for AssertResolver {
+  fn resolve(
+    &mut self,
+    target: IncludeTarget,
+    _: &mut dyn IncludeBuffer,
+  ) -> std::result::Result<usize, ResolveError> {
+    self.resolve_called = true;
+    assert_eq!(target, IncludeTarget::FilePath(self.expected.clone()));
+    Ok(0)
+  }
+  fn get_base_dir(&self) -> Option<String> {
+    Some(String::new())
+  }
+}
+
+impl Drop for AssertResolver {
+  fn drop(&mut self) {
+    assert!(self.resolve_called);
+  }
 }

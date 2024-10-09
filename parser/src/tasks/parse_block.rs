@@ -30,7 +30,7 @@ impl<'arena> Parser<'arena> {
           }));
         }
       }
-      _ => {}
+      None => {}
     }
 
     let first_token = lines.current_token().unwrap();

@@ -108,14 +108,15 @@ impl<'arena> Parser<'arena> {
     }
     if line.starts(TokenKind::Directive) {
       let copy = line.clone();
-      return match self.try_process_directive(&mut line)? {
+      match self.try_process_directive(&mut line)? {
         DirectiveAction::Passthrough => Ok(Some(copy)),
         DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
         DirectiveAction::ReadNextLine => self.read_line(),
         DirectiveAction::SkipLinesUntilEndIf => todo!(),
-      };
+      }
+    } else {
+      Ok(Some(line))
     }
-    Ok(Some(line))
   }
 
   pub(crate) fn read_lines(&mut self) -> Result<Option<ContiguousLines<'arena>>> {
@@ -128,6 +129,9 @@ impl<'arena> Parser<'arena> {
     }
     let mut lines = Deq::new(self.bump);
     while let Some(line) = self.read_line()? {
+      if line.is_empty() {
+        break; // line can be empty only if we just DROPPED a line
+      }
       lines.push(line);
       if self.lexer.peek_boundary_is(b'\n') {
         break;

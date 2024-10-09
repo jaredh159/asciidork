@@ -327,6 +327,38 @@ assert_html!(
    contains: r#"<h2 id="_section_2">Section 2</h2>"#
 );
 
+assert_html!(
+  drop_line_include,
+  resolving: b"not-included",
+  adoc! {r#"
+    :attribute-missing: drop-line
+
+    include::{missing}.adoc[]
+
+    spaced line
+
+    include::{missing}.adoc[]
+    next line
+  "#},
+  html! {r#"
+    <div class="paragraph"><p>spaced line</p></div>
+    <div class="paragraph"><p>next line</p></div>
+  "#}
+);
+
+assert_html!(
+  escaped_and_spaced_include,
+  resolving: b"not-included",
+  adoc! {r#"
+    \include::other.adoc[]
+
+     include::other.adoc[]
+  "#},
+  contains:
+    "include::other.adoc[]", // <-- escaped include unprocessed
+    "<pre>include::other.adoc[]</pre>" // <-- spaced include parsed as literal
+);
+
 const TAGGED_RUBY_CLASS: &[u8] = b"#tag::all[]
 class Dog
   #tag::init[]
