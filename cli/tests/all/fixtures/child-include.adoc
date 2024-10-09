@@ -1,5 +1,0 @@
-first line of child
-
-include::gchild-include.adoc[]
-
-last line of child

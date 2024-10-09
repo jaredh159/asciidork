@@ -1,3 +1,0 @@
-docdir: {docdir}
-
-f: _fixtures/b.adoc_

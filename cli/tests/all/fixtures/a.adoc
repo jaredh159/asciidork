@@ -1,5 +1,0 @@
-docdir: {docdir}
-
-f: _fixtures/a.adoc_
-
-include::b.adoc[]
