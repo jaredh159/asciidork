@@ -385,14 +385,125 @@ fn uri_read_not_allowed_include() {
   let input = "include::https://my.com/foo.adoc[]";
   let mut parser = test_parser!(input);
   parser.apply_job_settings(JobSettings::r#unsafe());
-  let expected_err = error! {"
+  let expected = error! {"
      --> test.adoc:1:10
       |
     1 | include::https://my.com/foo.adoc[]
       |          ^^^^^^^^^^^^^^^^^^^^^^^ Cannot include URL contents (allow-uri-read not enabled)
   "};
-  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err, from: input);
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
 }
+
+#[test]
+fn max_include_depth() {
+  let input = "include::file.adoc[]";
+  let mut parser = test_parser!(input);
+  let mut settings = JobSettings::r#unsafe();
+  settings
+    .job_attrs
+    .insert_unchecked("max-include-depth", JobAttr::readonly("20"));
+  parser.apply_job_settings(settings);
+  parser.set_resolver(Box::new(InfiniteResolver::new()));
+  let expected = error! {"
+     --> file-20.adoc:3:1
+      |
+    3 | include::file-21.adoc[]
+      | ^^^^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 20 exceeded
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+}
+
+#[test]
+fn max_include_depth_0() {
+  let input = "include::file.adoc[]";
+  let mut parser = test_parser!(input);
+  let mut settings = JobSettings::r#unsafe();
+  settings
+    .job_attrs
+    .insert_unchecked("max-include-depth", JobAttr::readonly("0"));
+  parser.apply_job_settings(settings);
+  parser.set_resolver(Box::new(InfiniteResolver::new()));
+  let expected = error! {"
+     --> test.adoc:1:1
+      |
+    1 | include::file.adoc[]
+      | ^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 0 exceeded
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+}
+
+#[test]
+fn max_include_depth_rel() {
+  let input = "include::file.adoc[depth=10]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(InfiniteResolver::new()));
+  let expected = error! {"
+     --> file-11.adoc:3:1
+      |
+    3 | include::file-12.adoc[]
+      | ^^^^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 10 exceeded
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+}
+
+#[test]
+fn max_include_depth_nested_depth_1() {
+  let input = "include::file.adoc[depth=1]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(NestedResolver(vec![
+    "\ninclude::child-include.adoc[]\n",
+    "\ninclude::grandchild-include.adoc[]\n",
+  ])));
+  let expected = error! {"
+     --> child-include.adoc:2:1
+      |
+    2 | include::grandchild-include.adoc[]
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 1 exceeded
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+}
+
+#[test]
+fn max_include_depth_nested_depth_2() {
+  let input = "include::file.adoc[depth=2]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(NestedResolver(vec![
+    "\ninclude::child-include.adoc[]\n",
+    "\ninclude::grandchild-include.adoc[]\n",
+    "\ninclude::ggg-include.adoc[]\n",
+  ])));
+  let expected = error! {"
+     --> grandchild-include.adoc:2:1
+      |
+    2 | include::ggg-include.adoc[]
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 2 exceeded
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+}
+
+#[test]
+fn max_include_depth_nested_context_exceeded() {
+  let input = "include::file.adoc[depth=3]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(NestedResolver(vec![
+    "\ninclude::child-include.adoc[depth=0]\n", // <-- included file stops
+    "\ninclude::grandchild-include.adoc[]\n",
+    "\ninclude::ggg-include.adoc[]\n",
+  ])));
+  let expected = error! {"
+     --> child-include.adoc:2:1
+      |
+    2 | include::grandchild-include.adoc[]
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 0 exceeded
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+}
+
+// test resolvers
 
 struct AssertResolver {
   expected: String,
@@ -426,5 +537,51 @@ impl IncludeResolver for AssertResolver {
 impl Drop for AssertResolver {
   fn drop(&mut self) {
     assert!(self.resolve_called);
+  }
+}
+
+struct InfiniteResolver(usize);
+
+impl InfiniteResolver {
+  const fn new() -> Self {
+    Self(0)
+  }
+}
+
+impl IncludeResolver for InfiniteResolver {
+  fn resolve(
+    &mut self,
+    _: IncludeTarget,
+    buffer: &mut dyn IncludeBuffer,
+  ) -> std::result::Result<usize, ResolveError> {
+    self.0 += 1;
+    let file = format!("file-{}\n\ninclude::file-{}.adoc[]\n", self.0, self.0 + 1);
+    let file_bytes = file.as_bytes();
+    buffer.initialize(file_bytes.len());
+    let dest = buffer.as_bytes_mut();
+    dest.copy_from_slice(file_bytes);
+    Ok(file_bytes.len())
+  }
+  fn get_base_dir(&self) -> Option<String> {
+    Some(String::new())
+  }
+}
+
+struct NestedResolver(Vec<&'static str>);
+
+impl IncludeResolver for NestedResolver {
+  fn resolve(
+    &mut self,
+    _: IncludeTarget,
+    buffer: &mut dyn IncludeBuffer,
+  ) -> std::result::Result<usize, ResolveError> {
+    let file_bytes = self.0.remove(0).as_bytes();
+    buffer.initialize(file_bytes.len());
+    let dest = buffer.as_bytes_mut();
+    dest.copy_from_slice(file_bytes);
+    Ok(file_bytes.len())
+  }
+  fn get_base_dir(&self) -> Option<String> {
+    Some(String::new())
   }
 }

@@ -10,6 +10,7 @@ pub struct SourceLexer<'arena> {
   pub offset: u32,
   pub file: SourceFile,
   pub leveloffset: i8,
+  pub max_include_depth: Option<u16>,
 }
 
 impl<'arena> SourceLexer<'arena> {
@@ -17,6 +18,7 @@ impl<'arena> SourceLexer<'arena> {
     src: BumpVec<'arena, u8>,
     file: SourceFile,
     leveloffset: i8,
+    max_include_depth: Option<u16>,
     bump: &'arena Bump,
   ) -> Self {
     Self {
@@ -26,6 +28,7 @@ impl<'arena> SourceLexer<'arena> {
       offset: 0,
       leveloffset,
       file,
+      max_include_depth,
     }
   }
 
@@ -41,6 +44,7 @@ impl<'arena> SourceLexer<'arena> {
       offset: 0,
       leveloffset: 0,
       file,
+      max_include_depth: None,
     }
   }
 

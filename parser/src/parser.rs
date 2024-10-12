@@ -55,6 +55,7 @@ impl<'arena> Parser<'arena> {
       Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &leveloffset.value);
     }
     self.strict = settings.strict;
+    self.ctx.max_include_depth = settings.job_attrs.u16("max-include-depth").unwrap_or(64);
     self.document.meta = settings.into();
     self.set_source_file_attrs();
   }

@@ -60,6 +60,13 @@ pub trait ReadAttr {
     }
   }
 
+  fn u16(&self, key: &str) -> Option<u16> {
+    match self.get(key) {
+      Some(AttrValue::String(s)) => s.parse().ok(),
+      _ => None,
+    }
+  }
+
   fn isize(&self, key: &str) -> Option<isize> {
     match self.get(key) {
       Some(AttrValue::String(s)) => s.parse().ok(),

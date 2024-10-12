@@ -24,7 +24,7 @@ impl<'arena> RootLexer<'arena> {
       idx: 0,
       next_idx: None,
       source_stack: Vec::new(),
-      sources: bvec![in bump; SourceLexer::new(src, file, 0, bump)],
+      sources: bvec![in bump; SourceLexer::new(src, file, 0, None, bump)],
       tmp_buf: None,
     }
   }
@@ -51,7 +51,13 @@ impl<'arena> RootLexer<'arena> {
     }
   }
 
-  pub fn push_source(&mut self, path: Path, leveloffset: i8, mut src: BumpVec<'arena, u8>) {
+  pub fn push_source(
+    &mut self,
+    path: Path,
+    leveloffset: i8,
+    max_include_depth: Option<u16>,
+    mut src: BumpVec<'arena, u8>,
+  ) {
     // match asciidoctor - its include processor returns an array of lines
     // so even if the source has no trailing newline, it's inserted as a full line
     // NB: the include resolver has taken care of reserving space for the newline
@@ -62,6 +68,7 @@ impl<'arena> RootLexer<'arena> {
       src,
       SourceFile::Path(path),
       leveloffset,
+      max_include_depth,
       self.bump,
     ));
     let next_idx = self.sources.len() as u16 - 1;
@@ -220,6 +227,20 @@ impl<'arena> RootLexer<'arena> {
   pub fn truncate(&mut self) {
     self.sources[self.idx as usize].truncate();
   }
+
+  pub const fn include_depth(&self) -> u16 {
+    self.idx
+  }
+
+  pub fn max_include_depth(&self) -> Option<(u16, u16)> {
+    self
+      .sources
+      .iter()
+      .enumerate()
+      .fold(None, |current, (i, src)| {
+        src.max_include_depth.map(|d| (d, i as u16)).or(current)
+      })
+  }
 }
 
 impl<'arena> HasArena<'arena> for RootLexer<'arena> {
@@ -295,7 +316,12 @@ mod tests {
     assert_eq!(lexer.next_token(), Token::new(Newline, 23..24, bstr!("\n")));
 
     // now mimic the parser resolving the include directive with `b"bar\n"`
-    lexer.push_source(Path::new("bar.adoc"), 0, vecb![b'b', b'a', b'r', b'\n']);
+    lexer.push_source(
+      Path::new("bar.adoc"),
+      0,
+      None,
+      vecb![b'b', b'a', b'r', b'\n'],
+    );
     assert_eq!(
       lexer.next_token(),
       Token::new(PreprocBeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))

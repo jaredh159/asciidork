@@ -44,6 +44,14 @@ impl<'arena> Parser<'arena> {
       ));
     }
 
+    if let Some(max_depth) = self.exceeded_max_include_depth() {
+      self.err_line_starting(
+        format!("Maximum include depth of {} exceeded", max_depth),
+        directive.first_token.loc.start,
+      )?;
+      return Ok(DirectiveAction::Passthrough);
+    }
+
     let Some(resolver) = self.include_resolver.as_mut() else {
       self.err_token_full(
         "No resolver supplied for include directive",
@@ -91,7 +99,13 @@ impl<'arena> Parser<'arena> {
         {
           Parser::adjust_leveloffset(&mut leveloffset, &offset_attr);
         }
-        self.lexer.push_source(target_abspath, leveloffset, buffer);
+        let include_depth = directive
+          .attrs
+          .named("depth")
+          .and_then(|s| s.parse::<u16>().ok());
+        self
+          .lexer
+          .push_source(target_abspath, leveloffset, include_depth, buffer);
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(ResolveError::NotFound) if directive.attrs.has_option("optional") => {
@@ -198,6 +212,19 @@ impl<'arena> Parser<'arena> {
     if let Some(indent) = attrs.named("indent").and_then(|s| s.parse::<usize>().ok()) {
       _set_indentation(indent, buf, self.bump);
     };
+  }
+
+  fn exceeded_max_include_depth(&self) -> Option<u16> {
+    let (rel_depth, stack_depth) = self
+      .lexer
+      .max_include_depth()
+      .unwrap_or((self.ctx.max_include_depth, 0));
+    let abs_depth = u16::min(rel_depth + stack_depth, self.ctx.max_include_depth);
+    if self.lexer.include_depth() + 1 > abs_depth {
+      Some(rel_depth)
+    } else {
+      None
+    }
   }
 }
 

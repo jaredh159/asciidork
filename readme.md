@@ -63,17 +63,14 @@ Be sure to pop the dev tools to see timing info.
 ## Caveats
 
 > [!WARNING]
-> Asciidork is not complete. It implements a majority of the
-> documented behavior of Asciidoc, but there are several unfinished areas,
-> missing error handling, edge cases galore! Consider it a technology preview
-> only for now.
+> Asciidork is not complete. It implements a sizeable majority of the
+> documented behavior of Asciidoc, but there are some unfinished areas,
+> missing error handling, and edge cases yet unfinished.
 
 Known **unfinished or unimplemented** areas include:
 
-- [ ] CSV Tables
 - [ ] STEM
 - [ ] Source highlighting
-- [ ] Include directives
 - [ ] All entity refs
 
 PRs welcome! 👍

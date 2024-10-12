@@ -54,6 +54,12 @@ impl std::fmt::Debug for JobAttrs {
   }
 }
 
+impl ReadAttr for JobAttrs {
+  fn get(&self, key: &str) -> Option<&AttrValue> {
+    self.0.get(key).map(|attr| &attr.value)
+  }
+}
+
 impl RemoveAttr for JobAttrs {
   fn remove(&mut self, key: &str) {
     self.0.remove(key);

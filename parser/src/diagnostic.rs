@@ -24,10 +24,7 @@ impl<'arena> Parser<'arena> {
   }
 
   pub(crate) fn err_line(&self, message: impl Into<String>, line: &Line) -> Result<()> {
-    let start = line
-      .loc()
-      .expect("non empty line for `err_entire_line`")
-      .start;
+    let start = line.loc().expect("non empty line for `err_line`").start;
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
     let line = line.reassemble_src().to_string();
     self.handle_err(Diagnostic {
@@ -36,6 +33,19 @@ impl<'arena> Parser<'arena> {
       underline_start: offset,
       underline_width: line.len() as u32,
       line,
+      source_file: self.lexer.source_file().clone(),
+    })
+  }
+
+  pub(crate) fn err_line_starting(&self, message: impl Into<String>, start: u32) -> Result<()> {
+    let (line_num, offset) = self.lexer.line_number_with_offset(start);
+    let line = self.lexer.line_of(start);
+    self.handle_err(Diagnostic {
+      line_num,
+      message: message.into(),
+      underline_start: offset,
+      underline_width: line.len() as u32,
+      line: String::from(line.as_str()),
       source_file: self.lexer.source_file().clone(),
     })
   }

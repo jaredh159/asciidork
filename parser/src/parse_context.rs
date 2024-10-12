@@ -18,6 +18,7 @@ pub struct ParseContext<'arena> {
   pub saw_toc_macro: bool,
   pub table_cell_ctx: TableCellContext,
   pub passthrus: BumpVec<'arena, Option<InlineNodes<'arena>>>,
+  pub max_include_depth: u16,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
 }
 
@@ -45,6 +46,7 @@ impl<'arena> ParseContext<'arena> {
       saw_toc_macro: false,
       table_cell_ctx: TableCellContext::None,
       passthrus: BumpVec::new_in(bump),
+      max_include_depth: 64,
     }
   }
 
@@ -64,6 +66,7 @@ impl<'arena> ParseContext<'arena> {
       saw_toc_macro: false,
       table_cell_ctx: TableCellContext::AsciiDocCell,
       passthrus: BumpVec::new_in(bump),
+      max_include_depth: 64,
     }
   }
 
