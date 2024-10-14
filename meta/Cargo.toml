@@ -1,6 +1,6 @@
 [package]
 name = "asciidork-meta"
-version = "0.5.1"
+version = "0.7.0"
 edition = "2021"
 description = "Asciidork document meta"
 license = "MIT"
