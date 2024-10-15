@@ -103,6 +103,7 @@ impl<'arena> Parser<'arena> {
           .attrs
           .named("depth")
           .and_then(|s| s.parse::<u16>().ok());
+        dbg!(std::str::from_utf8(&buffer).unwrap());
         self
           .lexer
           .push_source(target_abspath, leveloffset, include_depth, buffer);

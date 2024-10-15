@@ -137,30 +137,30 @@ impl<'arena> Parser<'arena> {
         });
       }
     }
-    let Some(token) = lines.current_token() else {
-      return None;
-    };
+    // let Some(token) = lines.current_token() else {
+    //   return None;
+    // };
 
-    use TokenKind::*;
-    if matches!(token.kind, PreprocBeginInclude | PreprocEndInclude) {
-      let kind = match token.kind {
-        PreprocBeginInclude => IncludeBoundaryKind::Begin,
-        PreprocEndInclude => IncludeBoundaryKind::End,
-        _ => unreachable!(),
-      };
-      let mut line = lines.consume_current().unwrap();
-      let token = line.consume_current().unwrap();
-      lines.restore_if_nonempty(line);
-      let depth: u16 = token.lexeme[3..8].parse().unwrap();
-      let start = token.loc.start;
-      Some(Block {
-        meta: ChunkMeta::empty(start),
-        context: Context::Comment,
-        content: Content::Empty(EmptyMetadata::IncludeBoundary { kind, depth }),
-      })
-    } else {
-      None
-    }
+    // use TokenKind::*;
+    // if matches!(token.kind, PreprocBeginInclude | PreprocEndInclude) {
+    //   let kind = match token.kind {
+    //     PreprocBeginInclude => IncludeBoundaryKind::Begin,
+    //     PreprocEndInclude => IncludeBoundaryKind::End,
+    //     _ => unreachable!(),
+    //   };
+    //   let mut line = lines.consume_current().unwrap();
+    //   let token = line.consume_current().unwrap();
+    //   lines.restore_if_nonempty(line);
+    //   let depth: u16 = token.lexeme[3..8].parse().unwrap();
+    //   let start = token.loc.start;
+    //   Some(Block {
+    //     meta: ChunkMeta::empty(start),
+    //     context: Context::Comment,
+    //     content: Content::Empty(EmptyMetadata::IncludeBoundary { kind, depth }),
+    //   })
+    // } else {
+    None
+    // }
   }
 
   fn parse_delimited_block(

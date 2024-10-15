@@ -1,4 +1,4 @@
-use asciidork_ast::{prelude::*, IncludeBoundaryKind as Boundary};
+use asciidork_ast::prelude::*;
 use asciidork_meta::{JobAttr, JobSettings};
 use asciidork_parser::includes::*;
 use asciidork_parser::prelude::*;
@@ -17,11 +17,11 @@ fn trims_trailing_from_adoc() {
       Block {
         context: BlockContext::Listing,
         content: BlockContent::Simple(nodes![
-          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 5..30),
+          // node!(Inline::IncludeBoundary(Boundary::Begin, 1), 5..30),
           node!("windows"; 0..7, depth: 1), // <-- trimmed
           node!(Inline::Newline, 7..8, depth: 1),
           node!("and unix"; 8..16, depth: 1), // <-- trimmed
-          node!(Inline::IncludeBoundary(Boundary::End, 1), 5..30),
+          // node!(Inline::IncludeBoundary(Boundary::End, 1), 5..30),
         ]),
         ..empty_block!(0)
       }
@@ -42,9 +42,9 @@ fn no_trim_trailing_non_adoc() {
       Block {
         context: BlockContext::Listing,
         content: BlockContent::Simple(nodes![
-          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 5..28),
+          // node!(Inline::IncludeBoundary(Boundary::Begin, 1), 5..28),
           node!("text "; 0..5, depth: 1), // <-- not trimmed
-          node!(Inline::IncludeBoundary(Boundary::End, 1), 5..28),
+          // node!(Inline::IncludeBoundary(Boundary::End, 1), 5..28),
         ]),
         ..empty_block!(0)
       }
@@ -66,9 +66,9 @@ fn include_no_trailing_newline() {
         content: BlockContent::Simple(nodes![
           node!("Line-1"; 0..6),
           node!(Inline::Newline, 6..7),
-          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
-          node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
         ]),
         ..empty_block!(0)
       }
@@ -87,10 +87,10 @@ fn include_no_trailing_newline() {
         content: BlockContent::Simple(nodes![
           node!("Line-1"; 0..6),
           node!(Inline::Newline, 6..7),
-          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
           node!(Inline::Newline, 7..8, depth: 1),
-          node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
           node!("Line-3"; 33..39),
         ]),
         ..empty_block!(0)
@@ -113,9 +113,9 @@ fn include_with_trailing_newline() {
         content: BlockContent::Simple(nodes![
           node!("Line-1"; 0..6),
           node!(Inline::Newline, 6..7),
-          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
-          node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
         ]),
         ..empty_block!(0)
       }
@@ -134,11 +134,11 @@ fn include_with_trailing_newline() {
         content: BlockContent::Simple(nodes![
           node!("Line-1"; 0..6),
           node!(Inline::Newline, 6..7),
-          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
           // node!(Inline::Newline, 7..8, depth: 1),
           node!(Inline::Newline, 7..8, depth: 1),
-          node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::End, 1), 7..32),
           node!("Line-3"; 33..39),
         ]),
         ..empty_block!(0)
@@ -168,23 +168,23 @@ fn include_with_2_trailing_newlines() {
         content: BlockContent::Simple(nodes![
           node!("Line-1"; 0..6),
           node!(Inline::Newline, 6..7),
-          node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
+          // node!(Inline::IncludeBoundary(Boundary::Begin, 1), 7..32),
           node!("Line-2!"; 0..7, depth: 1),
         ]),
         ..empty_block!(0)
       },
-      Block {
-        context: BlockContext::Comment,
-        content: BlockContent::Empty(EmptyMetadata::IncludeBoundary {
-          kind: Boundary::End,
-          depth: 1
-        }),
-        ..empty_block!(7)
-      },
+      // Block {
+      //   context: BlockContext::Comment,
+      //   content: BlockContent::Empty(EmptyMetadata::IncludeBoundary {
+      //     kind: Boundary::End,
+      //     depth: 1
+      //   }),
+      //   ..empty_block!(7)
+      // },
       Block {
         context: BlockContext::Paragraph,
         content: BlockContent::Simple(just!("Line-3", 33..39)),
-        ..empty_block!(7)
+        ..empty_block!(33)
       }
     ])
   );
@@ -471,17 +471,40 @@ fn max_include_depth_nested_depth_2() {
   let mut parser = test_parser!(input);
   parser.apply_job_settings(JobSettings::r#unsafe());
   parser.set_resolver(Box::new(NestedResolver(vec![
-    "\ninclude::child-include.adoc[]\n",
-    "\ninclude::grandchild-include.adoc[]\n",
-    "\ninclude::ggg-include.adoc[]\n",
+    "include::child-include.adoc[]\n",
+    "include::grandchild-include.adoc[]\n",
+    "include::ggg-include.adoc[]\n",
   ])));
   let expected = error! {"
-     --> grandchild-include.adoc:2:1
+     --> grandchild-include.adoc:1:1
       |
-    2 | include::ggg-include.adoc[]
+    1 | include::ggg-include.adoc[]
       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 2 exceeded
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+  // dbg!(parser.parse().unwrap().document);
+  // assert!(false);
+}
+
+#[test]
+fn max_include_depth_nested_depth_2_alt() {
+  let input = "include::file.adoc[depth=2]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(NestedResolver(vec![
+    "\ninclude::child-include.adoc[]\n",
+    // "\ninclude::grandchild-include.adoc[]\n",
+    // "\ninclude::ggg-include.adoc[]\n",
+  ])));
+  let expected = error! {"
+     --> grandchild-include.adoc:1:1
+      |
+    1 | include::ggg-include.adoc[]
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Maximum include depth of 2 exceeded
+  "};
+  // expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+  dbg!(parser.parse().unwrap().document);
+  assert!(false);
 }
 
 #[test]

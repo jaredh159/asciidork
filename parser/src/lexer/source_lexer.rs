@@ -104,6 +104,7 @@ impl<'arena> SourceLexer<'arena> {
 
   pub fn consume_empty_lines(&mut self) {
     while self.peek() == Some(b'\n') {
+      // eprintln!("    <<< skipping empty line");
       self.advance();
     }
   }

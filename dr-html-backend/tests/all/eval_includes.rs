@@ -37,7 +37,7 @@ assert_html!(
   adoc! {r#"
     para1
 
-    include::some_file.adoc[]
+    include::some_file[]
 
     para2
   "#},

@@ -4,9 +4,9 @@ use crate::internal::*;
 #[derive(Debug)]
 pub struct RootLexer<'arena> {
   pub bump: &'arena Bump,
-  idx: u16,
+  pub idx: u16,
   next_idx: Option<u16>,
-  source_stack: Vec<SourceLocation>,
+  source_stack: Vec<SourceLocation>, // maybe just a Vec<u36>?
   sources: BumpVec<'arena, SourceLexer<'arena>>,
   tmp_buf: Option<(SourceLexer<'arena>, BufLoc)>,
 }
@@ -96,27 +96,27 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn peek(&self) -> Option<u8> {
-    self.peek_with_boundary().map(|(c, _)| c)
-  }
-
-  fn peek_with_boundary(&self) -> Option<(u8, Option<u8>)> {
     if let Some((tmp_buf, _)) = &self.tmp_buf {
-      return tmp_buf.peek().map(|c| (c, None));
+      return tmp_buf.peek();
     }
 
     // case: we're about to switch to a new source
-    if self.next_idx.is_some() {
-      return Some((b'{', None)); // fake peek the generated boundary start include-token
+    if let Some(next_idx) = self.next_idx {
+      // eprintln!("peeking at next source");
+      return self.sources[next_idx as usize].peek();
+      // return Some((b'{', None)); // fake peek the generated boundary start include-token
     }
     // case: normal path: we're peeking at the current source, and have bytes
     if let Some(c) = self.sources[self.idx as usize].peek() {
-      return Some((c, None));
+      // eprintln!("peeking at current source");
+      return Some(c);
     }
     // case: we're out of bytes, check if we're returning to a previous source
     if !self.source_stack.is_empty() {
       let next_idx = self.source_stack.last().unwrap().include_depth;
       // fake peek the generated boundary end include-token, w/ next peek
-      return Some((b'{', self.sources[next_idx as usize].peek()));
+      // eprintln!("peeking at previous source");
+      return self.sources[next_idx as usize].peek();
     }
     // case: nothing left in any source, root EOF
     None
@@ -134,7 +134,27 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn consume_empty_lines(&mut self) {
-    self.sources[self.idx as usize].consume_empty_lines();
+    match self.next_idx.take() {
+      Some(next_idx) => {
+        // todo!!!!!!!!!!!!!!!!!!!
+        let mut include_loc = self.loc().decr();
+        let line = self.line_of(include_loc.start);
+        include_loc.start -= u32::min(include_loc.start, line.len() as u32);
+        include_loc.include_depth = self.idx;
+        self.source_stack.push(include_loc);
+        self.idx = next_idx;
+        self.consume_empty_lines()
+      }
+      None => {
+        self.sources[self.idx as usize].consume_empty_lines();
+        if self.sources[self.idx as usize].is_eof() {
+          if let Some(prev_loc) = self.source_stack.pop() {
+            self.idx = prev_loc.include_depth;
+            self.consume_empty_lines();
+          }
+        }
+      }
+    }
   }
 
   pub fn raw_lines(&'arena self) -> impl Iterator<Item = &'arena str> {
@@ -157,11 +177,11 @@ impl<'arena> RootLexer<'arena> {
     self.peek() == Some(c)
   }
 
-  pub fn peek_boundary_is(&self, c: u8) -> bool {
-    self
-      .peek_with_boundary()
-      .map_or(false, |(ch, resume_peek)| ch == c || resume_peek == Some(c))
-  }
+  // pub fn peek_boundary_is(&self, c: u8) -> bool {
+  //   self
+  //     .peek_with_boundary()
+  //     .map_or(false, |(ch, resume_peek)| ch == c || resume_peek == Some(c))
+  // }
 
   pub fn line_of(&self, location: u32) -> BumpString<'arena> {
     self.sources[self.idx as usize].line_of(location)
@@ -192,32 +212,31 @@ impl<'arena> RootLexer<'arena> {
     match self.next_idx.take() {
       Some(next_idx) => {
         let mut include_loc = self.loc().decr();
-        let mut line = self.line_of(include_loc.start);
-        line.replace_range(0..9, &format!("{{->{:05}}}", next_idx));
+        let line = self.line_of(include_loc.start);
         include_loc.start -= u32::min(include_loc.start, line.len() as u32);
         include_loc.include_depth = self.idx;
         self.source_stack.push(include_loc);
         self.idx = next_idx;
-        Token::new(TokenKind::PreprocBeginInclude, include_loc, line)
+        self.next_token()
       }
       None => match self.sources[self.idx as usize].next_token() {
         Some(mut token) => {
+          // dbg!(&token);
           token.loc.include_depth = self.idx;
           token
         }
         None => {
+          // eprintln!("EOF in source {}", self.idx);
           let Some(prev_loc) = self.source_stack.pop() else {
             return self.token(TokenKind::Eof, "", self.loc());
           };
-          let prev_idx = self.idx;
           self.idx = prev_loc.include_depth;
-          let mut line = self.line_of(prev_loc.start);
+          let line = self.line_of(prev_loc.start);
           if line.is_empty() {
             // this means the include directive ended the whole doc
             self.token(TokenKind::Eof, "", self.loc())
           } else {
-            line.replace_range(0..9, &format!("{{<-{:05}}}", prev_idx));
-            Token::new(TokenKind::PreprocEndInclude, prev_loc, line)
+            self.next_token()
           }
         }
       },
@@ -298,49 +317,49 @@ mod tests {
     }};
   }
 
-  #[test]
-  fn test_include_boundaries() {
-    let input = adoc! {"
-      foo
-      include::bar.adoc[]
-      baz
-    "};
-    let mut lexer = test_lexer!(input);
+  // #[test]
+  // fn test_include_boundaries() {
+  //   let input = adoc! {"
+  //     foo
+  //     include::bar.adoc[]
+  //     baz
+  //   "};
+  //   let mut lexer = test_lexer!(input);
 
-    // parse up to the end of the include directive
-    (0..7).for_each(|_| _ = lexer.next_token());
-    assert_eq!(
-      lexer.next_token(),
-      Token::new(CloseBracket, 22..23, bstr!("]"))
-    );
-    assert_eq!(lexer.next_token(), Token::new(Newline, 23..24, bstr!("\n")));
+  //   // parse up to the end of the include directive
+  //   (0..7).for_each(|_| _ = lexer.next_token());
+  //   assert_eq!(
+  //     lexer.next_token(),
+  //     Token::new(CloseBracket, 22..23, bstr!("]"))
+  //   );
+  //   assert_eq!(lexer.next_token(), Token::new(Newline, 23..24, bstr!("\n")));
 
-    // now mimic the parser resolving the include directive with `b"bar\n"`
-    lexer.push_source(
-      Path::new("bar.adoc"),
-      0,
-      None,
-      vecb![b'b', b'a', b'r', b'\n'],
-    );
-    assert_eq!(
-      lexer.next_token(),
-      Token::new(PreprocBeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
-    );
-    assert_eq!(&input[4..23], "include::bar.adoc[]");
+  //   // now mimic the parser resolving the include directive with `b"bar\n"`
+  //   lexer.push_source(
+  //     Path::new("bar.adoc"),
+  //     0,
+  //     None,
+  //     vecb![b'b', b'a', b'r', b'\n'],
+  //   );
+  //   assert_eq!(
+  //     lexer.next_token(),
+  //     Token::new(PreprocBeginInclude, 4..23, bstr!("{->00001}bar.adoc[]"))
+  //   );
+  //   assert_eq!(&input[4..23], "include::bar.adoc[]");
 
-    assert_eq!(
-      lexer.next_token(),
-      Token::new(Word, SourceLocation::new_depth(0, 3, 1), bstr!("bar"))
-    );
-    assert_eq!(
-      lexer.next_token(),
-      Token::new(Newline, SourceLocation::new_depth(3, 4, 1), bstr!("\n"))
-    );
-    assert_eq!(
-      lexer.next_token(),
-      Token::new(PreprocEndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
-    );
-  }
+  //   assert_eq!(
+  //     lexer.next_token(),
+  //     Token::new(Word, SourceLocation::new_depth(0, 3, 1), bstr!("bar"))
+  //   );
+  //   assert_eq!(
+  //     lexer.next_token(),
+  //     Token::new(Newline, SourceLocation::new_depth(3, 4, 1), bstr!("\n"))
+  //   );
+  //   assert_eq!(
+  //     lexer.next_token(),
+  //     Token::new(PreprocEndInclude, 4..23, bstr!("{<-00001}bar.adoc[]"))
+  //   );
+  // }
 
   #[test]
   fn test_tokens() {
