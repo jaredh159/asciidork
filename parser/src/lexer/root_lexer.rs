@@ -122,14 +122,20 @@ impl<'arena> RootLexer<'arena> {
     None
   }
 
+  // 🫣 - pretty sure problem is here, not advancing
   pub fn skip_byte(&mut self) {
     if let Some((tmp_lexer, _)) = &mut self.tmp_buf {
+      eprintln!(" ^^^ skip byte in tmp source");
       tmp_lexer.pos += 1;
       if tmp_lexer.is_eof() {
         self.tmp_buf = None;
       }
     } else if self.sources[self.idx as usize].peek().is_some() {
+      eprintln!(" ^^^ skip byte in current source");
+      // dbg!(&self);
       self.sources[self.idx as usize].pos += 1;
+    } else {
+      eprintln!(" ^^^ no skip byte");
     }
   }
 

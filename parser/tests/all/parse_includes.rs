@@ -493,7 +493,8 @@ fn max_include_depth_nested_depth_2_alt() {
   parser.apply_job_settings(JobSettings::r#unsafe());
   parser.set_resolver(Box::new(NestedResolver(vec![
     "\ninclude::child-include.adoc[]\n",
-    // "\ninclude::grandchild-include.adoc[]\n",
+    // "\nfoo bar\n",
+    "\ninclude::grandchild-include.adoc[]\n",
     // "\ninclude::ggg-include.adoc[]\n",
   ])));
   let expected = error! {"
