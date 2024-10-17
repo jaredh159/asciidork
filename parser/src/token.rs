@@ -44,8 +44,6 @@ pub enum TokenKind {
   Percent,
   Pipe,
   Plus,
-  PreprocBeginInclude,
-  PreprocEndInclude,
   PreprocPassthru,
   SemiColon,
   SingleQuote,
@@ -167,9 +165,6 @@ pub trait TokenIs {
   }
   fn is_whitespaceish(&self) -> bool {
     self.is(TokenKind::Whitespace) || self.is(TokenKind::Newline)
-  }
-  fn is_include_boundary(&self) -> bool {
-    self.is(TokenKind::PreprocBeginInclude) || self.is(TokenKind::PreprocEndInclude)
   }
 }
 

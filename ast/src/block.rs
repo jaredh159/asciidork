@@ -54,10 +54,6 @@ pub enum EmptyMetadata<'arena> {
     content: InlineNodes<'arena>,
     id: Option<BumpString<'arena>>,
   },
-  IncludeBoundary {
-    kind: IncludeBoundaryKind,
-    depth: u16,
-  },
   None,
 }
 
@@ -193,7 +189,6 @@ impl Json for EmptyMetadata<'_> {
         buf.add_member("content", content);
       }
       EmptyMetadata::None => buf.push_str("None\""),
-      EmptyMetadata::IncludeBoundary { .. } => todo!(),
     }
     buf.finish_obj();
   }

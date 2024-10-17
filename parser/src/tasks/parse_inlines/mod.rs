@@ -7,7 +7,6 @@ use crate::internal::*;
 use crate::variants::token::*;
 use ast::variants::{inline::*, r#macro::*};
 use inline_utils::*;
-use IncludeBoundaryKind::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_inlines(
@@ -30,13 +29,12 @@ impl<'arena> Parser<'arena> {
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
     let mut acc = Accum { inlines, text };
-    let mut saw_boundary_end = false;
 
     while let Some(mut line) = lines.consume_current() {
       if self.should_stop_at(&line) {
         acc.inlines.remove_trailing_newline();
         lines.restore_if_nonempty(line);
-        return Ok(acc.final_nodes(saw_boundary_end));
+        return Ok(acc.inlines);
       }
 
       if line.is_comment() && !subs.callouts() {
@@ -67,6 +65,11 @@ impl<'arena> Parser<'arena> {
           acc.maybe_push_joining_newline(lines);
           break;
         };
+
+        if token.loc.include_depth != acc.text.loc.include_depth {
+          acc.commit();
+          acc.text.loc = token.loc.clamp_start()
+        }
 
         match token.kind {
           MacroName if subs.macros() && line.continues_inline_macro() => {
@@ -238,19 +241,6 @@ impl<'arena> Parser<'arena> {
               && line.continues_valid_callout_nums() =>
           {
             push_callout_tuck(token, &mut line, &mut acc);
-          }
-
-          PreprocBeginInclude => {
-            let depth: u16 = token.lexeme[3..8].parse().unwrap();
-            acc.push_node(IncludeBoundary(Begin, depth), token.loc);
-            acc.text.loc = SourceLocation::new_depth(0, 0, depth);
-          }
-
-          PreprocEndInclude => {
-            saw_boundary_end = true;
-            let depth: u16 = token.lexeme[3..8].parse().unwrap();
-            acc.push_node(IncludeBoundary(End, depth), token.loc);
-            acc.text.loc = token.loc.clamp_end().incr();
           }
 
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
@@ -630,7 +620,7 @@ impl<'arena> Parser<'arena> {
     }
 
     acc.commit();
-    Ok(acc.final_nodes(saw_boundary_end))
+    Ok(acc.inlines)
   }
 
   fn parse_node<const N: usize>(
@@ -774,30 +764,11 @@ impl<'arena> Accum<'arena> {
   }
 
   fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {
-    if lines.is_empty()
-      // special case: dangling include boundary shouldn't produce newlines
-      || matches!(
-          self.inlines.last().map(|n| &n.content),
-          Some(IncludeBoundary(IncludeBoundaryKind::End, _)))
-    {
-      return;
+    if !lines.is_empty() {
+      self.commit();
+      self.text.loc.end += 1;
+      self.push_node(Inline::Newline, self.text.loc);
     }
-    self.commit();
-    self.text.loc.end += 1;
-    self.push_node(Inline::Newline, self.text.loc);
-  }
-
-  fn final_nodes(self, saw_boundary_end: bool) -> InlineNodes<'arena> {
-    let mut nodes = self.inlines;
-    // handle case where we failed to trim the final newline because
-    // the paragraph ended at the end of an include, so we got an artificial
-    // "line" of the boundary end token, which is only for tracking positions
-    if saw_boundary_end && matches!(nodes.last().unwrap().content, IncludeBoundary(End, _)) {
-      let boundary = nodes.pop().unwrap();
-      nodes.remove_trailing_newline();
-      nodes.push(boundary);
-    }
-    nodes
   }
 }
 

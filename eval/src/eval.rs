@@ -381,7 +381,7 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       nodes.iter().for_each(|n| eval_inline(n, doc, backend));
       backend.exit_text_span(attrs, nodes);
     }
-    LineComment(_) | Discarded | IncludeBoundary(..) => {}
+    LineComment(_) | Discarded => {}
     _ => {
       println!("\nUnhandled inline node type:");
       println!("  -> {:?}\n", &inline.content);

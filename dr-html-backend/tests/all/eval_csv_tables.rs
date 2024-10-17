@@ -161,7 +161,7 @@ assert_html!(
   contains:
     r#"col style="width: 50%;">"#, // <-- 2 cols, b/c tab not trimmed
     r#"<p class="tableblock">a</p>"#,
-    r#"<p class="tableblock"></p>"#, // <-- empty
+    r#"<td class="tableblock halign-left valign-top"></td>"#, // <-- empty
     r#"<p class="tableblock">c</p>"#,
     r#"<p class="tableblock">d</p>"#,
 );

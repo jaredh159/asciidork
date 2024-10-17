@@ -1,6 +1,6 @@
 use crate::internal::*;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Diagnostic {
   pub line_num: u32,
   pub line: String,
