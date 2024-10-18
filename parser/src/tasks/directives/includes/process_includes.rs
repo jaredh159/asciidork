@@ -66,7 +66,6 @@ impl<'arena> Parser<'arena> {
       self.lexer.source_file(),
       self.lexer.source_is_primary(),
       resolver.get_base_dir().map(Path::new),
-      self.document.meta.safe_mode,
     ) {
       Ok(target) => target,
       Err(err) => {
@@ -103,9 +102,12 @@ impl<'arena> Parser<'arena> {
           .attrs
           .named("depth")
           .and_then(|s| s.parse::<u16>().ok());
-        self
-          .lexer
-          .push_source(target_abspath, leveloffset, include_depth, buffer);
+        self.lexer.push_source(
+          SourceFile::Path(target_abspath),
+          leveloffset,
+          include_depth,
+          buffer,
+        );
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(ResolveError::NotFound) if directive.attrs.has_option("optional") => {

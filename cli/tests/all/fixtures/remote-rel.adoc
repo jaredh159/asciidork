@@ -1,0 +1,1 @@
+include::https://asciidork-rel-url-test.netlify.app/fixtures/gen/parent-include.adoc[]

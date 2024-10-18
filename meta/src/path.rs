@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Component {
-  Prefix(String),
+  UriScheme(String),
+  DrivePrefix(String),
   Root,
   CurrentDir,
   ParentDir,
@@ -20,7 +21,7 @@ impl Path {
     let mut components = Vec::with_capacity(4);
     let separator = match drive_prefix(path) {
       Some(prefix) => {
-        components.push(Component::Prefix(prefix));
+        components.push(Component::DrivePrefix(prefix));
         path = &path[2..];
         '\\'
       }
@@ -42,6 +43,8 @@ impl Path {
       "" => {}
       "." => components.push(Component::CurrentDir),
       ".." => components.push(Component::ParentDir),
+      "https:" => components.push(Component::UriScheme("https".to_string())),
+      "http:" => components.push(Component::UriScheme("http".to_string())),
       _ => components.push(Component::Normal(s.to_string())),
     });
     Path { separator, components }
@@ -57,7 +60,7 @@ impl Path {
 
   pub fn is_absolute(&self) -> bool {
     self.components.first() == Some(&Component::Root)
-      || (matches!(self.components.first(), Some(Component::Prefix(_)))
+      || (matches!(self.components.first(), Some(Component::DrivePrefix(_)))
         && matches!(self.components.get(1), Some(Component::Root)))
   }
 
@@ -114,7 +117,7 @@ impl Path {
       return self.to_string();
     }
     if self.components.len() == 2
-      && matches!(self.components[0], Component::Prefix(_))
+      && matches!(self.components[0], Component::DrivePrefix(_))
       && self.components[1] == Component::Root
     {
       return self.to_string();
@@ -125,7 +128,11 @@ impl Path {
         break;
       }
       match component {
-        Component::Prefix(s) => path.push_str(s),
+        Component::UriScheme(s) => {
+          path.push_str(s);
+          path.push(':');
+        }
+        Component::DrivePrefix(s) => path.push_str(s),
         Component::Root => path.push(self.separator),
         Component::CurrentDir => path.push('.'),
         Component::ParentDir => path.push_str(".."),
@@ -133,12 +140,16 @@ impl Path {
       }
       if i < self.components.len() - 2
         && component != &Component::Root
-        && !matches!(component, Component::Prefix(_))
+        && !matches!(component, Component::DrivePrefix(_))
       {
         path.push(self.separator);
       }
     }
     path
+  }
+
+  pub fn is_uri(&self) -> bool {
+    matches!(self.components.first(), Some(Component::UriScheme(_)))
   }
 }
 
@@ -159,7 +170,11 @@ impl std::fmt::Display for Path {
     let mut path = String::with_capacity(32);
     for (i, component) in self.components.iter().enumerate() {
       match component {
-        Component::Prefix(s) => path.push_str(s),
+        Component::UriScheme(s) => {
+          path.push_str(s);
+          path.push_str(":/");
+        }
+        Component::DrivePrefix(s) => path.push_str(s),
         Component::Root => path.push(self.separator),
         Component::CurrentDir => path.push('.'),
         Component::ParentDir => path.push_str(".."),
@@ -167,7 +182,7 @@ impl std::fmt::Display for Path {
       }
       if i < self.components.len() - 1
         && component != &Component::Root
-        && !matches!(component, Component::Prefix(_))
+        && !matches!(component, Component::DrivePrefix(_))
       {
         path.push(self.separator);
       }
@@ -215,7 +230,7 @@ mod tests {
     let mut path = Path::new(r#"c:\windows\foo.dll"#);
     assert_eq!(path.separator, '\\');
     assert_eq!(path.components.len(), 4);
-    assert_eq!(path.components[0], Component::Prefix("c:".to_string()));
+    assert_eq!(path.components[0], Component::DrivePrefix("c:".to_string()));
     assert_eq!(path.components[1], Component::Root);
     assert_eq!(path.components[2], Component::Normal("windows".to_string()));
     assert_eq!(path.components[3], Component::Normal("foo.dll".to_string()));
@@ -224,6 +239,25 @@ mod tests {
     path.push("baz");
     path.push("qux.dll");
     assert_eq!(path.to_string(), r#"c:\windows\baz\qux.dll"#);
+    assert!(!path.is_uri());
+  }
+
+  #[test]
+  fn path_new_uri() {
+    let path = Path::new(r#"https://example.com/path"#);
+    assert_eq!(path.separator, '/');
+    assert_eq!(path.components.len(), 3);
+    assert_eq!(
+      path.components[0],
+      Component::UriScheme("https".to_string())
+    );
+    assert_eq!(
+      path.components[1],
+      Component::Normal("example.com".to_string())
+    );
+    assert_eq!(path.components[2], Component::Normal("path".to_string()));
+    assert_eq!(path.to_string(), "https://example.com/path");
+    assert!(path.is_uri());
   }
 
   #[test]
@@ -307,5 +341,16 @@ mod tests {
     assert_eq!("foo", path("foo.rs").file_stem());
     assert_eq!("foo", path("/weird.txt/foo.bar/foo.rs").file_stem());
     assert_eq!("foo.tar", path("foo.tar.gz").file_stem());
+  }
+
+  #[test]
+  fn join_uri_relative() {
+    let src = Path::new("https://example.com/foo/bar");
+    let dir = Path::new(src.dirname());
+    assert_eq!(dir.to_string(), "https://example.com/foo");
+    let rel = Path::new("baz");
+    let abs = dir.join(rel);
+    assert_eq!(abs.to_string(), "https://example.com/foo/baz");
+    assert!(abs.is_uri());
   }
 }

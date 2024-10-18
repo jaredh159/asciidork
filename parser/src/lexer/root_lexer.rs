@@ -53,20 +53,20 @@ impl<'arena> RootLexer<'arena> {
 
   pub fn push_source(
     &mut self,
-    path: Path,
+    src_file: SourceFile,
     leveloffset: i8,
     max_include_depth: Option<u16>,
-    mut src: BumpVec<'arena, u8>,
+    mut src_bytes: BumpVec<'arena, u8>,
   ) {
     // match asciidoctor - its include processor returns an array of lines
     // so even if the source has no trailing newline, it's inserted as a full line
     // NB: the include resolver has taken care of reserving space for the newline
-    if src.last() != Some(&b'\n') {
-      src.push(b'\n');
+    if src_bytes.last() != Some(&b'\n') {
+      src_bytes.push(b'\n');
     }
     self.sources.push(SourceLexer::new(
-      src,
-      SourceFile::Path(path),
+      src_bytes,
+      src_file,
       leveloffset,
       max_include_depth,
       self.bump,
@@ -96,10 +96,10 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn peek(&self) -> Option<u8> {
+    // case: we're in the middle of a temporary buffer
     if let Some((tmp_buf, _)) = &self.tmp_buf {
       return tmp_buf.peek();
     }
-
     // case: we're about to switch to a new source
     if let Some(next_idx) = self.next_idx {
       return self.sources[next_idx as usize].peek();

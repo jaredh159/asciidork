@@ -25,6 +25,16 @@ impl IncludeTarget {
   }
 }
 
+impl From<Path> for IncludeTarget {
+  fn from(path: Path) -> Self {
+    if path.is_uri() {
+      IncludeTarget::Uri(path.to_string())
+    } else {
+      IncludeTarget::FilePath(path.to_string())
+    }
+  }
+}
+
 pub trait IncludeResolver {
   fn resolve(
     &mut self,

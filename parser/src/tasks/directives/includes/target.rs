@@ -9,11 +9,9 @@ pub fn prepare(
   src_file: &SourceFile,
   src_is_primary: bool,
   base_dir: Option<Path>,
-  _safe_mode: SafeMode,
 ) -> std::result::Result<IncludeTarget, ResolveError> {
   let target = Path::new(target_str);
   if target_is_uri {
-    // TODO: handle URI
     return Ok(Target::Uri(target_str.to_string()));
   }
   if src_is_primary && target.is_relative() {
@@ -23,17 +21,18 @@ pub fn prepare(
     let abspath = base_dir.join(target);
     return Ok(Target::FilePath(abspath.to_string()));
   }
-  match (src_file, base_dir) {
-    (Src::Path(src), _) => {
+  match src_file {
+    Src::Path(src) => {
       let abspath = if target.is_relative() {
         let dir = Path::new(src.dirname());
         dir.join(target)
       } else {
         target
       };
-      Ok(Target::FilePath(abspath.to_string()))
+      Ok(abspath.into())
     }
-    _ => todo!(),
+    Src::Stdin { .. } => unimplemented!("include from stdin not implemented yet"),
+    Src::Tmp => unreachable!(),
   }
 }
 
@@ -48,7 +47,6 @@ mod tests {
     target_is_uri: bool,
     src_file: SourceFile,
     src_is_primary: bool,
-    safe_mode: SafeMode,
     base_dir: Option<Path>,
     expected: std::result::Result<IncludeTarget, ResolveError>,
   }
@@ -61,7 +59,6 @@ mod tests {
         target_is_uri: false,
         src_file: SourceFile::Tmp,
         src_is_primary: true,
-        safe_mode: SafeMode::Unsafe,
         base_dir: Some(Path::new("/basedir")),
         expected: Err(ResolveError::NotFound),
       }
@@ -118,7 +115,6 @@ mod tests {
         &case.src_file,
         case.src_is_primary,
         case.base_dir,
-        case.safe_mode,
       );
       assert_eq!(actual, case.expected, "TestCase.name: {:?}", case.name);
     }
