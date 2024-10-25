@@ -613,7 +613,14 @@ impl<'arena> Parser<'arena> {
           }
 
           _ => {
-            acc.text.push_token(&token);
+            if acc.text.loc.end == token.loc.start {
+              acc.text.push_token(&token);
+            } else {
+              // happens when ifdefs cause lines to be skipped
+              acc.text.commit_inlines(&mut acc.inlines);
+              acc.text.push_token(&token);
+              acc.text.loc = token.loc;
+            }
           }
         }
       }

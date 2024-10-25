@@ -82,12 +82,8 @@ impl<'arena> Parser<'arena> {
         return true;
       } else if line.is_comment() {
         continue;
-      } else if !line.starts(Colon) {
-        return false;
       } else {
-        return line.starts_with_seq(&[Kind(Colon), Kind(Word), Kind(Colon)])
-          || line.starts_with_seq(&[Kind(Colon), Kind(MacroName)])
-          || line.starts_with_seq(&[Kind(Colon), Kind(Bang), Kind(Word), Kind(Colon)]);
+        return line.is_attr_decl();
       }
     }
     false

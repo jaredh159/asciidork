@@ -101,12 +101,11 @@ impl<'arena> Parser<'arena> {
       return self.read_line();
     }
     if line.starts(TokenKind::Directive) {
-      let copy = line.clone();
       match self.try_process_directive(&mut line)? {
-        DirectiveAction::Passthrough => Ok(Some(copy)),
+        DirectiveAction::Passthrough => Ok(Some(line)),
         DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
         DirectiveAction::ReadNextLine => self.read_line(),
-        DirectiveAction::SkipLinesUntilEndIf => todo!(),
+        DirectiveAction::SkipLinesUntilEndIf => self.skip_lines_until_endif(&line),
       }
     } else {
       Ok(Some(line))

@@ -10,6 +10,7 @@ mod line;
 mod list_stack;
 mod parse_context;
 pub mod parser;
+pub mod regx;
 mod substitutions;
 mod tasks;
 mod token;
@@ -44,6 +45,7 @@ mod internal {
   pub use crate::list_stack::*;
   pub use crate::parse_context::*;
   pub use crate::parser::*;
+  pub use crate::regx;
   pub use crate::substitutions::*;
   pub use crate::tasks::collect_text::*;
   pub use crate::tasks::customize_subs;

@@ -171,7 +171,7 @@ fn test_parse_indented_literal_block() {
       content: Content::Simple(nodes![
         node!("foo"; 10..13),
         node!(Newline, 13..14),
-        node!("bar"; 14..18),
+        node!("bar"; 15..18),
       ]),
     }
   );

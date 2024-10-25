@@ -1,6 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
-
 use crate::internal::*;
 use crate::variants::token::*;
 
@@ -508,7 +505,7 @@ impl<'arena> Line<'arena> {
       }
       Star if second.is(Star) => {
         let src = self.reassemble_src();
-        let Some(captures) = REPEAT_STAR_LI_START.captures(&src) else {
+        let Some(captures) = regx::REPEAT_STAR_LI_START.captures(&src) else {
           return None;
         };
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
@@ -692,10 +689,33 @@ impl<'arena> Line<'arena> {
       ));
     }
   }
-}
 
-lazy_static! {
-  pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)\s+.+"#).unwrap();
+  pub fn is_attr_decl(&self) -> bool {
+    if !self.current_is(TokenKind::Colon) || self.num_tokens() < 2 {
+      return false;
+    }
+    let src = self.reassemble_src();
+    regx::ATTR_DECL.is_match(&src)
+  }
+
+  pub fn is_directive_endif(&self) -> bool {
+    self.directive_endif_target().is_some()
+  }
+
+  pub fn directive_endif_target(&self) -> Option<BumpString<'arena>> {
+    if !self
+      .current_token()
+      .matches(TokenKind::Directive, "endif::")
+      || self.num_tokens() < 3
+    {
+      return None;
+    }
+    let src = self.reassemble_src();
+    regx::DIRECTIVE_ENDIF.captures(&src).map(|captures| {
+      let attrs = captures.get(1).map_or("", |c| c.as_str());
+      BumpString::from_str_in(attrs, self.tokens.bump)
+    })
+  }
 }
 
 #[cfg(test)]

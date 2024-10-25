@@ -359,6 +359,17 @@ assert_html!(
     "<pre>include::other.adoc[]</pre>" // <-- spaced include parsed as literal
 );
 
+assert_html!(
+  include_within_ifdef,
+  resolving: b"included\n",
+  adoc! {r#"
+    :defined_true:
+
+    ifdef::defined_true[include::some_file.adoc[]]
+  "#},
+  contains: "included",
+);
+
 const TAGGED_RUBY_CLASS: &[u8] = b"#tag::all[]
 class Dog
   #tag::init[]
