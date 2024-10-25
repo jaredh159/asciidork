@@ -1,6 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
-
 use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
@@ -31,7 +28,7 @@ impl<'arena> Parser<'arena> {
     };
 
     let src = line.reassemble_src();
-    let Some(captures) = ATTR_RE.captures(&src) else {
+    let Some(captures) = regx::ATTR_DECL.captures(&src) else {
       return Ok(None);
     };
 
@@ -59,7 +56,7 @@ impl<'arena> Parser<'arena> {
       }
 
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
-      let value = SUBS_RE.replace_all(&joined, |caps: &regex::Captures| {
+      let value = regx::ATTR_VAL_REPLACE.replace_all(&joined, |caps: &regex::Captures| {
         if let Some(AttrValue::String(replace)) =
           self.document.meta.get(caps.get(1).unwrap().as_str())
         {
@@ -114,14 +111,6 @@ impl<'arena> Parser<'arena> {
     }
     wrapped
   }
-}
-
-lazy_static! {
-  pub static ref ATTR_RE: Regex = Regex::new(r"^:([^\s:]+):\s*([^\s].*)?$").unwrap();
-}
-
-lazy_static! {
-  pub static ref SUBS_RE: Regex = Regex::new(r"\{([^\s}]+)\}").unwrap();
 }
 
 #[cfg(test)]

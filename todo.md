@@ -39,6 +39,8 @@
 - [ ] `tabsize`, see
       https://docs.asciidoctor.org/asciidoc/latest/directives/include-with-indent/#the-indent-attribute
 - [ ] doctype=book, special rules
+- [ ] asciidoctor seems to resolve attr refs case-insensitive, grep `ifdef::showScript[]`
+      (is it only for ifdef?) - not sure i want to replicate this, seems undocumented...
 - [√] indented listing/literal blocks
 - [√] breaks
 - [√] hard breaks

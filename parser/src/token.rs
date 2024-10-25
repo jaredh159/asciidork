@@ -157,6 +157,7 @@ pub trait TokenIs {
   fn is_url_scheme(&self) -> bool;
   fn is(&self, kind: TokenKind) -> bool;
   fn is_len(&self, kind: TokenKind, len: usize) -> bool;
+  fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool;
   fn is_not(&self, kind: TokenKind) -> bool {
     !self.is(kind)
   }
@@ -190,6 +191,10 @@ impl<'arena> TokenIs for Token<'arena> {
   fn is_url_scheme(&self) -> bool {
     self.to_url_scheme().is_some()
   }
+
+  fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {
+    self.kind == kind && self.lexeme == lexeme
+  }
 }
 
 impl<'arena> TokenIs for Option<&Token<'arena>> {
@@ -203,6 +208,10 @@ impl<'arena> TokenIs for Option<&Token<'arena>> {
 
   fn is_url_scheme(&self) -> bool {
     self.map_or(false, |t| t.is_url_scheme())
+  }
+
+  fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {
+    self.map_or(false, |t| t.matches(kind, lexeme))
   }
 }
 

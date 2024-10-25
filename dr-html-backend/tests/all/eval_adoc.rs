@@ -630,6 +630,22 @@ assert_html!(
 );
 
 assert_html!(
+  escaped_ifdef,
+  adoc! {"
+    \\ifdef::yup[]
+
+    Some line
+
+    \\endif::[]
+  "},
+  html! {r#"
+    <div class="paragraph"><p>ifdef::yup[]</p></div>
+    <div class="paragraph"><p>Some line</p></div>
+    <div class="paragraph"><p>endif::[]</p></div>
+  "#}
+);
+
+assert_html!(
   attr_ref_behavior,
   adoc! {r#"
     :attribute-missing: drop-line
