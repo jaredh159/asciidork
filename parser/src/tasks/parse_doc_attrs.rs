@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
@@ -56,15 +58,7 @@ impl<'arena> Parser<'arena> {
       }
 
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
-      let value = regx::ATTR_VAL_REPLACE.replace_all(&joined, |caps: &regex::Captures| {
-        if let Some(AttrValue::String(replace)) =
-          self.document.meta.get(caps.get(1).unwrap().as_str())
-        {
-          replace
-        } else {
-          ""
-        }
-      });
+      let value = self.replace_attr_vals(&joined);
       AttrValue::String(value.to_string())
     } else {
       AttrValue::Bool(!is_negated)
@@ -81,6 +75,18 @@ impl<'arena> Parser<'arena> {
     )))
   }
 
+  pub(crate) fn replace_attr_vals<'h>(&self, haystack: &'h str) -> Cow<'h, str> {
+    regx::ATTR_VAL_REPLACE.replace_all(haystack, |caps: &regex::Captures| {
+      if let Some(AttrValue::String(replace)) =
+        self.document.meta.get(caps.get(1).unwrap().as_str())
+      {
+        replace
+      } else {
+        ""
+      }
+    })
+  }
+
   fn join_wrapped_value(
     &self,
     mut first_line_src: &str,
@@ -93,7 +99,7 @@ impl<'arena> Parser<'arena> {
       false
     };
 
-    let mut wrapped = BumpString::from_str_in(first_line_src, self.bump);
+    let mut wrapped = self.string(first_line_src);
     if lines.is_empty() || !has_continuation {
       return wrapped;
     }

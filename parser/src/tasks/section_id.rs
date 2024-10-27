@@ -13,7 +13,7 @@ impl<'arena> Parser<'arena> {
       return None;
     }
     if let Some(id) = attrs.and_then(|a| a.id.as_ref()) {
-      let custom_id = BumpString::from_str_in(&id.src, self.bump);
+      let custom_id = self.string(&id.src);
       self.ctx.anchor_ids.borrow_mut().insert(custom_id.clone());
       return Some(custom_id);
     }
@@ -82,7 +82,7 @@ impl<'arena> Parser<'arena> {
     }
 
     if prefix.is_empty() && separator.map(|c| id.starts_with(c)).unwrap_or(false) {
-      id = BumpString::from_str_in(&id[1..], self.bump);
+      id = self.string(&id[1..]);
     }
 
     if self.ctx.anchor_ids.borrow().contains(&id) {

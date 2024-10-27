@@ -293,6 +293,10 @@ impl<'arena> Parser<'arena> {
     }
     Ok(())
   }
+
+  pub(crate) fn string(&self, s: &str) -> BumpString<'arena> {
+    BumpString::from_str_in(s, self.bump)
+  }
 }
 
 pub trait HasArena<'arena> {

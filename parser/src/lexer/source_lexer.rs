@@ -243,7 +243,10 @@ impl<'arena> SourceLexer<'arena> {
       // directives
       Some(b':')
         if at_line_start
-          && matches!(lexeme, b"include" | b"ifdef" | b"ifndef" | b"endif")
+          && matches!(
+            lexeme,
+            b"include" | b"ifdef" | b"ifndef" | b"endif" | b"ifeval"
+          )
           && self.remaining_len() > 4 =>
       {
         if self.peek_n(1) == Some(b':') && !self.peek_n(2).unwrap().is_ascii_whitespace() {
