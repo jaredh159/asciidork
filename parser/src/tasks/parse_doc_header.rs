@@ -38,8 +38,7 @@ impl<'arena> Parser<'arena> {
         _ => return, // err?
       },
     };
-    let title = self.document.meta.str_or("toc-title", "Table of Contents");
-    let title = BumpString::from_str_in(title, self.bump);
+    let title = self.string(self.document.meta.str_or("toc-title", "Table of Contents"));
     let nodes = BumpVec::new_in(self.bump);
     self.document.toc = Some(TableOfContents { title, nodes, position })
   }

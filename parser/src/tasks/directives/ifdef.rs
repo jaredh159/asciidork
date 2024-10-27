@@ -13,10 +13,7 @@ impl<'arena> Parser<'arena> {
 
     let attrs = captures.get(1).unwrap().as_str();
     let embedded_line = captures.get(2).unwrap();
-    self
-      .ctx
-      .ifdef_stack
-      .push(BumpString::from_str_in(attrs, self.bump));
+    self.ctx.ifdef_stack.push(self.string(attrs));
 
     match (self.evaluate_ifdef(defined, attrs), embedded_line.as_str()) {
       (false, "") => Ok(DirectiveAction::SkipLinesUntilEndIf),
@@ -56,28 +53,6 @@ impl<'arena> Parser<'arena> {
       result = !result;
     }
     result
-  }
-
-  pub(crate) fn try_process_endif_directive(
-    &mut self,
-    line: &mut Line<'arena>,
-  ) -> Result<DirectiveAction<'arena>> {
-    let Some(endif_attrs) = line.directive_endif_target() else {
-      return Ok(DirectiveAction::Passthrough);
-    };
-    let Some(expected) = self.ctx.ifdef_stack.last() else {
-      self.err_line("This endif directive has no previous ifdef/ifndef", line)?;
-      return Ok(DirectiveAction::Passthrough);
-    };
-    if !endif_attrs.is_empty() && expected != &endif_attrs {
-      self.err_at_pattern(
-        format!("Mismatched endif directive, expected `{}`", &expected),
-        line.loc().unwrap().start,
-        &endif_attrs,
-      )?;
-      return Ok(DirectiveAction::Passthrough);
-    }
-    Ok(DirectiveAction::ReadNextLine)
   }
 
   pub(crate) fn skip_lines_until_endif(

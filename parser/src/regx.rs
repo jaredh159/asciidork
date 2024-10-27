@@ -9,11 +9,18 @@ lazy_static! {
 
 // directives
 lazy_static! {
+  pub static ref DIRECTIVE_INCLUDE: Regex =
+    Regex::new(r#"^include::([^\[]+[^\[\s])\[.*\]$"#).unwrap();
   pub static ref DIRECTIVE_IFDEF: Regex =
     Regex::new(r#"^ifn?def::([^\[]+[^\[\s])\[(.*)\]$"#).unwrap();
   pub static ref DIRECTIVE_ENDIF: Regex = Regex::new(r#"^endif::(\S*)\[\]$"#).unwrap();
-  pub static ref DIRECTIVE_INCLUDE: Regex =
-    Regex::new(r#"^include::([^\[]+[^\[\s])\[.*\]$"#).unwrap();
+}
+
+// ifeval directives
+lazy_static! {
+  pub static ref DIRECTIVE_IFEVAL: Regex =
+    Regex::new(r#"^ifeval::(.*?)\[(.+?) *([=!><]=|[><]) *(.+)\]$"#).unwrap();
+  pub static ref DIRECTIVE_INVALID_IFEVAL: Regex = Regex::new(r#"^ifeval::(\[(.*)\])$"#).unwrap();
 }
 
 // line

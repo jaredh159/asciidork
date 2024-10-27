@@ -95,7 +95,7 @@ impl<'arena> Parser<'arena> {
                 let re = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
                 for captures in re.captures_iter(&keys_src).step_by(2) {
                   let key = captures.get(1).unwrap().as_str();
-                  keys.push(BumpString::from_str_in(key, self.bump));
+                  keys.push(self.string(key));
                 }
                 acc.push_node(Macro(Keyboard { keys, keys_src }), macro_loc);
               }
@@ -178,7 +178,7 @@ impl<'arena> Parser<'arena> {
                   trimmed = trimmed.trim_end();
                   if !trimmed.is_empty() {
                     items.push(SourceString::new(
-                      BumpString::from_str_in(trimmed, self.bump),
+                      self.string(trimmed),
                       SourceLocation::new(pos as u32, (pos + trimmed.len()) as u32),
                     ));
                   }
@@ -688,8 +688,7 @@ impl<'arena> Parser<'arena> {
       line_txt = &line_txt[..line_len - 1];
     }
     if line_txt.ends_with(comment_bytes) {
-      let tuck = state.text.str().split_at(line_len - back as usize).1;
-      let tuck = BumpString::from_str_in(tuck, self.bump);
+      let tuck = self.string(state.text.str().split_at(line_len - back as usize).1);
       state.text.drop_last(back);
       let tuck_loc = SourceLocation::new(state.text.loc.end, state.text.loc.end + back);
       state.push_node(CalloutTuck(tuck), tuck_loc);

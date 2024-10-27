@@ -116,7 +116,7 @@ impl<'arena> Parser<'arena> {
       }
       Err(err @ ResolveError::NotFound | err @ ResolveError::Io(..)) => {
         self.target_err(format!("Include resolver error: {}", err), &directive)?;
-        let mut msg = BumpString::from_str_in("+++Unresolved directive in ", self.bump);
+        let mut msg = self.string("+++Unresolved directive in ");
         msg.push_str(&self.lexer.source_file().file_name());
         msg.push_str(" - ");
         let offset = directive.first_token.loc.start + msg.len() as u32;
@@ -146,7 +146,7 @@ impl<'arena> Parser<'arena> {
     if let Some(captures) = VALID_INCLUDE.captures(&src) {
       let target = captures.get(1).unwrap().as_str();
       let has_spaces = target.contains(' ');
-      let target = BumpString::from_str_in(target, self.bump);
+      let target = self.string(target);
       let first_token = line.consume_current().unwrap();
       let target_is_uri = line.current_token().is_url_scheme();
       let num_target_tokens = line.first_nonescaped(TokenKind::OpenBracket).unwrap().1;
