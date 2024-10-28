@@ -1,5 +1,6 @@
 use asciidork_ast::prelude::*;
 use asciidork_ast::variants::{inline::*, r#macro::*};
+use asciidork_ast::Flow;
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -12,6 +13,19 @@ test_inlines_loose!(
       linktext: None
     }),
     0..10
+  )]
+);
+
+test_inlines_loose!(
+  inline_image_macro,
+  "image:play.png[]",
+  nodes![node!(
+    Macro(Image {
+      flow: Flow::Inline,
+      target: src!("play.png", 6..14),
+      attrs: attr_list!(14..16)
+    }),
+    0..16
   )]
 );
 

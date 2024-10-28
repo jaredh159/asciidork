@@ -125,7 +125,7 @@ impl<'arena> Parser<'arena> {
           state.commit_prev(self)?;
           state.kind = Option;
         }
-        SingleQuote if state.quotes == Default => {
+        SingleQuote if state.at_transition() && state.quotes == Default => {
           state.skip_char();
           state.quotes = InSingle;
         }
@@ -134,7 +134,7 @@ impl<'arena> Parser<'arena> {
           state.skip_char();
           state.quotes = Default;
         }
-        DoubleQuote if state.quotes == Default => {
+        DoubleQuote if state.at_transition() && state.quotes == Default => {
           state.skip_char();
           state.quotes = InDouble;
         }
@@ -217,6 +217,14 @@ impl<'arena> AttrState<'arena> {
       )?;
     }
     Ok(())
+  }
+
+  fn at_transition(&self) -> bool {
+    if self.prev_token.is_none() || self.tokens.is_empty() {
+      true
+    } else {
+      self.kind == AttrKind::Named && self.attr.is_empty()
+    }
   }
 
   fn switch_to_named(&mut self) {
@@ -587,6 +595,24 @@ mod tests {
         AttrList {
           named: Named::from(vecb![(src!("width", 1..6), just!("50%", 7..10))]),
           ..attr_list!(0..11)
+        },
+      ),
+      (
+        "[don't]",
+        AttrList {
+          positional: vecb![Some(nodes![
+            node!("don"; 1..4),
+            node!(CurlyQuote(CurlyKind::LegacyImplicitApostrophe), 4..5),
+            node!("t"; 5..6),
+          ])],
+          ..attr_list!(0..7)
+        },
+      ),
+      (
+        "[don\"t]",
+        AttrList {
+          positional: vecb![Some(nodes![node!("don\"t"; 1..6),])],
+          ..attr_list!(0..7)
         },
       ),
     ];

@@ -83,3 +83,30 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  inline_image_macro,
+  adoc! {r#"
+    Click image:play.png[] to play the video.
+
+    Foo image:a-b_c.png[] bar.
+
+    image:t.svg[Custom alt]
+
+    image:t.png[a' < b"]
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Click <span class="image"><img src="play.png" alt="play"></span> to play the video.</p>
+    </div>
+    <div class="paragraph">
+      <p>Foo <span class="image"><img src="a-b_c.png" alt="a b c"></span> bar.</p>
+    </div>
+    <div class="paragraph">
+      <p><span class="image"><img src="t.svg" alt="Custom alt"></span></p>
+    </div>
+    <div class="paragraph">
+      <p><span class="image"><img src="t.png" alt="a&#8217; &lt; b&quot;"></span></p>
+    </div>
+  "#}
+);

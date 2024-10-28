@@ -338,6 +338,7 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       text.iter().for_each(|node| eval_inline(node, doc, backend));
       backend.exit_footnote(*number, id.as_deref(), text);
     }
+    Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
     Macro(Button(text)) => backend.visit_button_macro(text),
     Macro(Link { target, attrs, scheme }) => {
       backend.enter_link_macro(target, attrs.as_ref(), *scheme);

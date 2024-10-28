@@ -3,4 +3,5 @@ target
 Session.vim
 scratch.adoc
 !kitchen-sink.adoc
+.vscode/
 

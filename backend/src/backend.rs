@@ -124,6 +124,7 @@ pub trait Backend {
   fn visit_multichar_whitespace(&mut self, whitespace: &str);
   fn visit_button_macro(&mut self, text: &str);
   fn visit_menu_macro(&mut self, items: &[&str]);
+  fn visit_image_macro(&mut self, target: &str, attrs: &AttrList);
 
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
     _ = keys;

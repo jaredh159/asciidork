@@ -14,7 +14,11 @@ impl<'arena> InlineNodes<'arena> {
     let mut text = Vec::new();
     self.iter().for_each(|node| match &node.content {
       Inline::Bold(nodes) => text.extend(nodes.plain_text()),
-      Inline::CurlyQuote(_) => {}
+      Inline::CurlyQuote(RightDouble) => text.push("”"),
+      Inline::CurlyQuote(LeftDouble) => text.push("“"),
+      Inline::CurlyQuote(LeftSingle) => text.push("‘"),
+      Inline::CurlyQuote(RightSingle) => text.push("’"),
+      Inline::CurlyQuote(LegacyImplicitApostrophe) => text.push("'"),
       Inline::Discarded => {}
       Inline::Highlight(nodes) => text.extend(nodes.plain_text()),
       Inline::Macro(_) => {}
@@ -29,7 +33,9 @@ impl<'arena> InlineNodes<'arena> {
       Inline::Mono(nodes) => text.extend(nodes.plain_text()),
       Inline::MultiCharWhitespace(_) => text.push(" "),
       Inline::Quote(_, nodes) => text.extend(nodes.plain_text()),
-      Inline::SpecialChar(_) => {}
+      Inline::SpecialChar(SpecialCharKind::Ampersand) => text.push("&"),
+      Inline::SpecialChar(SpecialCharKind::LessThan) => text.push("<"),
+      Inline::SpecialChar(SpecialCharKind::GreaterThan) => text.push(">"),
       Inline::Superscript(nodes) => text.extend(nodes.plain_text()),
       Inline::Subscript(nodes) => text.extend(nodes.plain_text()),
       Inline::Text(s) => text.push(s.as_str()),

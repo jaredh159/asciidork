@@ -14,7 +14,8 @@
       named attributes) in a table’s attribute list, otherwise the processor will ignore
       them."
 - [ ] xref to discrete heading
-- [ ] attr list `options` longhand (maybe role too?), i.e. `[options="a,b"]` == `[%a%b]`
+- [ ] attr list `options` longhand, (and `opts=` mediumhand, lol) (maybe role too?), i.e.
+      `[options="a,b"]` == `[%a%b]`
 - [ ] finish eval-ing all inline types, try to eval `kitchen-sink.adoc` to find missing
       ones
 - [ ] finish fleshing out customizing substitutions, handling append/prepend, etc., see

@@ -728,6 +728,26 @@ impl Backend for AsciidoctorHtml {
     self.push([r#"<b class="button">"#, text, "</b>"])
   }
 
+  fn visit_image_macro(&mut self, target: &str, attrs: &AttrList) {
+    self.push_str(r#"<span class="image">"#);
+    self.push_str(r#"<img src=""#);
+    self.push_str(target);
+    self.push_str(r#"" alt=""#);
+    if let Some(alt) = attrs.str_positional_at(0) {
+      self.push_str_attr_escaped(alt);
+    } else if let Some(Some(nodes)) = attrs.positional.first() {
+      for s in nodes.plain_text() {
+        self.push_str_attr_escaped(s);
+      }
+    } else {
+      let basename = target.split('/').last().unwrap_or(target);
+      let filestem = basename.split('.').next().unwrap_or(basename);
+      let alt = filestem.replace(['-', '_'], " ");
+      self.push_str_attr_escaped(&alt);
+    }
+    self.push_str(r#""></span>"#);
+  }
+
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
     if keys.len() > 1 {
       self.push_str(r#"<span class="keyseq">"#);
@@ -974,6 +994,19 @@ impl AsciidoctorHtml {
 
   pub(crate) fn push_str(&mut self, s: &str) {
     self.html.push_str(s);
+  }
+
+  pub(crate) fn push_str_attr_escaped(&mut self, s: &str) {
+    for c in s.chars() {
+      match c {
+        '"' => self.html.push_str("&quot;"),
+        '\'' => self.html.push_str("&#8217;"),
+        '&' => self.html.push_str("&amp;"),
+        '<' => self.html.push_str("&lt;"),
+        '>' => self.html.push_str("&gt;"),
+        _ => self.html.push(c),
+      }
+    }
   }
 
   pub(crate) fn push_buffered(&mut self) {
