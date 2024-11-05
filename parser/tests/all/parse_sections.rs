@@ -40,6 +40,7 @@ fn test_parse_section_w_reftext() {
     Section {
       meta: ChunkMeta {
         attrs: Some(AttrList {
+          positional: vecb![None],
           named: Named::from(vecb![
              (src!("reftext", 1..8), nodes![
                node!("so "; 9..12),

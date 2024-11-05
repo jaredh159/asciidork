@@ -26,42 +26,52 @@ impl SourceLocation {
     self.end = self.end.max(other.end);
   }
 
+  #[must_use]
   pub fn clamp_start(&self) -> SourceLocation {
     Self::new_depth(self.start, self.start, self.include_depth)
   }
 
+  #[must_use]
   pub fn clamp_end(&self) -> SourceLocation {
     Self::new_depth(self.end, self.end, self.include_depth)
   }
 
+  #[must_use]
   pub fn decr_end(&self) -> SourceLocation {
     Self::new_depth(self.start, self.end - 1, self.include_depth)
   }
 
+  #[must_use]
   pub fn incr_end(&self) -> SourceLocation {
     Self::new_depth(self.start, self.end + 1, self.include_depth)
   }
 
+  #[must_use]
   pub fn decr_start(&self) -> SourceLocation {
     Self::new_depth(self.start - 1, self.end, self.include_depth)
   }
 
+  #[must_use]
   pub fn incr_start(&self) -> SourceLocation {
     Self::new_depth(self.start + 1, self.end, self.include_depth)
   }
 
+  #[must_use]
   pub fn incr(&self) -> SourceLocation {
     Self::new_depth(self.start + 1, self.end + 1, self.include_depth)
   }
 
+  #[must_use]
   pub fn decr(&self) -> SourceLocation {
     Self::new_depth(self.start - 1, self.end - 1, self.include_depth)
   }
 
+  #[must_use]
   pub fn offset(&self, offset: u32) -> SourceLocation {
     Self::new_depth(self.start + offset, self.end + offset, self.include_depth)
   }
 
+  #[must_use]
   pub const fn size(&self) -> u32 {
     self.end - self.start
   }

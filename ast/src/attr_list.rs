@@ -23,6 +23,11 @@ impl<'arena> AttrList<'arena> {
     }
   }
 
+  pub fn insert_named(&mut self, key: SourceString<'arena>, value: InlineNodes<'arena>) {
+    self.named.insert(key, value);
+    self.positional.push(None);
+  }
+
   /// https://docs.asciidoctor.org/asciidoc/latest/blocks/#block-style
   pub fn block_style(&self) -> Option<BlockContext> {
     if let Some(first_positional) = self.str_positional_at(0) {
@@ -133,7 +138,7 @@ impl<'arena> Named<'arena> {
     Named(vec)
   }
 
-  pub fn insert(&mut self, key: SourceString<'arena>, value: InlineNodes<'arena>) {
+  fn insert(&mut self, key: SourceString<'arena>, value: InlineNodes<'arena>) {
     self.0.push((key, value));
   }
 

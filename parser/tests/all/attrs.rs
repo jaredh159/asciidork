@@ -12,7 +12,7 @@ pub fn named(
   attrs.loc.start = pairs[0].1.start - 1;
   attrs.loc.end = pairs[pairs.len() - 1].3.end + 1;
   for (name, name_range, value, value_range) in pairs {
-    attrs.named.insert(
+    attrs.insert_named(
       src!(name, name_range.clone()),
       just!(value, value_range.clone()),
     );

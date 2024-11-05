@@ -140,13 +140,6 @@ impl<'arena> Token<'arena> {
     self.loc.start += n;
   }
 
-  pub fn satisfies(&self, spec: TokenSpec) -> bool {
-    match spec {
-      TokenSpec::Kind(kind) => self.kind == kind,
-      TokenSpec::Len(len, kind) => self.kind == kind && self.len() == len as usize,
-    }
-  }
-
   pub fn attr_name(&self) -> &str {
     assert_eq!(self.kind, TokenKind::AttrRef);
     &self.lexeme[1..self.lexeme.len() - 1]
@@ -158,6 +151,7 @@ pub trait TokenIs {
   fn is(&self, kind: TokenKind) -> bool;
   fn is_len(&self, kind: TokenKind, len: usize) -> bool;
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool;
+  fn satisfies(&self, spec: TokenSpec) -> bool;
   fn is_not(&self, kind: TokenKind) -> bool {
     !self.is(kind)
   }
@@ -166,6 +160,9 @@ pub trait TokenIs {
   }
   fn is_whitespaceish(&self) -> bool {
     self.is(TokenKind::Whitespace) || self.is(TokenKind::Newline)
+  }
+  fn satisfies_any(&self, specs: &[TokenSpec]) -> bool {
+    specs.iter().any(|spec| self.satisfies(*spec))
   }
 }
 
@@ -186,6 +183,13 @@ impl<'arena> TokenIs for Token<'arena> {
 
   fn is_len(&self, kind: TokenKind, len: usize) -> bool {
     self.kind == kind && self.len() == len
+  }
+
+  fn satisfies(&self, spec: TokenSpec) -> bool {
+    match spec {
+      TokenSpec::Kind(kind) => self.kind == kind,
+      TokenSpec::Len(len, kind) => self.kind == kind && self.len() == len as usize,
+    }
   }
 
   fn is_url_scheme(&self) -> bool {
@@ -212,6 +216,10 @@ impl<'arena> TokenIs for Option<&Token<'arena>> {
 
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {
     self.map_or(false, |t| t.matches(kind, lexeme))
+  }
+
+  fn satisfies(&self, spec: TokenSpec) -> bool {
+    self.map_or(false, |t| t.satisfies(spec))
   }
 }
 

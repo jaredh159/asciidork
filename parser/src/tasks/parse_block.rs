@@ -223,7 +223,7 @@ impl<'arena> Parser<'arena> {
     line.discard_assert(MacroName);
     line.discard_assert(Colon);
     let target = line.consume_macro_target(self.bump);
-    let attrs = self.parse_attr_list(&mut line)?;
+    let attrs = self.parse_block_attr_list(&mut line)?;
     Ok(Block {
       meta,
       context: Context::Image,

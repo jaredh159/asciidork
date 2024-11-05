@@ -10,7 +10,7 @@ impl<'arena> CollectText<'arena> {
   pub fn new_in(loc: SourceLocation, bump: &'arena bumpalo::Bump) -> Self {
     CollectText {
       bump,
-      string: Some(BumpString::new_in(bump)),
+      string: Some(BumpString::with_capacity_in(16, bump)),
       loc,
     }
   }
@@ -54,7 +54,10 @@ impl<'arena> CollectText<'arena> {
 
   fn take(&mut self) -> BumpString<'arena> {
     self.loc = self.loc.clamp_end();
-    self.string.replace(BumpString::new_in(self.bump)).unwrap()
+    self
+      .string
+      .replace(BumpString::with_capacity_in(16, self.bump))
+      .unwrap()
   }
 
   pub fn take_src(&mut self) -> SourceString<'arena> {
