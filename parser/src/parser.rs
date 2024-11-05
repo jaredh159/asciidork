@@ -250,10 +250,20 @@ impl<'arena> Parser<'arena> {
           line.discard_assert(TokenKind::Dots);
           title = Some(self.parse_inlines(&mut line.into_lines())?);
         }
-        Some(line) if line.is_attr_list() => {
+        Some(line) if line.is_block_attr_list() => {
           let mut line = lines.consume_current().unwrap();
           line.discard_assert(TokenKind::OpenBracket);
-          attrs = Some(self.parse_attr_list(&mut line)?);
+          attrs = Some(self.parse_block_attr_list(&mut line)?);
+        }
+        Some(line) if line.is_block_anchor() => {
+          let mut line = lines.consume_current().unwrap();
+          line.discard_assert(TokenKind::OpenBracket);
+          line.discard_assert(TokenKind::OpenBracket);
+          let anchor = self.parse_block_anchor(&mut line)?.unwrap();
+          let mut anchor_attrs = AttrList::new(anchor.loc, self.bump);
+          anchor_attrs.id = Some(anchor.id);
+          anchor_attrs.positional.push(anchor.reftext);
+          attrs = Some(anchor_attrs);
         }
         _ => break,
       }

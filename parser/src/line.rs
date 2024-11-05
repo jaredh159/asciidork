@@ -152,16 +152,21 @@ impl<'arena> Line<'arena> {
       && self.ends_with_nonescaped(CloseBracket)
   }
 
-  pub fn is_attr_list(&self) -> bool {
-    if !self.starts(OpenBracket) || !self.ends_with_nonescaped(CloseBracket) {
-      false
-    // support legacy [[id,pos]] anchor syntax
-    } else if self.starts_with_seq(&[Kind(OpenBracket), Kind(OpenBracket)]) {
-      self.ends_with_nonescaped(CloseBracket)
-        && self.nth_token(self.num_tokens() - 2).is(CloseBracket)
-    } else {
-      true
-    }
+  pub fn is_block_attr_list(&self) -> bool {
+    self.starts(OpenBracket)
+      && self.ends_with_nonescaped(CloseBracket)
+      && !self.peek_token().is(OpenBracket)
+  }
+
+  pub fn is_block_anchor(&self) -> bool {
+    self.starts_with_seq(&[Kind(OpenBracket), Kind(OpenBracket)])
+      && self.num_tokens() > 4
+      && !matches!(
+        self.nth_token(2).unwrap().kind,
+        SingleQuote | DoubleQuote | Whitespace
+      )
+      && self.ends_with_nonescaped(CloseBracket)
+      && self.nth_token(self.num_tokens() - 2).is(CloseBracket)
   }
 
   pub fn is_chunk_title(&self) -> bool {
@@ -383,6 +388,28 @@ impl<'arena> Line<'arena> {
   }
 
   #[must_use]
+  pub fn consume_to_string_until_one_of(
+    &mut self,
+    spec: &[TokenSpec],
+    bump: &'arena Bump,
+  ) -> SourceString<'arena> {
+    let mut loc = self.loc().expect("no tokens to consume");
+    let mut s = BumpString::new_in(bump);
+    loop {
+      let Some(peek) = self.current_token() else {
+        break;
+      };
+      if peek.satisfies_any(spec) {
+        break;
+      }
+      let token = self.consume_current().unwrap();
+      s.push_str(&token.lexeme);
+      loc.extend(token.loc);
+    }
+    SourceString::new(s, loc)
+  }
+
+  #[must_use]
   pub fn consume_to_string(&mut self, bump: &'arena Bump) -> SourceString<'arena> {
     let mut loc = self.loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
@@ -549,7 +576,7 @@ impl<'arena> Line<'arena> {
       return false;
     }
     match self.current_token().map(|t| t.kind) {
-      Some(OpenBracket) => !self.is_attr_list(),
+      Some(OpenBracket) => !self.is_block_attr_list(),
       Some(Plus) | None => false,
       _ => !self.starts_list_item(),
     }
@@ -667,7 +694,7 @@ impl<'arena> Line<'arena> {
     if token.is(Whitespace) && token_len > indent {
       let delta = token_len - indent;
       if delta == token_len {
-        self.tokens.pop_front();
+        self.tokens.remove_first();
       } else {
         token.loc.start += delta as u32;
         for _ in 0..delta {

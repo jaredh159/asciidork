@@ -172,7 +172,7 @@ impl<'arena> ContiguousLines<'arena> {
     let Some(line) = self.first() else {
       return false;
     };
-    if !allow_attrs || !line.is_attr_list() {
+    if !allow_attrs || !line.is_block_attr_list() {
       return line.starts_nested_list(stack);
     }
     self

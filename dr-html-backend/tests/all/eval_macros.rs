@@ -87,6 +87,8 @@ assert_html!(
 assert_html!(
   inline_image_macro,
   adoc! {r#"
+    :foo: bar
+
     Click image:play.png[] to play the video.
 
     Foo image:a-b_c.png[] bar.
@@ -94,6 +96,8 @@ assert_html!(
     image:t.svg[Custom alt]
 
     image:t.png[a' < b"]
+
+    image:x.png[foo{foo}bar]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -107,6 +111,9 @@ assert_html!(
     </div>
     <div class="paragraph">
       <p><span class="image"><img src="t.png" alt="a&#8217; &lt; b&quot;"></span></p>
+    </div>
+    <div class="paragraph">
+      <p><span class="image"><img src="x.png" alt="foobarbar"></span></p>
     </div>
   "#}
 );

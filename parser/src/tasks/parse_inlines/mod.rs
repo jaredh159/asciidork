@@ -4,6 +4,7 @@ mod inline_preproc;
 mod inline_utils;
 
 use crate::internal::*;
+use crate::tasks::parse_attr_list::AnchorSrc;
 use crate::variants::token::*;
 use ast::variants::{inline::*, r#macro::*};
 use inline_utils::*;
@@ -79,7 +80,7 @@ impl<'arena> Parser<'arena> {
             match token.lexeme.as_str() {
               "image:" => {
                 let target = line.consume_macro_target(self.bump);
-                let attrs = self.parse_attr_list(&mut line)?;
+                let attrs = self.parse_inline_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 acc.push_node(
                   Macro(Image { flow: Flow::Inline, target, attrs }),
@@ -134,7 +135,7 @@ impl<'arena> Parser<'arena> {
                 let target = self
                   .macro_target_from_passthru(&mut line)
                   .unwrap_or_else(|| line.consume_macro_target(self.bump));
-                let attrs = self.parse_attr_list(&mut line)?;
+                let attrs = self.parse_inline_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 let scheme = token.to_url_scheme();
                 acc.push_node(
@@ -145,7 +146,7 @@ impl<'arena> Parser<'arena> {
               "https:" | "http:" | "irc:" => {
                 let target = line.consume_url(Some(&token), self.bump);
                 line.discard_assert(OpenBracket);
-                let attrs = self.parse_attr_list(&mut line)?;
+                let attrs = self.parse_inline_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 let scheme = Some(token.to_url_scheme().unwrap());
                 acc.push_node(
@@ -155,7 +156,7 @@ impl<'arena> Parser<'arena> {
               }
               "icon:" => {
                 let target = line.consume_macro_target(self.bump);
-                let attrs = self.parse_attr_list(&mut line)?;
+                let attrs = self.parse_inline_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 acc.push_node(Macro(Icon { target, attrs }), macro_loc);
               }
@@ -364,21 +365,22 @@ impl<'arena> Parser<'arena> {
 
           OpenBracket
             if line.current_is(OpenBracket)
+              && !line.peek_token().is(CloseBracket)
               && line.contains_seq(&[Kind(CloseBracket), Kind(CloseBracket)]) =>
           {
-            let attrs = self.parse_attr_list(&mut line)?;
-            let id = attrs.id.clone().expect("malformed legacy attrs").src;
-            self.document.anchors.borrow_mut().insert(
-              id.clone(),
-              Anchor {
-                title: InlineNodes::new(self.bump),
-                reftext: match attrs.positional.first() {
-                  Some(Some(reftext)) => Some(reftext.clone()),
-                  _ => None,
+            line.discard(1); // second `[`
+            if let Some(AnchorSrc { id, reftext, loc }) = self.parse_inline_anchor(&mut line)? {
+              self.document.anchors.borrow_mut().insert(
+                id.src.clone(),
+                Anchor {
+                  reftext,
+                  title: InlineNodes::new(self.bump),
                 },
-              },
-            );
-            acc.push_node(LegacyInlineAnchor(id), attrs.loc);
+              );
+              acc.push_node(LegacyInlineAnchor(id.src), loc);
+            } else {
+              acc.text.push_token(&token);
+            }
           }
 
           Backtick

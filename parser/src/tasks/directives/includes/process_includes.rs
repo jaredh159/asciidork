@@ -157,7 +157,7 @@ impl<'arena> Parser<'arena> {
         target_str: target,
         target_has_spaces: has_spaces,
         target_is_uri,
-        attrs: self.parse_attr_list(line)?,
+        attrs: self.parse_block_attr_list(line)?,
       }))
     } else {
       Ok(None)

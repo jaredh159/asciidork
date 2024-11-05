@@ -104,6 +104,10 @@ impl<'arena, T> Deq<'arena, T> {
     self.buf.reserve(additional + self.pos);
   }
 
+  pub fn remove_first(&mut self) {
+    self.pos += 1;
+  }
+
   // this is not meant to be a general-purpose method, rather
   // should only be called when we know we have a slot to overwrite
   // which is why there is a debug_assert! to catch misuse
@@ -120,6 +124,14 @@ impl<'arena, T> Deq<'arena, T> {
       self.buf[self.pos] = item;
     }
   }
+
+  pub fn as_slice(&self) -> &[T] {
+    &self.buf[self.pos..]
+  }
+
+  pub fn into_vec(self) -> BumpVec<'arena, T> {
+    BumpVec::from_iter_in(self.buf.into_iter().skip(self.pos), self.bump)
+  }
 }
 
 pub trait DefaultIn<'a> {
@@ -127,6 +139,7 @@ pub trait DefaultIn<'a> {
 }
 
 impl<'arena, T: DefaultIn<'arena>> Deq<'arena, T> {
+  #[must_use]
   pub fn pop_front(&mut self) -> Option<T> {
     if self.is_empty() {
       return None;

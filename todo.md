@@ -3,10 +3,13 @@
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref
 
+- [ ] alternate anchor/macro syntax: `anchor:idname[]`, `anchor:idname[ref text]`, ==
+      `[[idname]]`, `[[idname,ref text]]`
+- [ ] index: https://docs.asciidoctor.org/asciidoc/latest/sections/user-index
+- [ ] multi-anchors, e.g. `=== [[current]][[latest]]Version 4.9`, see
+      https://docs.asciidoctor.org/asciidoc/latest/attributes/id/#add-additional-anchors-to-a-section
 - [ ] resolve include directives starting from stdin
 - [ ] rest of doc-attrs-ref, date stuff, output file things
-- [ ] resolving the {email} attr is example of "multiple passes", as it gets turned into
-      an autolink in asciidoctor html5, test `{email}` vs `[subs=-macros]\n{email}`
 - [ ] syntax for undefining an attribute: `{set:foo!}`, see
       https://docs.asciidoctor.org/asciidoc/latest/attributes/unresolved-references/#undefined
 - [ ] think about this statement from header row section of tables docs: "Values assigned
@@ -14,14 +17,14 @@
       named attributes) in a table’s attribute list, otherwise the processor will ignore
       them."
 - [ ] xref to discrete heading
-- [ ] attr list `options` longhand, (and `opts=` mediumhand, lol) (maybe role too?), i.e.
-      `[options="a,b"]` == `[%a%b]`
 - [ ] finish eval-ing all inline types, try to eval `kitchen-sink.adoc` to find missing
       ones
 - [ ] finish fleshing out customizing substitutions, handling append/prepend, etc., see
       `customize_subs.rs`
 - [ ] i don't run substitutions in an _order_. i need to search out some test cases of why
       (if?) this is naive/problematic, and fix (see inferred_doc_title_attr test)
+- [ ] resolving the {email} attr is example of "multiple passes", as it gets turned into
+      an autolink in asciidoctor html5, test `{email}` vs `[subs=-macros]\n{email}`
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
 - [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
@@ -31,7 +34,6 @@
       `html5.rb`
 - [ ] char replacement substitutions:
       https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
-- [ ] look into cleaning up errors with a macro `err!(tok_start: token, "foo")`
 - [ ] all attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example, see also
@@ -42,32 +44,6 @@
 - [ ] doctype=book, special rules
 - [ ] asciidoctor seems to resolve attr refs case-insensitive, grep `ifdef::showScript[]`
       (is it only for ifdef?) - not sure i want to replicate this, seems undocumented...
-- [√] indented listing/literal blocks
-- [√] breaks
-- [√] hard breaks
-- [√] basic multi-byte char test
-- [√] sections
-- [√] poc, non-corner-painting wasm
-- [√] description lists
-- [√] multi-line continuation `\` -- see doc attrs, which can be multiline. prob should be
-  folded into ContiguousLines so that it shows up as one line, i think
-- [√] literal blocks (delimited and non-delimited)
-- [√] listing blocks (delimited and non-delimited)
-- [•] soon: multi-file non corner painting
-- [√] block quotes
-- [√] poc, non-corner-painting backend/interpreter
-- [√] unsetting doc attrs, e.g. `:version-label!:`
-- [√] contiguous sidebar with no delimiters using [sidebar]
-- [√] whacky `.Optional title` block first line above blocks (search docs for "sidebar")
-- [√] email autolinks:
-- [√] need to track locations in nodes, like inline at least, maybe doc header
-- [√] shared test macros (duplication of s!)
-- [√] would be nice if it could report ALL parse errors (maybe sync on new block)
-- [√] revision line for header
-- [√] maybe move diagnostics into a RefCell, remove lots of mut parser
-
-^ NB: commit `b035118` is useful if you want to find anything from the first, non
-bump-allocated version
 
 ## questions
 
