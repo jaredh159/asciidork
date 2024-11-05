@@ -307,6 +307,7 @@ impl<'arena> SourceLexer<'arena> {
       lexeme,
       b"footnote"
         | b"image"
+        | b"anchor"
         | b"irc"
         | b"icon"
         | b"kbd"

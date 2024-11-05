@@ -23,6 +23,14 @@ impl<'arena> AttrList<'arena> {
     }
   }
 
+  pub fn take_positional(&mut self, n: usize) -> Option<InlineNodes<'arena>> {
+    if self.positional.len() <= n {
+      None
+    } else {
+      self.positional[n].take()
+    }
+  }
+
   pub fn insert_named(&mut self, key: SourceString<'arena>, value: InlineNodes<'arena>) {
     self.named.insert(key, value);
     self.positional.push(None);

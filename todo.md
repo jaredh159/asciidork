@@ -3,8 +3,6 @@
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref
 
-- [ ] alternate anchor/macro syntax: `anchor:idname[]`, `anchor:idname[ref text]`, ==
-      `[[idname]]`, `[[idname,ref text]]`
 - [ ] index: https://docs.asciidoctor.org/asciidoc/latest/sections/user-index
 - [ ] multi-anchors, e.g. `=== [[current]][[latest]]Version 4.9`, see
       https://docs.asciidoctor.org/asciidoc/latest/attributes/id/#add-additional-anchors-to-a-section

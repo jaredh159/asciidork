@@ -25,7 +25,7 @@ pub enum Inline<'arena> {
   Newline,
   CalloutNum(Callout),
   CalloutTuck(BumpString<'arena>),
-  LegacyInlineAnchor(BumpString<'arena>),
+  InlineAnchor(BumpString<'arena>),
   LineBreak,
   LineComment(BumpString<'arena>),
   LitMono(SourceString<'arena>),
@@ -111,7 +111,7 @@ impl<'arena> Json for Inline<'arena> {
         buf.push_str("Macro\"");
         buf.add_member("macro", m);
       }
-      Inline::LegacyInlineAnchor(attrs) => {
+      Inline::InlineAnchor(attrs) => {
         buf.push_str("LegacyInlineAnchor\"");
         buf.add_member("attrs", attrs);
       }

@@ -30,6 +30,18 @@ test_inlines_loose!(
 );
 
 test_inlines_loose!(
+  inline_anchor_macro,
+  "anchor:some-id[]",
+  nodes![node!(InlineAnchor(bstr!("some-id")), 7..14)]
+);
+
+test_inlines_loose!(
+  inline_anchor_macro_reftext,
+  "anchor:some-id[Some ref text here]",
+  nodes![node!(InlineAnchor(bstr!("some-id")), 7..14)]
+);
+
+test_inlines_loose!(
   xref_macro_w_target,
   "xref:foo[bar _baz_]",
   nodes![node!(

@@ -204,7 +204,7 @@ assert_html!(
 );
 
 assert_html!(
-  legacy_inline_anchor_xrefs,
+  inline_anchor_xrefs,
   adoc! {r#"
     [[step-1]]Download the software
 
@@ -213,6 +213,10 @@ assert_html!(
     [[step-2,be sure to]]Lather, rinse, repeat
 
     Also, <<step-2>> do step 2.
+
+    anchor:step-3[Done]Finished
+
+    You're <<step-3>>!
   "#},
   html! {r##"
     <div class="paragraph">
@@ -227,11 +231,17 @@ assert_html!(
     <div class="paragraph">
       <p>Also, <a href="#step-2">be sure to</a> do step 2.</p>
     </div>
+    <div class="paragraph">
+      <p><a id="step-3"></a>Finished</p>
+    </div>
+    <div class="paragraph">
+      <p>You&#8217;re <a href="#step-3">Done</a>!</p>
+    </div>
   "##}
 );
 
 assert_html!(
-  legacy_inline_anchor_starting_cell,
+  inline_anchor_starting_cell,
   adoc! {r#"
     The highest peak in the Front Range is <<grays-peak>>, which tops <<mount-evans>> by just a few feet.
 

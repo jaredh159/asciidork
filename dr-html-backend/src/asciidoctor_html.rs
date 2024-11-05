@@ -676,7 +676,7 @@ impl Backend for AsciidoctorHtml {
     self.push(["[", id, "]"]);
   }
 
-  fn visit_legacy_inline_anchor(&mut self, id: &str) {
+  fn visit_inline_anchor(&mut self, id: &str) {
     self.push(["<a id=\"", id, "\"></a>"]);
   }
 

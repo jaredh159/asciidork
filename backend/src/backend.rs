@@ -172,7 +172,7 @@ pub trait Backend {
   fn enter_xref(&mut self, id: &str, target: Option<&[InlineNode]>);
   fn exit_xref(&mut self, id: &str, target: Option<&[InlineNode]>);
   fn visit_missing_xref(&mut self, id: &str);
-  fn visit_legacy_inline_anchor(&mut self, id: &str);
+  fn visit_inline_anchor(&mut self, id: &str);
   fn visit_linebreak(&mut self);
 
   // result

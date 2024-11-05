@@ -239,7 +239,7 @@ assert_html!(
     [id=longhand]
     == Chapter 2
 
-    [[legacy]]
+    [[anchor-style]]
     == Chapter 3
   "#},
   html! {r#"
@@ -252,7 +252,7 @@ assert_html!(
       <div class="sectionbody"></div>
     </div>
     <div class="sect1">
-      <h2 id="legacy">Chapter 3</h2>
+      <h2 id="anchor-style">Chapter 3</h2>
       <div class="sectionbody"></div>
     </div>
   "#}

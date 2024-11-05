@@ -373,7 +373,7 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
       }
       backend.exit_xref(id, linktext.as_ref().map(|t| t.as_slice()));
     }
-    LegacyInlineAnchor(id) => backend.visit_legacy_inline_anchor(id),
+    InlineAnchor(id) => backend.visit_inline_anchor(id),
     LineBreak => backend.visit_linebreak(),
     CalloutNum(callout) => backend.visit_callout(*callout),
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),

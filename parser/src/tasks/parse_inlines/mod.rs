@@ -189,6 +189,18 @@ impl<'arena> Parser<'arena> {
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 acc.push_node(Macro(Menu(items)), macro_loc);
               }
+              "anchor:" => {
+                let id = line.consume_macro_target(self.bump);
+                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                self.document.anchors.borrow_mut().insert(
+                  id.src.clone(),
+                  Anchor {
+                    reftext: attrs.take_positional(0),
+                    title: InlineNodes::new(self.bump),
+                  },
+                );
+                acc.push_node(InlineAnchor(id.src), id.loc);
+              }
               _ => todo!("unhandled macro type: `{}`", token.lexeme),
             }
           }
@@ -377,7 +389,7 @@ impl<'arena> Parser<'arena> {
                   title: InlineNodes::new(self.bump),
                 },
               );
-              acc.push_node(LegacyInlineAnchor(id.src), loc);
+              acc.push_node(InlineAnchor(id.src), loc);
             } else {
               acc.text.push_token(&token);
             }
@@ -1048,21 +1060,15 @@ mod tests {
   }
 
   #[test]
-  fn test_legacy_inline_anchors() {
+  fn test_inline_anchors() {
     let cases = vec![
       (
         "[[foo]]bar",
-        nodes![
-          node!(LegacyInlineAnchor(bstr!("foo")), 0..7),
-          node!("bar"; 7..10),
-        ],
+        nodes![node!(InlineAnchor(bstr!("foo")), 0..7), node!("bar"; 7..10),],
       ),
       (
         "bar[[foo]]",
-        nodes![
-          node!("bar"; 0..3),
-          node!(LegacyInlineAnchor(bstr!("foo")), 3..10),
-        ],
+        nodes![node!("bar"; 0..3), node!(InlineAnchor(bstr!("foo")), 3..10),],
       ),
     ];
 
