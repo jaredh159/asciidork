@@ -1,13 +1,13 @@
 [package]
 name = "asciidork-ast"
-version = "0.8.0"
+version = "0.10.0"
 edition = "2021"
 description = "Asciidork AST nodes"
 license = "MIT"
 
 [dependencies]
 bumpalo = { version = "3.15.4", features = ["collections"] }
-asciidork-meta = { path = "../meta", version = "0.8.0" }
+asciidork-meta = { path = "../meta", version = "0.10.0" }
 smallvec = "1.13.2"
 
 [dev-dependencies]
