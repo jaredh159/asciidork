@@ -94,6 +94,51 @@ impl<'arena> Parser<'arena> {
     self._parse_attr_list(line, false, true)
   }
 
+  pub(crate) fn parse_link_macro_attr_list(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<AttrList<'arena>> {
+    let mut in_double_quote = false;
+    let mut last_kind = TokenKind::Eof;
+    let mut parse_as_attr_list = false;
+    for token in line.iter().take(line.len() - 1) {
+      match (last_kind, token.kind) {
+        (Backslash, DoubleQuote) => {}
+        (Backslash, CloseBracket) => {}
+        (_, CloseBracket) => break,
+        (_, DoubleQuote) => in_double_quote = !in_double_quote,
+        (_, EqualSigns) if token.len() == 1 && !in_double_quote => {
+          parse_as_attr_list = true;
+          break;
+        }
+        _ => {}
+      }
+      last_kind = token.kind;
+    }
+    if parse_as_attr_list {
+      return self._parse_attr_list(line, false, false);
+    }
+
+    let mut attrs = AttrList::new(line.loc().unwrap().decr_start(), self.bump);
+    if line.current_is(CloseBracket) {
+      let end_bracket = line.consume_current().unwrap();
+      attrs.loc.extend(end_bracket.loc);
+      return Ok(attrs);
+    }
+
+    let mut tokens = Deq::with_capacity(line.len() - 1, self.bump);
+    while !line.peek_token().is(CloseBracket) || line.current_is(Backslash) {
+      tokens.push(line.consume_current().unwrap());
+    }
+    tokens.push(line.consume_current().unwrap());
+    let attr_line = Line::new(unquote(tokens));
+    let nodes = self.parse_inlines(&mut attr_line.into_lines())?;
+    attrs.positional.push(Some(nodes));
+    let close_bracket = line.consume_current().expect("attr list close bracket");
+    attrs.loc.extend(close_bracket.loc);
+    Ok(attrs)
+  }
+
   fn _parse_attr_list(
     &mut self,
     line: &mut Line<'arena>,
@@ -1387,7 +1432,7 @@ mod tests {
   }
 
   #[test]
-  fn test_parse_formated_text_attr_list() {
+  fn test_parse_formatted_text_attr_list() {
     let cases = vec![(
       "[#tigers]#a text span#",
       AttrList {
@@ -1401,6 +1446,73 @@ mod tests {
       let mut line = parser.read_line().unwrap().unwrap();
       line.discard_assert(TokenKind::OpenBracket);
       let attr_list = parser.parse_formatted_text_attr_list(&mut line).unwrap();
+      expect_eq!(attr_list, expected, from: input);
+    }
+  }
+
+  // https://docs.asciidoctor.org/asciidoc/latest/macros/link-macro-attribute-parsing/
+  #[test]
+  fn test_parse_link_macro_attr_list() {
+    let cases = vec![
+      (
+        "[foo, bar]",
+        AttrList {
+          positional: vecb![Some(just!("foo, bar", 1..9))],
+          ..attr_list!(0..10)
+        },
+      ),
+      (
+        "[foo, bar, role=resource]",
+        AttrList {
+          positional: vecb![Some(just!("foo", 1..4)), Some(just!("bar", 6..9))],
+          roles: vecb![src!("resource", 16..24)],
+          ..attr_list!(0..25)
+        },
+      ),
+      (
+        "[Discuss AsciiDoc]",
+        AttrList {
+          positional: vecb![Some(just!("Discuss AsciiDoc", 1..17))],
+          ..attr_list!(0..18)
+        },
+      ),
+      (
+        "[Discuss AsciiDoc,role=resource,window=_blank]",
+        AttrList {
+          positional: vecb![Some(just!("Discuss AsciiDoc", 1..17)), None],
+          named: Named::from(vecb![(src!("window", 32..38), just!("_blank", 39..45))]),
+          roles: vecb![src!("resource", 23..31)],
+          ..attr_list!(0..46)
+        },
+      ),
+      (
+        "[\"Google, DuckDuckGo, Ecosia\",role=teal]",
+        AttrList {
+          positional: vecb![Some(just!("Google, DuckDuckGo, Ecosia", 2..28))],
+          roles: vecb![src!("teal", 35..39)],
+          ..attr_list!(0..40)
+        },
+      ),
+      (
+        "[\"1=2 posits the problem of inequality\"]",
+        AttrList {
+          positional: vecb![Some(just!("1=2 posits the problem of inequality", 2..38))],
+          ..attr_list!(0..40)
+        },
+      ),
+      (
+        "[\"href=\"#top\" attribute\"]",
+        AttrList {
+          positional: vecb![Some(just!("href=\"#top\" attribute", 2..23))],
+          ..attr_list!(0..25)
+        },
+      ),
+    ];
+    for (input, expected) in cases {
+      let mut parser = test_parser!(input);
+      let mut line = parser.read_line().unwrap().unwrap();
+      line.discard_assert(TokenKind::OpenBracket);
+      let attr_list = parser.parse_link_macro_attr_list(&mut line).unwrap();
       expect_eq!(attr_list, expected, from: input);
     }
   }

@@ -6,7 +6,6 @@
 - [ ] multi-line inline (not block) img macro attrs (search rx for `a multi-line image`)
 - [ ] data-uri embedded images
 - [ ] "embedded" inline svgs, where html is in output, changing size
-- [ ] link-flavored attr_lists where [a, b, c] is one positional and so is ["a, b", c]
 - [ ] index: https://docs.asciidoctor.org/asciidoc/latest/sections/user-index
 - [ ] multi-anchors, e.g. `=== [[current]][[latest]]Version 4.9`, see
       https://docs.asciidoctor.org/asciidoc/latest/attributes/id/#add-additional-anchors-to-a-section

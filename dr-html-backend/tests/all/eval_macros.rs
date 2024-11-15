@@ -85,15 +85,17 @@ assert_html!(
 
     https://example.org["Google, DuckDuckGo, Ecosia^",role=btn]
 
-    // https://example.org[Google, DuckDuckGo, Ecosia^]
+    https://example.org[Google, DuckDuckGo, Ecosia^]
   "#},
   html! {r#"
     <div class="paragraph">
       <p>View html: <a href="view-source:asciidoctor.org" target="_blank" rel="noopener">Asciidoctor homepage</a>.</p>
     </div>
-
     <div class="paragraph">
       <p><a href="https://example.org" class="btn" target="_blank" rel="noopener">Google, DuckDuckGo, Ecosia</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a href="https://example.org" target="_blank" rel="noopener">Google, DuckDuckGo, Ecosia</a></p>
     </div>
   "#}
 );

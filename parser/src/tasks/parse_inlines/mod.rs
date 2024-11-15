@@ -136,7 +136,11 @@ impl<'arena> Parser<'arena> {
                   .macro_target_from_passthru(&mut line)
                   .unwrap_or_else(|| line.consume_macro_target(self.bump));
                 let line_has_caret = line.contains(Caret);
-                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                let mut attrs = if &token.lexeme == "link:" {
+                  self.parse_link_macro_attr_list(&mut line)?
+                } else {
+                  self.parse_inline_attr_list(&mut line)?
+                };
                 let mut caret = false;
                 if line_has_caret && &token.lexeme == "link:" {
                   caret = link_macro_blank_window_shorthand(&mut attrs);
@@ -157,7 +161,7 @@ impl<'arena> Parser<'arena> {
                 let target = line.consume_url(Some(&token), self.bump);
                 line.discard_assert(OpenBracket);
                 let line_has_caret = line.contains(Caret);
-                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                let mut attrs = self.parse_link_macro_attr_list(&mut line)?;
                 let mut caret = false;
                 if line_has_caret {
                   caret = link_macro_blank_window_shorthand(&mut attrs);
