@@ -160,7 +160,7 @@ impl<'arena> Parser<'arena> {
           tokens.last().unwrap().loc.end,
         )?;
       }
-      AttrIr::Options(groups) if formatted_text => {
+      AttrIr::Options(groups) | AttrIr::Roles(groups) if formatted_text => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
           groups.first().unwrap().first().unwrap().loc.start,
@@ -200,20 +200,8 @@ impl<'arena> Parser<'arena> {
         self.ctx.subs = restore;
         attr_list.insert_named(name, nodes);
       }
-      AttrIr::Options(groups) => {
-        for mut group in groups.into_iter() {
-          if group.is_empty() {
-            continue;
-          } else if group.len() == 1 {
-            let token = group.pop_front().unwrap();
-            let src = token.into_source_string();
-            attr_list.options.push(src);
-          } else {
-            let mut line = Line::new(group);
-            attr_list.options.push(line.consume_to_string(self.bump));
-          }
-        }
-      }
+      AttrIr::Options(groups) => self.push_attr_groups(groups, &mut attr_list.options),
+      AttrIr::Roles(groups) => self.push_attr_groups(groups, &mut attr_list.roles),
       AttrIr::Id(tokens) => {
         let mut line = Line::new(tokens);
         let src = line.consume_to_string(self.bump);
@@ -328,32 +316,36 @@ impl<'arena> Parser<'arena> {
       tokens.remove_first();
     }
     match name.as_str() {
-      "options" | "opts" => self.parse_options_attr(unquote(tokens)),
+      "options" | "opts" => AttrIr::Options(self.parse_attr_subgroups(Comma, unquote(tokens))),
+      "role" => AttrIr::Roles(self.parse_attr_subgroups(Whitespace, unquote(tokens))),
       "id" => AttrIr::Id(unquote(tokens)),
       _ => AttrIr::Named(SourceString::new(name, name_loc), unquote(tokens)),
     }
   }
 
-  fn parse_options_attr(&self, tokens: Deq<'arena, Token<'arena>>) -> AttrIr<'arena> {
+  fn parse_attr_subgroups(
+    &self,
+    delimiter: TokenKind,
+    tokens: Deq<'arena, Token<'arena>>,
+  ) -> Deq<'arena, Deq<'arena, Token<'arena>>> {
     let mut groups = Deq::new(self.bump);
     let mut current = Deq::new(self.bump);
     for token in tokens.into_iter() {
-      match token.kind {
-        Comma => {
-          let trimmed = trim(current);
-          if !trimmed.is_empty() {
-            groups.push(trimmed);
-          }
-          current = Deq::new(self.bump);
+      if token.kind == delimiter {
+        let trimmed = trim(current);
+        if !trimmed.is_empty() {
+          groups.push(trimmed);
         }
-        _ => current.push(token),
+        current = Deq::new(self.bump);
+      } else {
+        current.push(token);
       }
     }
     let trimmed = trim(current);
     if !trimmed.is_empty() {
       groups.push(trimmed);
     }
-    AttrIr::Options(groups)
+    groups
   }
 
   fn attr_ir(&self, tokens: Deq<'arena, Token<'arena>>) -> AttrIr<'arena> {
@@ -396,6 +388,25 @@ impl<'arena> Parser<'arena> {
       }
     }
   }
+
+  fn push_attr_groups(
+    &self,
+    groups: Deq<'arena, Deq<'arena, Token<'arena>>>,
+    sink: &mut BumpVec<'arena, SourceString<'arena>>,
+  ) {
+    for mut group in groups.into_iter() {
+      if group.is_empty() {
+        continue;
+      } else if group.len() == 1 {
+        let token = group.pop_front().unwrap();
+        let src = token.into_source_string();
+        sink.push(src);
+      } else {
+        let mut line = Line::new(group);
+        sink.push(line.consume_to_string(self.bump));
+      }
+    }
+  }
 }
 
 #[derive(Debug)]
@@ -403,6 +414,7 @@ enum AttrIr<'a> {
   Positional(Deq<'a, Token<'a>>, bool),
   Named(SourceString<'a>, Deq<'a, Token<'a>>),
   Options(Deq<'a, Deq<'a, Token<'a>>>),
+  Roles(Deq<'a, Deq<'a, Token<'a>>>),
   Shorthand(Deq<'a, Token<'a>>),
   Id(Deq<'a, Token<'a>>),
 }
@@ -884,10 +896,39 @@ mod tests {
         },
       ),
       (
+        "[role=nowrap]",
+        AttrList {
+          roles: vecb![src!("nowrap", 6..12)],
+          ..attr_list!(0..13)
+        },
+      ),
+      (
+        "[role=nowrap,]",
+        AttrList {
+          positional: vecb![None],
+          roles: vecb![src!("nowrap", 6..12)],
+          ..attr_list!(0..14)
+        },
+      ),
+      (
         "[.nowrap.underline]",
         AttrList {
           roles: vecb![src!("nowrap", 2..8), src!("underline", 9..18)],
           ..attr_list!(0..19)
+        },
+      ),
+      (
+        "[role=nowrap underline]",
+        AttrList {
+          roles: vecb![src!("nowrap", 6..12), src!("underline", 13..22)],
+          ..attr_list!(0..23)
+        },
+      ),
+      (
+        "[role=\"nowrap underline\"]",
+        AttrList {
+          roles: vecb![src!("nowrap", 7..13), src!("underline", 14..23)],
+          ..attr_list!(0..25)
         },
       ),
       (
@@ -1317,6 +1358,11 @@ mod tests {
         "opts='opt1,,opt2 , opt3'",
         "Options([Word`opt1`], [Word`opt2`], [Word`opt3`])",
       ),
+      // roles
+      ("role='role1'", "Roles([Word`role1`])"),
+      ("role=role1", "Roles([Word`role1`])"),
+      ("role=role1 role2", "Roles([Word`role1`], [Word`role2`])"),
+      // misc
       (
         "\"foo,bar\"",
         "Positional([Word`foo`, Comma`,`, Word`bar`], w_symbol: false)",
@@ -1449,6 +1495,10 @@ mod tests {
         AttrIr::Shorthand(tokens) => format!("Shorthand({})", toks_to_string(tokens)),
         AttrIr::Options(gs) => format!(
           "Options({})",
+          gs.iter().map(toks_to_string).collect::<Vec<_>>().join(", ")
+        ),
+        AttrIr::Roles(gs) => format!(
+          "Roles({})",
           gs.iter().map(toks_to_string).collect::<Vec<_>>().join(", ")
         ),
       }

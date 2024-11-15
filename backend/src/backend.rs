@@ -136,13 +136,21 @@ pub trait Backend {
     target: &str,
     attrs: Option<&AttrList>,
     scheme: Option<UrlScheme>,
+    has_link_text: bool,
+    blank_window_shorthand: bool,
   ) {
-    _ = (target, attrs, scheme);
+    _ = (target, attrs, scheme, has_link_text, blank_window_shorthand);
     warn_unimplemented!(enter_link_macro);
   }
 
-  fn exit_link_macro(&mut self, target: &str, attrs: Option<&AttrList>, scheme: Option<UrlScheme>) {
-    _ = (target, attrs, scheme);
+  fn exit_link_macro(
+    &mut self,
+    target: &str,
+    attrs: Option<&AttrList>,
+    scheme: Option<UrlScheme>,
+    has_link_text: bool,
+  ) {
+    _ = (target, attrs, scheme, has_link_text);
     warn_unimplemented!(exit_link_macro);
   }
 

@@ -20,6 +20,7 @@ pub enum MacroNode<'arena> {
     scheme: Option<UrlScheme>,
     target: SourceString<'arena>,
     attrs: Option<AttrList<'arena>>,
+    caret: bool,
   },
   Icon {
     target: SourceString<'arena>,
@@ -82,7 +83,7 @@ impl Json for MacroNode<'_> {
         buf.push_str("Keyboard\"");
         buf.add_member("keys", keys);
       }
-      MacroNode::Link { scheme, target, attrs } => {
+      MacroNode::Link { scheme, target, attrs, .. } => {
         buf.push_str("Link\"");
         buf.add_option_member("scheme", scheme.as_ref());
         buf.add_member("target", target);

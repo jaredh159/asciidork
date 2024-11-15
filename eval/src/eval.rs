@@ -340,12 +340,15 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     }
     Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
     Macro(Button(text)) => backend.visit_button_macro(text),
-    Macro(Link { target, attrs, scheme }) => {
-      backend.enter_link_macro(target, attrs.as_ref(), *scheme);
+    Macro(Link { target, attrs, scheme, caret }) => {
       if let Some(Some(nodes)) = attrs.as_ref().and_then(|a| a.positional.first()) {
+        backend.enter_link_macro(target, attrs.as_ref(), *scheme, true, *caret);
         nodes.iter().for_each(|n| eval_inline(n, doc, backend));
+        backend.exit_link_macro(target, attrs.as_ref(), *scheme, true);
+      } else {
+        backend.enter_link_macro(target, attrs.as_ref(), *scheme, false, *caret);
+        backend.exit_link_macro(target, attrs.as_ref(), *scheme, false);
       }
-      backend.exit_link_macro(target, attrs.as_ref(), *scheme);
     }
     Macro(Keyboard { keys, .. }) => {
       backend.visit_keyboard_macro(&keys.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
