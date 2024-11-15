@@ -6,6 +6,7 @@ extern crate asciidork_eval as eval;
 extern crate asciidork_meta as meta;
 
 mod asciidoctor_html;
+mod htmlbuf;
 mod open_tag;
 pub mod section;
 mod table;
@@ -24,6 +25,7 @@ mod internal {
   pub use lazy_static::lazy_static;
   pub use regex::Regex;
 
+  pub use crate::htmlbuf::*;
   pub use crate::open_tag::*;
   pub use crate::section;
   pub use crate::AsciidoctorHtml;
@@ -31,4 +33,21 @@ mod internal {
   pub use backend::prelude::*;
   pub use eval::helpers;
   pub use meta::*;
+}
+
+mod str_util {
+  /// NB: does not return the `.`
+  pub fn file_ext(input: &str) -> Option<&str> {
+    if let Some(idx) = input.rfind('.') {
+      Some(&input[idx + 1..])
+    } else {
+      None
+    }
+  }
+  pub fn basename(input: &str) -> &str {
+    input.split(&['/', '\\']).last().unwrap_or(input)
+  }
+  pub fn filestem(input: &str) -> &str {
+    basename(input).split('.').next().unwrap_or(input)
+  }
 }

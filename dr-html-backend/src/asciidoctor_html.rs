@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fmt::Write;
 
 use crate::internal::*;
+use crate::str_util;
 use EphemeralState::*;
 
 #[derive(Debug, Default)]
@@ -729,23 +730,34 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn visit_image_macro(&mut self, target: &str, attrs: &AttrList) {
-    self.push_str(r#"<span class="image">"#);
-    self.push_str(r#"<img src=""#);
-    self.push_str(target);
-    self.push_str(r#"" alt=""#);
-    if let Some(alt) = attrs.str_positional_at(0) {
-      self.push_str_attr_escaped(alt);
-    } else if let Some(Some(nodes)) = attrs.positional.first() {
-      for s in nodes.plain_text() {
-        self.push_str_attr_escaped(s);
+    let mut open_tag = OpenTag::new("span", None);
+    open_tag.push_class("image");
+    open_tag.push_opt_class(attrs.named("float"));
+    open_tag.push_opt_prefixed_class(attrs.named("align"), Some("text-"));
+    open_tag.push_classes(attrs.roles.iter());
+    self.push_open_tag(open_tag);
+
+    let with_link = if let Some(link_href) = attrs.named("link") {
+      let mut a_tag = OpenTag::new("a", None);
+      a_tag.push_class("image");
+      a_tag.push_str("\" href=\"");
+      if link_href == "self" {
+        push_img_path(a_tag.htmlbuf(), target, &self.doc_meta);
+      } else {
+        a_tag.push_str_attr_escaped(link_href);
       }
+      a_tag.push_link_attrs(attrs, true, false);
+      self.push_open_tag(a_tag);
+      true
     } else {
-      let basename = target.split('/').last().unwrap_or(target);
-      let filestem = basename.split('.').next().unwrap_or(basename);
-      let alt = filestem.replace(['-', '_'], " ");
-      self.push_str_attr_escaped(&alt);
+      false
+    };
+
+    self.render_image(target, attrs);
+    if with_link {
+      self.push_str("</a>");
     }
-    self.push_str(r#""></span>"#);
+    self.push_str("</span>");
   }
 
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
@@ -768,28 +780,37 @@ impl Backend for AsciidoctorHtml {
     target: &str,
     attrs: Option<&AttrList>,
     scheme: Option<UrlScheme>,
+    has_link_text: bool,
+    blank_window_shorthand: bool,
   ) {
-    self.push_str("<a href=\"");
+    let mut tag = OpenTag::new("a", None);
+    tag.push_str(" href=\"");
     if matches!(scheme, Some(UrlScheme::Mailto)) {
-      self.push_str("mailto:");
+      tag.push_str("mailto:");
     }
-    self.push([target, "\""]);
-    if attrs.as_ref().map(|a| a.named("role") == Some("include")) == Some(true) {
-      self.push_str(" class=\"bare include\">");
+    tag.push_str(target);
+    tag.push_ch('"');
+
+    if attrs.as_ref().map(|a| a.has_role("include")) == Some(true) {
+      tag.push_class("bare")
     } else if attrs.is_none() && !matches!(scheme, Some(UrlScheme::Mailto)) {
-      self.push_str(" class=\"bare\">");
-    } else {
-      self.push_ch('>');
+      tag.push_class("bare")
     }
+
+    if let Some(attrs) = attrs {
+      tag.push_link_attrs(attrs, has_link_text, blank_window_shorthand);
+    }
+    self.push_open_tag(tag);
   }
 
   fn exit_link_macro(
     &mut self,
     target: &str,
-    attrs: Option<&AttrList>,
+    _attrs: Option<&AttrList>,
     _scheme: Option<UrlScheme>,
+    has_link_text: bool,
   ) {
-    if matches!(attrs.and_then(|a| a.positional.first()), None | Some(None)) {
+    if !has_link_text {
       self.push_str(target);
     }
     self.push_str("</a>");
@@ -903,28 +924,19 @@ impl Backend for AsciidoctorHtml {
   }
 
   fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block) {
-    let alt = img_attrs.str_positional_at(0).unwrap_or({
-      if let Some(captures) = REMOVE_FILE_EXT.captures(img_target) {
-        captures.get(1).unwrap().as_str()
-      } else {
-        img_target
-      }
-    });
-    self.open_element("div", &["imageblock"], block.meta.attrs.as_ref());
+    let mut open_tag = OpenTag::new("div", block.meta.attrs.as_ref());
+    open_tag.push_class("imageblock");
+    open_tag.push_opt_class(img_attrs.named("float"));
+    open_tag.push_opt_prefixed_class(img_attrs.named("align"), Some("text-"));
+    self.push_open_tag(open_tag);
+
     self.push_str(r#"<div class="content">"#);
     let mut has_link = false;
-    if let Some(href) = &block.named_attr("link") {
+    if let Some(href) = &block.named_attr("link").or_else(|| img_attrs.named("link")) {
       self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
       has_link = true;
     }
-    self.push([r#"<img src=""#, img_target, r#"" alt=""#, alt, "\""]);
-    if let Some(width) = img_attrs.str_positional_at(1) {
-      self.push([r#" width=""#, width, "\""]);
-    }
-    if let Some(height) = img_attrs.str_positional_at(2) {
-      self.push([r#" height=""#, height, "\""]);
-    }
-    self.push_ch('>');
+    self.render_image(img_target, img_attrs);
     if has_link {
       self.push_str("</a>");
     }
@@ -983,6 +995,12 @@ impl Backend for AsciidoctorHtml {
   }
 }
 
+impl HtmlBuf for AsciidoctorHtml {
+  fn htmlbuf(&mut self) -> &mut String {
+    &mut self.html
+  }
+}
+
 impl AsciidoctorHtml {
   pub fn new() -> Self {
     Self::default()
@@ -992,37 +1010,10 @@ impl AsciidoctorHtml {
     self.html
   }
 
-  pub(crate) fn push_str(&mut self, s: &str) {
-    self.html.push_str(s);
-  }
-
-  pub(crate) fn push_str_attr_escaped(&mut self, s: &str) {
-    for c in s.chars() {
-      match c {
-        '"' => self.html.push_str("&quot;"),
-        '\'' => self.html.push_str("&#8217;"),
-        '&' => self.html.push_str("&amp;"),
-        '<' => self.html.push_str("&lt;"),
-        '>' => self.html.push_str("&gt;"),
-        _ => self.html.push(c),
-      }
-    }
-  }
-
   pub(crate) fn push_buffered(&mut self) {
     let mut buffer = String::new();
     mem::swap(&mut buffer, &mut self.alt_html);
     self.push_str(&buffer);
-  }
-
-  pub(crate) fn push_ch(&mut self, c: char) {
-    self.html.push(c);
-  }
-
-  pub(crate) fn push<const N: usize>(&mut self, strs: [&str; N]) {
-    for s in strs {
-      self.push_str(s);
-    }
   }
 
   pub(crate) fn push_open_tag(&mut self, tag: OpenTag) {
@@ -1252,6 +1243,51 @@ impl AsciidoctorHtml {
       return false;
     }
     true
+  }
+
+  fn render_interactive_svg(&mut self, target: &str, attrs: &AttrList) {
+    self.push_str(r#"<object type="image/svg+xml" data=""#);
+    push_img_path(&mut self.html, target, &self.doc_meta);
+    self.push_ch('"');
+    self.push_named_or_pos_attr("width", 1, attrs);
+    self.push_named_or_pos_attr("height", 2, attrs);
+    self.push_ch('>');
+    if let Some(fallback) = attrs.named("fallback") {
+      self.push_str(r#"<img src=""#);
+      push_img_path(&mut self.html, fallback, &self.doc_meta);
+      self.push_ch('"');
+      self.push_named_or_pos_attr("alt", 0, attrs);
+      self.push_ch('>');
+    } else if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
+      self.push([r#"<span class="alt">"#, alt, "</span>"]);
+    }
+    self.push_str("</object>");
+  }
+
+  fn render_image(&mut self, target: &str, attrs: &AttrList) {
+    let format = attrs.named("format").or_else(|| str_util::file_ext(target));
+    let is_svg = matches!(format, Some("svg" | "SVG"));
+    if is_svg && attrs.has_option("interactive") && self.doc_meta.safe_mode != SafeMode::Secure {
+      return self.render_interactive_svg(target, attrs);
+    }
+    self.push_str(r#"<img src=""#);
+    push_img_path(&mut self.html, target, &self.doc_meta);
+    self.push_str(r#"" alt=""#);
+    if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
+      self.push_str_attr_escaped(alt);
+    } else if let Some(Some(nodes)) = attrs.positional.first() {
+      for s in nodes.plain_text() {
+        self.push_str_attr_escaped(s);
+      }
+    } else {
+      let alt = str_util::filestem(target).replace(['-', '_'], " ");
+      self.push_str_attr_escaped(&alt);
+    }
+    self.push_ch('"');
+    self.push_named_or_pos_attr("width", 1, attrs);
+    self.push_named_or_pos_attr("height", 2, attrs);
+    self.push_named_attr("title", attrs);
+    self.push_ch('>');
   }
 }
 

@@ -57,6 +57,12 @@ impl<'arena> Deref for SourceString<'arena> {
   }
 }
 
+impl<'arena> AsRef<str> for SourceString<'arena> {
+  fn as_ref(&self) -> &str {
+    &self.src
+  }
+}
+
 impl<'arena> std::cmp::PartialEq<str> for SourceString<'arena> {
   fn eq(&self, other: &str) -> bool {
     self.src == other

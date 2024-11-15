@@ -59,12 +59,14 @@ pub enum TokenKind {
 pub enum TokenSpec {
   Kind(TokenKind),
   Len(u8, TokenKind),
+  Not(TokenKind),
 }
 
 impl TokenSpec {
   pub const fn token_kind(&self) -> TokenKind {
     match self {
       TokenSpec::Kind(kind) => *kind,
+      TokenSpec::Not(kind) => *kind,
       TokenSpec::Len(_, kind) => *kind,
     }
   }
@@ -188,6 +190,7 @@ impl<'arena> TokenIs for Token<'arena> {
   fn satisfies(&self, spec: TokenSpec) -> bool {
     match spec {
       TokenSpec::Kind(kind) => self.kind == kind,
+      TokenSpec::Not(kind) => self.kind != kind,
       TokenSpec::Len(len, kind) => self.kind == kind && self.len() == len as usize,
     }
   }

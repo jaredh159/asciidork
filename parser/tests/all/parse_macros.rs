@@ -30,6 +30,32 @@ test_inlines_loose!(
 );
 
 test_inlines_loose!(
+  inline_image_macro_attr,
+  "image:{note-caption}.png[]",
+  nodes![node!(
+    Macro(Image {
+      flow: Flow::Inline,
+      target: src!("Note.png", 6..24),
+      attrs: attr_list!(24..26)
+    }),
+    0..26
+  )]
+);
+
+test_inlines_loose!(
+  inline_image_macro_w_space_target,
+  "image:p ay.png[]",
+  nodes![node!(
+    Macro(Image {
+      flow: Flow::Inline,
+      target: src!("p ay.png", 6..14),
+      attrs: attr_list!(14..16)
+    }),
+    0..16
+  )]
+);
+
+test_inlines_loose!(
   inline_anchor_macro,
   "anchor:some-id[]",
   nodes![node!(InlineAnchor(bstr!("some-id")), 7..14)]

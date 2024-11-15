@@ -135,22 +135,42 @@ impl<'arena> Parser<'arena> {
                 let target = self
                   .macro_target_from_passthru(&mut line)
                   .unwrap_or_else(|| line.consume_macro_target(self.bump));
-                let attrs = self.parse_inline_attr_list(&mut line)?;
+                let line_has_caret = line.contains(Caret);
+                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                let mut caret = false;
+                if line_has_caret && &token.lexeme == "link:" {
+                  caret = link_macro_blank_window_shorthand(&mut attrs);
+                }
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 let scheme = token.to_url_scheme();
                 acc.push_node(
-                  Macro(Link { scheme, target, attrs: Some(attrs) }),
+                  Macro(Link {
+                    scheme,
+                    target,
+                    attrs: Some(attrs),
+                    caret,
+                  }),
                   macro_loc,
                 );
               }
               "https:" | "http:" | "irc:" => {
                 let target = line.consume_url(Some(&token), self.bump);
                 line.discard_assert(OpenBracket);
-                let attrs = self.parse_inline_attr_list(&mut line)?;
+                let line_has_caret = line.contains(Caret);
+                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                let mut caret = false;
+                if line_has_caret {
+                  caret = link_macro_blank_window_shorthand(&mut attrs);
+                }
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 let scheme = Some(token.to_url_scheme().unwrap());
                 acc.push_node(
-                  Macro(Link { scheme, target, attrs: Some(attrs) }),
+                  Macro(Link {
+                    scheme,
+                    target,
+                    attrs: Some(attrs),
+                    caret,
+                  }),
                   macro_loc,
                 );
               }
@@ -296,7 +316,7 @@ impl<'arena> Parser<'arena> {
           LessThan
             if subs.macros()
               && line.current_token().is_url_scheme()
-              && line.is_continuous_thru(GreaterThan) =>
+              && line.no_whitespace_until(GreaterThan) =>
           {
             acc.push_node(Discarded, token.loc);
             let scheme_token = line.consume_current().unwrap();
@@ -305,7 +325,15 @@ impl<'arena> Parser<'arena> {
             let target = line.consume_url(Some(&scheme_token), self.bump);
             finish_macro(&line, &mut loc, line_end, &mut acc.text);
             let scheme = Some(scheme_token.to_url_scheme().unwrap());
-            acc.push_node(Macro(Link { scheme, target, attrs: None }), loc);
+            acc.push_node(
+              Macro(Link {
+                scheme,
+                target,
+                attrs: None,
+                caret: false,
+              }),
+              loc,
+            );
             acc.push_node(Discarded, line.consume_current().unwrap().loc);
           }
 
@@ -316,6 +344,7 @@ impl<'arena> Parser<'arena> {
                 scheme: Some(UrlScheme::Mailto),
                 target: token.into_source_string(),
                 attrs: None,
+                caret: false,
               }),
               loc,
             );
@@ -420,7 +449,7 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
-          Caret if subs.inline_formatting() && line.is_continuous_thru(Caret) => {
+          Caret if subs.inline_formatting() && line.no_whitespace_until(Caret) => {
             self.parse_node(Superscript, [Kind(Caret)], &token, &mut acc, line, lines)?;
             break;
           }
@@ -473,7 +502,7 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
-          Tilde if subs.inline_formatting() && line.is_continuous_thru(Tilde) => {
+          Tilde if subs.inline_formatting() && line.no_whitespace_until(Tilde) => {
             self.parse_node(Subscript, [Kind(Tilde)], &token, &mut acc, line, lines)?;
             break;
           }
@@ -617,7 +646,15 @@ impl<'arena> Parser<'arena> {
             let target = line.consume_url(Some(&token), self.bump);
             finish_macro(&line, &mut loc, line_end, &mut acc.text);
             let scheme = Some(token.to_url_scheme().unwrap());
-            acc.push_node(Macro(Link { scheme, target, attrs: None }), loc);
+            acc.push_node(
+              Macro(Link {
+                scheme,
+                target,
+                attrs: None,
+                caret: false,
+              }),
+              loc,
+            );
           }
 
           PreprocPassthru => {
@@ -708,6 +745,28 @@ impl<'arena> Parser<'arena> {
       state.push_node(CalloutTuck(tuck), tuck_loc);
     }
   }
+}
+
+fn link_macro_blank_window_shorthand(attr_list: &mut AttrList) -> bool {
+  let Some(mut nodes) = attr_list.take_positional(0) else {
+    return false;
+  };
+  let Some(node) = nodes.last_mut() else {
+    attr_list.positional[0] = Some(nodes);
+    return false;
+  };
+  if let Inline::Text(text) = &node.content {
+    if text.ends_with('^') {
+      let mut shortened = text.clone();
+      shortened.pop();
+      node.content = Inline::Text(shortened);
+      node.loc.end -= 1;
+      attr_list.positional[0] = Some(nodes);
+      return true;
+    }
+  };
+  attr_list.positional[0] = Some(nodes);
+  false
 }
 
 fn push_callout_tuck<'arena>(

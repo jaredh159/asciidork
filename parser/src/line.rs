@@ -247,17 +247,8 @@ impl<'arena> Line<'arena> {
     }
     for (i, spec) in specs.iter().enumerate() {
       let token = self.tokens.get(i + offset as usize).unwrap();
-      match spec {
-        Kind(kind) => {
-          if token.kind != *kind {
-            return false;
-          }
-        }
-        Len(len, kind) => {
-          if token.kind != *kind || token.lexeme.len() != *len as usize {
-            return false;
-          }
-        }
+      if !token.satisfies(*spec) {
+        return false;
       }
     }
     true
@@ -295,6 +286,10 @@ impl<'arena> Line<'arena> {
     self.index_of_seq(specs).is_some()
   }
 
+  pub fn index_of_kind(&self, kind: TokenKind) -> Option<usize> {
+    self.iter().position(|t| t.is(kind))
+  }
+
   pub fn index_of_seq(&self, specs: &[TokenSpec]) -> Option<usize> {
     assert!(!specs.is_empty());
     if self.len() < specs.len() {
@@ -329,9 +324,16 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn continues_inline_macro(&self) -> bool {
-    !self.current_is(Colon)
-      && self.is_continuous_thru(OpenBracket)
-      && self.contains_nonescaped(CloseBracket)
+    if self.current_is(Colon) || self.current_is(Whitespace) {
+      return false;
+    }
+    let Some(open_idx) = self.index_of_kind(OpenBracket) else {
+      return false;
+    };
+    let Some(end_idx) = self.index_of_seq(&[Not(Backslash), Kind(CloseBracket)]) else {
+      return false;
+    };
+    end_idx >= open_idx
   }
 
   pub fn continues_xref_shorthand(&self) -> bool {
@@ -344,7 +346,7 @@ impl<'arena> Line<'arena> {
   }
 
   /// true if there is no whitespace until token type, and token type is found
-  pub fn is_continuous_thru(&self, kind: TokenKind) -> bool {
+  pub fn no_whitespace_until(&self, kind: TokenKind) -> bool {
     for token in self.iter() {
       if token.is(kind) {
         return true;
@@ -381,7 +383,9 @@ impl<'arena> Line<'arena> {
     let mut loc = self.loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
-      s.push_str(&token.lexeme);
+      if token.kind != AttrRef {
+        s.push_str(&token.lexeme);
+      }
       loc.extend(token.loc);
     }
     SourceString::new(s, loc)

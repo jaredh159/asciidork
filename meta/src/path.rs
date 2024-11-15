@@ -59,6 +59,9 @@ impl Path {
   }
 
   pub fn is_absolute(&self) -> bool {
+    if self.is_uri() && matches!(self.components.first(), Some(Component::UriScheme(_))) {
+      return true;
+    }
     self.components.first() == Some(&Component::Root)
       || (matches!(self.components.first(), Some(Component::DrivePrefix(_)))
         && matches!(self.components.get(1), Some(Component::Root)))
@@ -266,6 +269,7 @@ mod tests {
     assert!(!path("usr/local").is_absolute());
     assert!(path(r#"c:\foo"#).is_absolute());
     assert!(path(r#"\foo"#).is_absolute());
+    assert!(path(r#"http://foo.com"#).is_absolute());
     assert!(!path(r#"c:foo"#).is_absolute());
   }
 

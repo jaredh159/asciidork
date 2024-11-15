@@ -1,14 +1,21 @@
+// use crate::asciidoctor_html::HtmlBuf;
 use crate::internal::*;
 
 // NB: the awkward api here is because we want to make the common path
 // of some classes and an id very fast, with minimal allocations, as it
-// is used in the hot path of rendering html for almost every element
+// is used in the hot path of rendering html for many elements
 
 pub struct OpenTag {
   buf: String,
   opened_classes: bool,
   append_classes: Option<String>,
   styles: Option<String>,
+}
+
+impl HtmlBuf for OpenTag {
+  fn htmlbuf(&mut self) -> &mut String {
+    &mut self.buf
+  }
 }
 
 impl OpenTag {
@@ -56,8 +63,32 @@ impl OpenTag {
     tag
   }
 
+  pub fn push_str(&mut self, s: &str) {
+    self.buf.push_str(s);
+  }
+
+  pub fn push_ch(&mut self, c: char) {
+    self.buf.push(c);
+  }
+
   pub fn push_class(&mut self, class: impl AsRef<str>) {
     self.push_prefixed_class(class, None);
+  }
+
+  pub fn push_classes(&mut self, source: impl Iterator<Item = impl AsRef<str>>) {
+    for class in source {
+      self.push_class(class);
+    }
+  }
+
+  pub fn push_opt_class(&mut self, class: Option<impl AsRef<str>>) {
+    self.push_opt_prefixed_class(class, None);
+  }
+
+  pub fn push_opt_prefixed_class(&mut self, class: Option<impl AsRef<str>>, prefix: Option<&str>) {
+    if let Some(class) = class {
+      self.push_prefixed_class(class, prefix);
+    }
   }
 
   pub fn push_prefixed_class(&mut self, class: impl AsRef<str>, prefix: Option<&str>) {
@@ -101,6 +132,39 @@ impl OpenTag {
     } else {
       self.styles.as_mut().unwrap().push_str("; ");
       self.styles.as_mut().unwrap().push_str(style.as_ref());
+    }
+  }
+
+  pub fn push_link_attrs(
+    &mut self,
+    attrs: &AttrList,
+    has_link_text: bool,
+    blank_window_shorthand: bool,
+  ) {
+    self.push_classes(attrs.roles.iter());
+    if attrs.roles.is_empty() && !has_link_text {
+      self.push_class("bare");
+    }
+    if self.opened_classes {
+      self.buf.push('"');
+      self.opened_classes = false;
+    }
+    if let Some(target) = attrs.named("window") {
+      self.push_str(" target=\"");
+      self.push_str(target);
+      self.push_ch('"');
+      if target == "_blank" || attrs.has_option("noopener") {
+        self.push_str(" rel=\"noopener");
+        if attrs.has_option("nofollow") {
+          self.push_str(" nofollow\"");
+        } else {
+          self.push_ch('"');
+        }
+      }
+    } else if blank_window_shorthand {
+      self.push_str(" target=\"_blank\" rel=\"noopener\"");
+    } else if attrs.has_option("nofollow") {
+      self.push_str(" rel=\"nofollow\"");
     }
   }
 

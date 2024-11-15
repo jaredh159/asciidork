@@ -74,6 +74,10 @@ impl<'arena> AttrList<'arena> {
     }
   }
 
+  pub fn has_role(&self, role: &str) -> bool {
+    self.roles.iter().any(|s| s.src == role)
+  }
+
   pub fn named(&self, key: &str) -> Option<&str> {
     self
       .named
