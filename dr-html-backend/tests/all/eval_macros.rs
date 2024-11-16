@@ -484,3 +484,21 @@ assert_html!(
     </div>
  "#}
 );
+
+assert_html!(
+  image_macro_link_attr_ref,
+  adoc! {r#"
+    :foo: http://cats.com/cat.png
+
+    image::{foo}[link={foo}]
+  "#},
+  html! {r#"
+    <div class="imageblock">
+      <div class="content">
+        <a class="image" href="http://cats.com/cat.png">
+          <img src="http://cats.com/cat.png" alt="cat">
+        </a>
+      </div>
+    </div>
+  "#}
+);

@@ -49,13 +49,13 @@ impl Substitutions {
       order: [
         Some(Subs::SpecialChars),
         Some(Subs::InlineFormatting),
-        None,
+        Some(Subs::AttrRefs),
         Some(Subs::CharReplacement),
         None,
         None,
         None,
       ],
-      flags: 0b_00001011,
+      flags: 0b_00001111,
     }
   }
 
