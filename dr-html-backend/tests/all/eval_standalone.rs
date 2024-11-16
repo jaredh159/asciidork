@@ -37,6 +37,21 @@ assert_standalone_body!(
 );
 
 assert_standalone_body!(
+  doc_attrs_after_comment,
+  adoc! {r#"
+    = Document Title
+    :noheader:
+    // here is a comment
+    :nofooter:
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="content"></div>
+    </body>
+  "#}
+);
+
+assert_standalone_body!(
   notitle,
   adoc! {r#"
     = Document Title

@@ -12,8 +12,6 @@ impl<'arena> Parser<'arena> {
       return Ok(());
     }
 
-    block.discard_leading_comment_lines();
-
     self.parse_doc_attrs(&mut block)?;
     self.parse_doc_title_author_revision(&mut block)?;
     self.parse_doc_attrs(&mut block)?;

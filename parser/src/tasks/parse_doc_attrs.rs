@@ -4,6 +4,7 @@ use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
   pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
+    lines.discard_leading_comment_lines();
     while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
       if key == "doctype" {
         if let AttrValue::String(s) = &value {
@@ -17,6 +18,7 @@ impl<'arena> Parser<'arena> {
       } else if let Err(err) = self.document.meta.insert_header_attr(&key, value) {
         self.err_doc_attr(format!(":{}:", key), err)?;
       }
+      lines.discard_leading_comment_lines();
     }
     Ok(())
   }
