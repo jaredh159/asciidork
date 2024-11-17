@@ -499,8 +499,7 @@ mod tests {
           (Word, "url-repo"),
           (Colon, ":"),
           (Whitespace, " "),
-          (MacroName, "https:"),
-          (ForwardSlashes, "//"),
+          (UriScheme, "https://"),
           (Word, "my-git-repo"),
           (Dots, "."),
           (Word, "com"),
@@ -540,6 +539,26 @@ mod tests {
         "foo {hi@}",  // only a-z,A-Z,0-9,-,_ allowed
       ]
     );
+  }
+
+  #[test]
+  fn test_uri_schemes() {
+    assert_token_cases!([
+      ("http://", vec![(UriScheme, "http://")]),
+      ("https://", vec![(UriScheme, "https://")]),
+      ("file:///", vec![(UriScheme, "file:///")]),
+      (
+        "(http://foo)",
+        vec![
+          (OpenParens, "("),
+          (UriScheme, "http://"),
+          (Word, "foo"),
+          (CloseParens, ")")
+        ]
+      ),
+    ]);
+
+    refute_produces_token!(AttrRef, ["file://"]);
   }
 
   #[test]

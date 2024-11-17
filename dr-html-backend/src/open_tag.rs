@@ -141,10 +141,10 @@ impl OpenTag {
     has_link_text: bool,
     blank_window_shorthand: bool,
   ) {
-    self.push_classes(attrs.roles.iter());
-    if attrs.roles.is_empty() && !has_link_text {
+    if !has_link_text {
       self.push_class("bare");
     }
+    self.push_classes(attrs.roles.iter());
     if self.opened_classes {
       self.buf.push('"');
       self.opened_classes = false;

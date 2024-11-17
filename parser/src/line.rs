@@ -452,14 +452,25 @@ impl<'arena> Line<'arena> {
   }
 
   #[must_use]
-  pub fn consume_url(&mut self, start: Option<&Token>, bump: &'arena Bump) -> SourceString<'arena> {
+  pub fn consume_url(
+    &mut self,
+    start: Option<&Token>,
+    stop: Option<TokenKind>,
+    bump: &'arena Bump,
+  ) -> SourceString<'arena> {
     let mut loc = start.map_or_else(|| self.loc().unwrap(), |t| t.loc);
     let mut num_tokens = 0;
 
-    for token in self.iter() {
-      match token.kind {
-        Whitespace | GreaterThan | OpenBracket => break,
-        _ => num_tokens += 1,
+    if let Some(stop) = stop {
+      num_tokens = self.index_of_kind(stop).unwrap_or(0);
+    } else {
+      for token in self.iter() {
+        match token.kind {
+          Whitespace | GreaterThan | OpenBracket | OpenParens | CloseParens | Bang | SemiColon
+          | Colon => break,
+          Word if token.lexeme.starts_with('?') => break,
+          _ => num_tokens += 1,
+        }
       }
     }
 

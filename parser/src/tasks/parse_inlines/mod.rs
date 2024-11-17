@@ -73,6 +73,10 @@ impl<'arena> Parser<'arena> {
         }
 
         match token.kind {
+          UriScheme if subs.macros() && line.continues_inline_macro() => {
+            self.parse_uri_scheme_macro(&token, &mut line, &mut acc)?
+          }
+
           MacroName if subs.macros() && line.continues_inline_macro() => {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
@@ -131,35 +135,10 @@ impl<'arena> Parser<'arena> {
                 acc.push_node(Macro(Xref { id, linktext }), macro_loc);
                 break;
               }
-              "mailto:" | "link:" => {
+              "link:" => {
                 let target = self
                   .macro_target_from_passthru(&mut line)
                   .unwrap_or_else(|| line.consume_macro_target(self.bump));
-                let line_has_caret = line.contains(Caret);
-                let mut attrs = if &token.lexeme == "link:" {
-                  self.parse_link_macro_attr_list(&mut line)?
-                } else {
-                  self.parse_inline_attr_list(&mut line)?
-                };
-                let mut caret = false;
-                if line_has_caret && &token.lexeme == "link:" {
-                  caret = link_macro_blank_window_shorthand(&mut attrs);
-                }
-                finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
-                let scheme = token.to_url_scheme();
-                acc.push_node(
-                  Macro(Link {
-                    scheme,
-                    target,
-                    attrs: Some(attrs),
-                    caret,
-                  }),
-                  macro_loc,
-                );
-              }
-              "https:" | "http:" | "irc:" => {
-                let target = line.consume_url(Some(&token), self.bump);
-                line.discard_assert(OpenBracket);
                 let line_has_caret = line.contains(Caret);
                 let mut attrs = self.parse_link_macro_attr_list(&mut line)?;
                 let mut caret = false;
@@ -167,7 +146,7 @@ impl<'arena> Parser<'arena> {
                   caret = link_macro_blank_window_shorthand(&mut attrs);
                 }
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
-                let scheme = Some(token.to_url_scheme().unwrap());
+                let scheme = token.to_url_scheme();
                 acc.push_node(
                   Macro(Link {
                     scheme,
@@ -319,26 +298,37 @@ impl<'arena> Parser<'arena> {
 
           LessThan
             if subs.macros()
-              && line.current_token().is_url_scheme()
+              && line.current_token().is(UriScheme)
               && line.no_whitespace_until(GreaterThan) =>
           {
             acc.push_node(Discarded, token.loc);
             let scheme_token = line.consume_current().unwrap();
             let mut loc = scheme_token.loc;
             let line_end = line.last_location().unwrap();
-            let target = line.consume_url(Some(&scheme_token), self.bump);
-            finish_macro(&line, &mut loc, line_end, &mut acc.text);
-            let scheme = Some(scheme_token.to_url_scheme().unwrap());
-            acc.push_node(
-              Macro(Link {
-                scheme,
-                target,
-                attrs: None,
-                caret: false,
-              }),
-              loc,
-            );
-            acc.push_node(Discarded, line.consume_current().unwrap().loc);
+            let target = line.consume_url(Some(&scheme_token), Some(GreaterThan), self.bump);
+            if target.src == scheme_token.lexeme {
+              // turns out we don't have a valid uri here, backtrack
+              acc.pop_node();
+              if subs.special_chars() {
+                acc.push_node(SpecialChar(SpecialCharKind::LessThan), token.loc);
+              } else {
+                acc.push_node(Text(token.lexeme), token.loc);
+              }
+              acc.text.push_token(&scheme_token);
+            } else {
+              finish_macro(&line, &mut loc, line_end, &mut acc.text);
+              let scheme = Some(scheme_token.to_url_scheme().unwrap());
+              acc.push_node(
+                Macro(Link {
+                  scheme,
+                  target,
+                  attrs: None,
+                  caret: false,
+                }),
+                loc,
+              );
+              acc.push_node(Discarded, line.consume_current().unwrap().loc);
+            }
           }
 
           MaybeEmail if subs.macros() && EMAIL_RE.is_match(&token.lexeme) => {
@@ -644,21 +634,25 @@ impl<'arena> Parser<'arena> {
             acc.text.push_token(&next_token);
           }
 
-          _ if subs.macros() && token.is_url_scheme() && line.current_is_len(ForwardSlashes, 2) => {
+          _ if subs.macros() && token.is(UriScheme) => {
             let mut loc = token.loc;
             let line_end = line.last_location().unwrap();
-            let target = line.consume_url(Some(&token), self.bump);
-            finish_macro(&line, &mut loc, line_end, &mut acc.text);
-            let scheme = Some(token.to_url_scheme().unwrap());
-            acc.push_node(
-              Macro(Link {
-                scheme,
-                target,
-                attrs: None,
-                caret: false,
-              }),
-              loc,
-            );
+            let target = line.consume_url(Some(&token), None, self.bump);
+            if target.src == token.lexeme {
+              acc.text.push_token(&token);
+            } else {
+              finish_macro(&line, &mut loc, line_end, &mut acc.text);
+              let scheme = Some(token.to_url_scheme().unwrap());
+              acc.push_node(
+                Macro(Link {
+                  scheme,
+                  target,
+                  attrs: None,
+                  caret: false,
+                }),
+                loc,
+              );
+            }
           }
 
           PreprocPassthru => {
@@ -683,6 +677,37 @@ impl<'arena> Parser<'arena> {
 
     acc.commit();
     Ok(acc.inlines)
+  }
+
+  fn parse_uri_scheme_macro(
+    &mut self,
+    token: &Token<'arena>,
+    line: &mut Line<'arena>,
+    acc: &mut Accum<'arena>,
+  ) -> Result<()> {
+    let mut macro_loc = token.loc;
+    let line_end = line.last_location().unwrap();
+    acc.commit();
+    let target = line.consume_url(Some(token), Some(OpenBracket), self.bump);
+    line.discard_assert(OpenBracket);
+    let line_has_caret = line.contains(Caret);
+    let mut attrs = self.parse_link_macro_attr_list(line)?;
+    let mut caret = false;
+    if line_has_caret {
+      caret = link_macro_blank_window_shorthand(&mut attrs);
+    }
+    finish_macro(line, &mut macro_loc, line_end, &mut acc.text);
+    let scheme = Some(token.to_url_scheme().unwrap());
+    acc.push_node(
+      Macro(Link {
+        scheme,
+        target,
+        attrs: Some(attrs),
+        caret,
+      }),
+      macro_loc,
+    );
+    Ok(())
   }
 
   fn parse_node<const N: usize>(
@@ -844,6 +869,10 @@ impl<'arena> Accum<'arena> {
     self.commit();
     self.inlines.push(InlineNode::new(node, loc));
     self.text.loc = loc.clamp_end();
+  }
+
+  fn pop_node(&mut self) {
+    self.inlines.pop();
   }
 
   fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {

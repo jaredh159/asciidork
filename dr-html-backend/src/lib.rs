@@ -50,4 +50,18 @@ mod str_util {
   pub fn filestem(input: &str) -> &str {
     basename(input).split('.').next().unwrap_or(input)
   }
+  pub fn remove_uri_scheme(input: &str) -> &str {
+    let mut split = input.splitn(2, "://");
+    let first = split.next().unwrap_or("");
+    let Some(rest) = split.next() else {
+      return input;
+    };
+    if rest.is_empty() {
+      input
+    } else if matches!(first, "http" | "https" | "ftp" | "mailto" | "irc" | "file") {
+      rest
+    } else {
+      input
+    }
+  }
 }

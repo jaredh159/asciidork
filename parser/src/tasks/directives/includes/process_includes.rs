@@ -148,7 +148,7 @@ impl<'arena> Parser<'arena> {
       let has_spaces = target.contains(' ');
       let target = self.string(target);
       let first_token = line.consume_current().unwrap();
-      let target_is_uri = line.current_token().is_url_scheme();
+      let target_is_uri = line.current_token().is(TokenKind::UriScheme);
       let num_target_tokens = line.first_nonescaped(TokenKind::OpenBracket).unwrap().1;
       line.discard(num_target_tokens + 1); // including open bracket
       Ok(Some(IncludeDirective {

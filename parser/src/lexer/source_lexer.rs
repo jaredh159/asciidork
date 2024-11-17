@@ -80,11 +80,18 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'#') => Some(self.single(Hash)),
       Some(b'%') => Some(self.single(Percent)),
       Some(b'"') => Some(self.single(DoubleQuote)),
+      Some(b'(') => Some(self.repeating(b'(', OpenParens)),
+      Some(b')') => Some(self.repeating(b'(', CloseParens)),
       Some(b'|') => Some(self.single(Pipe)),
       Some(b'\'') => Some(self.single(SingleQuote)),
       Some(b'\\') => Some(self.single(Backslash)),
-      Some(ch) if ch.is_ascii_digit() => Some(self.digits()),
-      Some(ch) if ch == b';' || ch == b':' => Some(self.maybe_term_delimiter(ch, at_line_start)),
+      Some(b) if b.is_ascii_digit() => Some(self.digits()),
+      Some(b) if b == b';' || b == b':' => Some(self.maybe_term_delimiter(b, at_line_start)),
+      // two-byte utf-8 sequences
+      Some(b) if (0xc2..=0xdf).contains(&b) => {
+        self.pos += 1;
+        Some(self.token(Word, self.pos - 2, self.pos))
+      }
       Some(_) => Some(self.word(at_line_start)),
       None => None,
     }
@@ -258,7 +265,10 @@ impl<'arena> SourceLexer<'arena> {
 
       // macros
       Some(b':') if !self.peek_term_delimiter() => {
-        if self.is_macro_name(lexeme) {
+        if let Some(n) = self.continues_uri_scheme(lexeme) {
+          self.pos += n;
+          return self.token(UriScheme, start, end + n);
+        } else if self.is_macro_name(lexeme) {
           self.advance();
           return self.token(MacroName, start, end + 1);
           // ...checking for contiguous footnote `somethingfootnote:[]`
@@ -308,14 +318,9 @@ impl<'arena> SourceLexer<'arena> {
       b"footnote"
         | b"image"
         | b"anchor"
-        | b"irc"
         | b"icon"
         | b"kbd"
         | b"link"
-        | b"http"
-        | b"https"
-        | b"ftp"
-        | b"mailto"
         | b"pass"
         | b"btn"
         | b"menu"
@@ -374,6 +379,7 @@ impl<'arena> SourceLexer<'arena> {
   fn advance_until_one_of(&mut self, chars: &[u8]) -> u32 {
     loop {
       match self.peek() {
+        Some(b) if b >= 0xc2 => break,
         Some(c) if chars.contains(&c) => break,
         None => break,
         _ => {
@@ -399,6 +405,7 @@ impl<'arena> SourceLexer<'arena> {
       b'~',
       b'*',
       b'!',
+      b'?',
       b'`',
       b'+',
       b'.',
@@ -406,6 +413,8 @@ impl<'arena> SourceLexer<'arena> {
       b']',
       b'{',
       b'}',
+      b'(',
+      b')',
       b'=',
       b'|',
       b'"',
@@ -414,6 +423,7 @@ impl<'arena> SourceLexer<'arena> {
       b'%',
       b'#',
       b'&',
+      0xc2, // start of nbsp
       if with_at { b'@' } else { b'&' },
     ])
   }
@@ -549,6 +559,22 @@ impl<'arena> SourceLexer<'arena> {
 
   fn remaining_len(&self) -> u32 {
     self.src.len() as u32 - self.pos
+  }
+
+  fn peek_bytes<const N: usize>(&self) -> Option<&[u8]> {
+    self.src.get(self.pos as usize..self.pos as usize + N)
+  }
+
+  fn continues_uri_scheme(&self, lexeme: &[u8]) -> Option<u32> {
+    match lexeme {
+      b"http" | b"https" | b"ftp" | b"mailto" | b"irc"
+        if self.peek_bytes::<3>() == Some(b"://") =>
+      {
+        Some(3)
+      }
+      b"file" if self.peek_bytes::<4>() == Some(b":///") => Some(4),
+      _ => None,
+    }
   }
 }
 

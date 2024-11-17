@@ -41,6 +41,7 @@ pub enum UrlScheme {
   Ftp,
   Irc,
   Mailto,
+  File,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

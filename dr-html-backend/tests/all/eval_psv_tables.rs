@@ -455,6 +455,17 @@ assert_html!(
 );
 
 assert_html!(
+  autowidth_class_w_spec,
+  adoc! {r#"
+    [%autowidth,cols=2*]
+    |===
+    |a | b
+    |===
+  "#},
+  contains: "<colgroup><col><col></colgroup>" // <-- no width attrs
+);
+
+assert_html!(
   multibyte_separator,
   adoc! {r#"
     [separator="¦"]

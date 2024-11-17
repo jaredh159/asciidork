@@ -12,6 +12,7 @@ mod eval_delimited;
 mod eval_desc_lists;
 mod eval_dsv_tables;
 mod eval_includes;
+mod eval_links;
 mod eval_lists;
 mod eval_macros;
 mod eval_psv_tables;

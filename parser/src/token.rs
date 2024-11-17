@@ -20,6 +20,7 @@ pub enum TokenKind {
   Caret,
   CloseBrace,
   CloseBracket,
+  CloseParens,
   Colon,
   Comma,
   Dashes,
@@ -41,6 +42,7 @@ pub enum TokenKind {
   Newline,
   OpenBrace,
   OpenBracket,
+  OpenParens,
   Percent,
   Pipe,
   Plus,
@@ -51,6 +53,7 @@ pub enum TokenKind {
   TermDelimiter,
   Tilde,
   Underscore,
+  UriScheme,
   Whitespace,
   Word,
 }
@@ -89,12 +92,13 @@ impl<'arena> Token<'arena> {
 
   pub fn to_url_scheme(&self) -> Option<UrlScheme> {
     match self.kind {
-      TokenKind::MacroName => match self.lexeme.as_str() {
-        "https:" => Some(UrlScheme::Https),
-        "http:" => Some(UrlScheme::Http),
-        "ftp:" => Some(UrlScheme::Ftp),
-        "irc:" => Some(UrlScheme::Irc),
+      TokenKind::UriScheme => match self.lexeme.as_str() {
+        "https://" => Some(UrlScheme::Https),
+        "http://" => Some(UrlScheme::Http),
+        "ftp://" => Some(UrlScheme::Ftp),
+        "irc://" => Some(UrlScheme::Irc),
         "mailto:" => Some(UrlScheme::Mailto),
+        "file:///" => Some(UrlScheme::File),
         _ => None,
       },
       _ => None,
@@ -149,7 +153,6 @@ impl<'arena> Token<'arena> {
 }
 
 pub trait TokenIs {
-  fn is_url_scheme(&self) -> bool;
   fn is(&self, kind: TokenKind) -> bool;
   fn is_len(&self, kind: TokenKind, len: usize) -> bool;
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool;
@@ -195,10 +198,6 @@ impl<'arena> TokenIs for Token<'arena> {
     }
   }
 
-  fn is_url_scheme(&self) -> bool {
-    self.to_url_scheme().is_some()
-  }
-
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {
     self.kind == kind && self.lexeme == lexeme
   }
@@ -211,10 +210,6 @@ impl<'arena> TokenIs for Option<&Token<'arena>> {
 
   fn is_len(&self, kind: TokenKind, len: usize) -> bool {
     self.map_or(false, |t| t.is_len(kind, len))
-  }
-
-  fn is_url_scheme(&self) -> bool {
-    self.map_or(false, |t| t.is_url_scheme())
   }
 
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {

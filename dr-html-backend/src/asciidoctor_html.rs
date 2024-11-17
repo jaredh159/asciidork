@@ -558,15 +558,18 @@ impl Backend for AsciidoctorHtml {
     self.open_table_element(block);
     self.table_caption(block);
     self.push_str("<colgroup>");
+    let autowidth = block.meta.has_attr_option("autowidth");
     for width in table.col_widths.distribute() {
       self.push_str("<col");
-      if let DistributedColWidth::Percentage(width) = width {
-        if width.fract() == 0.0 {
-          write!(self.html, r#" style="width: {}%;""#, width).unwrap();
-        } else {
-          let width_s = format!("{:.4}", width);
-          let width_s = width_s.trim_end_matches('0');
-          write!(self.html, r#" style="width: {width_s}%;""#).unwrap();
+      if !autowidth {
+        if let DistributedColWidth::Percentage(width) = width {
+          if width.fract() == 0.0 {
+            write!(self.html, r#" style="width: {}%;""#, width).unwrap();
+          } else {
+            let width_s = format!("{:.4}", width);
+            let width_s = width_s.trim_end_matches('0');
+            write!(self.html, r#" style="width: {width_s}%;""#).unwrap();
+          }
         }
       }
       self.push_ch('>');
@@ -791,15 +794,14 @@ impl Backend for AsciidoctorHtml {
     tag.push_str(target);
     tag.push_ch('"');
 
-    if attrs.as_ref().map(|a| a.has_role("include")) == Some(true) {
-      tag.push_class("bare")
-    } else if attrs.is_none() && !matches!(scheme, Some(UrlScheme::Mailto)) {
-      tag.push_class("bare")
-    }
-
     if let Some(attrs) = attrs {
       tag.push_link_attrs(attrs, has_link_text, blank_window_shorthand);
     }
+
+    if attrs.is_none() && (!has_link_text && !matches!(scheme, Some(UrlScheme::Mailto))) {
+      tag.push_class("bare")
+    }
+
     self.push_open_tag(tag);
   }
 
@@ -810,7 +812,13 @@ impl Backend for AsciidoctorHtml {
     _scheme: Option<UrlScheme>,
     has_link_text: bool,
   ) {
-    if !has_link_text {
+    if has_link_text {
+      self.push_str("</a>");
+      return;
+    }
+    if self.doc_meta.is_true("hide-uri-scheme") {
+      self.push_str(str_util::remove_uri_scheme(target));
+    } else {
       self.push_str(target);
     }
     self.push_str("</a>");
