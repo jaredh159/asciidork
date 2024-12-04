@@ -14,7 +14,7 @@ pub struct SourceLexer<'arena> {
 }
 
 impl<'arena> SourceLexer<'arena> {
-  pub fn new(
+  pub const fn new(
     src: BumpVec<'arena, u8>,
     file: SourceFile,
     leveloffset: i8,
@@ -216,7 +216,7 @@ impl<'arena> SourceLexer<'arena> {
 
   fn whitespace(&mut self) -> Token<'arena> {
     let start = self.pos - 1;
-    self.advance_while_one_of(&[b' ', b'\t']);
+    self.advance_while_one_of(b" \t");
     self.token(Whitespace, start, self.pos)
   }
 
@@ -578,7 +578,7 @@ impl<'arena> SourceLexer<'arena> {
   }
 }
 
-impl<'arena> Debug for SourceLexer<'arena> {
+impl Debug for SourceLexer<'_> {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     f.debug_struct("SourceLexer")
       .field("src", &String::from_utf8_lossy(&self.src))

@@ -312,11 +312,11 @@ impl<'arena> Parser<'arena> {
         lines.current().unwrap().last_loc().unwrap().end,
       )?;
     }
-    return Ok(Block {
+    Ok(Block {
       meta,
       context: Context::TableOfContents,
       content: Content::Empty(EmptyMetadata::None),
-    });
+    })
   }
 }
 

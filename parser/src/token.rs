@@ -181,7 +181,7 @@ impl<'arena> DefaultIn<'arena> for Token<'arena> {
   }
 }
 
-impl<'arena> TokenIs for Token<'arena> {
+impl TokenIs for Token<'_> {
   fn is(&self, kind: TokenKind) -> bool {
     self.kind == kind
   }
@@ -203,7 +203,7 @@ impl<'arena> TokenIs for Token<'arena> {
   }
 }
 
-impl<'arena> TokenIs for Option<&Token<'arena>> {
+impl TokenIs for Option<&Token<'_>> {
   fn is(&self, kind: TokenKind) -> bool {
     self.map_or(false, |t| t.is(kind))
   }
@@ -221,7 +221,7 @@ impl<'arena> TokenIs for Option<&Token<'arena>> {
   }
 }
 
-impl<'arena> std::fmt::Debug for Token<'arena> {
+impl std::fmt::Debug for Token<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     let lexeme = if &self.lexeme == "\n" {
       "\\n".to_string()

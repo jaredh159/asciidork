@@ -18,7 +18,7 @@ pub enum ListItemTypeMeta<'arena> {
   None,
 }
 
-impl<'arena> ListItem<'arena> {
+impl ListItem<'_> {
   pub const fn loc_start(&self) -> u32 {
     self.marker_src.loc.start
   }

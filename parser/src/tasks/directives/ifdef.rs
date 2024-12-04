@@ -33,22 +33,20 @@ impl<'arena> Parser<'arena> {
 
   fn evaluate_ifdef(&self, defined: bool, attrs: &str) -> bool {
     let is_any = attrs.contains(',');
-    let mut result = attrs
-      .split(|c| c == ',' || c == '+')
-      .fold(!is_any, |current, attr| {
-        if !is_any && !current && defined {
-          false
-        } else if is_any && current {
-          true
-        } else {
-          match self.document.meta.get(attr) {
-            None => false,
-            Some(AttrValue::String(_)) => true,
-            Some(AttrValue::Bool(true)) => true,
-            Some(AttrValue::Bool(false)) => false,
-          }
+    let mut result = attrs.split([',', '+']).fold(!is_any, |current, attr| {
+      if !is_any && !current && defined {
+        false
+      } else if is_any && current {
+        true
+      } else {
+        match self.document.meta.get(attr) {
+          None => false,
+          Some(AttrValue::String(_)) => true,
+          Some(AttrValue::Bool(true)) => true,
+          Some(AttrValue::Bool(false)) => false,
         }
-      });
+      }
+    });
     if !defined {
       result = !result;
     }

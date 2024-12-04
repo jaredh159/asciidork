@@ -1594,7 +1594,7 @@ mod tests {
     }
   }
 
-  impl<'a> AttrIr<'a> {
+  impl AttrIr<'_> {
     fn assert_string(&self) -> String {
       match self {
         AttrIr::Id(tokens) => format!("Id({})", toks_to_string(tokens)),

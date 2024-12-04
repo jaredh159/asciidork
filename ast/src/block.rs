@@ -7,7 +7,7 @@ pub struct Block<'arena> {
   pub context: BlockContext,
 }
 
-impl<'arena> Block<'arena> {
+impl Block<'_> {
   pub fn has_attr_option(&self, name: &str) -> bool {
     self
       .meta
@@ -93,7 +93,7 @@ pub enum BlockContext {
   Video,
 }
 
-impl<'arena> BlockContent<'arena> {
+impl BlockContent<'_> {
   pub fn last_loc(&self) -> Option<SourceLocation> {
     match self {
       BlockContent::Compound(blocks) => blocks.last().and_then(|b| b.content.last_loc()),

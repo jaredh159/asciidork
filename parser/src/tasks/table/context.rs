@@ -55,7 +55,7 @@ pub enum DsvLastConsumed {
   Other,
 }
 
-impl<'arena> TableContext<'arena> {
+impl TableContext<'_> {
   pub fn add_phantom_cells(&mut self, cell: &Cell, col: usize) {
     if cell.row_span == 0 && cell.col_span == 0 {
       return;

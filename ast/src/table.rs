@@ -118,7 +118,7 @@ pub struct Row<'arena> {
 }
 
 impl<'arena> Row<'arena> {
-  pub fn new(cells: BumpVec<'arena, Cell<'arena>>) -> Self {
+  pub const fn new(cells: BumpVec<'arena, Cell<'arena>>) -> Self {
     Self { cells }
   }
 }

@@ -533,9 +533,7 @@ impl<'arena> Line<'arena> {
     if self.current_token().is(Whitespace) {
       offset += 1;
     }
-    let Some(token) = self.nth_token(offset) else {
-      return None;
-    };
+    let token = self.nth_token(offset)?;
     let second = self.nth_token(offset + 1);
     let third = self.nth_token(offset + 2);
 
@@ -547,9 +545,7 @@ impl<'arena> Line<'arena> {
       }
       Star if second.is(Star) => {
         let src = self.reassemble_src();
-        let Some(captures) = regx::REPEAT_STAR_LI_START.captures(&src) else {
-          return None;
-        };
+        let captures = regx::REPEAT_STAR_LI_START.captures(&src)?;
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
       }
       CalloutNumber if token.lexeme.as_bytes()[1] != b'!' => {

@@ -97,7 +97,7 @@ impl Json for &str {
   }
 }
 
-impl<'arena> Json for BumpString<'arena> {
+impl Json for BumpString<'_> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     self.as_str().to_json_in(buf);
   }

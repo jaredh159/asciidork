@@ -93,12 +93,8 @@ impl<'arena> Parser<'arena> {
   }
 
   fn peek_cell_start(&self, tokens: &mut TableTokens, sep: char) -> Option<CellStart> {
-    let Some(first_token) = tokens.current_mut() else {
-      return None;
-    };
-    let Some(first_byte) = first_token.lexeme.as_bytes().first() else {
-      return None;
-    };
+    let first_token = tokens.current_mut()?;
+    let first_byte = first_token.lexeme.as_bytes().first()?;
 
     // no explicit cell spec, but we're sitting on the sep, so infer default
     if first_token.lexeme.starts_with(sep) {
@@ -140,9 +136,7 @@ impl<'arena> Parser<'arena> {
     if cursor == 0 {
       return None;
     }
-    let Some(cursor_token) = tokens.nth(cursor as usize) else {
-      return None;
-    };
+    let cursor_token = tokens.nth(cursor as usize)?;
 
     let mut buf = [0; 4];
     let sep_bytes = sep.encode_utf8(&mut buf).as_bytes();

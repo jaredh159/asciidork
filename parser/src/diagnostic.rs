@@ -10,7 +10,7 @@ pub struct Diagnostic {
   pub source_file: SourceFile,
 }
 
-impl<'arena> Parser<'arena> {
+impl Parser<'_> {
   pub(crate) fn err_at(&self, message: impl Into<String>, start: u32, end: u32) -> Result<()> {
     let (line_num, offset) = self.lexer.line_number_with_offset(start);
     self.handle_err(Diagnostic {

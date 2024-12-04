@@ -93,7 +93,7 @@ impl<'arena> Deref for InlineNodes<'arena> {
   }
 }
 
-impl<'arena> DerefMut for InlineNodes<'arena> {
+impl DerefMut for InlineNodes<'_> {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.0
   }

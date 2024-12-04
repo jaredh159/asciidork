@@ -763,7 +763,7 @@ impl<'arena> Parser<'arena> {
     let mut line_txt = state.text.str().as_bytes();
     let line_len = line_txt.len();
     let mut back = comment_bytes.len() as u32;
-    if line_txt.ends_with(&[b' ']) {
+    if line_txt.ends_with(b" ") {
       back += 1;
       line_txt = &line_txt[..line_len - 1];
     }

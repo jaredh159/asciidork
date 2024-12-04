@@ -46,7 +46,7 @@ impl<'arena> ContiguousLines<'arena> {
     self.current()
   }
 
-  pub fn iter(&'arena self) -> impl ExactSizeIterator<Item = &Line<'arena>> + '_ {
+  pub fn iter(&'arena self) -> impl ExactSizeIterator<Item = &'arena Line<'arena>> + 'arena {
     self.lines.iter()
   }
 

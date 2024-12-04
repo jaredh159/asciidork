@@ -1087,7 +1087,7 @@ impl AsciidoctorHtml {
       Some(AttrValue::String(path)) => {
         let ext = helpers::file_ext(path).unwrap_or("ico");
         self.push_str(r#"<link rel="icon" type="image/"#);
-        self.push([ext, r#"" href=""#, &path, "\">"]);
+        self.push([ext, r#"" href=""#, path, "\">"]);
       }
       Some(AttrValue::Bool(true)) => {
         self.push_str(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#);

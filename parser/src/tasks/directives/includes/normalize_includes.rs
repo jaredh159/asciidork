@@ -150,7 +150,7 @@ fn from_utf16_in(utf16: BumpVec<u16>, dest: &mut BumpVec<u8>, bump: &Bump) -> bo
 
 fn parse_line_ranges(s: &str) -> Vec<Range<usize>> {
   let mut ranges = Vec::new();
-  s.split(|c| c == ',' || c == ';').for_each(|part| {
+  s.split([',', ';']).for_each(|part| {
     let part = part.trim();
     if let Some((low, high)) = part.split_once("..") {
       let Ok(low_n) = low.parse::<usize>() else {
