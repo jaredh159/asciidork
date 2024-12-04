@@ -116,16 +116,10 @@ impl<'arena> Parser<'arena> {
   }
 
   fn convert_utf16_le(&self, bytes: &mut BumpVec<u8>) -> std::result::Result<(), &'static str> {
-    // SAFETY: because we ensure the len is even, it's fine to transmute to u16
-    // because we're going to check that it's valid going back to utf8 anyway
-    let utf16: BumpVec<u16> = unsafe {
-      if bytes.len() % 2 != 0 {
-        bytes.push(0x00);
-      }
-      let ptr = bytes.as_ptr() as *const u16;
-      let len = bytes.len() / 2;
-      BumpVec::from_raw_parts_in(ptr as *mut u16, len, len, self.bump)
-    };
+    let utf16: BumpVec<u16> = bytes
+      .chunks_exact(2)
+      .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+      .collect_in(self.bump);
 
     if from_utf16_in(utf16, bytes, self.bump) {
       Ok(())
