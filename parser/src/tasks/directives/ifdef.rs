@@ -34,7 +34,7 @@ impl<'arena> Parser<'arena> {
   fn evaluate_ifdef(&self, defined: bool, attrs: &str) -> bool {
     let is_any = attrs.contains(',');
     let mut result = attrs
-      .split(|c| c == ',' || c == '+')
+      .split([',', '+'])
       .fold(!is_any, |current, attr| {
         if !is_any && !current && defined {
           false

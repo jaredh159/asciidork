@@ -31,7 +31,7 @@ pub enum DistributedColWidth {
 }
 
 impl<'arena> ColWidths<'arena> {
-  pub fn new(col_widths: BumpVec<'arena, ColWidth>) -> Self {
+  pub const fn new(col_widths: BumpVec<'arena, ColWidth>) -> Self {
     Self(col_widths)
   }
 

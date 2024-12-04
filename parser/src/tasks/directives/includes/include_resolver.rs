@@ -63,7 +63,7 @@ impl IncludeBuffer for Vec<u8> {
   }
 }
 
-impl<'a> IncludeBuffer for BumpVec<'a, u8> {
+impl IncludeBuffer for BumpVec<'_, u8> {
   fn initialize(&mut self, len: usize) {
     self.reserve(len + 1); // for possible extra newline
     self.resize(len, 0);
@@ -108,8 +108,9 @@ impl From<std::io::Error> for ResolveError {
 
 // test helpers
 
-#[cfg(not(release))]
+#[cfg(debug_assertions)]
 pub struct ConstResolver(pub Vec<u8>);
+#[cfg(debug_assertions)]
 impl IncludeResolver for ConstResolver {
   fn resolve(
     &mut self,
@@ -127,8 +128,9 @@ impl IncludeResolver for ConstResolver {
   }
 }
 
-#[cfg(not(release))]
+#[cfg(debug_assertions)]
 pub struct ErrorResolver(pub ResolveError);
+#[cfg(debug_assertions)]
 impl IncludeResolver for ErrorResolver {
   fn resolve(
     &mut self,

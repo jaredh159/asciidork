@@ -16,6 +16,7 @@ pub trait HtmlBuf {
     }
   }
 
+  #[allow(unused)]
   fn push_url_encoded(&mut self, s: &str) {
     push_url_encoded(self.htmlbuf(), s);
   }

@@ -101,7 +101,7 @@ impl<'arena> CollectText<'arena> {
   }
 }
 
-impl<'arena> std::fmt::Debug for CollectText<'arena> {
+impl std::fmt::Debug for CollectText<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,

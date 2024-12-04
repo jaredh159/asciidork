@@ -2,9 +2,7 @@ use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
   pub fn line_heading_level(&self, line: &Line) -> Option<u8> {
-    let Some(unadjusted) = line.unadjusted_heading_level() else {
-      return None;
-    };
+    let unadjusted = line.unadjusted_heading_level()?;
     Some(adjusted_leveloffset(
       self.lexer.leveloffset(line.loc().unwrap().include_depth),
       adjusted_leveloffset(self.ctx.leveloffset, unadjusted),

@@ -30,7 +30,7 @@ impl<'arena, T> Deq<'arena, T> {
     }
   }
 
-  pub fn from_vec(bump: &'arena Bump, buf: BumpVec<'arena, T>) -> Self {
+  pub const fn from_vec(bump: &'arena Bump, buf: BumpVec<'arena, T>) -> Self {
     Deq { bump, buf, pos: 0 }
   }
 
@@ -151,7 +151,7 @@ impl<'arena, T: DefaultIn<'arena>> Deq<'arena, T> {
   }
 }
 
-impl<'arena, T: fmt::Debug> fmt::Debug for Deq<'arena, T> {
+impl<T: fmt::Debug> fmt::Debug for Deq<'_, T> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(
       f,

@@ -49,7 +49,7 @@ impl Json for SourceString<'_> {
   }
 }
 
-impl<'arena> Deref for SourceString<'arena> {
+impl Deref for SourceString<'_> {
   type Target = str;
 
   fn deref(&self) -> &Self::Target {
@@ -57,19 +57,19 @@ impl<'arena> Deref for SourceString<'arena> {
   }
 }
 
-impl<'arena> AsRef<str> for SourceString<'arena> {
+impl AsRef<str> for SourceString<'_> {
   fn as_ref(&self) -> &str {
     &self.src
   }
 }
 
-impl<'arena> std::cmp::PartialEq<str> for SourceString<'arena> {
+impl std::cmp::PartialEq<str> for SourceString<'_> {
   fn eq(&self, other: &str) -> bool {
     self.src == other
   }
 }
 
-impl<'arena> std::fmt::Debug for SourceString<'arena> {
+impl std::fmt::Debug for SourceString<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "SourceString{{\"{}\",{:?}}}", self.src, self.loc)
   }

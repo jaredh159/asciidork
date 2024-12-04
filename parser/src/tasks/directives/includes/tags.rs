@@ -151,7 +151,7 @@ pub fn parse_spec(s: &str) -> Option<Spec> {
 pub fn parse_selection(s: &str) -> TagSpecs {
   let mut selection = TagSpecs(Vec::new());
   s.trim()
-    .split(|c| c == ',' || c == ';')
+    .split([',', ';'])
     .filter_map(parse_spec)
     .for_each(|spec| {
       selection.push(spec);

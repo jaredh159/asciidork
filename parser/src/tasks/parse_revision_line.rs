@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::internal::*;
 use crate::variants::token::*;
 
-impl<'arena> Parser<'arena> {
+impl Parser<'_> {
   pub(super) fn parse_revision_line(&mut self, lines: &mut ContiguousLines) {
     let Some(line) = lines.current() else {
       return;

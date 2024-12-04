@@ -27,7 +27,7 @@ impl From<Delimiter> for BlockContext {
   }
 }
 
-impl<'arena> Token<'arena> {
+impl Token<'_> {
   pub fn to_delimeter(&self) -> Option<Delimiter> {
     if self.kind != TokenKind::DelimiterLine {
       return None;

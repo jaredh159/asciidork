@@ -146,7 +146,7 @@ impl<'arena> Named<'arena> {
     Named(BumpVec::new_in(bump))
   }
 
-  pub fn from(vec: BumpVec<'arena, (SourceString<'arena>, InlineNodes<'arena>)>) -> Self {
+  pub const fn from(vec: BumpVec<'arena, (SourceString<'arena>, InlineNodes<'arena>)>) -> Self {
     Named(vec)
   }
 

@@ -63,7 +63,7 @@ pub enum SpecialCharKind {
 
 // json
 
-impl<'arena> Json for InlineNode<'arena> {
+impl Json for InlineNode<'_> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     buf.begin_obj("InlineNode");
     buf.add_member("content", &self.content);
@@ -89,7 +89,7 @@ impl Json for CurlyKind {
   }
 }
 
-impl<'arena> Json for Inline<'arena> {
+impl Json for Inline<'_> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     buf.begin_obj("Inline");
     buf.push_str(r#","variant":""#);
