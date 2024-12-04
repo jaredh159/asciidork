@@ -116,6 +116,9 @@ impl<'arena> Parser<'arena> {
   }
 
   fn convert_utf16_le(&self, bytes: &mut BumpVec<u8>) -> std::result::Result<(), &'static str> {
+    if bytes.len() % 2 != 0 {
+      bytes.push(0x00);
+    }
     let utf16: BumpVec<u16> = bytes
       .chunks_exact(2)
       .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
