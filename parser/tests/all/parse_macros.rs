@@ -1,8 +1,49 @@
+use crate::attrs;
 use asciidork_ast::prelude::*;
 use asciidork_ast::variants::{inline::*, r#macro::*};
 use asciidork_ast::Flow;
 use asciidork_parser::prelude::*;
 use test_utils::*;
+
+test_inlines_loose!(
+  link_macro,
+  "http://foo.com[bar]",
+  nodes![node!(
+    Macro(Link {
+      scheme: Some(UrlScheme::Http),
+      target: src!("http://foo.com", 0..14),
+      attrs: Some(attrs::pos("bar", 15..18)),
+      caret: false,
+    }),
+    0..19
+  )]
+);
+
+test_inlines_loose!(
+  link_macro_w_formatted_text,
+  "http://foo.com[[.role]#bar#]",
+  nodes![node!(
+    Macro(Link {
+      scheme: Some(UrlScheme::Http),
+      target: src!("http://foo.com", 0..14),
+      attrs: Some(AttrList {
+        positional: vecb![Some(nodes![node!(
+          TextSpan(
+            AttrList {
+              roles: vecb![src!("role", 17..21)],
+              ..attr_list!(15..22)
+            },
+            just!("bar", 23..26)
+          ),
+          15..27
+        )])],
+        ..attr_list!(14..28)
+      }),
+      caret: false,
+    }),
+    0..28
+  )]
+);
 
 test_inlines_loose!(
   xref_macro_alone,

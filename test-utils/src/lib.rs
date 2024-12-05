@@ -453,7 +453,7 @@ macro_rules! test_inlines_loose {
         BlockContent::Simple(nodes) => nodes,
         _ => panic!("expected simple block content"),
       };
-      assert_eq!(inlines, $expected);
+      expect_eq!(inlines, $expected, from: $input);
     }
   };
 }
