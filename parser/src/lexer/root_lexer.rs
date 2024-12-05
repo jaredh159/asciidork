@@ -327,11 +327,6 @@ mod tests {
         "<x>",
         vec![(LessThan, "<"), (Word, "x"), (GreaterThan, ">")],
       ),
-      ("él", vec![(Word, "él")]),
-      (
-        "foo él",
-        vec![(Word, "foo"), (Whitespace, " "), (Word, "él")],
-      ),
       ("{}", vec![(OpenBrace, "{"), (CloseBrace, "}")]),
       ("  ", vec![(Whitespace, "  ")]),
       (".", vec![(Dots, ".")]),
@@ -520,6 +515,18 @@ mod tests {
       ),
     ];
     assert_token_cases!(cases);
+  }
+
+  #[test]
+  fn test_accented_words() {
+    assert_token_cases!([
+      ("él", vec![(Word, "él")]),
+      (
+        "foo él",
+        vec![(Word, "foo"), (Whitespace, " "), (Word, "él")],
+      ),
+      ("diplomático", vec![(Word, "diplomático")]),
+    ]);
   }
 
   #[test]

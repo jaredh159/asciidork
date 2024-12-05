@@ -87,14 +87,21 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'\\') => Some(self.single(Backslash)),
       Some(b) if b.is_ascii_digit() => Some(self.digits()),
       Some(b) if b == b';' || b == b':' => Some(self.maybe_term_delimiter(b, at_line_start)),
-      // two-byte utf-8 sequences
-      Some(b) if (0xc2..=0xdf).contains(&b) => {
-        self.pos += 1;
-        Some(self.token(Word, self.pos - 2, self.pos))
-      }
+      Some(0xC2) if self.peek_is(0xA0) => Some(self.codepoint(2)), // no-break space
+      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\xAF") => Some(self.codepoint(3)), // narrow no-break space
+      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\x87") => Some(self.codepoint(3)), // figure space
+      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x81\xA0") => Some(self.codepoint(3)), // word joiner
+      Some(0xE3) if self.peek_bytes::<2>() == Some(b"\x80\x80") => Some(self.codepoint(3)), // ideographic space
+      Some(0xEF) if self.peek_bytes::<2>() == Some(b"\xBB\xBF") => Some(self.codepoint(3)), // zero-width no-break space
       Some(_) => Some(self.word(at_line_start)),
       None => None,
     }
+  }
+
+  pub fn codepoint(&mut self, n: u32) -> Token<'arena> {
+    debug_assert!(n > 1);
+    self.pos += n - 1;
+    self.token(Word, self.pos - n, self.pos)
   }
 
   pub fn peek(&self) -> Option<u8> {
@@ -392,7 +399,6 @@ impl<'arena> SourceLexer<'arena> {
   fn advance_to_word_boundary(&mut self, with_at: bool) -> u32 {
     loop {
       match self.peek() {
-        Some(b) if b >= 0xc2 => break, // 2-byte utf-8 sequence
         Some(b'@') if with_at => break,
         Some(
           b' ' | b'\t' | b'\n' | b':' | b';' | b'<' | b'>' | b',' | b'^' | b'_' | b'~' | b'*'
