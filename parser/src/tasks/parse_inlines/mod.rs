@@ -73,10 +73,6 @@ impl<'arena> Parser<'arena> {
         }
 
         match token.kind {
-          UriScheme if subs.macros() && line.continues_inline_macro() => {
-            self.parse_uri_scheme_macro(&token, &mut line, &mut acc)?
-          }
-
           MacroName if subs.macros() && line.continues_inline_macro() => {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
@@ -136,26 +132,33 @@ impl<'arena> Parser<'arena> {
                 break;
               }
               "link:" => {
-                let target = self
-                  .macro_target_from_passthru(&mut line)
-                  .unwrap_or_else(|| line.consume_macro_target(self.bump));
-                let line_has_caret = line.contains(Caret);
-                let mut attrs = self.parse_link_macro_attr_list(&mut line)?;
-                let mut caret = false;
-                if line_has_caret {
-                  caret = link_macro_blank_window_shorthand(&mut attrs);
+                if !line.no_whitespace_until(OpenBracket) {
+                  // turns out we didn't have a valid uri target here
+                  acc.text.push_token(&token);
+                  let next_token = line.consume_current().unwrap();
+                  acc.text.push_token(&next_token);
+                } else {
+                  let target = self
+                    .macro_target_from_passthru(&mut line)
+                    .unwrap_or_else(|| line.consume_macro_target(self.bump));
+                  let line_has_caret = line.contains(Caret);
+                  let mut attrs = self.parse_link_macro_attr_list(&mut line)?;
+                  let mut caret = false;
+                  if line_has_caret {
+                    caret = link_macro_blank_window_shorthand(&mut attrs);
+                  }
+                  finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
+                  let scheme = token.to_url_scheme();
+                  acc.push_node(
+                    Macro(Link {
+                      scheme,
+                      target,
+                      attrs: Some(attrs),
+                      caret,
+                    }),
+                    macro_loc,
+                  );
                 }
-                finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
-                let scheme = token.to_url_scheme();
-                acc.push_node(
-                  Macro(Link {
-                    scheme,
-                    target,
-                    attrs: Some(attrs),
-                    caret,
-                  }),
-                  macro_loc,
-                );
               }
               "icon:" => {
                 let target = line.consume_macro_target(self.bump);
@@ -206,6 +209,20 @@ impl<'arena> Parser<'arena> {
               }
               _ => todo!("unhandled macro type: `{}`", token.lexeme),
             }
+          }
+
+          // to match rx, we intentionally fail to recognize bare url links from invalid
+          // link macros like `link:http://foo.com`, so consume the uri scheme as text
+          MacroName
+            if subs.macros() && line.current_is(UriScheme) && token.lexeme.as_str() == "link:" =>
+          {
+            acc.text.push_token(&token);
+            let next_token = line.consume_current().unwrap();
+            acc.text.push_token(&next_token);
+          }
+
+          UriScheme if subs.macros() && line.continues_inline_macro() => {
+            self.parse_uri_scheme_macro(&token, &mut line, &mut acc)?
           }
 
           AttrRef if !subs.attr_refs() => {
@@ -591,6 +608,11 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
+          // already encoded entities, eg: &#8212;
+          Ampersand if line.starts_with_seq(&[Kind(Hash), Kind(Digits), Kind(SemiColon)]) => {
+            acc.text.push_token(&token);
+          }
+
           Ampersand | LessThan | GreaterThan if subs.special_chars() => {
             acc.push_node(
               SpecialChar(match token.kind {
@@ -692,6 +714,7 @@ impl<'arena> Parser<'arena> {
     line.discard_assert(OpenBracket);
     let line_has_caret = line.contains(Caret);
     let mut attrs = self.parse_link_macro_attr_list(line)?;
+
     let mut caret = false;
     if line_has_caret {
       caret = link_macro_blank_window_shorthand(&mut attrs);
@@ -1153,7 +1176,7 @@ mod tests {
 
   #[test]
   fn test_inline_anchors() {
-    let cases = vec![
+    run(vec![
       (
         "[[foo]]bar",
         nodes![node!(InlineAnchor(bstr!("foo")), 0..7), node!("bar"; 7..10),],
@@ -1162,9 +1185,7 @@ mod tests {
         "bar[[foo]]",
         nodes![node!("bar"; 0..3), node!(InlineAnchor(bstr!("foo")), 3..10),],
       ),
-    ];
-
-    run(cases);
+    ]);
   }
 
   #[test]
@@ -1462,6 +1483,19 @@ mod tests {
           ),
           node!("bar"; 25..28),
         ],
+      ),
+      (
+        "[.role]#bar#",
+        nodes![node!(
+          TextSpan(
+            AttrList {
+              roles: vecb![src!("role", 2..6)],
+              ..attr_list!(0..7)
+            },
+            just!("bar", 8..11),
+          ),
+          0..12
+        )],
       ),
     ];
 

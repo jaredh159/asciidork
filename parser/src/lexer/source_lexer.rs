@@ -379,7 +379,6 @@ impl<'arena> SourceLexer<'arena> {
   fn advance_until_one_of(&mut self, chars: &[u8]) -> u32 {
     loop {
       match self.peek() {
-        Some(b) if b >= 0xc2 => break,
         Some(c) if chars.contains(&c) => break,
         None => break,
         _ => {
@@ -391,41 +390,22 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   fn advance_to_word_boundary(&mut self, with_at: bool) -> u32 {
-    self.advance_until_one_of(&[
-      b' ',
-      b'\t',
-      b'\n',
-      b':',
-      b';',
-      b'<',
-      b'>',
-      b',',
-      b'^',
-      b'_',
-      b'~',
-      b'*',
-      b'!',
-      b'?',
-      b'`',
-      b'+',
-      b'.',
-      b'[',
-      b']',
-      b'{',
-      b'}',
-      b'(',
-      b')',
-      b'=',
-      b'|',
-      b'"',
-      b'\'',
-      b'\\',
-      b'%',
-      b'#',
-      b'&',
-      0xc2, // start of nbsp
-      if with_at { b'@' } else { b'&' },
-    ])
+    loop {
+      match self.peek() {
+        Some(b) if b >= 0xc2 => break, // 2-byte utf-8 sequence
+        Some(b'@') if with_at => break,
+        Some(
+          b' ' | b'\t' | b'\n' | b':' | b';' | b'<' | b'>' | b',' | b'^' | b'_' | b'~' | b'*'
+          | b'!' | b'?' | b'`' | b'+' | b'.' | b'[' | b']' | b'{' | b'}' | b'(' | b')' | b'='
+          | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&',
+        ) => break,
+        None => break,
+        _ => {
+          self.advance();
+        }
+      }
+    }
+    self.pos
   }
 
   fn maybe_term_delimiter(&mut self, ch: u8, at_line_start: bool) -> Token<'arena> {

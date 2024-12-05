@@ -1,4 +1,3 @@
-// use crate::asciidoctor_html::HtmlBuf;
 use crate::internal::*;
 
 // NB: the awkward api here is because we want to make the common path
@@ -7,7 +6,7 @@ use crate::internal::*;
 
 pub struct OpenTag {
   buf: String,
-  opened_classes: bool,
+  pub opened_classes: bool,
   append_classes: Option<String>,
   styles: Option<String>,
 }
@@ -40,9 +39,7 @@ impl OpenTag {
 
     if id {
       if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {
-        tag.buf.push_str(" id=\"");
-        tag.buf.push_str(id);
-        tag.buf.push('"');
+        tag.push_html_attr("id", id);
       }
     }
 
@@ -144,27 +141,29 @@ impl OpenTag {
     if !has_link_text {
       self.push_class("bare");
     }
-    self.push_classes(attrs.roles.iter());
-    if self.opened_classes {
-      self.buf.push('"');
-      self.opened_classes = false;
+    if let Some(title) = attrs.named("title") {
+      self.push_html_attr("title", title)
     }
-    if let Some(target) = attrs.named("window") {
-      self.push_str(" target=\"");
-      self.push_str(target);
-      self.push_ch('"');
-      if target == "_blank" || attrs.has_option("noopener") {
+    if let Some(window) = attrs.named("window") {
+      if !has_link_text {
+        self.push_ch('"');
+      }
+      self.push_html_attr("target", window);
+      if window == "_blank" || attrs.has_option("noopener") {
         self.push_str(" rel=\"noopener");
         if attrs.has_option("nofollow") {
           self.push_str(" nofollow\"");
+          self.opened_classes = false;
         } else {
           self.push_ch('"');
         }
       }
     } else if blank_window_shorthand {
       self.push_str(" target=\"_blank\" rel=\"noopener\"");
+      self.opened_classes = false;
     } else if attrs.has_option("nofollow") {
       self.push_str(" rel=\"nofollow\"");
+      self.opened_classes = false;
     }
   }
 
@@ -182,9 +181,7 @@ impl OpenTag {
       self.buf.push('"');
     }
     if let Some(styles) = self.styles.take() {
-      self.buf.push_str(" style=\"");
-      self.buf.push_str(&styles);
-      self.buf.push('"');
+      self.push_html_attr("style", &styles);
     }
     self.buf.push('>');
     self.buf

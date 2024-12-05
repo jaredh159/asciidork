@@ -101,12 +101,20 @@ impl<'arena> Parser<'arena> {
     let mut in_double_quote = false;
     let mut last_kind = TokenKind::Eof;
     let mut parse_as_attr_list = false;
+    let mut in_nested_attr_list = false;
+    let mut num_tokens = 0;
     for token in line.iter().take(line.len() - 1) {
+      num_tokens += 1;
       match (last_kind, token.kind) {
-        (Backslash, DoubleQuote) => {}
-        (Backslash, CloseBracket) => {}
-        (_, CloseBracket) => break,
+        (Backslash, CloseBracket) if in_nested_attr_list => in_nested_attr_list = false,
+        (Backslash, CloseBracket | OpenBracket | DoubleQuote) => {}
         (_, DoubleQuote) => in_double_quote = !in_double_quote,
+        (_, OpenBracket) => in_nested_attr_list = true,
+        (_, CloseBracket) if in_nested_attr_list => in_nested_attr_list = false,
+        (_, CloseBracket) => {
+          num_tokens -= 1;
+          break;
+        }
         (_, EqualSigns) if token.len() == 1 && !in_double_quote => {
           parse_as_attr_list = true;
           break;
@@ -127,13 +135,13 @@ impl<'arena> Parser<'arena> {
     }
 
     let mut tokens = Deq::with_capacity(line.len() - 1, self.bump);
-    while !line.peek_token().is(CloseBracket) || line.current_is(Backslash) {
+    for _ in 0..num_tokens {
       tokens.push(line.consume_current().unwrap());
     }
-    tokens.push(line.consume_current().unwrap());
     let attr_line = Line::new(unquote(tokens));
     let nodes = self.parse_inlines(&mut attr_line.into_lines())?;
     attrs.positional.push(Some(nodes));
+    debug_assert!(line.current_is(CloseBracket));
     let close_bracket = line.consume_current().expect("attr list close bracket");
     attrs.loc.extend(close_bracket.loc);
     Ok(attrs)
@@ -1419,6 +1427,10 @@ mod tests {
       (
         "foo%bar",
         "Positional([Word`foo`, Percent`%`, Word`bar`], w_symbol: true)",
+      ),
+      (
+        "[.role]#foo#",
+        "Positional([OpenBracket`[`, Dots`.`, Word`role`, CloseBracket`]`, Hash`#`, Word`foo`, Hash`#`], w_symbol: true)",
       ),
     ];
     for (input, expected) in cases {

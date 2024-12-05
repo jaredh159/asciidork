@@ -749,6 +749,8 @@ impl Backend for AsciidoctorHtml {
       } else {
         a_tag.push_str_attr_escaped(link_href);
       }
+      a_tag.push_ch('"');
+      a_tag.opened_classes = false;
       a_tag.push_link_attrs(attrs, true, false);
       self.push_open_tag(a_tag);
       true
@@ -786,7 +788,7 @@ impl Backend for AsciidoctorHtml {
     has_link_text: bool,
     blank_window_shorthand: bool,
   ) {
-    let mut tag = OpenTag::new("a", None);
+    let mut tag = OpenTag::new("a", attrs);
     tag.push_str(" href=\"");
     if matches!(scheme, Some(UrlScheme::Mailto)) {
       tag.push_str("mailto:");

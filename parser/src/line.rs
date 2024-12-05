@@ -467,14 +467,14 @@ impl<'arena> Line<'arena> {
       for token in self.iter() {
         match token.kind {
           Whitespace | GreaterThan | OpenBracket | OpenParens | CloseParens | Bang | SemiColon
-          | Colon => break,
+          | Colon | Star => break,
           Word if token.lexeme.starts_with('?') => break,
           _ => num_tokens += 1,
         }
       }
     }
 
-    if num_tokens > 0 && self.tokens.get(num_tokens - 1).is(Dots) {
+    if stop.is_none() && num_tokens > 0 && self.tokens.get(num_tokens - 1).is(Dots) {
       num_tokens -= 1;
     }
 
