@@ -1,0 +1,31 @@
+name: basic-ci
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: check
+        run: cargo check
+      - name: clippy
+        run: cargo clippy
+      - name: fmt
+        run: cargo fmt -- --check
+      - name: test
+        run: cargo test --all --no-fail-fast
+      - name: build
+        run: cargo build
+      - name: wasm
+        run: |
+          npm install -g wasm-pack@0.12.1
+          cd dr-html-wasm && wasm-pack build --target web
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
