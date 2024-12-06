@@ -25,7 +25,7 @@ impl<'arena> Parser<'arena> {
     let current = line.current_token().unwrap();
     if matches!(
       current.kind,
-      SingleQuote | DoubleQuote | Whitespace | CloseBracket
+      SingleQuote | DoubleQuote | Whitespace | CloseBracket | Digits
     ) {
       return Ok(None);
     }

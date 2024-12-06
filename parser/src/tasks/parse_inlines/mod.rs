@@ -420,7 +420,7 @@ impl<'arena> Parser<'arena> {
               && !line.peek_token().is(CloseBracket)
               && line.contains_seq(&[Kind(CloseBracket), Kind(CloseBracket)]) =>
           {
-            line.discard(1); // second `[`
+            let bracket = line.consume_current().unwrap(); // second `[`
             if let Some(AnchorSrc { id, reftext, loc }) = self.parse_inline_anchor(&mut line)? {
               self.document.anchors.borrow_mut().insert(
                 id.src.clone(),
@@ -431,6 +431,7 @@ impl<'arena> Parser<'arena> {
               );
               acc.push_node(InlineAnchor(id.src), loc);
             } else {
+              acc.text.push_token(&bracket);
               acc.text.push_token(&token);
             }
           }

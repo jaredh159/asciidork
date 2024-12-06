@@ -34,7 +34,13 @@ assert_html!(
 
     Link to <<custom>>.
 
-    Hashed link to <<#custom,Big CATS>> works too.
+    Reftext link to <<custom,Big CATS>> works too.
+
+    Hashed reftext link to <<#custom,Big CATS>> works too.
+
+    Quoted reftext link to <<#custom,"Big CATS">> works too.
+
+    Empty reftext to <<custom,>> works too.
 
     Hashed macro to xref:#custom[] works too.
   "#},
@@ -46,7 +52,16 @@ assert_html!(
           <p>Link to <a href="#custom">Tigers</a>.</p>
         </div>
         <div class="paragraph">
-          <p>Hashed link to <a href="#custom">Big CATS</a> works too.</p>
+          <p>Reftext link to <a href="#custom">Big CATS</a> works too.</p>
+        </div>
+        <div class="paragraph">
+          <p>Hashed reftext link to <a href="#custom">Big CATS</a> works too.</p>
+        </div>
+        <div class="paragraph">
+          <p>Quoted reftext link to <a href="#custom">"Big CATS"</a> works too.</p>
+        </div>
+        <div class="paragraph">
+          <p>Empty reftext to <a href="#custom">Tigers</a> works too.</p>
         </div>
         <div class="paragraph">
           <p>Hashed macro to <a href="#custom">Tigers</a> works too.</p>
@@ -280,5 +295,109 @@ assert_html!(
         </tr>
       </tbody>
     </table>
+  "##}
+);
+
+// asciidoctor/test/links_test.rb
+assert_html!(
+  asciidoctor_xrefs_test_rb1,
+  adoc! {r#"
+    // inline ref
+    Foo.[[tigers1]] bar.anchor:tigers2[]
+
+    // escaped inline ref
+    Foo.\[[tigers1]] bar.\anchor:tigers2[]
+
+    // inline ref can start with colon
+    [[:idname]] text
+
+    // inline ref cannot start with digit
+    [[1-install]] text
+
+    // reftext of macro inline ref can resolve to empty
+    anchor:id-only[{empty}]text
+
+    // inline ref with reftext
+    [[tigers3,Tigers]] anchor:tigers4[Tigers]
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>Foo.<a id="tigers1"></a> bar.<a id="tigers2"></a></p>
+    </div>
+    <div class="paragraph">
+      <p>Foo.[[tigers1]] bar.anchor:tigers2[]</p>
+    </div>
+    <div class="paragraph">
+      <p><a id=":idname"></a> text</p>
+    </div>
+    <div class="paragraph">
+      <p>[[1-install]] text</p>
+    </div>
+    <div class="paragraph">
+      <p><a id="id-only"></a>text</p>
+    </div>
+    <div class="paragraph">
+      <p><a id="tigers3"></a> <a id="tigers4"></a></p>
+    </div>
+  "##}
+);
+
+assert_html!(
+  asciidoctor_xrefs_test_rb2,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    :label-tigers: Tigers
+
+    // should substitute attribute references in reftext when registering inline ref
+    [[tigers4,{label-tigers}]] anchor:tigers5[{label-tigers}]
+    <<tigers4>> <<tigers5>>
+
+    // repeating inline anchor macro with empty reftext
+    anchor:one[] anchor:two[] anchor:three[]
+
+    // mixed inline anchor macro and anchor shorthand with empty reftext
+    anchor:one[][[two]]anchor:three[][[four]]anchor:five[]
+
+    // unescapes square bracket in reftext of anchor macro
+    see <<foo>> anchor:foo[b[a\]r]tex
+
+    // xref using angled bracket syntax
+    <<not-found>>
+
+    // xref using angled bracket syntax with explicit hash
+    <<#not-found2>>
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p><a id="tigers4"></a> <a id="tigers5"></a> <a href="#tigers4">Tigers</a> <a href="#tigers5">Tigers</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a id="one"></a> <a id="two"></a> <a id="three"></a></p>
+    </div>
+    <div class="paragraph">
+      <p><a id="one"></a><a id="two"></a><a id="three"></a><a id="four"></a><a id="five"></a></p>
+    </div>
+    <div class="paragraph">
+      <p>see <a href="#foo">b[a]r</a> <a id="foo"></a>tex</p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#not-found">[not-found]</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#not-found2">[not-found2]</a></p>
+    </div>
+  "##}
+);
+
+assert_html!(
+  asciidoctor_xrefs_test_rb3,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    <<tigers#>>
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p><a href="tigers.html">tigers.html</a></p>
+    </div>
   "##}
 );
