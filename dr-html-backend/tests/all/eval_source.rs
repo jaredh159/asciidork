@@ -31,6 +31,7 @@ assert_html!(
     ----
   "#},
   wrap_source(
+    None,
     "ruby",
     raw_html! {r#"
       require 'sinatra'
@@ -85,6 +86,7 @@ assert_html!(
     end
   "#},
   wrap_source(
+    None,
     "ruby",
     raw_html! {r#"
       require 'sinatra'
@@ -104,7 +106,7 @@ assert_html!(
     require 'sinatra'
     ----
   "#},
-  wrap_source("ruby", "require 'sinatra'")
+  wrap_source(None, "ruby", "require 'sinatra'")
 );
 
 assert_html!(
@@ -117,7 +119,7 @@ assert_html!(
     System.out.println("Hello, world!");
     ----
   "#},
-  wrap_source("java", r#"System.out.println("Hello, world!");"#)
+  wrap_source(None, "java", r#"System.out.println("Hello, world!");"#)
 );
 
 assert_html!(
@@ -131,6 +133,7 @@ assert_html!(
     ----
   "#},
   wrap_source(
+    None,
     "rust",
     raw_html! {r#"
       fn main() {
@@ -148,10 +151,13 @@ assert_html!(
     so baz
     ----
   "#},
-  wrap_listing(raw_html! {r#"
+  wrap_listing(
+    None,
+    raw_html! {r#"
     <pre>foo &lt;bar&gt;
     so baz</pre>
-  "#})
+  "#}
+  )
 );
 
 assert_html!(
@@ -163,17 +169,51 @@ assert_html!(
     so baz
     --
   "#},
-  wrap_listing(raw_html! {r#"
+  wrap_listing(
+    None,
+    raw_html! {r#"
     <pre>foo bar
     so baz</pre>
-  "#})
+  "#}
+  )
+);
+
+assert_html!(
+  source_block_id,
+  adoc! {r#"
+    [#hello,ruby]
+    ----
+    require 'sinatra'
+
+    get '/hi' do
+      "Hello World!"
+    end
+    ----
+  "#},
+  wrap_source(
+    Some("hello"),
+    "ruby",
+    raw_html! {r#"
+      require 'sinatra'
+
+      get '/hi' do
+        "Hello World!"
+      end
+    "#}
+  )
 );
 
 // helpers
 
-fn wrap_listing(inner: &str) -> String {
+fn wrap_listing(id: Option<&str>, inner: &str) -> String {
+  let div = if let Some(id) = id {
+    &format!(r#"<div id="{}" class="listingblock">"#, id)
+  } else {
+    r#"<div class="listingblock">"#
+  };
   format!(
-    r#"<div class="listingblock"><div class="content">{}</div></div>"#,
+    r#"{}<div class="content">{}</div></div>"#,
+    div,
     inner.trim(),
   )
 }
@@ -185,9 +225,12 @@ fn wrap_literal(inner: &str) -> String {
   )
 }
 
-fn wrap_source(lang: &str, inner: &str) -> String {
-  wrap_listing(&format!(
-    r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
-    inner.trim(),
-  ))
+fn wrap_source(id: Option<&str>, lang: &str, inner: &str) -> String {
+  wrap_listing(
+    id,
+    &format!(
+      r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
+      inner.trim(),
+    ),
+  )
 }
