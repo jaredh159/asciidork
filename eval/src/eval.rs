@@ -1,4 +1,5 @@
 use crate::internal::*;
+use asciidork_backend::utils;
 
 pub fn eval<B: Backend>(document: &Document, mut backend: B) -> Result<B::Output, B::Error> {
   visit(document, &mut backend);
@@ -356,12 +357,12 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
     Macro(Menu(items)) => {
       backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
     }
-    Macro(Xref { id, linktext }) => {
-      backend.enter_xref(id, linktext.as_ref().map(|t| t.as_slice()));
+    Macro(Xref { target, linktext, kind }) => {
+      backend.enter_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
       if let Some(text) = doc
         .anchors
         .borrow()
-        .get(&id.src)
+        .get(utils::xref::remove_leading_hash(&target.src))
         .map(|anchor| {
           anchor
             .reftext
@@ -371,10 +372,13 @@ fn eval_inline(inline: &InlineNode, doc: &Document, backend: &mut impl Backend) 
         .filter(|text| !text.is_empty())
       {
         text.iter().for_each(|node| eval_inline(node, doc, backend));
+      } else if let Some(text) = linktext {
+        text.iter().for_each(|node| eval_inline(node, doc, backend));
       } else {
-        backend.visit_missing_xref(id);
+        dbg!(target);
+        backend.visit_missing_xref(target, *kind);
       }
-      backend.exit_xref(id, linktext.as_ref().map(|t| t.as_slice()));
+      backend.exit_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
     }
     InlineAnchor(id) => backend.visit_inline_anchor(id),
     LineBreak => backend.visit_linebreak(),

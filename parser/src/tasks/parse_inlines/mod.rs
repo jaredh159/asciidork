@@ -114,21 +114,25 @@ impl<'arena> Parser<'arena> {
                 break;
               }
               "xref:" => {
-                let mut id = line.consume_macro_target(self.bump);
-                if id.src.starts_with('#') {
-                  id.drop_first();
-                }
-                self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
+                let target = line.consume_macro_target(self.bump);
+                self.push_xref(&target);
                 lines.restore_if_nonempty(line);
                 let nodes = self.parse_inlines_until(lines, &[Kind(CloseBracket)])?;
                 let linktext = if nodes.is_empty() {
-                  macro_loc.end = id.loc.end + 2;
+                  macro_loc.end = target.loc.end + 2;
                   None
                 } else {
                   extend(&mut macro_loc, &nodes, 1);
                   Some(nodes)
                 };
-                acc.push_node(Macro(Xref { id, linktext }), macro_loc);
+                acc.push_node(
+                  Macro(Xref {
+                    target,
+                    linktext,
+                    kind: XrefKind::Macro,
+                  }),
+                  macro_loc,
+                );
                 break;
               }
               "link:" => {
@@ -295,12 +299,9 @@ impl<'arena> Parser<'arena> {
           LessThan if line.continues_xref_shorthand() => {
             let mut loc = token.loc;
             line.discard_assert(LessThan);
-            if line.current_is(Hash) {
-              line.discard(1);
-            }
             let mut inner = line.extract_line_before(&[Kind(GreaterThan), Kind(GreaterThan)]);
-            let id = inner.consume_to_string_until(Comma, self.bump);
-            self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
+            let target = inner.consume_to_string_until(Comma, self.bump);
+            self.push_xref(&target);
             let mut linktext = None;
             if !inner.is_empty() {
               inner.discard_assert(Comma);
@@ -310,7 +311,14 @@ impl<'arena> Parser<'arena> {
             }
             line.discard_assert(GreaterThan);
             loc.end = line.consume_current().unwrap().loc.end;
-            acc.push_node(Macro(Xref { id, linktext }), loc);
+            acc.push_node(
+              Macro(Xref {
+                target,
+                linktext,
+                kind: XrefKind::Shorthand,
+              }),
+              loc,
+            );
           }
 
           LessThan
@@ -700,6 +708,16 @@ impl<'arena> Parser<'arena> {
 
     acc.commit();
     Ok(acc.inlines)
+  }
+
+  fn push_xref(&mut self, target: &SourceString<'arena>) {
+    let mut ref_id = target.src.clone();
+    let mut ref_loc = target.loc;
+    if ref_id.starts_with('#') {
+      ref_id.drain(..1);
+      ref_loc.start += 1;
+    }
+    self.ctx.xrefs.borrow_mut().insert(ref_id, ref_loc);
   }
 
   fn parse_uri_scheme_macro(

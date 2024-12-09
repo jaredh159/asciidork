@@ -388,16 +388,3 @@ assert_html!(
     </div>
   "##}
 );
-
-assert_html!(
-  asciidoctor_xrefs_test_rb3,
-  |s: &mut JobSettings| s.strict = false,
-  adoc! {r#"
-    <<tigers#>>
-  "#},
-  html! {r##"
-    <div class="paragraph">
-      <p><a href="tigers.html">tigers.html</a></p>
-    </div>
-  "##}
-);

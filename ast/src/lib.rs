@@ -31,7 +31,7 @@ mod internal {
     pub use crate::json::*;
     pub use crate::list::*;
     pub use crate::node::{Anchor, Callout, Section};
-    pub use crate::r#macro::{Flow, MacroNode, UrlScheme};
+    pub use crate::r#macro::{Flow, MacroNode, UrlScheme, XrefKind};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
     pub use crate::table::*;
@@ -60,7 +60,7 @@ pub mod prelude {
   pub use crate::json::*;
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
   pub use crate::node::{Anchor, Callout, Section};
-  pub use crate::r#macro::UrlScheme;
+  pub use crate::r#macro::{UrlScheme, XrefKind};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
   pub use crate::table::*;

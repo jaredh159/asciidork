@@ -383,7 +383,7 @@ impl<'arena> Line<'arena> {
     let mut loc = self.loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
-      if token.kind != AttrRef {
+      if token.kind != AttrRef && token.kind != Backslash {
         s.push_str(&token.lexeme);
       }
       loc.extend(token.loc);

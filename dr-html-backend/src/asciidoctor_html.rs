@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fmt::Write;
 
 use crate::internal::*;
-use crate::str_util;
+use utils::set_backend_attrs;
 use EphemeralState::*;
 
 #[derive(Debug, Default)]
@@ -26,9 +26,11 @@ pub struct AsciidoctorHtml {
 impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
+  const OUTFILESUFFIX: &'static str = ".html";
 
   fn enter_document(&mut self, document: &Document) {
     self.doc_meta = document.meta.clone();
+    set_backend_attrs::<Self>(&mut self.doc_meta);
     self.section_num_levels = document.meta.isize("sectnumlevels").unwrap_or(3);
     if document.meta.is_true("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
@@ -668,16 +670,25 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</span>");
   }
 
-  fn enter_xref(&mut self, id: &str, _target: Option<&[InlineNode]>) {
-    self.push(["<a href=\"#", id, "\">"]);
+  fn enter_xref(&mut self, target: &str, _reftext: Option<&[InlineNode]>, kind: XrefKind) {
+    self.push([
+      "<a href=\"",
+      &utils::xref::href(target, &self.doc_meta, kind, true),
+      "\">",
+    ]);
   }
 
-  fn exit_xref(&mut self, _id: &str, _target: Option<&[InlineNode]>) {
+  fn exit_xref(&mut self, _target: &str, _reftext: Option<&[InlineNode]>, _kind: XrefKind) {
     self.push_str("</a>");
   }
 
-  fn visit_missing_xref(&mut self, id: &str) {
-    self.push(["[", id, "]"]);
+  fn visit_missing_xref(&mut self, target: &str, kind: XrefKind) {
+    if utils::xref::is_interdoc(target, kind) {
+      let href = utils::xref::href(target, &self.doc_meta, kind, false);
+      self.push_str(utils::xref::remove_leading_hash(&href));
+    } else {
+      self.push(["[", target.strip_prefix('#').unwrap_or(target), "]"]);
+    }
   }
 
   fn visit_inline_anchor(&mut self, id: &str) {
@@ -819,7 +830,7 @@ impl Backend for AsciidoctorHtml {
       return;
     }
     if self.doc_meta.is_true("hide-uri-scheme") {
-      self.push_str(str_util::remove_uri_scheme(target));
+      self.push_str(utils::file::remove_uri_scheme(target));
     } else {
       self.push_str(target);
     }
@@ -1275,7 +1286,7 @@ impl AsciidoctorHtml {
   }
 
   fn render_image(&mut self, target: &str, attrs: &AttrList) {
-    let format = attrs.named("format").or_else(|| str_util::file_ext(target));
+    let format = attrs.named("format").or_else(|| utils::file::ext(target));
     let is_svg = matches!(format, Some("svg" | "SVG"));
     if is_svg && attrs.has_option("interactive") && self.doc_meta.safe_mode != SafeMode::Secure {
       return self.render_interactive_svg(target, attrs);
@@ -1290,7 +1301,7 @@ impl AsciidoctorHtml {
         self.push_str_attr_escaped(s);
       }
     } else {
-      let alt = str_util::filestem(target).replace(['-', '_'], " ");
+      let alt = utils::file::stem(target).replace(['-', '_'], " ");
       self.push_str_attr_escaped(&alt);
     }
     self.push_ch('"');
