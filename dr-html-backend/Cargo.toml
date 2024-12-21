@@ -12,6 +12,8 @@ asciidork-eval = { path = "../eval", version = "0.10.0" }
 asciidork-meta = { path = "../meta", version = "0.10.0" }
 lazy_static = "1.4.0"
 regex = "1.10.2"
+tracing = { version = "0.1", features = ["release_max_level_off"] }
+tracing-subscriber = {version ="0.3", features = ["env-filter", "std"]}
 
 [dev-dependencies]
 asciidork-parser = { path = "../parser" }

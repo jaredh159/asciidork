@@ -3,6 +3,7 @@ extern crate asciidork_meta as meta;
 
 mod admonition;
 mod backend;
+pub mod utils;
 
 // TODO: maybe move this into ast?
 pub use admonition::AdmonitionKind;

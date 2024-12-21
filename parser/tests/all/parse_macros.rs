@@ -50,8 +50,9 @@ test_inlines_loose!(
   "xref:foo[]",
   nodes![node!(
     Macro(Xref {
-      id: src!("foo", 5..8),
-      linktext: None
+      target: src!("foo", 5..8),
+      linktext: None,
+      kind: XrefKind::Macro
     }),
     0..10
   )]
@@ -113,11 +114,12 @@ test_inlines_loose!(
   "xref:foo[bar _baz_]",
   nodes![node!(
     Macro(Xref {
-      id: src!("foo", 5..8),
+      target: src!("foo", 5..8),
       linktext: Some(nodes![
         node!("bar "; 9..13),
         node!(Inline::Italic(just!("baz", 14..17)), 13..18)
-      ])
+      ]),
+      kind: XrefKind::Macro
     }),
     0..19
   )]
@@ -128,8 +130,9 @@ test_inlines_loose!(
   "xref:f-o[ ]",
   nodes![node!(
     Macro(Xref {
-      id: src!("f-o", 5..8),
-      linktext: Some(just!(" ", 9..10))
+      target: src!("f-o", 5..8),
+      linktext: Some(just!(" ", 9..10)),
+      kind: XrefKind::Macro
     }),
     0..11
   )]
@@ -142,8 +145,9 @@ test_inlines_loose!(
     node!("foo "; 0..4),
     node!(
       Macro(Xref {
-        id: src!("bar", 9..12),
-        linktext: None
+        target: src!("bar", 9..12),
+        linktext: None,
+        kind: XrefKind::Macro
       }),
       4..14
     ),
@@ -156,8 +160,9 @@ test_inlines_loose!(
   "<<foo>>",
   nodes![node!(
     Macro(Xref {
-      id: src!("foo", 2..5),
-      linktext: None
+      target: src!("foo", 2..5),
+      linktext: None,
+      kind: XrefKind::Shorthand
     }),
     0..7
   )]
@@ -168,8 +173,9 @@ test_inlines_loose!(
   "<<#foo>>",
   nodes![node!(
     Macro(Xref {
-      id: src!("foo", 3..6),
-      linktext: None
+      target: src!("#foo", 2..6),
+      linktext: None,
+      kind: XrefKind::Shorthand
     }),
     0..8
   )]
@@ -182,8 +188,9 @@ test_inlines_loose!(
     node!(Inline::SpecialChar(SpecialCharKind::LessThan), 0..1),
     node!(
       Macro(Xref {
-        id: src!("foo", 3..6),
-        linktext: None
+        target: src!("foo", 3..6),
+        linktext: None,
+        kind: XrefKind::Shorthand
       }),
       1..8
     )
@@ -197,12 +204,13 @@ test_inlines_loose!(
     node!("baz "; 0..4),
     node!(
       Macro(Xref {
-        id: src!("foo-rofl", 6..14),
+        target: src!("foo-rofl", 6..14),
         linktext: Some(nodes![
           node!("so "; 15..18),
           node!(Inline::Italic(just!("cool", 19..23)), 18..24),
           node!(" wow"; 24..28)
-        ])
+        ]),
+        kind: XrefKind::Shorthand
       }),
       4..30
     ),
@@ -218,5 +226,21 @@ assert_error!(
       |
     1 | <<foo>>
       |   ^^^ Invalid cross reference, no anchor found for `foo`
+  "}
+);
+
+assert_error!(
+  xref_unknown_interdoc_anchor,
+  adoc! {"
+    [#foobar]
+    == Foobar
+
+    See <<test.adoc#foobaz>>.
+  "},
+  error! {"
+     --> test.adoc:4:7
+      |
+    4 | See <<test.adoc#foobaz>>.
+      |       ^^^^^^^^^^^^^^^^ Invalid cross reference, no anchor found for `test.adoc#foobaz`
   "}
 );

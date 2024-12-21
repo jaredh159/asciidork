@@ -9,6 +9,9 @@ impl<'arena> Parser<'arena> {
     };
 
     if let Some(comment_block) = self.parse_comment_block(&mut lines) {
+      if let Some(meta) = self.peeked_meta.take() {
+        assert!(meta.is_empty());
+      }
       self.restore_lines(lines);
       return Ok(Some(comment_block));
     }

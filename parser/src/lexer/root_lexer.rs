@@ -87,8 +87,26 @@ impl<'arena> RootLexer<'arena> {
     &self.sources[self.idx as usize].file
   }
 
+  pub fn source_file_at(&self, idx: u16) -> &SourceFile {
+    &self.sources[idx as usize].file
+  }
+
   pub const fn source_is_primary(&self) -> bool {
     self.idx == 0
+  }
+
+  pub const fn source_idx(&self) -> u16 {
+    self.idx
+  }
+
+  pub fn source_idx_of_xref_target(&self, xref_target: &str) -> Option<u16> {
+    self
+      .sources
+      .iter()
+      .map(|src| &src.file)
+      .enumerate()
+      .find(|(_, file)| file.matches_xref_target(xref_target))
+      .map(|(i, _)| i as u16)
   }
 
   pub fn leveloffset(&self, idx: u16) -> i8 {

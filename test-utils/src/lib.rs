@@ -39,6 +39,7 @@ macro_rules! doc_meta {
     _ = m.insert_job_attr("docdir", JobAttr::readonly(""));
     _ = m.insert_job_attr("docfilesuffix", JobAttr::readonly(".adoc"));
     _ = m.insert_job_attr("docfile", JobAttr::readonly(""));
+    _ = m.insert_job_attr("asciidork-docfilename", JobAttr::readonly("test.adoc"));
     m
   }};
 }
@@ -83,7 +84,7 @@ macro_rules! assert_toc {
 macro_rules! assert_block {
   ($input:expr, $expected:expr$(,)?) => {{
     let block = parse_single_block!($input);
-    assert_eq!(block, $expected);
+    expect_eq!(block, $expected, from: $input);
   }};
 }
 

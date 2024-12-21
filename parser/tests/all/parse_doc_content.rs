@@ -41,6 +41,29 @@ fn test_sectioned_w_preamble() {
 }
 
 #[test]
+fn comment_only_preamble_discarded() {
+  assert_doc_content!(
+    adoc! {"
+      // first
+
+      == Sect 1
+
+      Para 1
+    "},
+    DocContent::Sectioned {
+      preamble: None,
+      sections: vecb![Section {
+        meta: ChunkMeta::empty(10),
+        level: 1,
+        id: Some(bstr!("_sect_1")),
+        heading: just!("Sect 1", 13..19),
+        blocks: vecb![simple_text_block!("Para 1", 21..27)]
+      }]
+    }
+  );
+}
+
+#[test]
 fn test_sectioned_no_preamble() {
   assert_doc_content!(
     adoc! {"

@@ -35,7 +35,7 @@ impl<'arena> Parser<'arena> {
       if self.should_stop_at(&line) {
         acc.inlines.remove_trailing_newline();
         lines.restore_if_nonempty(line);
-        return Ok(acc.inlines);
+        return Ok(acc.trimmed_inlines());
       }
 
       if line.is_comment() && !subs.callouts() {
@@ -54,7 +54,7 @@ impl<'arena> Parser<'arena> {
           line.discard(stop_tokens.len());
           acc.commit();
           lines.restore_if_nonempty(line);
-          return Ok(acc.inlines);
+          return Ok(acc.trimmed_inlines());
         }
 
         if line.may_contain_inline_pass() {
@@ -114,21 +114,25 @@ impl<'arena> Parser<'arena> {
                 break;
               }
               "xref:" => {
-                let mut id = line.consume_macro_target(self.bump);
-                if id.src.starts_with('#') {
-                  id.drop_first();
-                }
-                self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
+                let target = line.consume_macro_target(self.bump);
+                self.push_xref(&target);
                 lines.restore_if_nonempty(line);
                 let nodes = self.parse_inlines_until(lines, &[Kind(CloseBracket)])?;
                 let linktext = if nodes.is_empty() {
-                  macro_loc.end = id.loc.end + 2;
+                  macro_loc.end = target.loc.end + 2;
                   None
                 } else {
                   extend(&mut macro_loc, &nodes, 1);
                   Some(nodes)
                 };
-                acc.push_node(Macro(Xref { id, linktext }), macro_loc);
+                acc.push_node(
+                  Macro(Xref {
+                    target,
+                    linktext,
+                    kind: XrefKind::Macro,
+                  }),
+                  macro_loc,
+                );
                 break;
               }
               "link:" => {
@@ -203,6 +207,7 @@ impl<'arena> Parser<'arena> {
                   Anchor {
                     reftext: attrs.take_positional(0),
                     title: InlineNodes::new(self.bump),
+                    source_idx: self.lexer.source_idx(),
                   },
                 );
                 acc.push_node(InlineAnchor(id.src), id.loc);
@@ -295,22 +300,27 @@ impl<'arena> Parser<'arena> {
           LessThan if line.continues_xref_shorthand() => {
             let mut loc = token.loc;
             line.discard_assert(LessThan);
-            if line.current_is(Hash) {
-              line.discard(1);
-            }
             let mut inner = line.extract_line_before(&[Kind(GreaterThan), Kind(GreaterThan)]);
-            let id = inner.consume_to_string_until(Comma, self.bump);
-            self.ctx.xrefs.borrow_mut().insert(id.src.clone(), id.loc);
+            let target = inner.consume_to_string_until(Comma, self.bump);
+            self.push_xref(&target);
             let mut linktext = None;
             if !inner.is_empty() {
               inner.discard_assert(Comma);
+              inner.trim_leading_whitespace();
               if !inner.is_empty() {
                 linktext = Some(self.parse_inlines(&mut inner.into_lines())?);
               }
             }
             line.discard_assert(GreaterThan);
             loc.end = line.consume_current().unwrap().loc.end;
-            acc.push_node(Macro(Xref { id, linktext }), loc);
+            acc.push_node(
+              Macro(Xref {
+                target,
+                linktext,
+                kind: XrefKind::Shorthand,
+              }),
+              loc,
+            );
           }
 
           LessThan
@@ -408,7 +418,11 @@ impl<'arena> Parser<'arena> {
               if let Some(id) = &attrs.id {
                 self.document.anchors.borrow_mut().insert(
                   id.src.clone(),
-                  Anchor { reftext: None, title: nodes.clone() },
+                  Anchor {
+                    reftext: None,
+                    title: nodes.clone(),
+                    source_idx: self.lexer.source_idx(),
+                  },
                 );
               }
             }
@@ -420,17 +434,19 @@ impl<'arena> Parser<'arena> {
               && !line.peek_token().is(CloseBracket)
               && line.contains_seq(&[Kind(CloseBracket), Kind(CloseBracket)]) =>
           {
-            line.discard(1); // second `[`
+            let bracket = line.consume_current().unwrap(); // second `[`
             if let Some(AnchorSrc { id, reftext, loc }) = self.parse_inline_anchor(&mut line)? {
               self.document.anchors.borrow_mut().insert(
                 id.src.clone(),
                 Anchor {
                   reftext,
                   title: InlineNodes::new(self.bump),
+                  source_idx: self.lexer.source_idx(),
                 },
               );
               acc.push_node(InlineAnchor(id.src), loc);
             } else {
+              acc.text.push_token(&bracket);
               acc.text.push_token(&token);
             }
           }
@@ -698,7 +714,17 @@ impl<'arena> Parser<'arena> {
     }
 
     acc.commit();
-    Ok(acc.inlines)
+    Ok(acc.trimmed_inlines())
+  }
+
+  fn push_xref(&mut self, target: &SourceString<'arena>) {
+    let mut ref_id = target.src.clone();
+    let mut ref_loc = target.loc;
+    if ref_id.len() > 1 && ref_id.starts_with('#') {
+      ref_id.drain(..1);
+      ref_loc.start += 1;
+    }
+    self.ctx.xrefs.borrow_mut().insert(ref_id, ref_loc);
   }
 
   fn parse_uri_scheme_macro(
@@ -875,36 +901,6 @@ fn push_simple<'arena>(
   lines.restore_if_nonempty(line);
   state.push_node(inline_node, loc);
   push_newline_if_needed(state, lines);
-}
-
-#[derive(Debug)]
-struct Accum<'arena> {
-  inlines: InlineNodes<'arena>,
-  text: CollectText<'arena>,
-}
-
-impl<'arena> Accum<'arena> {
-  fn commit(&mut self) {
-    self.text.commit_inlines(&mut self.inlines);
-  }
-
-  fn push_node(&mut self, node: Inline<'arena>, loc: SourceLocation) {
-    self.commit();
-    self.inlines.push(InlineNode::new(node, loc));
-    self.text.loc = loc.clamp_end();
-  }
-
-  fn pop_node(&mut self) {
-    self.inlines.pop();
-  }
-
-  fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {
-    if !lines.is_empty() {
-      self.commit();
-      self.text.loc.end += 1;
-      self.push_node(Inline::Newline, self.text.loc);
-    }
-  }
 }
 
 #[cfg(test)]

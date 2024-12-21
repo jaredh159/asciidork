@@ -13,6 +13,7 @@ pub struct ParseContext<'arena> {
   pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
   pub anchor_ids: Rc<RefCell<HashSet<BumpString<'arena>>>>,
+  /// xrefs are only used for diagnosing errors
   pub xrefs: Rc<RefCell<HashMap<BumpString<'arena>, SourceLocation>>>,
   pub num_footnotes: Rc<RefCell<u16>>,
   pub saw_toc_macro: bool,

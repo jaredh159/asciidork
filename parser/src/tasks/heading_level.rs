@@ -15,7 +15,7 @@ impl<'arena> Parser<'arena> {
     meta: &ChunkMeta<'arena>,
   ) -> Option<u8> {
     for line in lines.iter() {
-      if line.is_block_attr_list() || line.is_chunk_title() {
+      if line.is_block_attr_list() || line.is_chunk_title() || line.is_comment() {
         continue;
       } else if let Some(level) = self.line_heading_level(line) {
         return match meta.attrs_has_str_positional("discrete")

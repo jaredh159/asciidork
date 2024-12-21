@@ -185,8 +185,10 @@ impl<'arena> Parser<'arena> {
   }
 
   pub(crate) fn restore_peeked_meta(&mut self, meta: ChunkMeta<'arena>) {
-    debug_assert!(self.peeked_meta.is_none());
-    self.peeked_meta = Some(meta);
+    if !meta.is_empty() {
+      debug_assert!(self.peeked_meta.is_none());
+      self.peeked_meta = Some(meta);
+    }
   }
 
   pub(crate) fn restore_peeked(&mut self, lines: ContiguousLines<'arena>, meta: ChunkMeta<'arena>) {
@@ -265,43 +267,14 @@ impl<'arena> Parser<'arena> {
           anchor_attrs.positional.push(anchor.reftext);
           attrs = Some(anchor_attrs);
         }
+        // consume trailing comment lines for valid meta
+        Some(line) if line.is_comment() && (attrs.is_some() || title.is_some()) => {
+          lines.consume_current();
+        }
         _ => break,
       }
     }
     Ok(ChunkMeta { attrs, title, start })
-  }
-
-  fn diagnose_document(&self) -> Result<()> {
-    if self.ctx.table_cell_ctx == TableCellContext::None {
-      for (ref_id, ref_loc) in self.ctx.xrefs.borrow().iter() {
-        if !self.document.anchors.borrow().contains_key(ref_id) {
-          self.err_at_loc(
-            format!("Invalid cross reference, no anchor found for `{ref_id}`"),
-            *ref_loc,
-          )?;
-        }
-      }
-    }
-    let toc_pos = self.document.toc.as_ref().map(|toc| toc.position);
-    match toc_pos {
-      Some(TocPosition::Macro) if !self.ctx.saw_toc_macro => {
-        self.err_doc_attr(
-          ":toc:",
-          "Table of Contents set to `macro` but macro (`toc::[]`) not found",
-        )?;
-      }
-      Some(TocPosition::Preamble) => match &self.document.content {
-        DocContent::Blocks(_) | DocContent::Sectioned { preamble: None, .. } => {
-          self.err_doc_attr(
-            ":toc:",
-            "Table of Contents set to `preamble` but no preamble found",
-          )?;
-        }
-        _ => {}
-      },
-      _ => {}
-    }
-    Ok(())
   }
 
   pub(crate) fn string(&self, s: &str) -> BumpString<'arena> {
@@ -343,11 +316,34 @@ pub enum SourceFile {
 }
 
 impl SourceFile {
-  pub fn file_name(&self) -> String {
+  pub fn file_name(&self) -> &str {
     match self {
-      SourceFile::Stdin { .. } => "<stdin>".to_string(),
-      SourceFile::Path(path) => path.file_name().to_string(),
-      SourceFile::Tmp => "<temp-buffer>".to_string(),
+      SourceFile::Stdin { .. } => "<stdin>",
+      SourceFile::Path(path) => path.file_name(),
+      SourceFile::Tmp => "<temp-buffer>",
+    }
+  }
+
+  pub fn matches_xref_target(&self, target: &str) -> bool {
+    let SourceFile::Path(path) = self else {
+      return false;
+    };
+    let filename = path.file_name();
+    if filename == target {
+      return true;
+    }
+    let xref_ext = file::ext(target);
+    let path_ext = file::ext(filename);
+    if xref_ext.is_some() && xref_ext != path_ext {
+      return false;
+    }
+    let fullpath = path.to_string();
+    if fullpath.ends_with(target) {
+      true
+    } else if xref_ext.is_some() {
+      false
+    } else {
+      file::remove_ext(&fullpath).ends_with(target)
     }
   }
 }

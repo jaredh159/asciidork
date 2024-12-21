@@ -26,6 +26,51 @@ impl<'arena> Parser<'arena> {
   }
 }
 
+#[derive(Debug)]
+pub struct Accum<'arena> {
+  pub inlines: InlineNodes<'arena>,
+  pub text: CollectText<'arena>,
+}
+
+impl<'arena> Accum<'arena> {
+  pub fn commit(&mut self) {
+    self.text.commit_inlines(&mut self.inlines);
+  }
+
+  pub fn push_node(&mut self, node: Inline<'arena>, loc: SourceLocation) {
+    self.commit();
+    self.inlines.push(InlineNode::new(node, loc));
+    self.text.loc = loc.clamp_end();
+  }
+
+  pub fn pop_node(&mut self) {
+    self.inlines.pop();
+  }
+
+  pub fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {
+    if !lines.is_empty() {
+      self.commit();
+      self.text.loc.end += 1;
+      self.push_node(Inline::Newline, self.text.loc);
+    }
+  }
+
+  pub fn trimmed_inlines(mut self) -> InlineNodes<'arena> {
+    if self.inlines.remove_trailing_line_comment() {
+      self.inlines.remove_trailing_newline();
+      if matches!(
+        self.inlines.last().map(|n| &n.content),
+        Some(Inline::Discarded)
+      ) {
+        self.inlines.pop();
+      }
+      self.trimmed_inlines()
+    } else {
+      self.inlines
+    }
+  }
+}
+
 impl Substitutions {
   /// https://docs.asciidoctor.org/asciidoc/latest/pass/pass-macro/#custom-substitutions
   pub fn from_pass_macro_target(target: BumpString) -> Self {

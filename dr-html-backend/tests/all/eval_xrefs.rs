@@ -1,6 +1,9 @@
 use asciidork_meta::JobSettings;
 use test_utils::*;
 
+// NB: many of these tests are ported directly from the asciidoctor test suite
+// @see https://gist.github.com/jaredh159/9e229fe1511aaea69e8f5658a8d1b5fd
+
 assert_html!(
   xrefs,
   |s: &mut JobSettings| s.strict = false,
@@ -34,7 +37,13 @@ assert_html!(
 
     Link to <<custom>>.
 
-    Hashed link to <<#custom,Big CATS>> works too.
+    Reftext link to <<custom,Big CATS>> works too.
+
+    Hashed reftext link to <<#custom,Big CATS>> works too.
+
+    Quoted reftext link to <<#custom,"Big CATS">> works too.
+
+    Empty reftext to <<custom,>> works too.
 
     Hashed macro to xref:#custom[] works too.
   "#},
@@ -46,7 +55,16 @@ assert_html!(
           <p>Link to <a href="#custom">Tigers</a>.</p>
         </div>
         <div class="paragraph">
-          <p>Hashed link to <a href="#custom">Big CATS</a> works too.</p>
+          <p>Reftext link to <a href="#custom">Big CATS</a> works too.</p>
+        </div>
+        <div class="paragraph">
+          <p>Hashed reftext link to <a href="#custom">Big CATS</a> works too.</p>
+        </div>
+        <div class="paragraph">
+          <p>Quoted reftext link to <a href="#custom">"Big CATS"</a> works too.</p>
+        </div>
+        <div class="paragraph">
+          <p>Empty reftext to <a href="#custom">Tigers</a> works too.</p>
         </div>
         <div class="paragraph">
           <p>Hashed macro to <a href="#custom">Tigers</a> works too.</p>
@@ -281,4 +299,318 @@ assert_html!(
       </tbody>
     </table>
   "##}
+);
+
+// asciidoctor/test/links_test.rb
+assert_html!(
+  asciidoctor_xrefs_test_rb1,
+  adoc! {r#"
+    // inline ref
+    Foo.[[tigers1]] bar.anchor:tigers2[]
+
+    // escaped inline ref
+    Foo.\[[tigers1]] bar.\anchor:tigers2[]
+
+    // inline ref can start with colon
+    [[:idname]] text
+
+    // inline ref cannot start with digit
+    [[1-install]] text
+
+    // reftext of macro inline ref can resolve to empty
+    anchor:id-only[{empty}]text
+
+    // inline ref with reftext
+    [[tigers3,Tigers]] anchor:tigers4[Tigers]
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>Foo.<a id="tigers1"></a> bar.<a id="tigers2"></a></p>
+    </div>
+    <div class="paragraph">
+      <p>Foo.[[tigers1]] bar.anchor:tigers2[]</p>
+    </div>
+    <div class="paragraph">
+      <p><a id=":idname"></a> text</p>
+    </div>
+    <div class="paragraph">
+      <p>[[1-install]] text</p>
+    </div>
+    <div class="paragraph">
+      <p><a id="id-only"></a>text</p>
+    </div>
+    <div class="paragraph">
+      <p><a id="tigers3"></a> <a id="tigers4"></a></p>
+    </div>
+  "##}
+);
+
+assert_html!(
+  asciidoctor_xrefs_test_rb2,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    :label-tigers: Tigers
+
+    // should substitute attribute references in reftext when registering inline ref
+    [[tigers4,{label-tigers}]] anchor:tigers5[{label-tigers}]
+    <<tigers4>> <<tigers5>>
+
+    // repeating inline anchor macro with empty reftext
+    anchor:one[] anchor:two[] anchor:three[]
+
+    // mixed inline anchor macro and anchor shorthand with empty reftext
+    anchor:one[][[two]]anchor:three[][[four]]anchor:five[]
+
+    // unescapes square bracket in reftext of anchor macro
+    see <<foo>> anchor:foo[b[a\]r]tex
+
+    // xref using angled bracket syntax
+    <<not-found>>
+
+    // xref using angled bracket syntax with explicit hash
+    <<#not-found2>>
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p><a id="tigers4"></a> <a id="tigers5"></a> <a href="#tigers4">Tigers</a> <a href="#tigers5">Tigers</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a id="one"></a> <a id="two"></a> <a id="three"></a></p>
+    </div>
+    <div class="paragraph">
+      <p><a id="one"></a><a id="two"></a><a id="three"></a><a id="four"></a><a id="five"></a></p>
+    </div>
+    <div class="paragraph">
+      <p>see <a href="#foo">b[a]r</a> <a id="foo"></a>tex</p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#not-found">[not-found]</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#not-found2">[not-found2]</a></p>
+    </div>
+  "##}
+);
+
+assert_html!(
+  asciidoctor_xrefs_test_rb3,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    // xref with target that begins with attribute reference in title (1/2)
+    :lessonsdir: lessons
+
+    [#lesson-1-listing]
+    == <<{lessonsdir}/lesson-1#,Lesson 1>>
+
+    A summary of the first lesson.
+
+    // xref with target that begins with attribute reference in title (2/2)
+
+    [#lesson-2-listing]
+    == xref:{lessonsdir}/lesson-2.adoc[Lesson 2]
+
+    A summary of the second lesson.
+
+    == rest
+
+    // xref using angled bracket syntax inline with text
+    Want to learn <<tigers,about tigers>>?
+
+    // xref with escaped text
+    See the <<tigers, `+[tigers]+`>> for more.
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="lesson-1-listing"><a href="lessons/lesson-1.html">Lesson 1</a></h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>A summary of the first lesson.</p>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="lesson-2-listing"><a href="lessons/lesson-2.html">Lesson 2</a></h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>A summary of the second lesson.</p>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_rest">rest</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Want to learn <a href="#tigers">about tigers</a>?</p>
+        </div>
+        <div class="paragraph">
+          <p>See the <a href="#tigers"><code>[tigers]</code></a> for more.</p>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+assert_html!(
+  asciidoctor_xrefs_test_rb4,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    // multiple xref macros with implicit text in single line
+    This document has two sections, xref:sect-a[] and xref:sect-b[].
+
+    // xref using macro syntax with explicit hash
+    xref:#tigers[]
+
+    // xref using macro syntax with label
+    xref:tigers[About Tigers]
+
+    // xref using macro syntax inline with text
+    Want to learn xref:tigers[about tigers]?
+
+    // xref using macro syntax with text that ends with an escaped closing bracket
+    xref:tigers[[foobar\]]
+
+    // xref using macro syntax with text that contains an escaped closing bracket
+    xref:tigers[[tigers\] are cats]
+
+    // unescapes square bracket in reftext used by xref
+    anchor:foo[b[a\]r]about
+
+    // xref using invalid macro syntax does not create link
+    xref:tigers
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>This document has two sections, <a href="#sect-a">[sect-a]</a> and <a href="#sect-b">[sect-b]</a>.</p>
+    </div>
+    <div class="paragraph"><p><a href="#tigers">[tigers]</a></p></div>
+    <div class="paragraph"><p><a href="#tigers">About Tigers</a></p></div>
+    <div class="paragraph"><p>Want to learn <a href="#tigers">about tigers</a>?</p></div>
+    <div class="paragraph"><p><a href="#tigers">[foobar]</a></p></div>
+    <div class="paragraph"><p><a href="#tigers">[tigers] are cats</a></p></div>
+    <div class="paragraph"><p><a id="foo"></a>about</p></div>
+    <div class="paragraph"><p>xref:tigers</p></div>
+  "##}
+);
+
+assert_html!(
+  asciidoctor_xrefs_test_rb5,
+  adoc! {r#"
+    // anchor creates reference
+    [[tigers]]Tigers roam here.
+
+    See <<tigers>>.
+
+    // anchor with label creates reference
+    [[tigers2,Tigers]]Tigers roam here.
+
+    See <<tigers2>>.
+
+    // anchor with quoted label creates reference with quoted label text
+    [[tigers3,"Tigers roam here"]]Tigers roam here.
+
+    See <<tigers3>>.
+
+    // anchor with label containing a comma creates reference
+    [[tigers4,Tigers, scary tigers, roam here]]Tigers roam here.
+
+    See <<tigers4>>.
+  "#},
+  contains:
+    r##"See <a href="#tigers">[tigers]</a>."##,
+    r##"See <a href="#tigers2">Tigers</a>."##,
+    r##"See <a href="#tigers3">"Tigers roam here"</a>."##,
+    r##"See <a href="#tigers4">Tigers, scary tigers, roam here</a>."##,
+);
+
+assert_html!(
+  xref_labels_forward_backward,
+  adoc! {r#"
+    // xref uses title of target as label for forward and backward references in html output
+    == Section A
+
+    <<_section_b>>
+
+    == Section B
+
+    <<_section_a>>
+  "#},
+  contains:
+    r##"<h2 id="_section_a">Section A</h2>"##,
+    r##"<a href="#_section_a">Section A</a>"##,
+    r##"<h2 id="_section_b">Section B</h2>"##,
+    r##"<a href="#_section_b">Section B</a>"##
+);
+
+assert_html!(
+  xref_as_title_and_other_weird_places,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    == Intro
+
+    // should resolve forward xref in title of block with ID
+    [#p1]
+    .<<conclusion>>
+    paragraph text
+
+    [#conclusion]
+    == Conclusion
+
+    // should not fail to resolve broken xref in title of block with ID
+    [#p2]
+    .<<DNE>>
+    paragraph text
+  "#},
+  contains:
+    r##"<div class="title"><a href="#conclusion">Conclusion</a></div>"##,
+    r##"<div class="title"><a href="#DNE">[DNE]</a></div>"##
+);
+
+// NB: we generate the id for section 2 different from asciidoctor
+assert_html!(
+  resolves_broken_xref_in_title,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    [#s1]
+    == <<DNE>>
+
+    // should not fail to resolve broken xref in section title
+    == <<s1>>
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="s1"><a href="#DNE">[DNE]</a></h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_s1"><a href="#s1">[DNE]</a></h2>
+      <div class="sectionbody"></div>
+    </div>
+  "##}
+);
+
+assert_html!(
+  breaks_circular_xref,
+  adoc! {r#"
+    [#a]
+    == A <<b>>
+
+    // should break circular xref reference in section title
+    [#b]
+    == B <<a>>
+  "#},
+  // html doesn't matter, only that we don't stack overflow
+  contains: r##"<a href="#b">B [a]</a>"##,
+);
+
+assert_html!(
+  drops_nested_anchor,
+  adoc! {r#"
+    [#a]
+    == See <<b>>
+
+    // should drop nested anchor in xreftext
+    [#b]
+    == Consult https://google.com[Google]
+  "#},
+  contains: r##"<h2 id="a">See <a href="#b">Consult Google</a></h2>"##,
 );

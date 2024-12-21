@@ -33,7 +33,7 @@ impl<'arena> DocContent<'arena> {
 
   pub fn ensure_sectioned(&mut self, bump: &'arena Bump) {
     if let DocContent::Blocks(blocks) = self {
-      let preamble = if blocks.is_empty() {
+      let preamble = if blocks.is_empty() || blocks.iter().all(|b| b.is_comment()) {
         None
       } else {
         Some(std::mem::replace(blocks, BumpVec::new_in(bump)))

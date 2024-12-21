@@ -29,9 +29,16 @@ pub enum MacroNode<'arena> {
   Button(SourceString<'arena>),
   Menu(BumpVec<'arena, SourceString<'arena>>),
   Xref {
-    id: SourceString<'arena>,
+    target: SourceString<'arena>,
     linktext: Option<InlineNodes<'arena>>,
+    kind: XrefKind,
   },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum XrefKind {
+  Shorthand,
+  Macro,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -103,9 +110,9 @@ impl Json for MacroNode<'_> {
         buf.push_str("Menu\"");
         buf.add_member("items", items);
       }
-      MacroNode::Xref { id, linktext } => {
+      MacroNode::Xref { target, linktext, .. } => {
         buf.push_str("Xref\"");
-        buf.add_member("id", id);
+        buf.add_member("target", target);
         buf.add_member("linktext", linktext);
       }
     }
