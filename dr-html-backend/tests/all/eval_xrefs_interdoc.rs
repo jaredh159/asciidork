@@ -1,4 +1,4 @@
-use asciidork_meta::JobSettings;
+use asciidork_core::JobSettings;
 use test_utils::*;
 
 // NB: most of these tests are ported directly from the asciidoctor test suite

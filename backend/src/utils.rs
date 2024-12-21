@@ -1,6 +1,6 @@
 pub mod xref {
   use ast::{DocumentMeta, ReadAttr, XrefKind};
-  use meta::file;
+  use core::file;
 
   pub fn href(target: &str, doc_meta: &DocumentMeta, xref_kind: XrefKind, with_id: bool) -> String {
     if !is_interdoc(target, xref_kind) {

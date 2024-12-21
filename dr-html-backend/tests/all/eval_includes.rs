@@ -1,4 +1,4 @@
-use asciidork_meta::{JobSettings, SafeMode};
+use asciidork_core::{JobSettings, SafeMode};
 use asciidork_parser::includes::*;
 use test_utils::*;
 

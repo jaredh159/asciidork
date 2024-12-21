@@ -1,4 +1,4 @@
-use asciidork_meta::{JobAttr, JobSettings};
+use asciidork_core::{JobAttr, JobSettings};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 

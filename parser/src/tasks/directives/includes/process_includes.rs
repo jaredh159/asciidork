@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use meta::SafeMode;
 use regex::Regex;
 
 use crate::internal::*;

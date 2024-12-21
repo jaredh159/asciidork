@@ -1,4 +1,4 @@
-use asciidork_meta::JobSettings;
+use asciidork_core::JobSettings;
 use test_utils::*;
 
 assert_html!(
@@ -252,7 +252,7 @@ assert_html!(
 assert_html!(
   svg_images_secure,
   |job_settings: &mut JobSettings| {
-    job_settings.safe_mode = asciidork_meta::SafeMode::Secure;
+    job_settings.safe_mode = asciidork_core::SafeMode::Secure;
   },
   adoc! {r#"
     :imagesdir: images

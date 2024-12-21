@@ -12,7 +12,7 @@ default = ["console_error_panic_hook"]
 wasm-bindgen = "0.2.84"
 asciidork-parser = { path = "../parser", version = "0.10.0" }
 asciidork-eval = { path = "../eval", version = "0.10.0" }
-asciidork-meta = { path = "../meta", version = "0.10.0" }
+asciidork-core = { path = "../core", version = "0.10.0" }
 asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.10.0" }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

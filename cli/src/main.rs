@@ -9,8 +9,8 @@ use bumpalo::Bump;
 use clap::Parser as ClapParser;
 use colored::*;
 
+use asciidork_core::Path;
 use asciidork_dr_html_backend::*;
-use asciidork_meta::Path;
 use asciidork_parser::prelude::*;
 
 mod args;
@@ -89,14 +89,6 @@ fn run(
             writeln!(stderr)?;
           }
           print_timings(&mut stderr, src.len(), parse_time, Some(convert_time));
-        }
-      }
-      Output::Ast => {
-        let json = parse_result.document.to_json();
-        writeln!(stdout, "{json}")?;
-        if args.print_timings {
-          writeln!(stderr)?;
-          print_timings(&mut stderr, src.len(), parse_time, None);
         }
       }
     },
