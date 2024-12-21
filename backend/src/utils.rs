@@ -1,6 +1,6 @@
 pub mod xref {
-  use super::file;
   use ast::{DocumentMeta, ReadAttr, XrefKind};
+  use meta::file;
 
   pub fn href(target: &str, doc_meta: &DocumentMeta, xref_kind: XrefKind, with_id: bool) -> String {
     if !is_interdoc(target, xref_kind) {
@@ -20,6 +20,15 @@ pub mod xref {
     let path = parts.next().unwrap();
     let id = parts.next().filter(|id| !id.is_empty());
     let mut href = String::with_capacity(path.len() + 8 + id.map_or(0, str::len));
+
+    if xref_path_was_included(path, doc_meta) {
+      href.push('#');
+      if let Some(id) = id {
+        href.push_str(id);
+      }
+      return href;
+    }
+
     push_interdoc_prefix(&mut href, doc_meta);
     if file::has_adoc_ext(path) {
       href.push_str(file::remove_ext(path));
@@ -40,6 +49,26 @@ pub mod xref {
       href.push_str(id);
     }
     href
+  }
+
+  fn xref_path_was_included(path: &str, doc_meta: &DocumentMeta) -> bool {
+    if file::has_adoc_ext(path) {
+      if Some(path) == doc_meta.str("asciidork-docfilename") {
+        true
+      } else {
+        doc_meta
+          .included_files
+          .iter()
+          .any(|included_file| included_file == path)
+      }
+    } else if !file::has_ext(path) {
+      doc_meta
+        .included_files
+        .iter()
+        .any(|included_file| file::remove_ext(included_file) == path)
+    } else {
+      false
+    }
   }
 
   fn push_interdoc_suffix(href: &mut String, doc_meta: &DocumentMeta) {
@@ -68,6 +97,10 @@ pub mod xref {
   pub fn remove_leading_hash(input: &str) -> &str {
     input.strip_prefix('#').unwrap_or(input)
   }
+
+  pub fn get_id(target: &str) -> &str {
+    target.split_once('#').map(|x| x.1).unwrap_or(target)
+  }
 }
 
 pub fn set_backend_attrs<B: crate::Backend>(doc_meta: &mut ast::DocumentMeta) {
@@ -75,53 +108,4 @@ pub fn set_backend_attrs<B: crate::Backend>(doc_meta: &mut ast::DocumentMeta) {
   doc_meta
     .insert_doc_attr("outfilesuffix", B::OUTFILESUFFIX.to_string())
     .unwrap();
-}
-
-pub mod file {
-  /// NB: does not return the `.`
-  pub fn ext(input: &str) -> Option<&str> {
-    if let Some(idx) = input.rfind('.') {
-      Some(&input[idx + 1..])
-    } else {
-      None
-    }
-  }
-
-  pub fn has_adoc_ext(path: &str) -> bool {
-    matches!(
-      ext(path),
-      Some("adoc") | Some("asciidoc") | Some("asc") | Some("ad")
-    )
-  }
-
-  pub fn remove_ext(input: &str) -> &str {
-    if let Some(idx) = input.rfind('.') {
-      &input[..idx]
-    } else {
-      input
-    }
-  }
-
-  pub fn basename(input: &str) -> &str {
-    input.split(&['/', '\\']).last().unwrap_or(input)
-  }
-
-  pub fn stem(input: &str) -> &str {
-    basename(input).split('.').next().unwrap_or(input)
-  }
-
-  pub fn remove_uri_scheme(input: &str) -> &str {
-    let mut split = input.splitn(2, "://");
-    let first = split.next().unwrap_or("");
-    let Some(rest) = split.next() else {
-      return input;
-    };
-    if rest.is_empty() {
-      input
-    } else if matches!(first, "http" | "https" | "ftp" | "mailto" | "irc" | "file") {
-      rest
-    } else {
-      input
-    }
-  }
 }

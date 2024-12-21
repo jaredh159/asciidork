@@ -42,11 +42,16 @@ impl<'arena> Parser<'arena> {
   }
 
   fn parse_doc_title_author_revision(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
+    if lines.is_empty() {
+      return Ok(());
+    }
+    let meta = self.parse_chunk_meta(lines)?;
     if !lines
       .current()
       .map_or(false, |first| self.line_heading_level(first) == Some(0))
     {
       // author and revision must follow doc title, so if non title, skip
+      self.restore_peeked_meta(meta);
       return Ok(());
     }
 
@@ -59,8 +64,11 @@ impl<'arena> Parser<'arena> {
       .insert_header_attr("doctitle", header_line.reassemble_src().as_str())
       .unwrap();
 
-    self.document.title = Some(self.parse_inlines(&mut header_line.into_lines())?);
-    // TODO: subtitle
+    self.document.title = Some(DocTitle {
+      attrs: meta.attrs,
+      main: self.parse_inlines(&mut header_line.into_lines())?,
+      subtitle: None, // TODO: subtitle
+    });
 
     if lines.starts(Word) {
       self.parse_author_line(lines.consume_current().unwrap())?;
@@ -77,7 +85,7 @@ impl<'arena> Parser<'arena> {
     for line in lines.iter() {
       if self.line_heading_level(line) == Some(0) {
         return true;
-      } else if line.is_comment() {
+      } else if line.is_comment() || line.is_block_attr_list() {
         continue;
       } else {
         return line.is_attr_decl();

@@ -7,6 +7,7 @@ impl<'arena> Parser<'arena> {
     };
 
     let meta = self.parse_chunk_meta(&mut lines)?;
+
     let Some(line) = lines.current() else {
       self.restore_peeked_meta(meta);
       return Ok(None);
@@ -52,11 +53,14 @@ impl<'arena> Parser<'arena> {
         .as_ref()
         .and_then(|attrs| attrs.named.get("reftext"))
         .cloned();
-      self
-        .document
-        .anchors
-        .borrow_mut()
-        .insert(id.clone(), Anchor { reftext, title: heading.clone() });
+      self.document.anchors.borrow_mut().insert(
+        id.clone(),
+        Anchor {
+          reftext,
+          title: heading.clone(),
+          source_idx: self.lexer.source_idx(),
+        },
+      );
     }
 
     self.restore_lines(lines);

@@ -1,7 +1,9 @@
 use asciidork_meta::JobSettings;
 use test_utils::*;
 
-// ported from asciidoctor/test/links_test.rb
+// NB: most of these tests are ported directly from the asciidoctor test suite
+// @see https://gist.github.com/jaredh159/9e229fe1511aaea69e8f5658a8d1b5fd
+
 assert_html!(
   asciidoctor_interdoc_xrefs_tests1,
   |s: &mut JobSettings| s.strict = false,
@@ -168,6 +170,182 @@ assert_html!(
   "##}
 );
 
+assert_html!(
+  asciidoctor_interdoc_xrefs_tests_include_1,
+  resolving: b"info [#about]#tigers#.",
+  adoc! {r#"
+    include::tigers.adoc[]
+
+    // xref using angled bracket syntax with path which has been included in this document
+    <<tigers#about,About Tigers>>
+
+    // explicit ref to included file with ext which was included (not in rx)
+    <<tigers.adoc#about,About Tigers>>
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>info <span id="about">tigers</span>.</p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#about">About Tigers</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#about">About Tigers</a></p>
+    </div>
+  "##}
+);
+
+assert_html!(
+  asciidoctor_interdoc_xrefs_tests_include_2,
+  resolving: b"info [#about]#tigers#.",
+  adoc! {r#"
+    include::part1/tigers.adoc[]
+
+    // xref using angled bracket syntax with nested path which has been included in this document
+    <<part1/tigers#about,About Tigers>>
+
+    // explicit ref to included file with ext which was included (not in rx)
+    <<part1/tigers.adoc#about,About Tigers>>
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>info <span id="about">tigers</span>.</p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#about">About Tigers</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a href="#about">About Tigers</a></p>
+    </div>
+  "##}
+);
+
+assert_html!(
+  interdoc_xref_resolves_link_text_from_include,
+  resolving: OTHER_CHAPTERS,
+  adoc! {r#"
+    // should produce an internal anchor from an inter-document
+    // xref to file included into current file
+
+    [#ch1]
+    == Chapter One
+
+    So it begins.
+
+    Read <<other-chapters.adoc#ch2>>.
+
+    include::other-chapters.adoc[]
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="ch1">Chapter One</h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>So it begins.</p></div>
+        <div class="paragraph"><p>Read <a href="#ch2">Chapter 2</a>.</p></div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="ch2">Chapter 2</h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>The plot thickens.</p></div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="ch3">Chapter 3</h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>The plot runs its course, predictably.</p></div>
+      </div>
+    </div>
+  "##}
+);
+
+assert_html!(
+  interdoc_xref_include_all_tags,
+  resolving: OTHER_CHAPTERS,
+  adoc! {r#"
+    [#ch1]
+    == Chapter One
+
+    // should produce an internal anchor for inter-document xref
+    // to file included fully and partially
+    Read <<other-chapters.adoc#ch2>>.
+
+    include::other-chapters.adoc[tags=**]
+  "#},
+  contains: r##"<p>Read <a href="#ch2">Chapter 2</a>.</p>"##
+);
+
+assert_html!(
+  interdoc_xref_include_partial,
+  resolving: OTHER_CHAPTERS,
+  adoc! {r#"
+    [#ch1]
+    == Chapter One
+
+    // should not produce an internal anchor for inter-document
+    // xref to file partially included into current file
+    Read <<other-chapters.adoc#ch2,the next chapter>>.
+
+    include::other-chapters.adoc[tags=ch2]
+  "#},
+  contains: r##"<p>Read <a href="#ch2">the next chapter</a>.</p>"##
+);
+
+assert_html!(
+  doctitle_fallback_link_text,
+  adoc! {r#"
+    = The Document Title
+
+    // should use doctitle as fallback link text if inter-document xref
+    // points to current doc and no link text is provided
+    See xref:test.adoc[]
+
+    // should use doctitle of root document as fallback link text for
+    // inter-document xref in AsciiDoc table cell that resolves to current doc
+    |===
+    a|From cell xref:test.adoc[]
+    |===
+  "#},
+  contains:
+    r##"<a href="#">The Document Title</a>"##,
+    r##"From cell <a href="#">The Document Title</a>"##,
+);
+
+assert_html!(
+  doctitle_refext_fallback_link_text,
+  adoc! {r#"
+    [reftext="Links and Stuff"]
+    = The Document Title
+
+    // should use reftext on document as fallback link text if inter-document
+    // xref points to current doc and no link text is provided
+    See xref:test.adoc[]
+
+    // should use reftext on document as fallback link text if xref points
+    // to empty fragment and no link text is provided
+    See also xref:#[]
+  "#},
+  contains:
+    r##"See <a href="#">Links and Stuff</a>"##,
+    r##"See also <a href="#">Links and Stuff</a>"##
+);
+
+assert_html!(
+  doctitle_refext_fallback_link_text_no_doc_header,
+  adoc! {r#"
+    // should use fallback link text if inter-document xref points
+    // to current doc without header and no link text is provided
+    See xref:test.adoc[]
+
+    // should use fallback link text if fragment of
+    // internal xref is empty and no link text is provided
+    See also xref:#[]
+  "#},
+  contains:
+    r##"See <a href="#">[^top]</a>"##,
+    r##"See also <a href="#">[^top]</a>"##
+);
+
 // @see https://github.com/asciidoctor/asciidoctor/issues/3021
 // @see https://github.com/asciidoctor/asciidoctor/issues/3231
 assert_html!(
@@ -211,3 +389,18 @@ assert_html!(
     </div>
   "##}
 );
+
+const OTHER_CHAPTERS: &[u8] = b"// tag::ch2[]
+[#ch2]
+// tag::ch2-noid[]
+== Chapter 2
+
+The plot thickens.
+// end::ch2-noid[]
+// end::ch2[]
+
+[#ch3]
+== Chapter 3
+
+The plot runs its course, predictably.
+";

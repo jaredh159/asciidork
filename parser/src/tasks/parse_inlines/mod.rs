@@ -35,7 +35,7 @@ impl<'arena> Parser<'arena> {
       if self.should_stop_at(&line) {
         acc.inlines.remove_trailing_newline();
         lines.restore_if_nonempty(line);
-        return Ok(acc.inlines);
+        return Ok(acc.trimmed_inlines());
       }
 
       if line.is_comment() && !subs.callouts() {
@@ -54,7 +54,7 @@ impl<'arena> Parser<'arena> {
           line.discard(stop_tokens.len());
           acc.commit();
           lines.restore_if_nonempty(line);
-          return Ok(acc.inlines);
+          return Ok(acc.trimmed_inlines());
         }
 
         if line.may_contain_inline_pass() {
@@ -207,6 +207,7 @@ impl<'arena> Parser<'arena> {
                   Anchor {
                     reftext: attrs.take_positional(0),
                     title: InlineNodes::new(self.bump),
+                    source_idx: self.lexer.source_idx(),
                   },
                 );
                 acc.push_node(InlineAnchor(id.src), id.loc);
@@ -305,6 +306,7 @@ impl<'arena> Parser<'arena> {
             let mut linktext = None;
             if !inner.is_empty() {
               inner.discard_assert(Comma);
+              inner.trim_leading_whitespace();
               if !inner.is_empty() {
                 linktext = Some(self.parse_inlines(&mut inner.into_lines())?);
               }
@@ -416,7 +418,11 @@ impl<'arena> Parser<'arena> {
               if let Some(id) = &attrs.id {
                 self.document.anchors.borrow_mut().insert(
                   id.src.clone(),
-                  Anchor { reftext: None, title: nodes.clone() },
+                  Anchor {
+                    reftext: None,
+                    title: nodes.clone(),
+                    source_idx: self.lexer.source_idx(),
+                  },
                 );
               }
             }
@@ -435,6 +441,7 @@ impl<'arena> Parser<'arena> {
                 Anchor {
                   reftext,
                   title: InlineNodes::new(self.bump),
+                  source_idx: self.lexer.source_idx(),
                 },
               );
               acc.push_node(InlineAnchor(id.src), loc);
@@ -707,13 +714,13 @@ impl<'arena> Parser<'arena> {
     }
 
     acc.commit();
-    Ok(acc.inlines)
+    Ok(acc.trimmed_inlines())
   }
 
   fn push_xref(&mut self, target: &SourceString<'arena>) {
     let mut ref_id = target.src.clone();
     let mut ref_loc = target.loc;
-    if ref_id.starts_with('#') {
+    if ref_id.len() > 1 && ref_id.starts_with('#') {
       ref_id.drain(..1);
       ref_loc.start += 1;
     }
@@ -894,36 +901,6 @@ fn push_simple<'arena>(
   lines.restore_if_nonempty(line);
   state.push_node(inline_node, loc);
   push_newline_if_needed(state, lines);
-}
-
-#[derive(Debug)]
-struct Accum<'arena> {
-  inlines: InlineNodes<'arena>,
-  text: CollectText<'arena>,
-}
-
-impl<'arena> Accum<'arena> {
-  fn commit(&mut self) {
-    self.text.commit_inlines(&mut self.inlines);
-  }
-
-  fn push_node(&mut self, node: Inline<'arena>, loc: SourceLocation) {
-    self.commit();
-    self.inlines.push(InlineNode::new(node, loc));
-    self.text.loc = loc.clamp_end();
-  }
-
-  fn pop_node(&mut self) {
-    self.inlines.pop();
-  }
-
-  fn maybe_push_joining_newline(&mut self, lines: &ContiguousLines<'arena>) {
-    if !lines.is_empty() {
-      self.commit();
-      self.text.loc.end += 1;
-      self.push_node(Inline::Newline, self.text.loc);
-    }
-  }
 }
 
 #[cfg(test)]

@@ -45,8 +45,10 @@ impl<'arena> Parser<'arena> {
     let mut last_c = prefix.chars().last().unwrap_or('\0');
     id.push_str(prefix);
 
-    for c in line.chars() {
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
       match c {
+        '<' if chars.next() == Some('<') => {}
         '<' => in_html_tag = true,
         '>' => in_html_tag = false,
         ' ' | '-' | '.' | ',' | '\t' => {
@@ -81,27 +83,35 @@ impl<'arena> Parser<'arena> {
       id.pop();
     }
 
+    if separator.is_some() && id.is_empty() {
+      return self.sequence_sectid(&id, separator);
+    }
+
     if prefix.is_empty() && separator.map(|c| id.starts_with(c)).unwrap_or(false) {
       id = self.string(&id[1..]);
     }
 
     if self.ctx.anchor_ids.borrow().contains(&id) {
-      let mut i = 2;
-      loop {
-        let mut sequenced = BumpString::with_capacity_in(id.len() + 2, self.bump);
-        sequenced.push_str(&id);
-        if let Some(c) = separator {
-          sequenced.push(c);
-        }
-        sequenced.push_str(&i.to_string());
-        if !self.ctx.anchor_ids.borrow().contains(&sequenced) {
-          return sequenced;
-        }
-        i += 1;
-      }
+      return self.sequence_sectid(&id, separator);
     }
 
     id
+  }
+
+  fn sequence_sectid(&self, id: &str, separator: Option<char>) -> BumpString<'arena> {
+    let mut i = 2;
+    loop {
+      let mut sequenced = BumpString::with_capacity_in(id.len() + 2, self.bump);
+      sequenced.push_str(id);
+      if let Some(c) = separator {
+        sequenced.push(c);
+      }
+      sequenced.push_str(&i.to_string());
+      if !self.ctx.anchor_ids.borrow().contains(&sequenced) {
+        return sequenced;
+      }
+      i += 1;
+    }
   }
 }
 
@@ -155,6 +165,7 @@ mod tests {
       ("& ! More", "", Some('_'), &[], "more"), // sep stripped from beginning
       ("Foo-bar design", "_", Some('-'), &[], "_foo-bar-design"),
       ("Version 5.0.1", "_", Some('.'), &[], "_version.5.0.1"),
+      ("<em></em>", "_", Some('_'), &[], "_2"),
     ];
 
     for (line, id_prefix, id_sep, prev, expected) in cases {

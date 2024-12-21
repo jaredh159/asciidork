@@ -228,3 +228,19 @@ assert_error!(
       |   ^^^ Invalid cross reference, no anchor found for `foo`
   "}
 );
+
+assert_error!(
+  xref_unknown_interdoc_anchor,
+  adoc! {"
+    [#foobar]
+    == Foobar
+
+    See <<test.adoc#foobaz>>.
+  "},
+  error! {"
+     --> test.adoc:4:7
+      |
+    4 | See <<test.adoc#foobaz>>.
+      |       ^^^^^^^^^^^^^^^^ Invalid cross reference, no anchor found for `test.adoc#foobaz`
+  "}
+);

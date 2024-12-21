@@ -7,7 +7,7 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Document<'arena> {
   pub meta: DocumentMeta,
-  pub title: Option<InlineNodes<'arena>>,
+  pub title: Option<DocTitle<'arena>>,
   pub subtitle: Option<InlineNodes<'arena>>,
   pub content: DocContent<'arena>,
   pub toc: Option<TableOfContents<'arena>>,
@@ -31,4 +31,11 @@ impl<'arena> Document<'arena> {
       source_filenames: Vec::new(),
     }
   }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct DocTitle<'arena> {
+  pub attrs: Option<AttrList<'arena>>,
+  pub main: InlineNodes<'arena>,
+  pub subtitle: Option<InlineNodes<'arena>>,
 }

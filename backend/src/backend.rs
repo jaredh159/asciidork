@@ -138,10 +138,18 @@ pub trait Backend {
     target: &str,
     attrs: Option<&AttrList>,
     scheme: Option<UrlScheme>,
+    resolving_xref: bool,
     has_link_text: bool,
     blank_window_shorthand: bool,
   ) {
-    _ = (target, attrs, scheme, has_link_text, blank_window_shorthand);
+    _ = (
+      target,
+      attrs,
+      scheme,
+      has_link_text,
+      resolving_xref,
+      blank_window_shorthand,
+    );
     warn_unimplemented!(enter_link_macro);
   }
 
@@ -150,9 +158,10 @@ pub trait Backend {
     target: &str,
     attrs: Option<&AttrList>,
     scheme: Option<UrlScheme>,
+    resolving_xref: bool,
     has_link_text: bool,
   ) {
-    _ = (target, attrs, scheme, has_link_text);
+    _ = (target, attrs, scheme, resolving_xref, has_link_text);
     warn_unimplemented!(exit_link_macro);
   }
 
@@ -181,7 +190,7 @@ pub trait Backend {
   fn exit_text_span(&mut self, attrs: &AttrList, children: &[InlineNode]);
   fn enter_xref(&mut self, target: &str, reftext: Option<&[InlineNode]>, kind: XrefKind);
   fn exit_xref(&mut self, target: &str, reftext: Option<&[InlineNode]>, kind: XrefKind);
-  fn visit_missing_xref(&mut self, target: &str, kind: XrefKind);
+  fn visit_missing_xref(&mut self, target: &str, kind: XrefKind, doc_title: Option<&DocTitle>);
   fn visit_inline_anchor(&mut self, id: &str);
   fn visit_linebreak(&mut self);
 

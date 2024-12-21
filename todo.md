@@ -3,8 +3,12 @@
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref
 
+- [ ] "natural" xrefs (eg: `<<Section Title>>`), these are officially discouraged, so i'd
+      like to not implement them
 - [ ] multi-line inline (not block) img macro attrs (search rx for `a multi-line image`)
-- [ ] multi-line link macro text (maybe same as above) `link:https://example.com[foo\nbar]`
+- [ ] multi-line link macro text (maybe same as above)
+      `link:https://example.com[foo\nbar]`
+- [ ] multi-line shorthand xref `<<tigers,foo\nbar>>`
 - [ ] data-uri embedded images
 - [ ] "embedded" inline svgs, where html is in output, changing size
 - [ ] index: https://docs.asciidoctor.org/asciidoc/latest/sections/user-index

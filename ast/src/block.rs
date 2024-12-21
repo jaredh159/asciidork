@@ -19,6 +19,10 @@ impl Block<'_> {
   pub fn named_attr(&self, name: &str) -> Option<&str> {
     self.meta.attrs.as_ref().and_then(|attrs| attrs.named(name))
   }
+
+  pub fn is_comment(&self) -> bool {
+    self.context == BlockContext::Comment
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

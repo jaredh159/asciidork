@@ -25,6 +25,17 @@ fn test_parse_simple_block() {
 }
 
 #[test]
+fn test_line_followed_by_comment_is_trimmed() {
+  assert_block!(
+    adoc! {"
+      hello mamma
+      // a comment
+    "},
+    simple_text_block!("hello mamma", 0..11)
+  );
+}
+
+#[test]
 fn test_parse_comment_block() {
   assert_block!(
     adoc! {"

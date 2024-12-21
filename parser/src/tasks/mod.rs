@@ -1,6 +1,7 @@
 mod attr_refs;
 pub(crate) mod collect_text;
 pub mod customize_subs;
+mod diagnose_document;
 pub mod directives;
 mod heading_level;
 mod parse_attr_list;

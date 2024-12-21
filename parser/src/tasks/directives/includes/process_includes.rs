@@ -9,7 +9,7 @@ use crate::variants::token::*;
 struct IncludeDirective<'a> {
   line_src: BumpString<'a>,
   first_token: Token<'a>,
-  target_str: BumpString<'a>,
+  target: BumpString<'a>,
   target_has_spaces: bool,
   target_is_uri: bool,
   attrs: AttrList<'a>,
@@ -61,7 +61,7 @@ impl<'arena> Parser<'arena> {
     };
 
     let target = match super::target::prepare(
-      directive.target_str.as_str(),
+      directive.target.as_str(),
       directive.target_is_uri,
       self.lexer.source_file(),
       self.lexer.source_is_primary(),
@@ -108,6 +108,11 @@ impl<'arena> Parser<'arena> {
           include_depth,
           buffer,
         );
+        self
+          .document
+          .meta
+          .included_files
+          .insert(directive.target.as_str().to_string());
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(ResolveError::NotFound) if directive.attrs.has_option("optional") => {
@@ -117,7 +122,7 @@ impl<'arena> Parser<'arena> {
       Err(err @ ResolveError::NotFound | err @ ResolveError::Io(..)) => {
         self.target_err(format!("Include resolver error: {}", err), &directive)?;
         let mut msg = self.string("+++Unresolved directive in ");
-        msg.push_str(&self.lexer.source_file().file_name());
+        msg.push_str(self.lexer.source_file().file_name());
         msg.push_str(" - ");
         let offset = directive.first_token.loc.start + msg.len() as u32;
         msg.push_str(directive.line_src.as_str());
@@ -154,7 +159,7 @@ impl<'arena> Parser<'arena> {
       Ok(Some(IncludeDirective {
         line_src: src,
         first_token,
-        target_str: target,
+        target,
         target_has_spaces: has_spaces,
         target_is_uri,
         attrs: self.parse_block_attr_list(line)?,
@@ -206,7 +211,7 @@ impl<'arena> Parser<'arena> {
     self.err_at(
       msg,
       directive.first_token.loc.end,
-      directive.first_token.loc.end + directive.target_str.len() as u32,
+      directive.first_token.loc.end + directive.target.len() as u32,
     )
   }
 

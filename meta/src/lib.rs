@@ -1,6 +1,7 @@
 mod attrs;
 mod doctype;
 mod document_meta;
+pub mod file;
 mod job_attrs;
 mod job_settings;
 mod path;

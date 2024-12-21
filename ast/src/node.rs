@@ -6,6 +6,8 @@ use crate::internal::*;
 pub struct Anchor<'arena> {
   pub reftext: Option<InlineNodes<'arena>>,
   pub title: InlineNodes<'arena>,
+  /// can be used to identify the source file in which the anchor was found
+  pub source_idx: u16,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -81,9 +83,7 @@ impl Json for Anchor<'_> {
 impl Json for Document<'_> {
   fn to_json_in(&self, buf: &mut JsonBuf) {
     buf.begin_obj("Document");
-    buf.add_member("title", &self.title);
     buf.add_member("subtitle", &self.subtitle);
-    // buf.add_member("anchors", &self.anchors);
     buf.add_member("content", &self.content);
     buf.add_option_member("toc", self.toc.as_ref());
     buf.finish_obj();

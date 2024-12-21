@@ -53,16 +53,34 @@ impl<'arena> InlineNodes<'arena> {
     self.last().map(|node| node.loc.end)
   }
 
-  pub fn remove_trailing_newline(&mut self) {
+  pub fn remove_trailing_newline(&mut self) -> bool {
     if matches!(self.last().map(|n| &n.content), Some(Inline::Newline)) {
       self.pop();
+      true
+    } else {
+      false
     }
   }
 
-  pub fn discard_trailing_newline(&mut self) {
+  pub fn remove_trailing_line_comment(&mut self) -> bool {
+    if matches!(
+      self.last().map(|n| &n.content),
+      Some(Inline::LineComment(_))
+    ) {
+      self.pop();
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn discard_trailing_newline(&mut self) -> bool {
     if matches!(self.last().map(|n| &n.content), Some(Inline::Newline)) {
       let idx = self.len() - 1;
       self.0[idx].content = Inline::Discarded;
+      true
+    } else {
+      false
     }
   }
 

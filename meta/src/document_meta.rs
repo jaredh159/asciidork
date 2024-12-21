@@ -12,6 +12,7 @@ pub struct DocumentMeta {
   default_attrs: Attrs,
   pub safe_mode: SafeMode,
   pub embedded: bool,
+  pub included_files: HashSet<String>,
 }
 
 impl Default for DocumentMeta {
@@ -25,6 +26,7 @@ impl Default for DocumentMeta {
       default_attrs: Attrs::defaults(),
       authors: Vec::new(),
       embedded: false,
+      included_files: HashSet::new(),
     }
   }
 }
@@ -62,6 +64,7 @@ impl DocumentMeta {
       default_attrs: Attrs::defaults(),
       authors: Vec::new(),
       embedded: false,
+      included_files: HashSet::new(),
     }
   }
 

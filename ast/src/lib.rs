@@ -24,7 +24,7 @@ mod internal {
     pub use crate::chunk_meta::ChunkMeta;
     pub use crate::col_widths::*;
     pub use crate::doc_content::DocContent;
-    pub use crate::document::Document;
+    pub use crate::document::{DocTitle, Document};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
     pub use crate::inline::{CurlyKind::*, QuoteKind::*};
     pub use crate::inline_nodes::InlineNodes;
@@ -55,7 +55,7 @@ pub mod prelude {
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::col_widths::*;
   pub use crate::doc_content::DocContent;
-  pub use crate::document::Document;
+  pub use crate::document::{DocTitle, Document};
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
   pub use crate::json::*;
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};

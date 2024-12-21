@@ -6,8 +6,11 @@ impl<'arena> Parser<'arena> {
     match source_file {
       SourceFile::Stdin { .. } => {}
       SourceFile::Path(path) => {
-        self.insert_file_attr("docfilesuffix", path.extension().to_string());
-        self.insert_file_attr("docname", path.file_stem().to_string());
+        let file_stem = path.file_stem();
+        let ext = path.extension();
+        self.insert_file_attr("docfilesuffix", ext.to_string());
+        self.insert_file_attr("docname", file_stem.to_string());
+        self.insert_file_attr("asciidork-docfilename", format!("{}{}", file_stem, ext));
         match self.document.meta.safe_mode {
           SafeMode::Server | SafeMode::Secure => {
             self.insert_file_attr("docdir", "");

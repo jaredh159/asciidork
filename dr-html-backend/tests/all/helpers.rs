@@ -19,6 +19,13 @@ macro_rules! assert_html {
       ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
     }
   };
+  ($name:ident, resolving: $bytes:expr, $mod_settings:expr, $input:expr, $expected:expr$(,)?) => {
+    #[test]
+    fn $name() {
+      let actual = _html!($input, $mod_settings, Some(const_resolver!($bytes)));
+      ::test_utils::expect_eq!(actual, $expected.to_string(), from: $input);
+    }
+  };
   ($name:ident, resolving_err: $err:expr, $input:expr, $expected:expr$(,)?) => {
     #[test]
     fn $name() {
