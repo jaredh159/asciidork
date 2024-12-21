@@ -1,13 +1,13 @@
 [package]
 name = "asciidork-parser"
-version = "0.10.0"
+version = "0.11.1"
 edition = "2021"
 description = "Asciidork parser"
 license = "MIT"
 
 [dependencies]
-asciidork-ast = { path = "../ast", version = "0.10.0" }
-asciidork-core = { path = "../core", version = "0.10.0" }
+asciidork-ast = { path = "../ast", version = "0.11.1" }
+asciidork-core = { path = "../core", version = "0.11.1" }
 bumpalo = { version = "3.15.4", features = ["collections"] }
 lazy_static = "1.4.0"
 regex = { version = "1.10.2", features = ["std", "use_std"] }
