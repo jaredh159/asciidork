@@ -6,7 +6,6 @@ mod doc_content;
 mod document;
 mod inline;
 mod inline_nodes;
-mod json;
 mod list;
 mod r#macro;
 mod node;
@@ -28,7 +27,6 @@ mod internal {
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
     pub use crate::inline::{CurlyKind::*, QuoteKind::*};
     pub use crate::inline_nodes::InlineNodes;
-    pub use crate::json::*;
     pub use crate::list::*;
     pub use crate::node::{Anchor, Callout, Section};
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme, XrefKind};
@@ -57,7 +55,6 @@ pub mod prelude {
   pub use crate::doc_content::DocContent;
   pub use crate::document::{DocTitle, Document};
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
-  pub use crate::json::*;
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
   pub use crate::node::{Anchor, Callout, Section};
   pub use crate::r#macro::{UrlScheme, XrefKind};

@@ -26,7 +26,6 @@ pub mod includes {
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
   pub use crate::parser::{Parser, SourceFile};
-  pub use asciidork_ast::Json;
   pub use asciidork_meta::Path;
   pub use bumpalo::Bump;
 }

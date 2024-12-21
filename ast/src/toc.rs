@@ -23,30 +23,3 @@ pub enum TocPosition {
   Macro,
   Auto,
 }
-
-impl Json for TableOfContents<'_> {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    buf.begin_obj("TableOfContents");
-    buf.add_member("title", &self.title);
-    buf.add_member("nodes", &self.nodes);
-    buf.add_member("position", &self.position);
-    buf.finish_obj();
-  }
-}
-
-impl Json for TocNode<'_> {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    buf.begin_obj("TocNode");
-    buf.add_member("level", &self.level);
-    buf.add_member("title", &self.title);
-    buf.add_option_member("id", self.id.as_ref());
-    buf.add_member("children", &self.children);
-    buf.finish_obj();
-  }
-}
-
-impl Json for TocPosition {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    buf.push_obj_enum_type("TocPosition", self);
-  }
-}

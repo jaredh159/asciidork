@@ -2,7 +2,7 @@ _default:
   @just --choose
 
 build-playground:
-  @cd dr-html-wasm && wasm-pack build \
+  @cd dr-html-wasm && RUSTFLAGS='-D warnings -A unused-imports' wasm-pack build \
     --target web \
     --out-dir ../web-playground/public/wasm
 
@@ -16,11 +16,7 @@ check:
     cargo fmt -- --check && \
     cargo test --all --no-fail-fast && \
     cargo build
-  @just check-ast-json
   @just build-playground
-
-check-ast-json:
-  @cargo run -- --input kitchen-sink.adoc --format ast | jq &> /dev/null
 
 reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm

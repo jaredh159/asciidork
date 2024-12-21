@@ -91,14 +91,6 @@ fn run(
           print_timings(&mut stderr, src.len(), parse_time, Some(convert_time));
         }
       }
-      Output::Ast => {
-        let json = parse_result.document.to_json();
-        writeln!(stdout, "{json}")?;
-        if args.print_timings {
-          writeln!(stderr)?;
-          print_timings(&mut stderr, src.len(), parse_time, None);
-        }
-      }
     },
     Err(diagnostics) => {
       print_diagnostics(&mut stderr, diagnostics);

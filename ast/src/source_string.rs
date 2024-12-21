@@ -43,12 +43,6 @@ impl<'arena> SourceString<'arena> {
   }
 }
 
-impl Json for SourceString<'_> {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    self.src.to_json_in(buf);
-  }
-}
-
 impl Deref for SourceString<'_> {
   type Target = str;
 

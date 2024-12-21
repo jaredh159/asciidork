@@ -35,12 +35,3 @@ impl<'arena> ChunkMeta<'arena> {
     self.attrs.is_none() && self.title.is_none()
   }
 }
-
-impl Json for ChunkMeta<'_> {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    buf.begin_obj("ChunkMeta");
-    buf.add_option_member("attrs", self.attrs.as_ref());
-    buf.add_option_member("title", self.title.as_ref());
-    buf.finish_obj();
-  }
-}

@@ -58,7 +58,6 @@ pub struct Args {
 pub enum Output {
   DrHtml,
   DrHtmlPrettier,
-  Ast,
 }
 
 lazy_static! {

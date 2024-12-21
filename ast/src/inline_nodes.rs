@@ -123,12 +123,6 @@ impl<'arena> From<BumpVec<'arena, InlineNode<'arena>>> for InlineNodes<'arena> {
   }
 }
 
-impl Json for InlineNodes<'_> {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    self.0.to_json_in(buf);
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;

@@ -59,22 +59,3 @@ impl<'arena> DocContent<'arena> {
     }
   }
 }
-
-impl Json for DocContent<'_> {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    buf.begin_obj("DocContent");
-    buf.push_str(r#","variant":""#);
-    match self {
-      DocContent::Sectioned { preamble, sections } => {
-        buf.push_str("Sectioned\"");
-        buf.add_option_member("preamble", preamble.as_ref());
-        buf.add_member("sections", sections);
-      }
-      DocContent::Blocks(blocks) => {
-        buf.push_str("Blocks\"");
-        buf.add_member("blocks", blocks);
-      }
-    }
-    buf.finish_obj();
-  }
-}

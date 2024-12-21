@@ -1,8 +1,6 @@
 use std::fmt::{Debug, Formatter, Result};
 use std::ops::Range;
 
-use crate::internal::*;
-
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
 pub struct SourceLocation {
   pub start: u32,
@@ -114,15 +112,5 @@ impl Debug for SourceLocation {
         String::new()
       }
     )
-  }
-}
-
-impl Json for SourceLocation {
-  fn to_json_in(&self, buf: &mut JsonBuf) {
-    buf.push('[');
-    buf.push_str(&self.start.to_string());
-    buf.push(',');
-    buf.push_str(&self.end.to_string());
-    buf.push(']');
   }
 }
