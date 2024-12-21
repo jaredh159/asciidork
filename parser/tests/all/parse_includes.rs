@@ -1,5 +1,5 @@
 use asciidork_ast::prelude::*;
-use asciidork_meta::{JobAttr, JobSettings};
+use asciidork_core::{JobAttr, JobSettings};
 use asciidork_parser::includes::*;
 use asciidork_parser::prelude::*;
 use test_utils::*;

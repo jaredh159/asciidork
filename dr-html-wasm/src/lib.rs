@@ -1,7 +1,7 @@
 mod utils;
 
+use asciidork_core::JobSettings;
 use asciidork_dr_html_backend as backend;
-use asciidork_meta::JobSettings;
 use asciidork_parser::{parser::ParseResult, prelude::*};
 use wasm_bindgen::prelude::*;
 

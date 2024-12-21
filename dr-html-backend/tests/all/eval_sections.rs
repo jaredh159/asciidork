@@ -1,4 +1,4 @@
-use asciidork_meta::JobSettings;
+use asciidork_core::JobSettings;
 use test_utils::{adoc, html};
 
 assert_html!(

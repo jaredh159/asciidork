@@ -2,13 +2,12 @@
 
 members = [
   "ast",
-  "meta",
+  "core",
   "backend",
   "cli",
   "dr-html-backend",
   "dr-html-wasm",
   "eval",
-  "meta",
   "parser",
   "test-utils",
 ]

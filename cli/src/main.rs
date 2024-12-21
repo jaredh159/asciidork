@@ -9,8 +9,8 @@ use bumpalo::Bump;
 use clap::Parser as ClapParser;
 use colored::*;
 
+use asciidork_core::Path;
 use asciidork_dr_html_backend::*;
-use asciidork_meta::Path;
 use asciidork_parser::prelude::*;
 
 mod args;

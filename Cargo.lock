@@ -63,7 +63,7 @@ dependencies = [
 name = "asciidork-ast"
 version = "0.10.0"
 dependencies = [
- "asciidork-meta",
+ "asciidork-core",
  "bumpalo",
  "pretty_assertions",
  "smallvec",
@@ -75,7 +75,7 @@ name = "asciidork-backend"
 version = "0.10.0"
 dependencies = [
  "asciidork-ast",
- "asciidork-meta",
+ "asciidork-core",
 ]
 
 [[package]]
@@ -83,9 +83,9 @@ name = "asciidork-cli"
 version = "0.10.0"
 dependencies = [
  "asciidork-ast",
+ "asciidork-core",
  "asciidork-dr-html-backend",
  "asciidork-eval",
- "asciidork-meta",
  "asciidork-parser",
  "bumpalo",
  "clap",
@@ -99,13 +99,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "asciidork-core"
+version = "0.10.0"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
 name = "asciidork-dr-html-backend"
 version = "0.10.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
+ "asciidork-core",
  "asciidork-eval",
- "asciidork-meta",
  "asciidork-parser",
  "indoc",
  "lazy_static",
@@ -125,18 +132,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "asciidork-meta"
-version = "0.10.0"
-dependencies = [
- "lazy_static",
-]
-
-[[package]]
 name = "asciidork-parser"
 version = "0.10.0"
 dependencies = [
  "asciidork-ast",
- "asciidork-meta",
+ "asciidork-core",
  "bumpalo",
  "indoc",
  "lazy_static",
@@ -244,9 +244,9 @@ checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
 name = "dr-html-wasm"
 version = "0.0.0"
 dependencies = [
+ "asciidork-core",
  "asciidork-dr-html-backend",
  "asciidork-eval",
- "asciidork-meta",
  "asciidork-parser",
  "console_error_panic_hook",
  "wasm-bindgen",

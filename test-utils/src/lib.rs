@@ -416,7 +416,7 @@ macro_rules! assert_no_error {
     #[test]
     fn $name() {
       let mut parser = test_parser!($input);
-      parser.apply_job_settings(asciidork_meta::JobSettings::r#unsafe());
+      parser.apply_job_settings(asciidork_core::JobSettings::r#unsafe());
       parser.set_resolver(Box::new(asciidork_parser::includes::ConstResolver(
         Vec::from($bytes),
       )));
@@ -441,7 +441,7 @@ macro_rules! test_inlines_loose {
   ($name:ident, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      let mut settings = ::asciidork_meta::JobSettings::embedded();
+      let mut settings = ::asciidork_core::JobSettings::embedded();
       settings.strict = false;
       let mut parser = test_parser!($input);
       parser.apply_job_settings(settings);
@@ -554,7 +554,7 @@ macro_rules! parse_doc_content {
   }};
   ($input:expr, $bytes:expr) => {{
     let mut parser = test_parser!($input);
-    parser.apply_job_settings(asciidork_meta::JobSettings::r#unsafe());
+    parser.apply_job_settings(asciidork_core::JobSettings::r#unsafe());
     parser.set_resolver(const_resolver!($bytes));
     parser.parse().unwrap().document.content
   }};
@@ -563,7 +563,7 @@ macro_rules! parse_doc_content {
 #[macro_export]
 macro_rules! parse_doc_content_loose {
   ($input:expr) => {{
-    let mut settings = ::asciidork_meta::JobSettings::embedded();
+    let mut settings = ::asciidork_core::JobSettings::embedded();
     settings.strict = false;
     let mut parser = test_parser!($input);
     parser.apply_job_settings(settings);
@@ -624,7 +624,7 @@ macro_rules! parse_error {
   }};
   ($input:expr, resolving: $bytes:expr) => {{
     let mut parser = test_parser!($input);
-    parser.apply_job_settings(asciidork_meta::JobSettings::r#unsafe());
+    parser.apply_job_settings(asciidork_core::JobSettings::r#unsafe());
     parser.set_resolver(Box::new(asciidork_parser::includes::ConstResolver(
       Vec::from($bytes),
     )));

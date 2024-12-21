@@ -34,7 +34,7 @@ mod internal {
     pub use crate::source_string::SourceString;
     pub use crate::table::*;
     pub use crate::toc::*;
-    pub use asciidork_meta::{AttrValue, DocumentMeta, ReadAttr};
+    pub use asciidork_core::{AttrValue, DocumentMeta, ReadAttr};
     pub use smallvec::SmallVec;
   }
 

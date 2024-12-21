@@ -1,4 +1,4 @@
-use asciidork_meta::{DocType, JobAttr, JobAttrs, JobSettings, SafeMode};
+use asciidork_core::{DocType, JobAttr, JobAttrs, JobSettings, SafeMode};
 use clap::Parser;
 use lazy_static::lazy_static;
 use regex::Regex;

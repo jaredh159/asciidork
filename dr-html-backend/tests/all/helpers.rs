@@ -69,9 +69,9 @@ macro_rules! assert_inline_html {
   ($name:ident, $input:expr, $expected:expr) => {
     assert_html!(
       $name,
-      |settings: &mut ::asciidork_meta::JobSettings| {
+      |settings: &mut ::asciidork_core::JobSettings| {
         settings.embedded = true;
-        settings.doctype = Some(::asciidork_meta::DocType::Inline);
+        settings.doctype = Some(::asciidork_core::DocType::Inline);
       },
       $input,
       $expected
@@ -87,7 +87,7 @@ macro_rules! assert_standalone_body {
   ($name:ident, $mod_settings:expr, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      let mut settings = ::asciidork_meta::JobSettings::default();
+      let mut settings = ::asciidork_core::JobSettings::default();
       #[allow(clippy::redundant_closure_call)]
       $mod_settings(&mut settings);
       let mut parser = ::test_utils::test_parser!($input);
@@ -125,11 +125,11 @@ macro_rules! test_non_embedded_contains {
 macro_rules! _html {
   ($input:expr, $mod_settings:expr, $resolver:expr) => {{
     let bump = &::asciidork_parser::prelude::Bump::new();
-    let mut settings = ::asciidork_meta::JobSettings::embedded();
-    settings.safe_mode = ::asciidork_meta::SafeMode::Unsafe;
+    let mut settings = ::asciidork_core::JobSettings::embedded();
+    settings.safe_mode = ::asciidork_core::SafeMode::Unsafe;
     #[allow(clippy::redundant_closure_call)]
     $mod_settings(&mut settings);
-    let path = ::asciidork_meta::Path::new("test.adoc");
+    let path = ::asciidork_core::Path::new("test.adoc");
     let mut parser = ::asciidork_parser::Parser::from_str(
       $input,
       ::asciidork_parser::prelude::SourceFile::Path(path),
