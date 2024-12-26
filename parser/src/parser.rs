@@ -60,6 +60,15 @@ impl<'arena> Parser<'arena> {
     self.set_source_file_attrs();
   }
 
+  pub fn provide_timestamps(
+    &mut self,
+    now: u64,
+    input_modified_time: Option<u64>,
+    reproducible_override: Option<u64>,
+  ) {
+    self.set_datetime_attrs(now, input_modified_time, reproducible_override);
+  }
+
   pub fn set_resolver(&mut self, resolver: Box<dyn IncludeResolver>) {
     self.include_resolver = Some(resolver);
   }

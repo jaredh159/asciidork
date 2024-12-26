@@ -15,3 +15,4 @@ mod parse_revision_line;
 pub mod parse_section;
 mod section_id;
 mod table;
+mod time;
