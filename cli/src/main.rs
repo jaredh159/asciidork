@@ -2,8 +2,8 @@ use std::env;
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::result::Result;
-use std::time::{Duration, Instant};
-use std::{error::Error, fs};
+use std::time::{Duration, Instant, SystemTime};
+use std::{error::Error, fs, time::UNIX_EPOCH};
 
 use bumpalo::Bump;
 use clap::Parser as ClapParser;
@@ -30,14 +30,20 @@ fn run(
   mut stdout: impl Write,
   mut stderr: impl Write,
 ) -> Result<(), Box<dyn Error>> {
-  let (src, src_file, base_dir) = {
+  let (src, src_file, base_dir, input_mtime) = {
     if let Some(pathbuf) = &args.input {
       let abspath = fs::canonicalize(pathbuf)?;
       let mut file = fs::File::open(pathbuf.clone())?;
+      let mut input_mtime = None;
       let mut src = file
         .metadata()
         .ok()
-        .map(|metadata| String::with_capacity(metadata.len() as usize))
+        .map(|metadata| {
+          if let Ok(mtime) = metadata.modified() {
+            input_mtime = Some(mtime.duration_since(UNIX_EPOCH).unwrap().as_secs());
+          }
+          String::with_capacity(metadata.len() as usize)
+        })
         .unwrap_or_else(String::new);
       // TODO: for perf, better to read the file straight into a BumpVec<u8>
       // have an initializer on Parser that takes ownership of it
@@ -47,13 +53,13 @@ fn run(
         .as_ref()
         .cloned()
         .or_else(|| abspath.parent().map(|p| p.to_path_buf()));
-      (src, SourceFile::Path(abspath.into()), base_dir)
+      (src, SourceFile::Path(abspath.into()), base_dir, input_mtime)
     } else {
       let mut src = String::new();
       stdin.read_to_string(&mut src)?;
       let cwd_buf = env::current_dir()?;
       let cwd = Path::new(cwd_buf.to_str().unwrap_or(""));
-      (src, SourceFile::Stdin { cwd }, Some(cwd_buf))
+      (src, SourceFile::Stdin { cwd }, Some(cwd_buf), None)
     }
   };
 
@@ -62,6 +68,12 @@ fn run(
   let mut parser = Parser::from_str(&src, src_file, bump);
   parser.apply_job_settings(args.clone().try_into()?);
   parser.set_resolver(Box::new(CliResolver::new(base_dir)));
+
+  let now = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .unwrap()
+    .as_secs();
+  parser.provide_timestamps(now, input_mtime, None);
 
   let result = parser.parse();
   let parse_time = parse_start.elapsed();

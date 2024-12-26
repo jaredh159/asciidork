@@ -84,16 +84,17 @@ function getStringFromWasm0(ptr, len) {
 }
 /**
 * @param {string} adoc
+* @param {number} timestamp
 * @returns {string}
 */
-export function convert(adoc) {
+export function convert(adoc, timestamp) {
     let deferred2_0;
     let deferred2_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(adoc, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm.convert(retptr, ptr0, len0);
+        wasm.convert(retptr, ptr0, len0, timestamp);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         deferred2_0 = r0;

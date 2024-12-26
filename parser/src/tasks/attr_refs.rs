@@ -65,4 +65,12 @@ impl<'arena> Parser<'arena> {
       .insert_job_attr(key, JobAttr::readonly(value))
       .unwrap();
   }
+
+  pub(crate) fn insert_doc_attr(
+    &mut self,
+    key: &str,
+    value: impl Into<AttrValue>,
+  ) -> std::result::Result<(), String> {
+    self.document.meta.insert_doc_attr(key, value)
+  }
 }

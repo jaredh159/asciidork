@@ -10,7 +10,7 @@ SyntaxHighlighter.registerLanguage('html', xml);
 
 declare global {
   interface Window {
-    convert?: (adoc: string) => string;
+    convert?: (adoc: string, timestamp: number) => string;
   }
 }
 
@@ -27,7 +27,7 @@ const App: React.FC = () => {
     async function inner() {
       if (!window.convert) return;
       console.time(`converted in`);
-      const result = window.convert(adoc);
+      const result = window.convert(adoc, Math.floor(Date.now() / 1000));
       console.timeEnd(`converted in`);
       const parsed: ParsedResult = JSON.parse(result);
       if (parsed.success) {

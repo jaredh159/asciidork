@@ -244,8 +244,6 @@ lazy_static::lazy_static! {
       "doc",
       "docdir",
       "docfile",
-      "docdate",
-      "docdatetime",
       "docfilesuffix",
       "docname",
     ])

@@ -6,10 +6,11 @@ use asciidork_parser::{parser::ParseResult, prelude::*};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn convert(adoc: &str) -> String {
+pub fn convert(adoc: &str, timestamp: f64) -> String {
   let bump = &Bump::new();
   let mut parser = Parser::from_str(adoc, SourceFile::Tmp, bump);
   parser.apply_job_settings(JobSettings::embedded());
+  parser.provide_timestamps(timestamp as u64, None, None);
   let result = parser.parse();
   match result {
     Ok(ParseResult { document, .. }) => {
