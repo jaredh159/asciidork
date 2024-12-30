@@ -53,7 +53,7 @@ impl<'arena> Parser<'arena> {
     while tokens.current().is_whitespaceish() {
       let trimmed = tokens.consume_current().unwrap();
       start = trimmed.loc.end;
-      if trimmed.is(TokenKind::Newline) {
+      if trimmed.kind(TokenKind::Newline) {
         trimmed_newline = true;
         ctx.counting_cols = false;
       }
@@ -76,7 +76,7 @@ impl<'arena> Parser<'arena> {
     if ctx.header_row.is_unknown()
       && maybe_cell.is_some()
       && ctx.dsv_last_consumed == DsvLastConsumed::Newline
-      && tokens.current().is(TokenKind::Newline)
+      && tokens.current().kind(TokenKind::Newline)
     {
       ctx.header_row = HeaderRow::FoundImplicit;
     }
@@ -102,11 +102,11 @@ impl<'arena> Parser<'arena> {
       let token = tokens
         .consume_splitting(ctx.embeddable_cell_separator)
         .unwrap();
-      if token.is(TokenKind::Newline) {
+      if token.kind(TokenKind::Newline) {
         ctx.counting_cols = false
       }
       end = token.loc.end;
-      if !token.is(TokenKind::Backslash) {
+      if !token.kind(TokenKind::Backslash) {
         cell_tokens.push(token);
       } else if let Some(next) = tokens.consume_current() {
         end = next.loc.end;
@@ -120,7 +120,7 @@ impl<'arena> Parser<'arena> {
     tokens: &mut TableTokens,
     ctx: &mut TableContext,
   ) -> bool {
-    if tokens.current().is(TokenKind::Newline) {
+    if tokens.current().kind(TokenKind::Newline) {
       ctx.dsv_last_consumed = DsvLastConsumed::Newline;
       ctx.counting_cols = false;
       tokens.consume_current();
@@ -129,7 +129,7 @@ impl<'arena> Parser<'arena> {
 
     ctx.dsv_last_consumed = DsvLastConsumed::Other;
     if let Some(tokenkind) = ctx.cell_separator_tokenkind {
-      return if tokens.current().is(tokenkind) {
+      return if tokens.current().kind(tokenkind) {
         ctx.dsv_last_consumed = DsvLastConsumed::Delimiter;
         tokens.consume_current();
         true

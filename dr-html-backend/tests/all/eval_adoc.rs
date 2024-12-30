@@ -36,6 +36,12 @@ assert_inline_html!(multichar_whitespace, "foo   bar", r#"foo bar"#);
 assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 
 assert_inline_html!(
+  char_replacments_symbols,
+  "(C)(TM)(R)...->=><-<=",
+  r#"&#169;&#8482;&#174;&#8230;&#8203;&#8594;&#8658;&#8592;&#8656;"#
+);
+
+assert_inline_html!(
   minus_subs,
   "[subs=-specialchars]\nfoo & _bar_",
   r#"foo & <em>bar</em>"#
@@ -45,6 +51,12 @@ assert_inline_html!(
   special_chars,
   "foo <bar> & lol",
   r#"foo &lt;bar&gt; &amp; lol"#
+);
+
+assert_inline_html!(
+  replaces_punctionation,
+  "John's Hideout is the Whites`' place... foo\\'bar",
+  r#"John&#8217;s Hideout is the Whites&#8217; place&#8230;&#8203; foo'bar"#
 );
 
 assert_inline_html!(

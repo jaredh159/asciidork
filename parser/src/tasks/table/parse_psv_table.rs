@@ -21,7 +21,7 @@ impl<'arena> Parser<'arena> {
         break;
       }
     }
-    while tokens.current().is(TokenKind::Newline) {
+    while tokens.current().kind(TokenKind::Newline) {
       tokens.consume_current();
     }
 
@@ -98,7 +98,7 @@ impl<'arena> Parser<'arena> {
     let mut cell_tokens = Line::empty(self.bump);
 
     // trim leading whitespace
-    while tokens.current().is(TokenKind::Whitespace) {
+    while tokens.current().kind(TokenKind::Whitespace) {
       let trimmed = tokens.consume_current().unwrap();
       start = trimmed.loc.end;
     }
@@ -111,7 +111,7 @@ impl<'arena> Parser<'arena> {
         return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
       };
 
-      if ctx.counting_cols && token.is(TokenKind::Newline) {
+      if ctx.counting_cols && token.kind(TokenKind::Newline) {
         // once we've seen one newline, we finish the current cell (even if
         // it continues multiple lines) but we're done counting newlines
         // doesn't exactly match asciidoctor docs, but matches behavior
@@ -119,7 +119,7 @@ impl<'arena> Parser<'arena> {
       }
 
       end = token.loc.end;
-      if !token.is(TokenKind::Backslash) {
+      if !token.kind(TokenKind::Backslash) {
         cell_tokens.push(token);
       } else if let Some(next) = tokens.consume_current() {
         end = next.loc.end;

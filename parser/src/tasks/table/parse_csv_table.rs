@@ -14,7 +14,7 @@ impl<'arena> Parser<'arena> {
     let mut end = start;
 
     let mut quote = {
-      if tokens.current().is(TokenKind::DoubleQuote) {
+      if tokens.current().kind(TokenKind::DoubleQuote) {
         let quote = tokens.consume_current().unwrap();
         start = quote.loc.end;
         while tokens.current().is_whitespaceish() {
@@ -42,7 +42,7 @@ impl<'arena> Parser<'arena> {
         .consume_splitting(ctx.embeddable_cell_separator)
         .unwrap();
 
-      if token.is(Newline) {
+      if token.kind(Newline) {
         ctx.counting_cols = false
       }
 
@@ -54,10 +54,10 @@ impl<'arena> Parser<'arena> {
             token.loc,
           )?;
         }
-        DoubleQuote if quote.is_some() && tokens.current().is_not(DoubleQuote) => {
+        DoubleQuote if quote.is_some() && tokens.current().not_kind(DoubleQuote) => {
           quote = None;
         }
-        DoubleQuote if quote.is_some() && tokens.current().is(DoubleQuote) => {
+        DoubleQuote if quote.is_some() && tokens.current().kind(DoubleQuote) => {
           cell_tokens.push(tokens.consume_current().unwrap());
         }
         _ => {

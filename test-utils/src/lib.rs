@@ -441,22 +441,39 @@ macro_rules! test_inlines_loose {
   ($name:ident, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
-      let mut settings = ::asciidork_core::JobSettings::embedded();
-      settings.strict = false;
-      let mut parser = test_parser!($input);
-      parser.apply_job_settings(settings);
-      let content = parser.parse().unwrap().document.content;
-      let blocks = content.blocks().expect("expected blocks").clone();
-      if blocks.len() != 1 {
-        panic!("expected one block, found {}", blocks.len());
-      }
-      let inlines = match blocks[0].clone().content {
-        BlockContent::Simple(nodes) => nodes,
-        _ => panic!("expected simple block content"),
-      };
+      let inlines = parse_inlines!($input, strict: false);
       expect_eq!(inlines, $expected, from: $input);
     }
   };
+}
+
+#[macro_export]
+macro_rules! parse_inlines {
+  ($input:expr) => {
+    parse_inlines!($input, settings: None)
+  };
+  ($input:expr, strict: false) => {
+    parse_inlines!($input, settings: Some({
+      let mut settings = ::asciidork_core::JobSettings::embedded();
+      settings.strict = false;
+      settings
+    }))
+  };
+  ($input:expr, settings: $settings:expr) => {{
+    let mut parser = test_parser!($input);
+    if let Some(settings) = $settings {
+      parser.apply_job_settings(settings);
+    }
+    let content = parser.parse().unwrap().document.content;
+    let blocks = content.blocks().expect("expected blocks").clone();
+    if blocks.len() != 1 {
+      panic!("expected one block, found {}", blocks.len());
+    }
+    match blocks[0].clone().content {
+      BlockContent::Simple(nodes) => nodes,
+      _ => panic!("expected simple block content"),
+    }
+  }};
 }
 
 #[macro_export]

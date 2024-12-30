@@ -38,8 +38,6 @@
 - [ ] asciidoctor html backend _stylesheets,_ @see
       https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
       `html5.rb`
-- [ ] char replacement substitutions:
-      https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 - [ ] all attribute refs, see
       https://docs.asciidoctor.org/asciidoc/latest/document/revision-line/ bottom
       `{docdate}` example, see also
@@ -50,6 +48,14 @@
 - [ ] doctype=book, special rules
 - [ ] asciidoctor seems to resolve attr refs case-insensitive, grep `ifdef::showScript[]`
       (is it only for ifdef?) - not sure i want to replicate this, seems undocumented...
+
+## design philosophy
+
+- push complexity into the lexer, w/ more tokens, we can always ignore token types later
+  based on substitutions
+- try to keep things single-pass as much as possible, even if semantically the language
+  describes things as having multiple ordered passes
+- use regex as a last resort
 
 ## questions
 

@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use Inline::Symbol;
 
 use crate::internal::*;
 use crate::variants::token::*;
@@ -43,6 +44,32 @@ impl<'arena> Accum<'arena> {
     self.text.loc = loc.clamp_end();
   }
 
+  pub fn push_emdash(&mut self, token: Token, next_token: Option<&mut Token>) {
+    let last_char = self.text.str().chars().next_back();
+    let next_char = next_token.as_ref().and_then(|t| t.lexeme.chars().next());
+    match (last_char, next_char) {
+      (Some(c), Some(n)) if is_word_char(c) && is_word_char(n) => {
+        self.push_node(Symbol(SymbolKind::EmDash), token.loc);
+      }
+      (None, None) => self.push_text_token(&token),
+      (None | Some(' '), None | Some(' ')) => {
+        let mut loc = token.loc;
+        if last_char.is_some() {
+          loc.start -= 1;
+          self.text.drop_last(1);
+        }
+        self.push_node(Symbol(SymbolKind::SpacedEmDash), loc.incr_end());
+        if let Some(next_token) = next_token {
+          next_token.drop_leading_bytes(1);
+        }
+      }
+      _ => {
+        dbg!(last_char, next_char);
+        self.push_text_token(&token);
+      }
+    }
+  }
+
   pub fn pop_node(&mut self) {
     self.inlines.pop();
   }
@@ -67,6 +94,18 @@ impl<'arena> Accum<'arena> {
       self.trimmed_inlines()
     } else {
       self.inlines
+    }
+  }
+
+  #[inline(always)]
+  pub fn push_text_token(&mut self, token: &Token) {
+    if self.text.loc.end == token.loc.start {
+      self.text.push_token(token);
+    } else {
+      // happens when ifdefs cause lines to be skipped
+      self.text.commit_inlines(&mut self.inlines);
+      self.text.push_token(token);
+      self.text.loc = token.loc;
     }
   }
 }
@@ -113,7 +152,7 @@ pub fn starts_constrained(
   lines: &mut ContiguousLines,
 ) -> bool {
   debug_assert!(!stop_tokens.is_empty());
-  token.is(stop_tokens.last().unwrap().token_kind())
+  token.kind(stop_tokens.last().unwrap().token_kind())
     && (line.terminates_constrained(stop_tokens) || lines.terminates_constrained(stop_tokens))
 }
 
@@ -124,7 +163,7 @@ pub fn starts_unconstrained(
   lines: &ContiguousLines,
 ) -> bool {
   debug_assert!(!stop_tokens.is_empty());
-  token.is(stop_tokens[0].token_kind())
+  token.kind(stop_tokens[0].token_kind())
     && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind()))
     && contains_seq(stop_tokens, line, lines)
 }
@@ -151,6 +190,10 @@ pub fn finish_macro<'arena>(
     loc.extend(line_end);
     text.loc = loc.clamp_end();
   }
+}
+
+fn is_word_char(c: char) -> bool {
+  c.is_alphanumeric() || c == '_'
 }
 
 lazy_static! {

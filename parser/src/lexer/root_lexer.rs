@@ -337,7 +337,8 @@ mod tests {
           (Bang, "!"),
           (Dashes, "--"),
           (Digits, "1"),
-          (Word, "x--"),
+          (Word, "x"),
+          (Dashes, "--"),
           (GreaterThan, ">"),
         ],
       ),
@@ -509,11 +510,17 @@ mod tests {
           (Colon, ":"),
           (Newline, "\n"),
           (Colon, ":"),
-          (Word, "url-repo"),
+          (Word, "url"),
+          (Dashes, "-"),
+          (Word, "repo"),
           (Colon, ":"),
           (Whitespace, " "),
           (UriScheme, "https://"),
-          (Word, "my-git-repo"),
+          (Word, "my"),
+          (Dashes, "-"),
+          (Word, "git"),
+          (Dashes, "-"),
+          (Word, "repo"),
           (Dots, "."),
           (Word, "com"),
           (Newline, "\n"),
@@ -533,6 +540,27 @@ mod tests {
       ),
     ];
     assert_token_cases!(cases);
+  }
+
+  #[test]
+  fn test_entity_tokens() {
+    assert_token_cases!([
+      ("&amp;", vec![(Entity, "&amp;")]),
+      ("&sect;", vec![(Entity, "&sect;")]),
+      (
+        "&CounterClockwiseContourIntegral;",
+        vec![(Entity, "&CounterClockwiseContourIntegral;")]
+      ),
+      ("&#169;", vec![(Entity, "&#169;")]),
+      ("&#10004;", vec![(Entity, "&#10004;")]),
+      ("&#128512;", vec![(Entity, "&#128512;")]),
+      ("&#x2022;", vec![(Entity, "&#x2022;")]),
+      ("&#x1f600;", vec![(Entity, "&#x1f600;")]),
+    ]);
+    refute_produces_token!(
+      Entity,
+      ["&a;", "&foo", "&#;", "&#x;", "&#XFFF;", "&#x05T;", "&sect 1;"]
+    );
   }
 
   #[test]
@@ -599,7 +627,9 @@ mod tests {
         "include::not-include []",
         vec![
           (Directive, "include::"),
-          (Word, "not-include"),
+          (Word, "not"),
+          (Dashes, "-"),
+          (Word, "include"),
           (Whitespace, " "),
           (OpenBracket, "["),
           (CloseBracket, "]")

@@ -405,6 +405,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       nodes.iter().for_each(|n| eval_inline(n, ctx, backend));
       backend.exit_text_span(attrs, nodes);
     }
+    Symbol(kind) => backend.visit_symbol(*kind),
     LineComment(_) | Discarded => {}
     _ => {
       println!("\nUnhandled inline node type:");

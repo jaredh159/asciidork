@@ -59,7 +59,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'=') => Some(self.repeating(b'=', EqualSigns)),
       Some(b'-') => Some(self.repeating(b'-', Dashes)),
       Some(b' ' | b'\t') => Some(self.whitespace()),
-      Some(b'&') => Some(self.single(Ampersand)),
+      Some(b'&') => Some(self.maybe_entity()),
       Some(b'\n') => Some(self.single(Newline)),
       Some(b'<') => Some(self.maybe_callout_number()),
       Some(b'>') => Some(self.single(GreaterThan)),
@@ -81,7 +81,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'%') => Some(self.single(Percent)),
       Some(b'"') => Some(self.single(DoubleQuote)),
       Some(b'(') => Some(self.repeating(b'(', OpenParens)),
-      Some(b')') => Some(self.repeating(b'(', CloseParens)),
+      Some(b')') => Some(self.repeating(b')', CloseParens)),
       Some(b'|') => Some(self.single(Pipe)),
       Some(b'\'') => Some(self.single(SingleQuote)),
       Some(b'\\') => Some(self.single(Backslash)),
@@ -403,7 +403,7 @@ impl<'arena> SourceLexer<'arena> {
         Some(
           b' ' | b'\t' | b'\n' | b':' | b';' | b'<' | b'>' | b',' | b'^' | b'_' | b'~' | b'*'
           | b'!' | b'?' | b'`' | b'+' | b'.' | b'[' | b']' | b'{' | b'}' | b'(' | b')' | b'='
-          | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&',
+          | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&' | b'-',
         ) => break,
         None => break,
         _ => {
@@ -541,6 +541,36 @@ impl<'arena> SourceLexer<'arena> {
       _ => {}
     }
     self.single(LessThan)
+  }
+
+  fn maybe_entity(&mut self) -> Token<'arena> {
+    match self.peek() {
+      Some(b'#') if self.peek_n(1).map_or(false, |b| b.is_ascii_digit()) => {
+        self.finish_entity(1, |byte| byte.is_ascii_digit())
+      }
+      Some(b'#') if self.peek_n(1) == Some(b'x') => {
+        self.finish_entity(2, |byte| byte.is_ascii_hexdigit())
+      }
+      Some(byte) if byte.is_ascii_alphabetic() => {
+        self.finish_entity(1, |byte| byte.is_ascii_alphanumeric())
+      }
+      _ => self.single(Ampersand),
+    }
+  }
+
+  fn finish_entity(&mut self, initial_pos: usize, f: impl Fn(u8) -> bool) -> Token<'arena> {
+    let start = self.pos - 1;
+    let mut pos = initial_pos;
+    loop {
+      if self.peek_n(pos).map_or(false, &f) {
+        pos += 1;
+      } else if initial_pos < pos && self.peek_n(pos) == Some(b';') {
+        self.pos += pos as u32 + 1;
+        return self.token(Entity, start, self.pos);
+      } else {
+        return self.single(Ampersand);
+      }
+    }
   }
 
   fn remaining_len(&self) -> u32 {

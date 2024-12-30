@@ -73,6 +73,51 @@ impl<'arena> Parser<'arena> {
         }
 
         match token.kind {
+          OpenParens
+            if subs.char_replacement()
+              && token.is_len(1)
+              && line.starts_with_seq(&[Kind(Word), Len(1, CloseParens)]) =>
+          {
+            match line.current_token().unwrap().lexeme.as_ref() {
+              "C" | "TM" | "R" => {
+                let symbol = line.consume_current().unwrap();
+                line.discard_assert(CloseParens);
+                acc.push_node(
+                  Symbol(match symbol.lexeme.as_ref() {
+                    "C" => SymbolKind::Copyright,
+                    "TM" => SymbolKind::Trademark,
+                    _ => SymbolKind::Registered,
+                  }),
+                  symbol.loc.decr_start().incr_end(),
+                );
+              }
+              _ => acc.push_text_token(&token),
+            }
+          }
+          Dashes if subs.char_replacement() && token.is_len(2) => {
+            acc.push_emdash(token, line.current_token_mut());
+          }
+          Dots if subs.char_replacement() && token.is_len(3) => {
+            acc.push_node(Symbol(SymbolKind::Ellipsis), token.loc);
+          }
+          Dashes if token.is_len(1) && subs.char_replacement() && line.current_is(GreaterThan) => {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::SingleRightArrow), token.loc.incr_end());
+          }
+          EqualSigns
+            if token.is_len(1) && subs.char_replacement() && line.current_is(GreaterThan) =>
+          {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::DoubleRightArrow), token.loc.incr_end());
+          }
+          LessThan if subs.char_replacement() && line.current_is_len(Dashes, 1) => {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::SingleLeftArrow), token.loc.incr_end());
+          }
+          LessThan if subs.char_replacement() && line.current_is_len(EqualSigns, 1) => {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::DoubleLeftArrow), token.loc.incr_end());
+          }
           MacroName if subs.macros() && line.continues_inline_macro() => {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
@@ -138,9 +183,9 @@ impl<'arena> Parser<'arena> {
               "link:" => {
                 if !line.no_whitespace_until(OpenBracket) {
                   // turns out we didn't have a valid uri target here
-                  acc.text.push_token(&token);
+                  acc.push_text_token(&token);
                   let next_token = line.consume_current().unwrap();
-                  acc.text.push_token(&next_token);
+                  acc.push_text_token(&next_token);
                 } else {
                   let target = self
                     .macro_target_from_passthru(&mut line)
@@ -221,9 +266,9 @@ impl<'arena> Parser<'arena> {
           MacroName
             if subs.macros() && line.current_is(UriScheme) && token.lexeme.as_str() == "link:" =>
           {
-            acc.text.push_token(&token);
+            acc.push_text_token(&token);
             let next_token = line.consume_current().unwrap();
-            acc.text.push_token(&next_token);
+            acc.push_text_token(&next_token);
           }
 
           UriScheme if subs.macros() && line.continues_inline_macro() => {
@@ -241,7 +286,7 @@ impl<'arena> Parser<'arena> {
                 break;
               }
             }
-            acc.text.push_token(&token);
+            acc.push_text_token(&token);
           }
 
           // if we're in a table cell, and we have a blank attr ref
@@ -256,7 +301,7 @@ impl<'arena> Parser<'arena> {
 
           TermDelimiter
             if subs.callouts()
-              && token.len() == 2
+              && token.is_len(2)
               && line.current_is(Whitespace)
               && token.lexeme == ";;" // this is a happy accident
               && line.continues_valid_callout_nums() =>
@@ -274,7 +319,7 @@ impl<'arena> Parser<'arena> {
 
           ForwardSlashes
             if subs.callouts()
-              && token.len() == 2
+              && token.is_len(2)
               && line.current_is(Whitespace)
               && line.continues_valid_callout_nums() =>
           {
@@ -325,7 +370,7 @@ impl<'arena> Parser<'arena> {
 
           LessThan
             if subs.macros()
-              && line.current_token().is(UriScheme)
+              && line.current_token().kind(UriScheme)
               && line.no_whitespace_until(GreaterThan) =>
           {
             acc.push_node(Discarded, token.loc);
@@ -341,7 +386,7 @@ impl<'arena> Parser<'arena> {
               } else {
                 acc.push_node(Text(token.lexeme), token.loc);
               }
-              acc.text.push_token(&scheme_token);
+              acc.push_text_token(&scheme_token);
             } else {
               finish_macro(&line, &mut loc, line_end, &mut acc.text);
               let scheme = Some(scheme_token.to_url_scheme().unwrap());
@@ -431,7 +476,7 @@ impl<'arena> Parser<'arena> {
 
           OpenBracket
             if line.current_is(OpenBracket)
-              && !line.peek_token().is(CloseBracket)
+              && !line.peek_token().kind(CloseBracket)
               && line.contains_seq(&[Kind(CloseBracket), Kind(CloseBracket)]) =>
           {
             let bracket = line.consume_current().unwrap(); // second `[`
@@ -446,8 +491,8 @@ impl<'arena> Parser<'arena> {
               );
               acc.push_node(InlineAnchor(id.src), loc);
             } else {
-              acc.text.push_token(&bracket);
-              acc.text.push_token(&token);
+              acc.push_text_token(&bracket);
+              acc.push_text_token(&token);
             }
           }
 
@@ -575,7 +620,7 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
-          Plus if token.len() == 3 && contains_len(Plus, 3, &line, lines) => {
+          Plus if token.is_len(3) && contains_len(Plus, 3, &line, lines) => {
             self.ctx.subs = Substitutions::none();
             self.parse_node(
               InlinePassthru,
@@ -591,7 +636,7 @@ impl<'arena> Parser<'arena> {
 
           Plus
             if subs.inline_formatting()
-              && token.len() == 2
+              && token.is_len(2)
               && starts_unconstrained(&[Len(2, Plus)], &token, &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
@@ -626,7 +671,7 @@ impl<'arena> Parser<'arena> {
 
           // already encoded entities, eg: &#8212;
           Ampersand if line.starts_with_seq(&[Kind(Hash), Kind(Digits), Kind(SemiColon)]) => {
-            acc.text.push_token(&token);
+            acc.push_text_token(&token);
           }
 
           Ampersand | LessThan | GreaterThan if subs.special_chars() => {
@@ -643,7 +688,7 @@ impl<'arena> Parser<'arena> {
 
           SingleQuote if line.current_is(Word) && subs.inline_formatting() => {
             if acc.text.is_empty() || acc.text.ends_with(char::is_whitespace) {
-              acc.text.push_token(&token);
+              acc.push_text_token(&token);
             } else {
               acc.push_node(CurlyQuote(LegacyImplicitApostrophe), token.loc);
             }
@@ -669,15 +714,15 @@ impl<'arena> Parser<'arena> {
             acc.push_node(Discarded, token.loc);
             // pushing the next token as text prevents recognizing the pattern
             let next_token = line.consume_current().unwrap();
-            acc.text.push_token(&next_token);
+            acc.push_text_token(&next_token);
           }
 
-          _ if subs.macros() && token.is(UriScheme) => {
+          _ if subs.macros() && token.kind(UriScheme) => {
             let mut loc = token.loc;
             let line_end = line.last_location().unwrap();
             let target = line.consume_url(Some(&token), None, self.bump);
             if target.src == token.lexeme {
-              acc.text.push_token(&token);
+              acc.push_text_token(&token);
             } else {
               finish_macro(&line, &mut loc, line_end, &mut acc.text);
               let scheme = Some(token.to_url_scheme().unwrap());
@@ -699,16 +744,7 @@ impl<'arena> Parser<'arena> {
             acc.push_node(InlinePassthru(content), token.loc);
           }
 
-          _ => {
-            if acc.text.loc.end == token.loc.start {
-              acc.text.push_token(&token);
-            } else {
-              // happens when ifdefs cause lines to be skipped
-              acc.text.commit_inlines(&mut acc.inlines);
-              acc.text.push_token(&token);
-              acc.text.loc = token.loc;
-            }
-          }
+          _ => acc.push_text_token(&token),
         }
       }
     }
@@ -909,642 +945,11 @@ mod tests {
   use test_utils::*;
 
   #[test]
-  fn test_inline_passthrus() {
-    let cases = vec![
-      (
-        "+_foo_&+ bar",
-        nodes![
-          node!(
-            InlinePassthru(nodes![
-              node!("_foo_"; 1..6),
-              node!(SpecialChar(SpecialCharKind::Ampersand), 6..7),
-            ]),
-            0..8,
-          ),
-          node!(" bar"; 8..12),
-        ],
-      ),
-      (
-        "baz ++_foo_&++ bar",
-        nodes![
-          node!("baz "; 0..4),
-          node!(
-            InlinePassthru(nodes![
-              node!("_foo_"; 6..11),
-              node!(SpecialChar(SpecialCharKind::Ampersand), 11..12),
-            ]),
-            4..14,
-          ),
-          node!(" bar"; 14..18),
-        ],
-      ),
-      (
-        "baz +++_foo_&+++ bar", // no specialchars subs on +++
-        nodes![
-          node!("baz "; 0..4),
-          node!(InlinePassthru(nodes![node!("_foo_&"; 7..13)]), 4..16,),
-          node!(" bar"; 16..20),
-        ],
-      ),
-      (
-        "+foo+ bar +baz+", // two passthrus on one line
-        nodes![
-          node!(InlinePassthru(just!("foo", 1..4)), 0..5),
-          node!(" bar "; 5..10),
-          node!(InlinePassthru(just!("baz", 11..14)), 10..15),
-        ],
-      ),
-      (
-        "+foo+bar", // single plus = not unconstrained, not a passthrough
-        just!("+foo+bar", 0..8),
-      ),
-      (
-        "+foo\nbar+ baz", // multi-line
-        nodes![
-          node!(
-            InlinePassthru(nodes![
-              node!("foo"; 1..4),
-              node!(Inline::Newline, 4..5),
-              node!("bar"; 5..8),
-            ]),
-            0..9
-          ),
-          node!(" baz"; 9..13),
-        ],
-      ),
-      (
-        "+foo\nbar+baz", // multi-line constrained can't terminate within word
-        nodes![
-          // no InlinePassthrough
-          node!("+foo"; 0..4),
-          node!(Inline::Newline, 4..5),
-          node!("bar+baz"; 5..12),
-        ],
-      ),
-      (
-        "++foo\nbar++", // multi-line unconstrained
-        nodes![node!(
-          InlinePassthru(nodes![
-            node!("foo"; 2..5),
-            node!(Inline::Newline, 5..6),
-            node!("bar"; 6..9),
-          ]),
-          0..11
-        )],
-      ),
-      (
-        "pass:[_foo_]",
-        nodes![node!(InlinePassthru(just!("_foo_", 6..11)), 0..12)],
-      ),
-      (
-        "pass:q[_foo_] bar", // subs=quotes
-        nodes![
-          node!(
-            InlinePassthru(nodes![node!(Italic(just!("foo", 8..11)), 7..12)]),
-            0..13
-          ),
-          node!(" bar"; 13..17),
-        ],
-      ),
-      (
-        "pass:a,c[_foo_\nbar]",
-        nodes![node!(
-          InlinePassthru(nodes![
-            node!("_foo_"; 9..14),
-            node!(Inline::Newline, 14..15),
-            node!("bar"; 15..18),
-          ]),
-          0..19
-        )],
-      ),
-    ];
-
-    run(cases);
-  }
-
-  #[test]
-  fn test_line_comments() {
-    let cases = vec![(
-      "foo\n// baz\nbar",
-      nodes![
-        node!("foo"; 0..3),
-        node!(Inline::Newline, 3..4),
-        node!(LineComment(bstr!(" baz")), 4..11),
-        node!("bar"; 11..14),
-      ],
-    )];
-    run(cases);
-  }
-
-  #[test]
-  fn test_joining_newlines() {
-    let cases = vec![
-      ("{foo}", just!("{foo}", 0..5)),
-      (
-        "\\{foo}",
-        nodes![node!(Discarded, 0..1), node!("{foo}"; 1..6)],
-      ),
-      ("{attribute-missing}", just!("skip", 0..19)),
-      (
-        "\\{attribute-missing}",
-        nodes![node!(Discarded, 0..1), node!("{attribute-missing}"; 1..20)],
-      ),
-      (
-        "_foo_\nbar",
-        nodes![
-          node!(Italic(nodes![node!("foo"; 1..4)]), 0..5),
-          node!(Inline::Newline, 5..6),
-          node!("bar"; 6..9),
-        ],
-      ),
-      (
-        "__foo__\nbar",
-        nodes![
-          node!(Italic(nodes![node!("foo"; 2..5)]), 0..7),
-          node!(Inline::Newline, 7..8),
-          node!("bar"; 8..11),
-        ],
-      ),
-      (
-        "foo \"`bar`\"\nbaz",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Quote(QuoteKind::Double, nodes![node!("bar"; 6..9)]), 4..11),
-          node!(Inline::Newline, 11..12),
-          node!("baz"; 12..15),
-        ],
-      ),
-      (
-        "\"`foo\nbar`\"\nbaz",
-        nodes![
-          node!(
-            Quote(
-              QuoteKind::Double,
-              nodes![
-                node!("foo"; 2..5),
-                node!(Inline::Newline, 5..6),
-                node!("bar"; 6..9),
-              ],
-            ),
-            0..11,
-          ),
-          node!(Inline::Newline, 11..12),
-          node!("baz"; 12..15),
-        ],
-      ),
-      (
-        "bar`\"\nbaz",
-        nodes![
-          node!("bar"; 0..3),
-          node!(CurlyQuote(RightDouble), 3..5),
-          node!(Inline::Newline, 5..6),
-          node!("baz"; 6..9),
-        ],
-      ),
-      (
-        "^foo^\nbar",
-        nodes![
-          node!(Superscript(nodes![node!("foo"; 1..4)]), 0..5),
-          node!(Inline::Newline, 5..6),
-          node!("bar"; 6..9),
-        ],
-      ),
-      (
-        "~foo~\nbar",
-        nodes![
-          node!(Subscript(nodes![node!("foo"; 1..4)]), 0..5),
-          node!(Inline::Newline, 5..6),
-          node!("bar"; 6..9),
-        ],
-      ),
-      (
-        "`+{name}+`\nbar",
-        nodes![
-          node!(LitMono(src!("{name}", 2..8)), 0..10),
-          node!(Inline::Newline, 10..11),
-          node!("bar"; 11..14),
-        ],
-      ),
-      (
-        "+_foo_+\nbar",
-        nodes![
-          node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7,),
-          node!(Inline::Newline, 7..8),
-          node!("bar"; 8..11),
-        ],
-      ),
-      (
-        "+++_<foo>&_+++\nbar",
-        nodes![
-          node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
-          node!(Inline::Newline, 14..15),
-          node!("bar"; 15..18),
-        ],
-      ),
-    ];
-
-    run(cases);
-  }
-
-  #[test]
-  fn test_line_breaks() {
-    let cases = vec![
-      (
-        "foo +\nbar",
-        nodes![
-          node!("foo"; 0..3),
-          node!(LineBreak, 3..6),
-          node!("bar"; 6..9),
-        ],
-      ),
-      (
-        "foo+\nbar", // not valid linebreak
-        nodes![
-          node!("foo+"; 0..4),
-          node!(Inline::Newline, 4..5),
-          node!("bar"; 5..8),
-        ],
-      ),
-    ];
-
-    run(cases);
-  }
-
-  #[test]
-  fn test_inline_anchors() {
-    run(vec![
-      (
-        "[[foo]]bar",
-        nodes![node!(InlineAnchor(bstr!("foo")), 0..7), node!("bar"; 7..10),],
-      ),
-      (
-        "bar[[foo]]",
-        nodes![node!("bar"; 0..3), node!(InlineAnchor(bstr!("foo")), 3..10),],
-      ),
-    ]);
-  }
-
-  #[test]
-  fn test_parse_inlines() {
-    let cases = vec![
-      (
-        "+_foo_+",
-        nodes![node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7,)],
-      ),
-      (
-        "+_{foo}_+",
-        nodes![node!(InlinePassthru(nodes![node!("_{foo}_"; 1..8)]), 0..9,)],
-      ),
-      (
-        "+_{attribute-missing}_+",
-        nodes![node!(
-          InlinePassthru(nodes![node!("_{attribute-missing}_"; 1..22)]),
-          0..23,
-        )],
-      ),
-      (
-        "`*_foo_*`",
-        nodes![node!(
-          Mono(nodes![node!(
-            Bold(nodes![node!(Italic(nodes![node!("foo"; 3..6)]), 2..7)]),
-            1..8,
-          )]),
-          0..9,
-        )],
-      ),
-      (
-        "+_foo\nbar_+",
-        // not sure if this is "spec", but it's what asciidoctor currently does
-        nodes![node!(
-          InlinePassthru(nodes![
-            node!("_foo"; 1..5),
-            node!(Inline::Newline, 5..6),
-            node!("bar_"; 6..10),
-          ]),
-          0..11,
-        )],
-      ),
-      (
-        "+_<foo>&_+",
-        nodes![node!(
-          InlinePassthru(nodes![
-            node!("_"; 1..2),
-            node!(SpecialChar(SpecialCharKind::LessThan), 2..3),
-            node!("foo"; 3..6),
-            node!(SpecialChar(SpecialCharKind::GreaterThan), 6..7),
-            node!(SpecialChar(SpecialCharKind::Ampersand), 7..8),
-            node!("_"; 8..9),
-          ]),
-          0..10,
-        )],
-      ),
-      (
-        "rofl +_foo_+ lol",
-        nodes![
-          node!("rofl "; 0..5),
-          node!(InlinePassthru(nodes![node!("_foo_"; 6..11)]), 5..12,),
-          node!(" lol"; 12..16),
-        ],
-      ),
-      (
-        "++_foo_++bar",
-        nodes![
-          node!(InlinePassthru(nodes![node!("_foo_"; 2..7)]), 0..9,),
-          node!("bar"; 9..12),
-        ],
-      ),
-      (
-        "+++_<foo>&_+++ bar",
-        nodes![
-          node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
-          node!(" bar"; 14..18),
-        ],
-      ),
-      (
-        "foo #bar#",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Highlight(nodes![node!("bar"; 5..8)]), 4..9),
-        ],
-      ),
-      (
-        "foo ##bar##baz",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Highlight(nodes![node!("bar"; 6..9)]), 4..11),
-          node!("baz"; 11..14),
-        ],
-      ),
-      (
-        "image::foo.png[]", // unexpected block macro, parse as text
-        nodes![node!("image::foo.png[]"; 0..16)],
-      ),
-      (
-        "foo `bar`",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Mono(nodes![node!("bar"; 5..8)]), 4..9),
-        ],
-      ),
-      (
-        "foo b``ar``",
-        nodes![
-          node!("foo b"; 0..5),
-          node!(Mono(nodes![node!("ar"; 7..9)]), 5..11),
-        ],
-      ),
-      (
-        "foo *bar*",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Bold(nodes![node!("bar"; 5..8)]), 4..9),
-        ],
-      ),
-      (
-        "foo b**ar**",
-        nodes![
-          node!("foo b"; 0..5),
-          node!(Bold(nodes![node!("ar"; 7..9)]), 5..11),
-        ],
-      ),
-      (
-        "foo ~bar~ baz",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Subscript(nodes![node!("bar"; 5..8)]), 4..9),
-          node!(" baz"; 9..13),
-        ],
-      ),
-      (
-        "foo _bar\nbaz_",
-        nodes![
-          node!("foo "; 0..4),
-          node!(
-            Italic(nodes![
-              node!("bar"; 5..8),
-              node!(Inline::Newline, 8..9),
-              node!("baz"; 9..12),
-            ]),
-            4..13,
-          ),
-        ],
-      ),
-      ("foo __bar", nodes![node!("foo __bar"; 0..9)]),
-      (
-        "foo _bar baz_",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Italic(nodes![node!("bar baz"; 5..12)]), 4..13),
-        ],
-      ),
-      (
-        "foo _bar_",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Italic(nodes![node!("bar"; 5..8)]), 4..9),
-        ],
-      ),
-      (
-        "foo b__ar__",
-        nodes![
-          node!("foo b"; 0..5),
-          node!(Italic(nodes![node!("ar"; 7..9)]), 5..11),
-        ],
-      ),
-      ("foo 'bar'", nodes![node!("foo 'bar'"; 0..9)]),
-      ("foo \"bar\"", nodes![node!("foo \"bar\""; 0..9)]),
-      (
-        "foo `\"bar\"`",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Mono(nodes![node!("\"bar\""; 5..10)]), 4..11),
-        ],
-      ),
-      (
-        "foo `'bar'`",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Mono(nodes![node!("'bar'"; 5..10)]), 4..11),
-        ],
-      ),
-      (
-        "foo \"`bar`\"",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Quote(QuoteKind::Double, nodes![node!("bar"; 6..9)]), 4..11,),
-        ],
-      ),
-      (
-        "foo \"`bar baz`\"",
-        nodes![
-          node!("foo "; 0..4),
-          node!(
-            Quote(QuoteKind::Double, nodes![node!("bar baz"; 6..13)]),
-            4..15,
-          ),
-        ],
-      ),
-      (
-        "foo \"`bar\nbaz`\"",
-        nodes![
-          node!("foo "; 0..4),
-          node!(
-            Quote(
-              QuoteKind::Double,
-              nodes![
-                node!("bar"; 6..9),
-                node!(Inline::Newline, 9..10),
-                node!("baz"; 10..13),
-              ],
-            ),
-            4..15,
-          ),
-        ],
-      ),
-      (
-        "foo '`bar`'",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Quote(QuoteKind::Single, nodes![node!("bar"; 6..9)]), 4..11,),
-        ],
-      ),
-      (
-        "Olaf's wrench",
-        nodes![
-          node!("Olaf"; 0..4),
-          node!(CurlyQuote(LegacyImplicitApostrophe), 4..5),
-          node!("s wrench"; 5..13),
-        ],
-      ),
-      (
-        "foo   bar",
-        nodes![
-          node!("foo"; 0..3),
-          node!(MultiCharWhitespace(bstr!("   ")), 3..6),
-          node!("bar"; 6..9),
-        ],
-      ),
-      (
-        "`+{name}+`",
-        nodes![node!(LitMono(src!("{name}", 2..8)), 0..10)],
-      ),
-      (
-        "`+_foo_+`",
-        nodes![node!(LitMono(src!("_foo_", 2..7)), 0..9)],
-      ),
-      (
-        "foo <bar> & lol",
-        nodes![
-          node!("foo "; 0..4),
-          node!(SpecialChar(SpecialCharKind::LessThan), 4..5),
-          node!("bar"; 5..8),
-          node!(SpecialChar(SpecialCharKind::GreaterThan), 8..9),
-          node!(" "; 9..10),
-          node!(SpecialChar(SpecialCharKind::Ampersand), 10..11),
-          node!(" lol"; 11..15),
-        ],
-      ),
-      (
-        "^bar^",
-        nodes![node!(Superscript(nodes![node!("bar"; 1..4)]), 0..5)],
-      ),
-      (
-        "^bar^",
-        nodes![node!(Superscript(nodes![node!("bar"; 1..4)]), 0..5)],
-      ),
-      ("foo ^bar", nodes![node!("foo ^bar"; 0..8)]),
-      ("foo bar^", nodes![node!("foo bar^"; 0..8)]),
-      (
-        "foo ^bar^ foo",
-        nodes![
-          node!("foo "; 0..4),
-          node!(Superscript(nodes![node!("bar"; 5..8)]), 4..9),
-          node!(" foo"; 9..13),
-        ],
-      ),
-      (
-        "doublefootnote:[ymmv _i_]bar",
-        nodes![
-          node!("double"; 0..6),
-          node!(
-            Macro(Footnote {
-              number: 1,
-              id: None,
-              text: nodes![
-                node!("ymmv "; 16..21),
-                node!(Italic(nodes![node!("i"; 22..23)]), 21..24),
-              ],
-            }),
-            6..25,
-          ),
-          node!("bar"; 25..28),
-        ],
-      ),
-      (
-        "[.role]#bar#",
-        nodes![node!(
-          TextSpan(
-            AttrList {
-              roles: vecb![src!("role", 2..6)],
-              ..attr_list!(0..7)
-            },
-            just!("bar", 8..11),
-          ),
-          0..12
-        )],
-      ),
-    ];
-
-    run(cases);
-  }
-
-  #[test]
-  fn test_button_menu_macro() {
-    let cases = vec![
-      (
-        "press the btn:[OK] button",
-        nodes![
-          node!("press the "; 0..10),
-          node!(Macro(Button(src!("OK", 15..17))), 10..18),
-          node!(" button"; 18..25),
-        ],
-      ),
-      (
-        "btn:[Open]",
-        nodes![node!(Macro(Button(src!("Open", 5..9))), 0..10)],
-      ),
-      (
-        "select menu:File[Save].",
-        nodes![
-          node!("select "; 0..7),
-          node!(
-            Macro(Menu(vecb![src!("File", 12..16), src!("Save", 17..21)])),
-            7..22,
-          ),
-          node!("."; 22..23),
-        ],
-      ),
-      (
-        "menu:View[Zoom > Reset]",
-        nodes![node!(
-          Macro(Menu(vecb![
-            src!("View", 5..9),
-            src!("Zoom", 10..14),
-            src!("Reset", 17..22),
-          ])),
-          0..23,
-        )],
-      ),
-    ];
-    run(cases);
-  }
-
-  fn run(cases: Vec<(&str, InlineNodes)>) {
-    for (input, expected) in cases {
-      let mut parser = test_parser!(input);
-      let mut block = parser.read_lines().unwrap().unwrap();
-      let inlines = parser.parse_inlines(&mut block).unwrap();
-      expect_eq!(inlines, expected, from: input);
-    }
+  fn unexpected_block_macro() {
+    let input = "image::foo.png[]";
+    let mut parser = test_parser!(input);
+    let mut block = parser.read_lines().unwrap().unwrap();
+    let inlines = parser.parse_inlines(&mut block).unwrap();
+    expect_eq!(inlines, nodes![node!("image::foo.png[]"; 0..16)], from: input);
   }
 }
