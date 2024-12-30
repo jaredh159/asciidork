@@ -30,6 +30,7 @@ pub enum TokenKind {
   Discard,
   DoubleQuote,
   Dots,
+  Entity,
   EqualSigns,
   #[default]
   Eof,
@@ -144,6 +145,9 @@ impl<'arena> Token<'arena> {
       }
     }
     self.loc.start += n;
+    if self.len() == 0 {
+      self.kind = TokenKind::Discard;
+    }
   }
 
   pub fn attr_name(&self) -> &str {
@@ -153,18 +157,19 @@ impl<'arena> Token<'arena> {
 }
 
 pub trait TokenIs {
-  fn is(&self, kind: TokenKind) -> bool;
-  fn is_len(&self, kind: TokenKind, len: usize) -> bool;
+  fn is_len(&self, len: usize) -> bool;
+  fn kind(&self, kind: TokenKind) -> bool;
+  fn is_kind_len(&self, kind: TokenKind, len: usize) -> bool;
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool;
   fn satisfies(&self, spec: TokenSpec) -> bool;
-  fn is_not(&self, kind: TokenKind) -> bool {
-    !self.is(kind)
+  fn not_kind(&self, kind: TokenKind) -> bool {
+    !self.kind(kind)
   }
-  fn is_not_len(&self, kind: TokenKind, len: usize) -> bool {
-    !self.is_len(kind, len)
+  fn is_not_kind_len(&self, kind: TokenKind, len: usize) -> bool {
+    !self.is_kind_len(kind, len)
   }
   fn is_whitespaceish(&self) -> bool {
-    self.is(TokenKind::Whitespace) || self.is(TokenKind::Newline)
+    self.kind(TokenKind::Whitespace) || self.kind(TokenKind::Newline)
   }
   fn satisfies_any(&self, specs: &[TokenSpec]) -> bool {
     specs.iter().any(|spec| self.satisfies(*spec))
@@ -182,11 +187,15 @@ impl<'arena> DefaultIn<'arena> for Token<'arena> {
 }
 
 impl TokenIs for Token<'_> {
-  fn is(&self, kind: TokenKind) -> bool {
+  fn is_len(&self, len: usize) -> bool {
+    self.len() == len
+  }
+
+  fn kind(&self, kind: TokenKind) -> bool {
     self.kind == kind
   }
 
-  fn is_len(&self, kind: TokenKind, len: usize) -> bool {
+  fn is_kind_len(&self, kind: TokenKind, len: usize) -> bool {
     self.kind == kind && self.len() == len
   }
 
@@ -204,12 +213,16 @@ impl TokenIs for Token<'_> {
 }
 
 impl TokenIs for Option<&Token<'_>> {
-  fn is(&self, kind: TokenKind) -> bool {
-    self.map_or(false, |t| t.is(kind))
+  fn is_len(&self, len: usize) -> bool {
+    self.map_or(false, |t| t.is_len(len))
   }
 
-  fn is_len(&self, kind: TokenKind, len: usize) -> bool {
-    self.map_or(false, |t| t.is_len(kind, len))
+  fn kind(&self, kind: TokenKind) -> bool {
+    self.map_or(false, |t| t.kind(kind))
+  }
+
+  fn is_kind_len(&self, kind: TokenKind, len: usize) -> bool {
+    self.map_or(false, |t| t.is_kind_len(kind, len))
   }
 
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {

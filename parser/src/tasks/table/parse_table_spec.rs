@@ -108,7 +108,7 @@ impl<'arena> Parser<'arena> {
     }
 
     // optimization: words are most common, so reject non-candidates
-    if first_token.is(Word) {
+    if first_token.kind(Word) {
       match first_byte {
         b'a' | b'd' | b'e' | b'h' | b'l' | b'm' | b's' => {}
         _ => return None,
@@ -172,7 +172,7 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) -> b
   let Some(token) = tokens.nth(*cursor as usize) else {
     return false;
   };
-  if !token.is(Word) {
+  if !token.kind(Word) {
     return false;
   }
   let Some(style) = &token.lexeme[0..1].parse().ok() else {
@@ -203,7 +203,7 @@ fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32
       *cursor += 2;
     }
   } else if tokens.has_seq_at(&[Kind(Dots), Kind(Digits), Kind(Plus)], *cursor) {
-    if !tokens.nth(*cursor as usize).is_len(Dots, 1) {
+    if !tokens.nth(*cursor as usize).is_kind_len(Dots, 1) {
       return;
     }
     if let Some(Ok(digits)) = tokens
@@ -217,7 +217,7 @@ fn parse_span_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32
     &[Kind(Digits), Kind(Dots), Kind(Digits), Kind(Plus)],
     *cursor,
   ) {
-    if !tokens.nth(*cursor as usize + 1).is_len(Dots, 1) {
+    if !tokens.nth(*cursor as usize + 1).is_kind_len(Dots, 1) {
       return;
     }
     let col = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>());
@@ -250,7 +250,7 @@ fn parse_h_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
 }
 
 fn parse_v_align(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
-  if !tokens.nth(*cursor as usize).is_len(Dots, 1) {
+  if !tokens.nth(*cursor as usize).is_kind_len(Dots, 1) {
     return;
   }
   match tokens.nth(*cursor as usize + 1).map(|t| t.kind) {

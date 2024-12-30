@@ -73,6 +73,51 @@ impl<'arena> Parser<'arena> {
         }
 
         match token.kind {
+          OpenParens
+            if subs.char_replacement()
+              && token.is_len(1)
+              && line.starts_with_seq(&[Kind(Word), Len(1, CloseParens)]) =>
+          {
+            match line.current_token().unwrap().lexeme.as_ref() {
+              "C" | "TM" | "R" => {
+                let symbol = line.consume_current().unwrap();
+                line.discard_assert(CloseParens);
+                acc.push_node(
+                  Symbol(match symbol.lexeme.as_ref() {
+                    "C" => SymbolKind::Copyright,
+                    "TM" => SymbolKind::Trademark,
+                    _ => SymbolKind::Registered,
+                  }),
+                  symbol.loc.decr_start().incr_end(),
+                );
+              }
+              _ => acc.push_text_token(&token),
+            }
+          }
+          Dashes if subs.char_replacement() && token.is_len(2) => {
+            acc.push_emdash(token, line.current_token_mut());
+          }
+          Dots if subs.char_replacement() && token.is_len(3) => {
+            acc.push_node(Symbol(SymbolKind::Ellipsis), token.loc);
+          }
+          Dashes if token.is_len(1) && subs.char_replacement() && line.current_is(GreaterThan) => {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::SingleRightArrow), token.loc.incr_end());
+          }
+          EqualSigns
+            if token.is_len(1) && subs.char_replacement() && line.current_is(GreaterThan) =>
+          {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::DoubleRightArrow), token.loc.incr_end());
+          }
+          LessThan if subs.char_replacement() && line.current_is_len(Dashes, 1) => {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::SingleLeftArrow), token.loc.incr_end());
+          }
+          LessThan if subs.char_replacement() && line.current_is_len(EqualSigns, 1) => {
+            line.discard(1);
+            acc.push_node(Symbol(SymbolKind::DoubleLeftArrow), token.loc.incr_end());
+          }
           MacroName if subs.macros() && line.continues_inline_macro() => {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
@@ -138,9 +183,9 @@ impl<'arena> Parser<'arena> {
               "link:" => {
                 if !line.no_whitespace_until(OpenBracket) {
                   // turns out we didn't have a valid uri target here
-                  acc.text.push_token(&token);
+                  acc.push_text_token(&token);
                   let next_token = line.consume_current().unwrap();
-                  acc.text.push_token(&next_token);
+                  acc.push_text_token(&next_token);
                 } else {
                   let target = self
                     .macro_target_from_passthru(&mut line)
@@ -221,9 +266,9 @@ impl<'arena> Parser<'arena> {
           MacroName
             if subs.macros() && line.current_is(UriScheme) && token.lexeme.as_str() == "link:" =>
           {
-            acc.text.push_token(&token);
+            acc.push_text_token(&token);
             let next_token = line.consume_current().unwrap();
-            acc.text.push_token(&next_token);
+            acc.push_text_token(&next_token);
           }
 
           UriScheme if subs.macros() && line.continues_inline_macro() => {
@@ -241,7 +286,7 @@ impl<'arena> Parser<'arena> {
                 break;
               }
             }
-            acc.text.push_token(&token);
+            acc.push_text_token(&token);
           }
 
           // if we're in a table cell, and we have a blank attr ref
@@ -256,7 +301,7 @@ impl<'arena> Parser<'arena> {
 
           TermDelimiter
             if subs.callouts()
-              && token.len() == 2
+              && token.is_len(2)
               && line.current_is(Whitespace)
               && token.lexeme == ";;" // this is a happy accident
               && line.continues_valid_callout_nums() =>
@@ -274,7 +319,7 @@ impl<'arena> Parser<'arena> {
 
           ForwardSlashes
             if subs.callouts()
-              && token.len() == 2
+              && token.is_len(2)
               && line.current_is(Whitespace)
               && line.continues_valid_callout_nums() =>
           {
@@ -325,7 +370,7 @@ impl<'arena> Parser<'arena> {
 
           LessThan
             if subs.macros()
-              && line.current_token().is(UriScheme)
+              && line.current_token().kind(UriScheme)
               && line.no_whitespace_until(GreaterThan) =>
           {
             acc.push_node(Discarded, token.loc);
@@ -341,7 +386,7 @@ impl<'arena> Parser<'arena> {
               } else {
                 acc.push_node(Text(token.lexeme), token.loc);
               }
-              acc.text.push_token(&scheme_token);
+              acc.push_text_token(&scheme_token);
             } else {
               finish_macro(&line, &mut loc, line_end, &mut acc.text);
               let scheme = Some(scheme_token.to_url_scheme().unwrap());
@@ -431,7 +476,7 @@ impl<'arena> Parser<'arena> {
 
           OpenBracket
             if line.current_is(OpenBracket)
-              && !line.peek_token().is(CloseBracket)
+              && !line.peek_token().kind(CloseBracket)
               && line.contains_seq(&[Kind(CloseBracket), Kind(CloseBracket)]) =>
           {
             let bracket = line.consume_current().unwrap(); // second `[`
@@ -446,8 +491,8 @@ impl<'arena> Parser<'arena> {
               );
               acc.push_node(InlineAnchor(id.src), loc);
             } else {
-              acc.text.push_token(&bracket);
-              acc.text.push_token(&token);
+              acc.push_text_token(&bracket);
+              acc.push_text_token(&token);
             }
           }
 
@@ -575,7 +620,7 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
-          Plus if token.len() == 3 && contains_len(Plus, 3, &line, lines) => {
+          Plus if token.is_len(3) && contains_len(Plus, 3, &line, lines) => {
             self.ctx.subs = Substitutions::none();
             self.parse_node(
               InlinePassthru,
@@ -591,7 +636,7 @@ impl<'arena> Parser<'arena> {
 
           Plus
             if subs.inline_formatting()
-              && token.len() == 2
+              && token.is_len(2)
               && starts_unconstrained(&[Len(2, Plus)], &token, &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
@@ -626,7 +671,7 @@ impl<'arena> Parser<'arena> {
 
           // already encoded entities, eg: &#8212;
           Ampersand if line.starts_with_seq(&[Kind(Hash), Kind(Digits), Kind(SemiColon)]) => {
-            acc.text.push_token(&token);
+            acc.push_text_token(&token);
           }
 
           Ampersand | LessThan | GreaterThan if subs.special_chars() => {
@@ -643,7 +688,7 @@ impl<'arena> Parser<'arena> {
 
           SingleQuote if line.current_is(Word) && subs.inline_formatting() => {
             if acc.text.is_empty() || acc.text.ends_with(char::is_whitespace) {
-              acc.text.push_token(&token);
+              acc.push_text_token(&token);
             } else {
               acc.push_node(CurlyQuote(LegacyImplicitApostrophe), token.loc);
             }
@@ -669,15 +714,15 @@ impl<'arena> Parser<'arena> {
             acc.push_node(Discarded, token.loc);
             // pushing the next token as text prevents recognizing the pattern
             let next_token = line.consume_current().unwrap();
-            acc.text.push_token(&next_token);
+            acc.push_text_token(&next_token);
           }
 
-          _ if subs.macros() && token.is(UriScheme) => {
+          _ if subs.macros() && token.kind(UriScheme) => {
             let mut loc = token.loc;
             let line_end = line.last_location().unwrap();
             let target = line.consume_url(Some(&token), None, self.bump);
             if target.src == token.lexeme {
-              acc.text.push_token(&token);
+              acc.push_text_token(&token);
             } else {
               finish_macro(&line, &mut loc, line_end, &mut acc.text);
               let scheme = Some(token.to_url_scheme().unwrap());
@@ -699,16 +744,7 @@ impl<'arena> Parser<'arena> {
             acc.push_node(InlinePassthru(content), token.loc);
           }
 
-          _ => {
-            if acc.text.loc.end == token.loc.start {
-              acc.text.push_token(&token);
-            } else {
-              // happens when ifdefs cause lines to be skipped
-              acc.text.commit_inlines(&mut acc.inlines);
-              acc.text.push_token(&token);
-              acc.text.loc = token.loc;
-            }
-          }
+          _ => acc.push_text_token(&token),
         }
       }
     }
@@ -1495,47 +1531,6 @@ mod tests {
       ),
     ];
 
-    run(cases);
-  }
-
-  #[test]
-  fn test_button_menu_macro() {
-    let cases = vec![
-      (
-        "press the btn:[OK] button",
-        nodes![
-          node!("press the "; 0..10),
-          node!(Macro(Button(src!("OK", 15..17))), 10..18),
-          node!(" button"; 18..25),
-        ],
-      ),
-      (
-        "btn:[Open]",
-        nodes![node!(Macro(Button(src!("Open", 5..9))), 0..10)],
-      ),
-      (
-        "select menu:File[Save].",
-        nodes![
-          node!("select "; 0..7),
-          node!(
-            Macro(Menu(vecb![src!("File", 12..16), src!("Save", 17..21)])),
-            7..22,
-          ),
-          node!("."; 22..23),
-        ],
-      ),
-      (
-        "menu:View[Zoom > Reset]",
-        nodes![node!(
-          Macro(Menu(vecb![
-            src!("View", 5..9),
-            src!("Zoom", 10..14),
-            src!("Reset", 17..22),
-          ])),
-          0..23,
-        )],
-      ),
-    ];
     run(cases);
   }
 

@@ -63,7 +63,7 @@ impl<'arena> Parser<'arena> {
         return self.parse_delimited_block(delimiter, lines, meta);
       }
       Pipe | Colon | Bang | Comma
-        if lines.nth_token(1).is_len(EqualSigns, 3) && lines.nth_token(2).is_none() =>
+        if lines.nth_token(1).is_kind_len(EqualSigns, 3) && lines.nth_token(2).is_none() =>
       {
         return Ok(Some(self.parse_table(lines, meta)?));
       }
@@ -208,7 +208,7 @@ impl<'arena> Parser<'arena> {
     self.ctx.subs = restore_subs;
     if let Some(mut block) = self.read_lines()? {
       let token = block.consume_current_token().unwrap();
-      debug_assert!(token.is(DelimiterLine));
+      debug_assert!(token.kind(DelimiterLine));
       self.restore_lines(block);
     } else {
       self.err_token_full("This delimiter was never closed", &delimiter_token)?;

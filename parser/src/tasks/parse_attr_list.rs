@@ -180,7 +180,7 @@ impl<'arena> Parser<'arena> {
         tokens.push(line.consume_current().unwrap());
       }
     } else if !line.current_is(CloseBracket) {
-      while !line.peek_token().is(CloseBracket) || line.current_is(Backslash) {
+      while !line.peek_token().kind(CloseBracket) || line.current_is(Backslash) {
         tokens.push(line.consume_current().unwrap());
       }
       tokens.push(line.consume_current().unwrap());
@@ -299,7 +299,7 @@ impl<'arena> Parser<'arena> {
     &mut self,
     mut tokens: Deq<'arena, Token<'arena>>,
   ) -> Result<Option<InlineNodes<'arena>>> {
-    if tokens.len() == 1 && tokens.first().is(Word) {
+    if tokens.len() == 1 && tokens.first().kind(Word) {
       let first = tokens.pop_front().unwrap();
       let mut nodes = InlineNodes::new(self.bump);
       nodes.push(InlineNode::new(
@@ -365,7 +365,7 @@ impl<'arena> Parser<'arena> {
         }
       }
     }
-    if tokens.first().is(Whitespace) {
+    if tokens.first().kind(Whitespace) {
       tokens.remove_first();
     }
     match name.as_str() {
@@ -481,8 +481,8 @@ pub struct AnchorSrc<'arena> {
 
 fn unquote<'a>(mut tokens: Deq<'a, Token<'a>>) -> Deq<'a, Token<'a>> {
   if tokens.len() > 1
-    && (tokens.first().is(DoubleQuote) && tokens.last().is(DoubleQuote)
-      || tokens.first().is(SingleQuote) && tokens.last().is(SingleQuote))
+    && (tokens.first().kind(DoubleQuote) && tokens.last().kind(DoubleQuote)
+      || tokens.first().kind(SingleQuote) && tokens.last().kind(SingleQuote))
   {
     tokens.remove_first();
     tokens.pop();
@@ -491,10 +491,10 @@ fn unquote<'a>(mut tokens: Deq<'a, Token<'a>>) -> Deq<'a, Token<'a>> {
 }
 
 fn trim<'a>(mut tokens: Deq<'a, Token<'a>>) -> Deq<'a, Token<'a>> {
-  while tokens.first().is(Whitespace) {
+  while tokens.first().kind(Whitespace) {
     tokens.remove_first();
   }
-  while tokens.last().is(Whitespace) {
+  while tokens.last().kind(Whitespace) {
     tokens.pop();
   }
   tokens

@@ -40,7 +40,7 @@ impl<'arena> Line<'arena> {
   pub fn push(&mut self, token: Token<'arena>) {
     match token.kind {
       MacroName if token.lexeme == "pass:" => self.pass_tokens = true,
-      Plus if self.tokens.last().is_not(Backtick) && token.len() < 4 => self.pass_tokens = true,
+      Plus if self.tokens.last().not_kind(Backtick) && token.len() < 4 => self.pass_tokens = true,
       _ => {}
     }
     self.tokens.push(token);
@@ -123,11 +123,11 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn current_is(&self, kind: TokenKind) -> bool {
-    self.current_token().is(kind)
+    self.current_token().kind(kind)
   }
 
   pub fn current_is_len(&self, kind: TokenKind, len: usize) -> bool {
-    self.current_token().is_len(kind, len)
+    self.current_token().is_kind_len(kind, len)
   }
 
   pub fn unadjusted_heading_level(&self) -> Option<u8> {
@@ -155,7 +155,7 @@ impl<'arena> Line<'arena> {
   pub fn is_block_attr_list(&self) -> bool {
     self.starts(OpenBracket)
       && self.ends_with_nonescaped(CloseBracket)
-      && !self.peek_token().is(OpenBracket)
+      && !self.peek_token().kind(OpenBracket)
   }
 
   pub fn is_block_anchor(&self) -> bool {
@@ -166,12 +166,12 @@ impl<'arena> Line<'arena> {
         SingleQuote | DoubleQuote | Whitespace
       )
       && self.ends_with_nonescaped(CloseBracket)
-      && self.nth_token(self.num_tokens() - 2).is(CloseBracket)
+      && self.nth_token(self.num_tokens() - 2).kind(CloseBracket)
   }
 
   pub fn is_chunk_title(&self) -> bool {
     // dot followed by at least one non-whitespace token
-    self.starts(Dots) && self.iter().len() > 1 && self.peek_token().unwrap().is_not(Whitespace)
+    self.starts(Dots) && self.iter().len() > 1 && self.peek_token().unwrap().not_kind(Whitespace)
   }
 
   pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
@@ -190,7 +190,7 @@ impl<'arena> Line<'arena> {
 
   pub fn discard_assert(&mut self, kind: TokenKind) {
     let token = self.consume_current();
-    debug_assert!(token.unwrap().is(kind));
+    debug_assert!(token.unwrap().kind(kind));
   }
 
   pub fn discard_last(&mut self) -> Option<Token<'arena>> {
@@ -199,7 +199,7 @@ impl<'arena> Line<'arena> {
 
   pub fn discard_assert_last(&mut self, kind: TokenKind) {
     let token = self.discard_last();
-    debug_assert!(token.unwrap().is(kind));
+    debug_assert!(token.unwrap().kind(kind));
   }
 
   pub fn contains_nonescaped(&self, token_type: TokenKind) -> bool {
@@ -210,7 +210,7 @@ impl<'arena> Line<'arena> {
     match self.iter().len() {
       0 => false,
       1 => self.current_is(token_type),
-      n => self.last_token().is(token_type) && self.nth_token(n - 2).is_not(Backslash),
+      n => self.last_token().kind(token_type) && self.nth_token(n - 2).not_kind(Backslash),
     }
   }
 
@@ -233,7 +233,7 @@ impl<'arena> Line<'arena> {
   pub fn first_nonescaped(&self, kind: TokenKind) -> Option<(&Token, usize)> {
     let mut prev: Option<TokenKind> = None;
     for (i, token) in self.iter().enumerate() {
-      if token.is(kind) && prev.map_or(true, |k| k != Backslash) {
+      if token.kind(kind) && prev.map_or(true, |k| k != Backslash) {
         return Some((token, i));
       }
       prev = Some(token.kind);
@@ -275,7 +275,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn ends(&self, kind: TokenKind) -> bool {
-    self.last_token().is(kind)
+    self.last_token().kind(kind)
   }
 
   pub fn starts_with_seq(&self, tokens: &[TokenSpec]) -> bool {
@@ -287,7 +287,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn index_of_kind(&self, kind: TokenKind) -> Option<usize> {
-    self.iter().position(|t| t.is(kind))
+    self.iter().position(|t| t.kind(kind))
   }
 
   pub fn index_of_seq(&self, specs: &[TokenSpec]) -> Option<usize> {
@@ -314,7 +314,7 @@ impl<'arena> Line<'arena> {
 
   pub fn continues_valid_callout_nums(&self) -> bool {
     for token in self.iter() {
-      if token.is(Whitespace) || token.is(CalloutNumber) {
+      if token.kind(Whitespace) || token.kind(CalloutNumber) {
         continue;
       } else {
         return false;
@@ -340,17 +340,17 @@ impl<'arena> Line<'arena> {
     self.current_is(LessThan)
       && self.num_tokens() > 3
       && self.contains_seq(&[Kind(GreaterThan), Kind(GreaterThan)])
-      && self.nth_token(1).is_not(GreaterThan)
-      && self.nth_token(1).is_not(LessThan)
-      && self.nth_token(1).is_not(Whitespace)
+      && self.nth_token(1).not_kind(GreaterThan)
+      && self.nth_token(1).not_kind(LessThan)
+      && self.nth_token(1).not_kind(Whitespace)
   }
 
   /// true if there is no whitespace until token type, and token type is found
   pub fn no_whitespace_until(&self, kind: TokenKind) -> bool {
     for token in self.iter() {
-      if token.is(kind) {
+      if token.kind(kind) {
         return true;
-      } else if token.is(Whitespace) {
+      } else if token.kind(Whitespace) {
         return false;
       } else {
         continue;
@@ -369,7 +369,7 @@ impl<'arena> Line<'arena> {
       // or else `foo __bar` would include an empty italic node
       // TODO: maybe that's only true for _single_ tok sequences?
       Some(0) => None,
-      Some(n) if self.nth_token(n + 1).is_not(Word) => Some(n),
+      Some(n) if self.nth_token(n + 1).not_kind(Word) => Some(n),
       _ => None,
     }
   }
@@ -426,7 +426,7 @@ impl<'arena> Line<'arena> {
 
   pub fn consume_if_not(&mut self, kind: TokenKind) -> Option<Token> {
     match self.current_token() {
-      Some(token) if !token.is(kind) => self.consume_current(),
+      Some(token) if !token.kind(kind) => self.consume_current(),
       _ => None,
     }
   }
@@ -474,7 +474,7 @@ impl<'arena> Line<'arena> {
       }
     }
 
-    if stop.is_none() && num_tokens > 0 && self.tokens.get(num_tokens - 1).is(Dots) {
+    if stop.is_none() && num_tokens > 0 && self.tokens.get(num_tokens - 1).kind(Dots) {
       num_tokens -= 1;
     }
 
@@ -530,7 +530,7 @@ impl<'arena> Line<'arena> {
     // PERF: checking for list markers seems sort of sad, wonder if the
     // Line could be created with some markers to speed these tests up
     let mut offset = 0;
-    if self.current_token().is(Whitespace) {
+    if self.current_token().kind(Whitespace) {
       offset += 1;
     }
     let token = self.nth_token(offset)?;
@@ -538,12 +538,14 @@ impl<'arena> Line<'arena> {
     let third = self.nth_token(offset + 2);
 
     match token.kind {
-      Star if second.is(Whitespace) && third.is_some() => Some(ListMarker::Star(1)),
-      Dots if second.is(Whitespace) && third.is_some() => Some(ListMarker::Dot(token.len() as u8)),
-      Dashes if second.is(Whitespace) && token.len() == 1 && third.is_some() => {
+      Star if second.kind(Whitespace) && third.is_some() => Some(ListMarker::Star(1)),
+      Dots if second.kind(Whitespace) && third.is_some() => {
+        Some(ListMarker::Dot(token.len() as u8))
+      }
+      Dashes if second.kind(Whitespace) && token.len() == 1 && third.is_some() => {
         Some(ListMarker::Dash)
       }
-      Star if second.is(Star) => {
+      Star if second.kind(Star) => {
         let src = self.reassemble_src();
         let captures = regx::REPEAT_STAR_LI_START.captures(&src)?;
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
@@ -551,12 +553,12 @@ impl<'arena> Line<'arena> {
       CalloutNumber if token.lexeme.as_bytes()[1] != b'!' => {
         Some(ListMarker::Callout(token.parse_callout_num()))
       }
-      Digits if second.is(Dots) && third.is(Whitespace) => {
+      Digits if second.kind(Dots) && third.kind(Whitespace) => {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
       _ => {
         for token in self.iter().skip(offset) {
-          if token.is(TermDelimiter) {
+          if token.kind(TermDelimiter) {
             return match token.lexeme.as_str() {
               "::" => Some(ListMarker::Colons(2)),
               ":::" => Some(ListMarker::Colons(3)),
@@ -680,7 +682,7 @@ impl<'arena> Line<'arena> {
     let mut attr_loc: Option<SourceLocation> = None;
     let bump = self.tokens.bump;
     for token in self.iter_mut() {
-      if token.is(AttrRef) {
+      if token.kind(AttrRef) {
         attr_loc = Some(token.loc);
       } else if attr_loc.map_or(false, |loc| loc == token.loc) {
         token.lexeme = BumpString::from_str_in("", bump);
@@ -693,7 +695,7 @@ impl<'arena> Line<'arena> {
   pub fn get_indentation(&self) -> usize {
     self
       .current_token()
-      .filter(|t| t.is(Whitespace))
+      .filter(|t| t.kind(Whitespace))
       .map_or(0, |t| t.lexeme.len())
   }
 
@@ -702,7 +704,7 @@ impl<'arena> Line<'arena> {
       return;
     };
     let token_len = token.len();
-    if token.is(Whitespace) && token_len > indent {
+    if token.kind(Whitespace) && token_len > indent {
       let delta = token_len - indent;
       if delta == token_len {
         self.tokens.remove_first();
@@ -712,12 +714,12 @@ impl<'arena> Line<'arena> {
           token.lexeme.pop();
         }
       }
-    } else if token.is(Whitespace) && token_len < indent {
+    } else if token.kind(Whitespace) && token_len < indent {
       // this is a little hinky, as the source locations are lying now
       // maybe would be better to have an explicit token type to formalize
       // a indentation created out of thin air with no source location ?
       token.lexeme.push_str(&" ".repeat(indent - token_len));
-    } else if !token.is(Whitespace) && indent != 0 {
+    } else if !token.kind(Whitespace) && indent != 0 {
       let loc = token.loc.clamp_start();
       // ... also hinky
       self.tokens.slowly_push_front(Token::new(

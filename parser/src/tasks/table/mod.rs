@@ -101,7 +101,7 @@ impl<'arena> TableTokens<'arena> {
     let Some(sep) = embeddable_separator else {
       return self.consume_current();
     };
-    if !self.current().is(TokenKind::Word) {
+    if !self.current().kind(TokenKind::Word) {
       return self.consume_current();
     }
 

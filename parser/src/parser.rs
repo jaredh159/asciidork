@@ -481,7 +481,9 @@ mod tests {
         // we "drop" positions 4-7, the `inc` of `include::`
         // which becomes `••••link:`, keeping rest of token positions
         Token::new(TokenKind::MacroName, 8..13, bstr!("link:")),
-        Token::new(TokenKind::Word, 13..25, bstr!("include-file")),
+        Token::new(TokenKind::Word, 13..20, bstr!("include")),
+        Token::new(TokenKind::Dashes, 20..21, bstr!("-")),
+        Token::new(TokenKind::Word, 21..25, bstr!("file")),
         Token::new(TokenKind::Dots, 25..26, bstr!(".")),
         Token::new(TokenKind::Word, 26..30, bstr!("adoc")),
         Token::new(TokenKind::OpenBracket, 30..31, bstr!("[")),

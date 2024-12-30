@@ -1000,6 +1000,22 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
+  fn visit_symbol(&mut self, kind: SymbolKind) {
+    match kind {
+      SymbolKind::Copyright => self.push_str("&#169;"),
+      SymbolKind::Registered => self.push_str("&#174;"),
+      SymbolKind::Trademark => self.push_str("&#8482;"),
+      SymbolKind::EmDash => self.push_str("&#8212;&#8203;"),
+      SymbolKind::SpacedEmDash => self.push_str("&#8201;&#8212;&#8201;"),
+      SymbolKind::Ellipsis => self.push_str("&#8230;&#8203;"),
+      SymbolKind::SingleRightArrow => self.push_str("&#8594;"),
+      SymbolKind::DoubleRightArrow => self.push_str("&#8658;"),
+      SymbolKind::SingleLeftArrow => self.push_str("&#8592;"),
+      SymbolKind::DoubleLeftArrow => self.push_str("&#8656;"),
+    }
+  }
+
+  #[instrument(skip_all)]
   fn enter_inline_highlight(&mut self, _children: &[InlineNode]) {
     self.push_str("<mark>");
   }
@@ -1050,8 +1066,8 @@ impl Backend for AsciidoctorHtml {
     match kind {
       CurlyKind::LeftDouble => self.push_str("&#8221;"),
       CurlyKind::RightDouble => self.push_str("&#8220;"),
-      CurlyKind::LeftSingle => self.push_str("&#8217;"),
-      CurlyKind::RightSingle => self.push_str("&#8216;"),
+      CurlyKind::LeftSingle => self.push_str("&#8216;"),
+      CurlyKind::RightSingle => self.push_str("&#8217;"),
       CurlyKind::LegacyImplicitApostrophe => self.push_str("&#8217;"),
     }
   }

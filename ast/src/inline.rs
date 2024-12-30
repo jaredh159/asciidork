@@ -35,6 +35,7 @@ pub enum Inline<'arena> {
   SpecialChar(SpecialCharKind),
   Superscript(InlineNodes<'arena>),
   Subscript(InlineNodes<'arena>),
+  Symbol(SymbolKind),
   Text(BumpString<'arena>),
   TextSpan(AttrList<'arena>, InlineNodes<'arena>),
 }
@@ -54,9 +55,23 @@ pub enum CurlyKind {
   LegacyImplicitApostrophe,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SpecialCharKind {
   Ampersand,
   LessThan,
   GreaterThan,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum SymbolKind {
+  Copyright,
+  Registered,
+  Trademark,
+  EmDash,
+  SpacedEmDash,
+  Ellipsis,
+  SingleRightArrow,
+  DoubleRightArrow,
+  SingleLeftArrow,
+  DoubleLeftArrow,
 }

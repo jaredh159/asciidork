@@ -437,7 +437,7 @@ assert_html!(
     :show_title: Cool new show
 
     |===
-    |{show_title} |Coming soon...
+    |{show_title} |Coming soon!
     |===
   "#},
   contains: r#"<p class="tableblock">Cool new show</p></td>"#

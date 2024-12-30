@@ -25,7 +25,7 @@ mod internal {
     pub use crate::doc_content::DocContent;
     pub use crate::document::{DocTitle, Document};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
-    pub use crate::inline::{CurlyKind::*, QuoteKind::*};
+    pub use crate::inline::{CurlyKind::*, QuoteKind::*, SymbolKind};
     pub use crate::inline_nodes::InlineNodes;
     pub use crate::list::*;
     pub use crate::node::{Anchor, Callout, Section};
@@ -54,7 +54,7 @@ pub mod prelude {
   pub use crate::col_widths::*;
   pub use crate::doc_content::DocContent;
   pub use crate::document::{DocTitle, Document};
-  pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
+  pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind, SymbolKind};
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
   pub use crate::node::{Anchor, Callout, Section};
   pub use crate::r#macro::{UrlScheme, XrefKind};

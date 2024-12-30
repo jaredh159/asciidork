@@ -75,7 +75,7 @@ impl<'arena> Parser<'arena> {
             break self.read_line();
           }
         }
-      } else if token.is(TokenKind::Directive)
+      } else if token.kind(TokenKind::Directive)
         && (token.lexeme == "ifdef::" || token.lexeme == "ifndef::")
       {
         // TODO: we should probably check if the directive is valid

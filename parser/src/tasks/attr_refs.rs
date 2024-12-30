@@ -32,7 +32,7 @@ impl<'arena> Parser<'arena> {
     line: &mut Line<'arena>,
     drop_line: &mut bool,
   ) -> Result<()> {
-    if token.is(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
+    if token.kind(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
       match self.document.meta.get(token.attr_name()) {
         Some(AttrValue::String(attr_val)) => {
           if !attr_val.is_empty() {
