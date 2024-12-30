@@ -9,7 +9,9 @@ use wasm_bindgen::prelude::*;
 pub fn convert(adoc: &str, timestamp: f64) -> String {
   let bump = &Bump::new();
   let mut parser = Parser::from_str(adoc, SourceFile::Tmp, bump);
-  parser.apply_job_settings(JobSettings::embedded());
+  let mut job_settings = JobSettings::embedded();
+  job_settings.strict = false;
+  parser.apply_job_settings(job_settings);
   parser.provide_timestamps(timestamp as u64, None, None);
   let result = parser.parse();
   match result {
