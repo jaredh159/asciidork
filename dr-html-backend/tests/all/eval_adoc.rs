@@ -20,6 +20,12 @@ assert_inline_html!(
   r#"<code><strong><em>foo</em></strong></code>"#
 );
 
+assert_inline_html!(
+  biblio_anchor_out_of_place,
+  "a [[[foo]]] bar",
+  r#"a [<a id="foo"></a>] bar"#
+);
+
 assert_inline_html!(passthrough, "+_<foo>&_+", r#"_&lt;foo&gt;&amp;_"#);
 assert_inline_html!(text_span, "[.foo]#bar#", r#"<span class="foo">bar</span>"#);
 assert_inline_html!(passthrough_block, "[pass]\n_<foo>&_", "_<foo>&_");

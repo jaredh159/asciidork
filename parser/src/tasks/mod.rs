@@ -1,3 +1,4 @@
+mod anchors;
 mod attr_refs;
 pub(crate) mod collect_text;
 pub mod customize_subs;

@@ -371,14 +371,13 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
     }
     Macro(Xref { target, linktext, kind }) => {
+      let anchors = ctx.doc.anchors.borrow();
+      let anchor = anchors.get(utils::xref::get_id(&target.src));
+      let is_biblio = anchor.map(|a| a.is_biblio).unwrap_or(false);
       backend.enter_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
       if ctx.resolving_xref.replace(true) {
         backend.visit_missing_xref(target, *kind, ctx.doc.title.as_ref());
-      } else if let Some(text) = ctx
-        .doc
-        .anchors
-        .borrow()
-        .get(utils::xref::get_id(&target.src))
+      } else if let Some(text) = anchor
         .map(|anchor| {
           anchor
             .reftext
@@ -387,9 +386,13 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
         })
         .filter(|text| !text.is_empty())
       {
+        backend.enter_xref_text(text, is_biblio);
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
+        backend.exit_xref_text(text, is_biblio);
       } else if let Some(text) = linktext {
+        backend.enter_xref_text(text, is_biblio);
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
+        backend.exit_xref_text(text, is_biblio);
       } else {
         backend.visit_missing_xref(target, *kind, ctx.doc.title.as_ref());
       }
@@ -397,6 +400,17 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
     }
     InlineAnchor(id) => backend.visit_inline_anchor(id),
+    BiblioAnchor(id) => {
+      backend.visit_biblio_anchor(
+        id,
+        ctx
+          .doc
+          .anchors
+          .borrow()
+          .get(id)
+          .and_then(|anchor| anchor.reftext.as_ref()?.single_text()),
+      );
+    }
     LineBreak => backend.visit_linebreak(),
     CalloutNum(callout) => backend.visit_callout(*callout),
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),

@@ -58,9 +58,15 @@ impl<'arena> Parser<'arena> {
         Anchor {
           reftext,
           title: heading.clone(),
+          source_loc: None,
           source_idx: self.lexer.source_idx(),
+          is_biblio: false,
         },
       );
+    }
+
+    if meta.attrs_has_str_positional_at(0, "bibliography") {
+      self.ctx.bibliography_ctx = BiblioContext::Section;
     }
 
     self.restore_lines(lines);
@@ -69,6 +75,7 @@ impl<'arena> Parser<'arena> {
       blocks.push(inner);
     }
 
+    self.ctx.bibliography_ctx = BiblioContext::None;
     self.ctx.section_level = last_level;
     Ok(Some(Section { meta, level, id, heading, blocks }))
   }

@@ -26,6 +26,7 @@ impl<'arena> InlineNodes<'arena> {
       Inline::InlinePassthru(nodes) => text.extend(nodes.plain_text()),
       Inline::Newline => text.push(" "),
       Inline::InlineAnchor(_) => {}
+      Inline::BiblioAnchor(..) => {}
       Inline::LineBreak => {}
       Inline::LineComment(_) => {}
       Inline::CalloutNum(_) => {}

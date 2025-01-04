@@ -6,8 +6,10 @@ use crate::internal::*;
 pub struct Anchor<'arena> {
   pub reftext: Option<InlineNodes<'arena>>,
   pub title: InlineNodes<'arena>,
+  pub source_loc: Option<SourceLocation>,
   /// can be used to identify the source file in which the anchor was found
   pub source_idx: u16,
+  pub is_biblio: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
