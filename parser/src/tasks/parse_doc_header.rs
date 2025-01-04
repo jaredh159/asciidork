@@ -85,7 +85,7 @@ impl<'arena> Parser<'arena> {
     for line in lines.iter() {
       if self.line_heading_level(line) == Some(0) {
         return true;
-      } else if line.is_comment() || line.is_block_attr_list() {
+      } else if line.is_comment() || line.is_block_attr_list() || line.is_block_anchor() {
         continue;
       } else {
         return line.is_attr_decl();
@@ -106,6 +106,14 @@ mod tests {
       (
         adoc! {"
           // ignored
+          = Title
+          :foo: bar
+        "},
+        true,
+      ),
+      (
+        adoc! {"
+          [[foo-bar]]
           = Title
           :foo: bar
         "},

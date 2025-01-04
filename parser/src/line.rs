@@ -159,7 +159,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_block_anchor(&self) -> bool {
-    self.starts_with_seq(&[Kind(OpenBracket), Kind(OpenBracket)])
+    self.starts_with_seq(&[Kind(OpenBracket); 2])
       && self.num_tokens() > 4
       && !matches!(
         self.nth_token(2).unwrap().kind,
