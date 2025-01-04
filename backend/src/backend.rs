@@ -192,8 +192,15 @@ pub trait Backend {
   fn exit_xref(&mut self, target: &str, reftext: Option<&[InlineNode]>, kind: XrefKind);
   fn visit_missing_xref(&mut self, target: &str, kind: XrefKind, doc_title: Option<&DocTitle>);
   fn visit_inline_anchor(&mut self, id: &str);
+  fn visit_biblio_anchor(&mut self, id: &str, reftext: Option<&str>);
   fn visit_symbol(&mut self, kind: SymbolKind);
   fn visit_linebreak(&mut self);
+  fn enter_xref_text(&mut self, text: &[InlineNode], is_biblio: bool) {
+    _ = (text, is_biblio);
+  }
+  fn exit_xref_text(&mut self, text: &[InlineNode], is_biblio: bool) {
+    _ = (text, is_biblio);
+  }
 
   // result
   fn into_result(self) -> Result<Self::Output, Self::Error>;

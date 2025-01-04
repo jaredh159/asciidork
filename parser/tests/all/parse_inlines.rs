@@ -34,6 +34,22 @@ test_inlines_loose!(
 );
 
 test_inlines_loose!(
+  biblio_anchor_out_of_place,
+  "[[[foo]]] bar",
+  nodes![
+    node!("["; 0..1),
+    node!(InlineAnchor(bstr!("foo")), 1..8),
+    node!("] bar"; 8..13),
+  ]
+);
+
+test_inlines_loose!(
+  digit_bib_anchor_not_recognized,
+  "[[[123]]] bar",
+  just!("[[[123]]] bar", 0..13)
+);
+
+test_inlines_loose!(
   preserves_entity_refs,
   "&amp; &#169; &#10004; &#128512; &#x2022; &#x1f600;",
   nodes![node!("&amp; &#169; &#10004; &#128512; &#x2022; &#x1f600;"; 0..50)]
@@ -183,7 +199,7 @@ fn test_inline_passthrus() {
       "baz +++_foo_&+++ bar", // no specialchars subs on +++
       nodes![
         node!("baz "; 0..4),
-        node!(InlinePassthru(nodes![node!("_foo_&"; 7..13)]), 4..16,),
+        node!(InlinePassthru(nodes![node!("_foo_&"; 7..13)]), 4..16),
         node!(" bar"; 16..20),
       ],
     ),
@@ -366,7 +382,7 @@ fn test_joining_newlines() {
     (
       "+_foo_+\nbar",
       nodes![
-        node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7,),
+        node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7),
         node!(Inline::Newline, 7..8),
         node!("bar"; 8..11),
       ],
@@ -374,7 +390,7 @@ fn test_joining_newlines() {
     (
       "+++_<foo>&_+++\nbar",
       nodes![
-        node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
+        node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14),
         node!(Inline::Newline, 14..15),
         node!("bar"; 15..18),
       ],
@@ -409,11 +425,11 @@ fn test_inline_anchors() {
   run(vec![
     (
       "[[foo]]bar",
-      nodes![node!(InlineAnchor(bstr!("foo")), 0..7), node!("bar"; 7..10),],
+      nodes![node!(InlineAnchor(bstr!("foo")), 0..7), node!("bar"; 7..10)],
     ),
     (
       "bar[[foo]]",
-      nodes![node!("bar"; 0..3), node!(InlineAnchor(bstr!("foo")), 3..10),],
+      nodes![node!("bar"; 0..3), node!(InlineAnchor(bstr!("foo")), 3..10)],
     ),
   ]);
 }
@@ -423,11 +439,11 @@ fn test_parse_inlines() {
   run(vec![
     (
       "+_foo_+",
-      nodes![node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7,)],
+      nodes![node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7)],
     ),
     (
       "+_{foo}_+",
-      nodes![node!(InlinePassthru(nodes![node!("_{foo}_"; 1..8)]), 0..9,)],
+      nodes![node!(InlinePassthru(nodes![node!("_{foo}_"; 1..8)]), 0..9)],
     ),
     (
       "+_{attribute-missing}_+",
@@ -476,7 +492,7 @@ fn test_parse_inlines() {
       "rofl +_foo_+ lol",
       nodes![
         node!("rofl "; 0..5),
-        node!(InlinePassthru(nodes![node!("_foo_"; 6..11)]), 5..12,),
+        node!(InlinePassthru(nodes![node!("_foo_"; 6..11)]), 5..12),
         node!(" lol"; 12..16),
       ],
     ),
@@ -484,14 +500,14 @@ fn test_parse_inlines() {
     (
       "++_foo_++bar",
       nodes![
-        node!(InlinePassthru(nodes![node!("_foo_"; 2..7)]), 0..9,),
+        node!(InlinePassthru(nodes![node!("_foo_"; 2..7)]), 0..9),
         node!("bar"; 9..12),
       ],
     ),
     (
       "+++_<foo>&_+++ bar",
       nodes![
-        node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14,),
+        node!(InlinePassthru(nodes![node!("_<foo>&_"; 3..11)]), 0..14),
         node!(" bar"; 14..18),
       ],
     ),
@@ -602,7 +618,7 @@ fn test_parse_inlines() {
       "foo \"`bar`\"",
       nodes![
         node!("foo "; 0..4),
-        node!(Quote(QuoteKind::Double, nodes![node!("bar"; 6..9)]), 4..11,),
+        node!(Quote(QuoteKind::Double, nodes![node!("bar"; 6..9)]), 4..11),
       ],
     ),
     (
@@ -636,7 +652,7 @@ fn test_parse_inlines() {
       "foo '`bar`'",
       nodes![
         node!("foo "; 0..4),
-        node!(Quote(QuoteKind::Single, nodes![node!("bar"; 6..9)]), 4..11,),
+        node!(Quote(QuoteKind::Single, nodes![node!("bar"; 6..9)]), 4..11),
       ],
     ),
     (

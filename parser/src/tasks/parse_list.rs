@@ -17,8 +17,22 @@ impl<'arena> Parser<'arena> {
     let depth = self.ctx.list.stack.depth();
     let mut items = BumpVec::new_in(self.bump);
     let mut auto_conum = 1;
+
+    if variant == ListVariant::Unordered
+      && (self.ctx.bibliography_ctx == BiblioContext::Section
+        || meta
+          .as_ref()
+          .map_or(false, |m| m.has_str_positional("bibliography")))
+    {
+      self.ctx.bibliography_ctx = BiblioContext::List;
+    }
+
     while let Some(item) = self.parse_list_item(variant, &mut auto_conum)? {
       items.push(item);
+    }
+
+    if self.ctx.bibliography_ctx == BiblioContext::List {
+      self.ctx.bibliography_ctx = BiblioContext::Section;
     }
     self.ctx.list.stack.pop();
     if variant == ListVariant::Callout {

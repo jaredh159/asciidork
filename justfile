@@ -18,6 +18,12 @@ check:
     cargo build
   @just build-playground
 
+test-parser:
+  @cd parser && bacon test
+
+test-backend:
+  @cd dr-html-backend && bacon test
+
 reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm
 

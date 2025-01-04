@@ -27,6 +27,13 @@ impl<'arena> ChunkMeta<'arena> {
       .map_or(false, |attrs| attrs.has_option(name))
   }
 
+  pub fn has_str_positional(&self, positional: &str) -> bool {
+    self
+      .attrs
+      .as_ref()
+      .map_or(false, |attrs| attrs.has_str_positional(positional))
+  }
+
   pub fn attr_named(&self, name: &str) -> Option<&str> {
     self.attrs.as_ref().and_then(|attrs| attrs.named(name))
   }

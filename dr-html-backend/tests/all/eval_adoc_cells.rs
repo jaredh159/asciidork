@@ -401,6 +401,36 @@ assert_error!(
   "}
 );
 
+assert_error!(
+  duplicate_anchor,
+  adoc! {r#"
+    So [[foo]] and [[foo]].
+  "#},
+  error! {r"
+     --> test.adoc:1:18
+      |
+    1 | So [[foo]] and [[foo]].
+      |                  ^^^ Duplicate anchor id
+  "}
+);
+
+assert_error!(
+  duplicate_biblio_ref,
+  adoc! {r#"
+    [bibliography]
+    == Refs
+
+    * [[[foo]]] Foo
+    * [[[foo]]] Bar
+  "#},
+  error! {r"
+     --> test.adoc:5:6
+      |
+    5 | * [[[foo]]] Bar
+      |      ^^^ Duplicate bibliography id
+  "}
+);
+
 assert_html!(
   adoc_cell_global_footnote_numbering,
   adoc! {r#"

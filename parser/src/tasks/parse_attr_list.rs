@@ -42,6 +42,7 @@ impl<'arena> Parser<'arena> {
       return Ok(Some(anchor));
     }
     line.discard_assert(Comma);
+    line.discard_leading_whitespace();
     let reftext_line = if is_entire_line {
       let mut reftext = Line::new(Deq::new(self.bump));
       std::mem::swap(&mut reftext, line);
@@ -64,13 +65,6 @@ impl<'arena> Parser<'arena> {
     let reftext = self.parse_inlines(&mut reftext_line.into_lines())?;
     anchor.reftext = Some(reftext);
     Ok(Some(anchor))
-  }
-
-  pub(crate) fn parse_biblio_anchor(
-    &mut self,
-    _line: &mut Line<'arena>,
-  ) -> Result<AnchorSrc<'arena>> {
-    todo!("biblio anchor")
   }
 
   pub(crate) fn parse_block_attr_list(

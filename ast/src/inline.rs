@@ -26,6 +26,7 @@ pub enum Inline<'arena> {
   CalloutNum(Callout),
   CalloutTuck(BumpString<'arena>),
   InlineAnchor(BumpString<'arena>),
+  BiblioAnchor(BumpString<'arena>),
   LineBreak,
   LineComment(BumpString<'arena>),
   LitMono(SourceString<'arena>),

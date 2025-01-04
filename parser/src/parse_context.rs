@@ -10,13 +10,14 @@ pub struct ParseContext<'arena> {
   pub list: ListContext,
   pub section_level: u8,
   pub leveloffset: i8,
-  pub can_nest_blocks: bool,
   pub custom_line_comment: Option<SmallVec<[u8; 3]>>,
   pub anchor_ids: Rc<RefCell<HashSet<BumpString<'arena>>>>,
   /// xrefs are only used for diagnosing errors
   pub xrefs: Rc<RefCell<HashMap<BumpString<'arena>, SourceLocation>>>,
   pub num_footnotes: Rc<RefCell<u16>>,
+  pub can_nest_blocks: bool,
   pub saw_toc_macro: bool,
+  pub bibliography_ctx: BiblioContext,
   pub table_cell_ctx: TableCellContext,
   pub passthrus: BumpVec<'arena, Option<InlineNodes<'arena>>>,
   pub max_include_depth: u16,
@@ -29,6 +30,13 @@ pub enum TableCellContext {
   None,
   Cell,
   AsciiDocCell,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum BiblioContext {
+  None,
+  Section,
+  List,
 }
 
 impl<'arena> ParseContext<'arena> {
@@ -46,6 +54,7 @@ impl<'arena> ParseContext<'arena> {
       xrefs: Rc::new(RefCell::new(HashMap::new())),
       num_footnotes: Rc::new(RefCell::new(0)),
       saw_toc_macro: false,
+      bibliography_ctx: BiblioContext::None,
       table_cell_ctx: TableCellContext::None,
       passthrus: BumpVec::new_in(bump),
       max_include_depth: 64,
@@ -67,6 +76,7 @@ impl<'arena> ParseContext<'arena> {
       xrefs: Rc::clone(&self.xrefs),
       num_footnotes: Rc::clone(&self.num_footnotes),
       saw_toc_macro: false,
+      bibliography_ctx: BiblioContext::None,
       table_cell_ctx: TableCellContext::AsciiDocCell,
       passthrus: BumpVec::new_in(bump),
       max_include_depth: 64,

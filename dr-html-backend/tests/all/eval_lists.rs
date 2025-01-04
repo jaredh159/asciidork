@@ -736,3 +736,80 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  bibliography_section_list,
+  adoc! {r#"
+    == Title
+
+    A <<foo>> and a <<b123>>.
+
+    Out of context [[[bib-ref]]] not recognized.
+
+    [bibliography]
+    == References
+
+    * [[[foo]]] foo
+    * [[[b123, 1]]] bar
+
+    // break
+
+    * no bib anchors
+    * but should have bibliography class
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="_title">Title</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>A <a href="#foo">[foo]</a> and a <a href="#b123">[1]</a>.</p>
+        </div>
+        <div class="paragraph">
+          <p>Out of context [<a id="bib-ref"></a>] not recognized.</p>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_references">References</h2>
+      <div class="sectionbody">
+        <div class="ulist bibliography">
+          <ul class="bibliography">
+            <li><p><a id="foo"></a>[foo] foo</p></li>
+            <li><p><a id="b123"></a>[1] bar</p></li>
+          </ul>
+        </div>
+        <div class="ulist bibliography">
+          <ul class="bibliography">
+            <li><p>no bib anchors</p></li>
+            <li><p>but should have bibliography class</p></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  "##}
+);
+
+assert_html!(
+  // not documented, but dan said this is valid in zulip
+  bibliography_list_not_in_section,
+  adoc! {r#"
+    [bibliography]
+    - [[[taoup]]] Eric Steven Raymond. _The Art of Unix
+      Programming_. Addison-Wesley. ISBN 0-13-142901-9.
+    - [[[walsh-muellner]]] Norman Walsh & Leonard Muellner.
+      _DocBook - The Definitive Guide_. O'Reilly & Associates. 1999.
+      ISBN 1-56592-580-7.
+  "#},
+  html! {r#"
+    <div class="ulist bibliography">
+      <ul class="bibliography">
+        <li>
+          <p><a id="taoup"></a>[taoup] Eric Steven Raymond. <em>The Art of Unix Programming</em>. Addison-Wesley. ISBN 0-13-142901-9.</p>
+        </li>
+        <li>
+          <p><a id="walsh-muellner"></a>[walsh-muellner] Norman Walsh &amp; Leonard Muellner. <em>DocBook - The Definitive Guide</em>. O&#8217;Reilly &amp; Associates. 1999. ISBN 1-56592-580-7.</p>
+        </li>
+        </ul>
+    </div>
+  "#}
+);

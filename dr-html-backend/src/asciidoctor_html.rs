@@ -219,6 +219,9 @@ impl Backend for AsciidoctorHtml {
     let mut section_tag = OpenTag::without_id("div", section.meta.attrs.as_ref());
     section_tag.push_class(section::class(section));
     self.push_open_tag(section_tag);
+    if section.meta.has_str_positional("bibliography") {
+      self.state.insert(InBibliographySection);
+    }
   }
 
   #[instrument(skip_all)]
@@ -227,6 +230,7 @@ impl Backend for AsciidoctorHtml {
       self.push_str("</div>");
     }
     self.push_str("</div>");
+    self.state.remove(&InBibliographySection);
   }
 
   #[instrument(skip_all)]
@@ -455,6 +459,11 @@ impl Backend for AsciidoctorHtml {
     let mut div = OpenTag::new("div", attrs);
     let mut ul = OpenTag::new("ul", None);
     div.push_class("ulist");
+    if self.state.contains(&InBibliographySection) || block.meta.has_str_positional("bibliography")
+    {
+      div.push_class("bibliography");
+      ul.push_class("bibliography");
+    }
     if let Some(custom) = custom {
       div.push_class(custom);
       ul.push_class(custom);
@@ -805,6 +814,25 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn visit_inline_anchor(&mut self, id: &str) {
     self.push(["<a id=\"", id, "\"></a>"]);
+  }
+
+  #[instrument(skip_all)]
+  fn visit_biblio_anchor(&mut self, id: &str, reftext: Option<&str>) {
+    self.push(["<a id=\"", id, "\"></a>[", reftext.unwrap_or(id), "]"]);
+  }
+
+  #[instrument(skip_all)]
+  fn enter_xref_text(&mut self, _text: &[InlineNode], is_biblio: bool) {
+    if is_biblio {
+      self.push_str("[");
+    }
+  }
+
+  #[instrument(skip_all)]
+  fn exit_xref_text(&mut self, _text: &[InlineNode], is_biblio: bool) {
+    if is_biblio {
+      self.push_str("]");
+    }
   }
 
   #[instrument(skip_all)]
@@ -1494,6 +1522,7 @@ pub enum Newlines {
 pub enum EphemeralState {
   VisitingSimpleTermDescription,
   IsSourceBlock,
+  InBibliographySection,
 }
 
 const fn list_type_from_depth(depth: u8) -> &'static str {
