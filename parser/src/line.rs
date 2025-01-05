@@ -5,6 +5,14 @@ use crate::variants::token::*;
 pub struct Line<'arena> {
   tokens: Deq<'arena, Token<'arena>>,
   orig_len: u32,
+  pass_macro: bool,
+  pass_pluses: u8,
+}
+
+#[derive(Debug, Clone)]
+pub struct Line1<'arena> {
+  tokens: Deq<'arena, Token<'arena>>,
+  orig_len: u32,
   pass_tokens: bool,
 }
 
@@ -13,7 +21,8 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: tokens.len() as u32,
       tokens,
-      pass_tokens: false,
+      pass_macro: false,
+      pass_pluses: 0,
     }
   }
 
@@ -21,7 +30,8 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: 0,
       tokens: Deq::new(bump),
-      pass_tokens: false,
+      pass_macro: false,
+      pass_pluses: 0,
     }
   }
 
@@ -29,18 +39,33 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: 0,
       tokens: Deq::with_capacity(capacity, bump),
-      pass_tokens: false,
+      pass_macro: false,
+      pass_pluses: 0,
     }
   }
 
-  pub const fn may_contain_inline_pass(&self) -> bool {
-    self.pass_tokens
+  pub fn may_contain_inline_pass(&self) -> bool {
+    if !self.pass_macro && self.pass_pluses == 0 {
+      false
+    } else if self.pass_macro || self.pass_pluses > 1 {
+      true
+    } else {
+      let last = self.last().unwrap();
+      if last.is_kind_len(Plus, 1) && self.len() > 1 {
+        // NB: line ending ` +` is a hardbreak, cannot be pass
+        !self.nth_token(self.len() - 2).is_whitespaceish()
+      } else {
+        true
+      }
+    }
   }
 
   pub fn push(&mut self, token: Token<'arena>) {
     match token.kind {
-      MacroName if token.lexeme == "pass:" => self.pass_tokens = true,
-      Plus if self.tokens.last().not_kind(Backtick) && token.len() < 4 => self.pass_tokens = true,
+      MacroName if token.lexeme == "pass:" => self.pass_macro = true,
+      Plus if self.tokens.last().not_kind(Backtick) && token.len() < 4 => {
+        self.pass_pluses = self.pass_pluses.saturating_add(1)
+      }
       _ => {}
     }
     self.tokens.push(token);

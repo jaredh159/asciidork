@@ -63,10 +63,7 @@ impl<'arena> Accum<'arena> {
           next_token.drop_leading_bytes(1);
         }
       }
-      _ => {
-        dbg!(last_char, next_char);
-        self.push_text_token(&token);
-      }
+      _ => self.push_text_token(&token),
     }
   }
 

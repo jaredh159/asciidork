@@ -410,6 +410,17 @@ fn test_line_breaks() {
       ],
     ),
     (
+      // not confused as multi-line pass macro
+      "foo +\nbar +\nbaz",
+      nodes![
+        node!("foo"; 0..3),
+        node!(LineBreak, 3..6),
+        node!("bar"; 6..9),
+        node!(LineBreak, 9..12),
+        node!("baz"; 12..15),
+      ],
+    ),
+    (
       "foo+\nbar", // not valid linebreak
       nodes![
         node!("foo+"; 0..4),
