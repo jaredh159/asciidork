@@ -648,6 +648,28 @@ assert_html!(
 );
 
 assert_html!(
+  admonition_blocks,
+  adoc! {r#"
+    [NOTE]
+    ====
+    This is a note!
+    ====
+  "#},
+  html! {r#"
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><div class="title">Note</div></td>
+          <td class="content">
+            <div class="paragraph"><p>This is a note!</p></div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  "#}
+);
+
+assert_html!(
   escaped_ifdef,
   adoc! {"
     \\ifdef::yup[]

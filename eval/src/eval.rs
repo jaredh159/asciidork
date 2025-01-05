@@ -169,6 +169,21 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
       backend.exit_admonition_block(kind, block);
     }
+    (
+      Context::AdmonitionTip
+      | Context::AdmonitionNote
+      | Context::AdmonitionCaution
+      | Context::AdmonitionWarning
+      | Context::AdmonitionImportant,
+      Content::Compound(blocks),
+    ) => {
+      let kind = AdmonitionKind::try_from(block.context).unwrap();
+      backend.enter_admonition_block(kind, block);
+      backend.enter_compound_block_content(blocks, block);
+      blocks.iter().for_each(|b| eval_block(b, ctx, backend));
+      backend.exit_compound_block_content(blocks, block);
+      backend.exit_admonition_block(kind, block);
+    }
     (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs })) => {
       backend.enter_image_block(target, attrs, block);
       backend.exit_image_block(block);
