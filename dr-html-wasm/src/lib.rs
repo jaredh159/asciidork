@@ -2,6 +2,7 @@ mod utils;
 
 use asciidork_core::JobSettings;
 use asciidork_dr_html_backend as backend;
+use asciidork_dr_html_backend::{AsciidoctorHtml, Backend};
 use asciidork_parser::{parser::ParseResult, prelude::*};
 use wasm_bindgen::prelude::*;
 
@@ -9,10 +10,13 @@ use wasm_bindgen::prelude::*;
 pub fn convert(adoc: &str, timestamp: f64) -> String {
   let bump = &Bump::new();
   let mut parser = Parser::from_str(adoc, SourceFile::Tmp, bump);
+
   let mut job_settings = JobSettings::embedded();
   job_settings.strict = false;
+  AsciidoctorHtml::set_job_attrs(&mut job_settings.job_attrs);
   parser.apply_job_settings(job_settings);
   parser.provide_timestamps(timestamp as u64, None, None);
+
   let result = parser.parse();
   match result {
     Ok(ParseResult { document, .. }) => {

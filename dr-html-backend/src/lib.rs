@@ -11,6 +11,7 @@ pub mod section;
 mod table;
 
 pub use asciidoctor_html::AsciidoctorHtml;
+pub use backend::Backend;
 
 pub fn convert(document: ast::Document) -> Result<String, Box<dyn Error>> {
   Ok(eval::eval(&document, AsciidoctorHtml::new())?)

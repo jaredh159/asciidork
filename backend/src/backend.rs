@@ -17,6 +17,8 @@ pub trait Backend {
 
   const OUTFILESUFFIX: &'static str;
 
+  fn set_job_attrs(attrs: &mut asciidork_core::JobAttrs);
+
   // document
   fn enter_document(&mut self, document: &Document);
   fn exit_document(&mut self, document: &Document);

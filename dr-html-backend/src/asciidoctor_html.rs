@@ -34,6 +34,13 @@ impl Backend for AsciidoctorHtml {
   type Error = Infallible;
   const OUTFILESUFFIX: &'static str = ".html";
 
+  fn set_job_attrs(attrs: &mut asciidork_core::JobAttrs) {
+    attrs.insert_unchecked("backend", JobAttr::readonly("html5"));
+    attrs.insert_unchecked("backend-html5", JobAttr::readonly(true));
+    attrs.insert_unchecked("basebackend", JobAttr::readonly("html"));
+    attrs.insert_unchecked("basebackend-html", JobAttr::readonly(true));
+  }
+
   #[instrument(skip_all)]
   fn enter_document(&mut self, document: &Document) {
     #[cfg(debug_assertions)]
