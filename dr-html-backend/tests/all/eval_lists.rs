@@ -542,6 +542,42 @@ assert_html!(
 );
 
 assert_html!(
+  list_nested_inside_continuation,
+  adoc! {r#"
+    * Item 1
+    +
+    Foo
+
+    ** Item 1.1
+    ** Item 1.2
+
+    * Item 2
+    +
+    Baz
+  "#},
+  html! {r#"
+    <div class="ulist">
+      <ul>
+        <li>
+          <p>Item 1</p>
+          <div class="paragraph"><p>Foo</p></div>
+          <div class="ulist">
+            <ul>
+              <li><p>Item 1.1</p></li>
+              <li><p>Item 1.2</p></li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <p>Item 2</p>
+          <div class="paragraph"><p>Baz</p></div>
+        </li>
+      </ul>
+    </div>
+  "#}
+);
+
+assert_html!(
   list_items_w_delimited_listing_blocks,
   adoc! {r#"
     * item 1

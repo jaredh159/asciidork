@@ -165,11 +165,18 @@ impl<'arena> Parser<'arena> {
     let Some(mut lines) = self.read_lines()? else {
       return Ok(accum);
     };
+
+    if lines.starts_nested_list(&self.ctx.list.stack, false) {
+      accum.push(self.parse_list(lines, None)?);
+      return Ok(accum);
+    }
+
     if !lines.starts_list_continuation() {
       self.restore_lines(lines);
       return Ok(accum);
     }
-    lines.consume_current();
+
+    lines.consume_current(); // the `+` line starting the continuation
     self.restore_lines(lines);
     self.ctx.list.parsing_continuations = true;
     accum.push(self.parse_block()?.unwrap());
