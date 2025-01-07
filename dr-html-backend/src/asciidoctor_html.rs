@@ -901,6 +901,68 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
+  fn visit_icon_macro(&mut self, target: &str, attrs: &AttrList) {
+    self.push_str(r#"<span class="icon"#);
+    attrs.roles.iter().for_each(|role| {
+      self.push_str(" ");
+      self.push_str(role);
+    });
+    self.push_str(r#"">"#);
+    let has_link = if let Some(link) = attrs.named("link") {
+      self.push_str(r#"<a class="image""#);
+      self.push_html_attr("href", link);
+      if let Some(window) = attrs.named("window") {
+        self.push_html_attr("target", window);
+      }
+      self.push_str(">");
+      true
+    } else {
+      false
+    };
+    match self.doc_meta.icon_mode() {
+      IconMode::Text => {
+        self.push_ch('[');
+        self.push_str(attrs.named("alt").unwrap_or(target));
+        self.push_str("&#93;");
+      }
+      IconMode::Image => {
+        self.push_str(r#"<img src=""#);
+        self.push_icon_uri(target, None);
+        self.push_str(r#"" alt=""#);
+        self.push_str(attrs.named("alt").unwrap_or(target));
+        if let Some(width) = attrs.named("width") {
+          self.push([r#"" width=""#, width]);
+        }
+        if let Some(title) = attrs.named("title") {
+          self.push([r#"" title=""#, title]);
+        }
+        self.push_str(r#"">"#);
+      }
+      IconMode::Font => {
+        self.push_str(r#"<i class="fa fa-"#);
+        self.push_str(target);
+        if let Some(size) = attrs.named("size").or(attrs.str_positional_at(0)) {
+          self.push([r#" fa-"#, size]);
+        }
+        if let Some(flip) = attrs.named("flip") {
+          self.push([r#" fa-flip-"#, flip]);
+        }
+        if let Some(rotate) = attrs.named("rotate") {
+          self.push([r#" fa-rotate-"#, rotate]);
+        }
+        if let Some(title) = attrs.named("title") {
+          self.push([r#"" title=""#, title]);
+        }
+        self.push_str(r#""></i>"#);
+      }
+    }
+    if has_link {
+      self.push_str("</a>");
+    }
+    self.push_str("</span>");
+  }
+
+  #[instrument(skip_all)]
   fn visit_image_macro(&mut self, target: &str, attrs: &AttrList) {
     let mut open_tag = OpenTag::new("span", None);
     open_tag.push_class("image");

@@ -435,12 +435,8 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_text_span(attrs, nodes);
     }
     Symbol(kind) => backend.visit_symbol(*kind),
+    Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
     LineComment(_) | Discarded => {}
-    _ => {
-      println!("\nUnhandled inline node type:");
-      println!("  -> {:?}\n", &inline.content);
-      todo!();
-    }
   }
 }
 
