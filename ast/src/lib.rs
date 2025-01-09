@@ -8,6 +8,7 @@ mod inline;
 mod inline_nodes;
 mod list;
 mod r#macro;
+mod multi_attr_list;
 mod node;
 mod source_location;
 mod source_string;
@@ -18,7 +19,7 @@ pub use internal::types::*;
 
 mod internal {
   pub(crate) mod types {
-    pub use crate::attr_list::{AttrList, Named};
+    pub use crate::attr_list::{AttrData, AttrList, Named};
     pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
     pub use crate::chunk_meta::ChunkMeta;
     pub use crate::col_widths::*;
@@ -28,6 +29,7 @@ mod internal {
     pub use crate::inline::{CurlyKind::*, QuoteKind::*, SymbolKind};
     pub use crate::inline_nodes::InlineNodes;
     pub use crate::list::*;
+    pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
     pub use crate::node::{Anchor, Callout, Section};
     pub use crate::r#macro::{Flow, MacroNode, UrlScheme, XrefKind};
     pub use crate::source_location::SourceLocation;
@@ -48,7 +50,7 @@ mod internal {
 }
 
 pub mod prelude {
-  pub use crate::attr_list::{AttrList, Named};
+  pub use crate::attr_list::{AttrData, AttrList, Named};
   pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::col_widths::*;
@@ -56,6 +58,7 @@ pub mod prelude {
   pub use crate::document::{DocTitle, Document};
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind, SymbolKind};
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
+  pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
   pub use crate::node::{Anchor, Callout, Section};
   pub use crate::r#macro::{UrlScheme, XrefKind};
   pub use crate::source_location::SourceLocation;

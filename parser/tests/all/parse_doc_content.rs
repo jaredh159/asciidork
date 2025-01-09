@@ -30,7 +30,7 @@ fn test_sectioned_w_preamble() {
     DocContent::Sectioned {
       preamble: Some(vecb![simple_text_block!("Preamble", 0..8)]),
       sections: vecb![Section {
-        meta: ChunkMeta::empty(10),
+        meta: chunk_meta!(10),
         level: 1,
         id: Some(bstr!("_sect_1")),
         heading: just!("Sect 1", 13..19),
@@ -53,7 +53,7 @@ fn comment_only_preamble_discarded() {
     DocContent::Sectioned {
       preamble: None,
       sections: vecb![Section {
-        meta: ChunkMeta::empty(10),
+        meta: chunk_meta!(10),
         level: 1,
         id: Some(bstr!("_sect_1")),
         heading: just!("Sect 1", 13..19),
@@ -74,7 +74,7 @@ fn test_sectioned_no_preamble() {
     DocContent::Sectioned {
       preamble: None,
       sections: vecb![Section {
-        meta: ChunkMeta::empty(0),
+        meta: chunk_meta!(0),
         level: 1,
         id: Some(bstr!("_sect_1")),
         heading: just!("Sect 1", 3..9),
@@ -98,7 +98,7 @@ fn test_section_offset() {
       preamble: None,
       sections: vecb![
         Section {
-          meta: ChunkMeta::empty(0),
+          meta: chunk_meta!(0),
           level: 1,
           id: Some(bstr!("_sect_1")),
           heading: just!("Sect 1", 3..9),
@@ -112,7 +112,7 @@ fn test_section_offset() {
           }]
         },
         Section {
-          meta: ChunkMeta::empty(28),
+          meta: chunk_meta!(28),
           level: 1,
           id: Some(bstr!("_sect_2")),
           heading: just!("Sect 2", 30..36),

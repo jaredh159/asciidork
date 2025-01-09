@@ -35,7 +35,7 @@ impl<'arena> Document<'arena> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DocTitle<'arena> {
-  pub attrs: Option<AttrList<'arena>>,
+  pub attrs: MultiAttrList<'arena>,
   pub main: InlineNodes<'arena>,
   pub subtitle: Option<InlineNodes<'arena>>,
 }

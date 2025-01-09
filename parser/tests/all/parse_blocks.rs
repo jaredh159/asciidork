@@ -25,6 +25,26 @@ fn test_parse_simple_block() {
 }
 
 #[test]
+fn block_multiple_attr_lists() {
+  assert_block!(
+    adoc! {"
+      [mustard]
+      [%thingy]
+      foobar
+    "},
+    Block {
+      context: Context::Paragraph,
+      content: Content::Simple(just!("foobar", 20..26)),
+      meta: ChunkMeta::new(
+        vecb![attrs::pos("mustard", 1..8), attrs::opt("thingy", 12..18)],
+        None,
+        0
+      ),
+    }
+  );
+}
+
+#[test]
 fn test_line_followed_by_comment_is_trimmed() {
   assert_block!(
     adoc! {"
@@ -63,7 +83,7 @@ fn test_parse_comment_style_block() {
       --
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("comment", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("comment", 1..8)], None, 0),
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
     }
@@ -79,7 +99,7 @@ fn test_parse_paragraph_comment_block() {
       Like all paragraphs, the lines must be contiguous.
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("comment", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("comment", 1..8)], None, 0),
       context: Context::Comment,
       content: Content::Empty(EmptyMetadata::None),
     }
@@ -100,7 +120,7 @@ fn test_parse_discrete_headings() {
     "},
     &[
       Block {
-        meta: ChunkMeta::new(Some(attrs::pos("discrete", 1..9)), None, 0),
+        meta: ChunkMeta::new(vecb![attrs::pos("discrete", 1..9)], None, 0),
         context: Context::DiscreteHeading,
         content: Content::Empty(EmptyMetadata::DiscreteHeading {
           level: 3,
@@ -115,7 +135,7 @@ fn test_parse_discrete_headings() {
       },
       Block {
         //                                    vvvvv - synonym for `discrete`
-        meta: ChunkMeta::new(Some(attrs::pos("float", 54..59)), None, 53),
+        meta: ChunkMeta::new(vecb![attrs::pos("float", 54..59)], None, 53),
         context: Context::DiscreteHeading,
         content: Content::Empty(EmptyMetadata::DiscreteHeading {
           level: 3, // <- discrete headings are subject to `leveloffset`
@@ -140,7 +160,7 @@ fn test_parse_passthrough() {
       foo <bar>
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("pass", 1..5)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("pass", 1..5)], None, 0),
       context: Context::Passthrough,
       content: Content::Simple(just!("foo <bar>", 7..16)),
     }
@@ -178,8 +198,9 @@ fn test_parse_delimited_passthrough_block_subs_normal() {
   "};
   let expected = Block {
     meta: ChunkMeta {
-      attrs: Some(attrs::named(&[("subs", 1..5, "normal", 6..12)])),
-      ..ChunkMeta::default()
+      attrs: vecb![attrs::named(&[("subs", 1..5, "normal", 6..12)])].into(),
+      start: 0,
+      title: None,
     },
     context: Context::Passthrough,
     content: Content::Simple(nodes![
@@ -208,7 +229,10 @@ fn test_parse_block_titles() {
     foo
   "};
   let expected = Block {
-    meta: ChunkMeta::new(None, Some(just!("My Title", 1..9)), 0),
+    meta: ChunkMeta {
+      title: Some(just!("My Title", 1..9)),
+      ..chunk_meta!(0)
+    },
     context: Context::Paragraph,
     content: Content::Simple(nodes![node!("foo"; 10..13)]),
   };
@@ -234,7 +258,7 @@ fn test_parse_admonitions() {
       TIP: foo
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("pos", 1..4)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("pos", 1..4)], None, 0),
       context: Context::AdmonitionTip,
       content: Content::Simple(just!("foo", 11..14)),
     }
@@ -246,7 +270,7 @@ fn test_parse_admonitions() {
       TIP: foo
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("WARNING", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("WARNING", 1..8)], None, 0),
       context: Context::AdmonitionWarning,
       content: Content::Simple(just!("TIP: foo", 10..18)), // <-- attr list wins
     }
@@ -260,7 +284,7 @@ fn test_parse_admonitions() {
       ====
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("WARNING", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("WARNING", 1..8)], None, 0),
       context: Context::AdmonitionWarning, // <-- turns example into warning
       content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
@@ -278,7 +302,7 @@ fn test_parse_admonitions() {
       ====
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("CAUTION", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("CAUTION", 1..8)], None, 0),
       context: Context::AdmonitionCaution,
       content: Content::Compound(vecb![Block {
         context: Context::AdmonitionNote,
@@ -364,7 +388,7 @@ fn test_undelimited_sidebar() {
       foo
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("sidebar", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("sidebar", 1..8)], None, 0),
       context: Context::Sidebar,
       content: Content::Simple(just!("foo", 10..13)),
     }
@@ -448,7 +472,10 @@ fn test_nested_delimiter_blocks() {
     Block {
       context: Context::Sidebar,
       content: Content::Compound(vecb![Block {
-        meta: ChunkMeta::new(None, Some(just!("Bar", 7..10)), 6),
+        meta: ChunkMeta {
+          title: Some(just!("Bar", 7..10)),
+          ..chunk_meta!(6)
+        },
         context: Context::Open,
         content: Content::Compound(vecb![Block {
           context: Context::Paragraph,

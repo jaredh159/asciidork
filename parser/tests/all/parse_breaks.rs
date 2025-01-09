@@ -24,10 +24,7 @@ fn test_themmatic_break_w_attrs() {
       '''
     "},
     Block {
-      meta: ChunkMeta {
-        attrs: Some(attrs::role("fancy", 2..7)),
-        ..ChunkMeta::empty(0)
-      },
+      meta: ChunkMeta::new(vecb![attrs::role("fancy", 2..7)], None, 0),
       context: Context::ThematicBreak,
       content: Content::Empty(EmptyMetadata::None),
     }
@@ -119,10 +116,7 @@ fn test_page_break_w_attrs() {
       <<<
     "},
     Block {
-      meta: ChunkMeta {
-        attrs: Some(attrs::opt("always", 2..8)),
-        ..ChunkMeta::empty(0)
-      },
+      meta: ChunkMeta::new(vecb![attrs::opt("always", 2..8)], None, 0),
       context: Context::PageBreak,
       content: Content::Empty(EmptyMetadata::None),
     }

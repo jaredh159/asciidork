@@ -407,6 +407,21 @@ assert_html!(
 );
 
 assert_html!(
+  table_multiple_attr_lists,
+  adoc! {r#"
+    [[custom-id]]
+    .My Title
+    [caption="So wow: "]
+    |===
+    |a | b
+    |===
+  "#},
+  contains:
+  r#"<table id="custom-id" class="tableblock"#,
+  r#"<caption class="title">So wow: My Title</caption>"#,
+);
+
+assert_html!(
   empty_captions_disables_numbered,
   adoc! {r#"
     [caption=""]

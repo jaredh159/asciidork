@@ -43,12 +43,7 @@ impl AsciidoctorHtml {
     match sectnums {
       AttrValue::String(val) if val == "all" => true,
       AttrValue::Bool(true) => {
-        if let Some(special) = section
-          .meta
-          .attrs
-          .as_ref()
-          .and_then(|a| a.str_positional_at(0))
-        {
+        if let Some(special) = section.meta.attrs.str_positional_at(0) {
           self
             .doc_meta
             .get_doctype()

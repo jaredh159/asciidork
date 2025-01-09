@@ -8,18 +8,6 @@ pub struct Block<'arena> {
 }
 
 impl Block<'_> {
-  pub fn has_attr_option(&self, name: &str) -> bool {
-    self
-      .meta
-      .attrs
-      .as_ref()
-      .map_or(false, |attrs| attrs.has_option(name))
-  }
-
-  pub fn named_attr(&self, name: &str) -> Option<&str> {
-    self.meta.attrs.as_ref().and_then(|attrs| attrs.named(name))
-  }
-
   pub fn is_comment(&self) -> bool {
     self.context == BlockContext::Comment
   }

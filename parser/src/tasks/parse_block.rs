@@ -27,7 +27,7 @@ impl<'arena> Parser<'arena> {
         } else {
           let section = self.parse_section()?.unwrap();
           return Ok(Some(Block {
-            meta: ChunkMeta::empty(section.meta.start),
+            meta: ChunkMeta::empty(section.meta.start, self.bump),
             context: Context::Section,
             content: Content::Section(section),
           }));
@@ -115,7 +115,7 @@ impl<'arena> Parser<'arena> {
     let level = self.line_heading_level(&line).unwrap();
     line.discard_assert(TokenKind::EqualSigns);
     line.discard_assert(TokenKind::Whitespace);
-    let id = self.section_id(&line, meta.attrs.as_ref());
+    let id = self.section_id(&line, &meta.attrs);
     let content = self.parse_inlines(&mut line.into_lines())?;
     self.restore_lines(lines);
     Ok(Block {
@@ -134,7 +134,7 @@ impl<'arena> Parser<'arena> {
       lines.discard_leading_comment_lines();
       if lines.is_empty() {
         return Some(Block {
-          meta: ChunkMeta::empty(start),
+          meta: ChunkMeta::empty(start, self.bump),
           context: Context::Comment,
           content: Content::Empty(EmptyMetadata::None),
         });
@@ -171,7 +171,8 @@ impl<'arena> Parser<'arena> {
         .unwrap_or_else(|| ContiguousLines::new(Deq::new(self.bump)));
 
       if let Some(indent) = meta
-        .attr_named("indent")
+        .attrs
+        .named("indent")
         .and_then(|s| s.parse::<usize>().ok())
       {
         let delimiter = lines.pop();
@@ -180,7 +181,7 @@ impl<'arena> Parser<'arena> {
       }
 
       if context == Context::Listing || context == Context::Literal {
-        if let Some(comment) = meta.attrs.as_ref().and_then(|a| a.named("line-comment")) {
+        if let Some(comment) = meta.attrs.named("line-comment") {
           self.ctx.custom_line_comment = Some(SmallVec::from_slice(comment.as_bytes()));
         }
       }

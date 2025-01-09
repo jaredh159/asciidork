@@ -11,7 +11,7 @@ fn test_parse_section() {
       bar
     "},
     Section {
-      meta: ChunkMeta::empty(0),
+      meta: chunk_meta!(0),
       level: 1,
       id: Some(bstr!("_foo")),
       heading: nodes![node!("foo"; 3..6)],
@@ -39,7 +39,7 @@ fn test_parse_section_w_reftext() {
     ]),
     Section {
       meta: ChunkMeta {
-        attrs: Some(AttrList {
+        attrs: vecb![AttrList {
           positional: vecb![None],
           named: Named::from(vecb![
              (src!("reftext", 1..8), nodes![
@@ -48,9 +48,8 @@ fn test_parse_section_w_reftext() {
              ])
           ]),
           ..attr_list!(0..18)
-        }),
-        title: None,
-        start: 0
+        }].into(),
+        ..chunk_meta!(0)
       },
       level: 1,
       id: Some(bstr!("_foo")),
@@ -75,15 +74,15 @@ fn test_parse_nested_section() {
       bar
     "},
     Section {
-      meta: ChunkMeta::empty(0),
+      meta: chunk_meta!(0),
       level: 1,
       id: Some(bstr!("_one")),
       heading: nodes![node!("one"; 3..6)],
       blocks: vecb![Block {
-        meta: ChunkMeta::empty(8),
+        meta: chunk_meta!(8),
         context: BlockContext::Section,
         content: BlockContent::Section(Section {
-          meta: ChunkMeta::empty(8),
+          meta: chunk_meta!(8),
           level: 2,
           id: Some(bstr!("_two")),
           heading: nodes![node!("two"; 12..15)],

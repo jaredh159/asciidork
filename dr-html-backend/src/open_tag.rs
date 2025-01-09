@@ -18,15 +18,15 @@ impl HtmlBuf for OpenTag {
 }
 
 impl OpenTag {
-  pub fn new(elem: &str, attrs: Option<&AttrList>) -> Self {
+  pub fn new(elem: &str, attrs: &impl AttrData) -> Self {
     Self::new_with_id(true, elem, attrs)
   }
 
-  pub fn without_id(elem: &str, attrs: Option<&AttrList>) -> Self {
+  pub fn without_id(elem: &str, attrs: &impl AttrData) -> Self {
     Self::new_with_id(false, elem, attrs)
   }
 
-  fn new_with_id(id: bool, elem: &str, attrs: Option<&AttrList>) -> Self {
+  fn new_with_id(id: bool, elem: &str, attrs: &impl AttrData) -> Self {
     let mut tag = Self {
       buf: String::with_capacity(64),
       opened_classes: false,
@@ -38,19 +38,15 @@ impl OpenTag {
     tag.buf.push_str(elem);
 
     if id {
-      if let Some(id) = attrs.as_ref().and_then(|a| a.id.as_ref()) {
+      if let Some(id) = attrs.id() {
         tag.push_html_attr("id", id);
       }
     }
 
-    if let Some(mut roles) = attrs
-      .as_ref()
-      .map(|a| &a.roles)
-      .filter(|r| !r.is_empty())
-      .map(|r| r.iter())
-    {
-      let mut append = String::with_capacity(roles.len() * 12);
-      append.push_str(roles.next().unwrap());
+    let mut roles = attrs.roles();
+    if let Some(first_role) = roles.next() {
+      let mut append = String::with_capacity(24);
+      append.push_str(first_role);
       for role in roles {
         append.push(' ');
         append.push_str(role);
@@ -110,7 +106,7 @@ impl OpenTag {
     chunk_meta: &ChunkMeta,
     doc_meta: &DocumentMeta,
   ) {
-    match chunk_meta.attr_named(name) {
+    match chunk_meta.attrs.named(name) {
       Some(value) => self.push_prefixed_class(value, prefix),
       None => match doc_meta.get(doc_name.unwrap_or(name)) {
         Some(AttrValue::String(s)) => self.push_prefixed_class(s, prefix),

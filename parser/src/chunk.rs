@@ -4,24 +4,18 @@ use crate::variants::token::*;
 pub trait ChunkMetaExt<'arena> {
   fn block_style_or(&self, default: BlockContext) -> BlockContext;
   fn block_paragraph_context(&self, lines: &mut ContiguousLines) -> BlockContext;
-  fn attrs_has_str_positional(&self, positional: &str) -> bool;
-  fn attrs_has_str_positional_at(&self, idx: usize, positional: &str) -> bool;
 }
 
 impl<'arena> ChunkMetaExt<'arena> for ChunkMeta<'arena> {
   fn block_style_or(&self, default: BlockContext) -> BlockContext {
-    self
-      .attrs
-      .as_ref()
-      .and_then(|attrs| attrs.block_style())
-      .unwrap_or(default)
+    self.attrs.block_style().unwrap_or(default)
   }
 
   fn block_paragraph_context(&self, lines: &mut ContiguousLines) -> BlockContext {
     let uniform_indented = lines.trim_uniform_leading_whitespace();
 
     // line from block attrs takes precedence
-    if let Some(block_style) = self.attrs.as_ref().and_then(|attrs| attrs.block_style()) {
+    if let Some(block_style) = self.attrs.block_style() {
       return block_style;
     }
 
@@ -46,20 +40,5 @@ impl<'arena> ChunkMetaExt<'arena> for ChunkMeta<'arena> {
     }
 
     BlockContext::Paragraph
-  }
-
-  fn attrs_has_str_positional(&self, positional: &str) -> bool {
-    self
-      .attrs
-      .as_ref()
-      .map_or(false, |attrs| attrs.has_str_positional(positional))
-  }
-
-  fn attrs_has_str_positional_at(&self, idx: usize, positional: &str) -> bool {
-    self
-      .attrs
-      .as_ref()
-      .and_then(|attrs| attrs.str_positional_at(idx))
-      .map_or(false, |s| s == positional)
   }
 }

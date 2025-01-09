@@ -269,7 +269,7 @@ fn test_globally_unique_callouts() {
         ..empty_block!(5)
       },
       Block {
-        meta: ChunkMeta::new(None, None, 31),
+        meta: chunk_meta!(31),
         content: Content::Table(Table {
           col_widths: ColWidths::new(vecb![ColWidth::Proportional(1)]),
           header_row: None,

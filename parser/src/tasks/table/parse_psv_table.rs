@@ -183,7 +183,7 @@ mod tests {
           Cell {
             content: CellContent::AsciiDoc(Document {
               content: DocContent::Blocks(vecb![Block {
-                meta: ChunkMeta::empty(8),
+                meta: chunk_meta!(8),
                 content: BlockContent::List {
                   variant: ListVariant::Unordered,
                   depth: 1,
@@ -833,9 +833,8 @@ mod tests {
       "},
       Block {
         meta: ChunkMeta {
-          attrs: None,
           title: Some(just!("Simple psv table", 1..17)),
-          start: 0
+          ..chunk_meta!(0)
         },
         content: BlockContent::Table(Table {
           col_widths: ColWidths::new(vecb![w(1), w(1), w(1)]),
