@@ -161,6 +161,18 @@ assert_html!(
 );
 
 assert_html!(
+  topbot_to_frame_ends,
+  adoc! {r#"
+    [frame=topbot]
+    |===
+    |A |B
+    |===
+  "#},
+  contains:
+    r#"<table class="tableblock frame-ends grid-all stretch">"#
+);
+
+assert_html!(
   cell_content_paragraphs,
   adoc! {r#"
     |===

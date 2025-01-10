@@ -107,6 +107,8 @@ impl OpenTag {
     doc_meta: &DocumentMeta,
   ) {
     match chunk_meta.attrs.named(name) {
+      // `topbot` is a special case that gets normalized in html to `frame-ends`
+      Some("topbot") if name == "frame" => self.push_prefixed_class("ends", prefix),
       Some(value) => self.push_prefixed_class(value, prefix),
       None => match doc_meta.get(doc_name.unwrap_or(name)) {
         Some(AttrValue::String(s)) => self.push_prefixed_class(s, prefix),
