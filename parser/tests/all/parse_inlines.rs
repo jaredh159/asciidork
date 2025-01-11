@@ -446,6 +446,59 @@ fn test_inline_anchors() {
 }
 
 #[test]
+fn test_footnotes() {
+  run(vec![
+    (
+      "footnote:[foo]",
+      nodes![node!(
+        Macro(Footnote {
+          id: None,
+          text: Some(just!("foo", 10..13))
+        }),
+        0..14,
+      )],
+    ),
+    (
+      "footnote:id[foo]",
+      nodes![node!(
+        Macro(Footnote {
+          id: Some(src!("id", 9..11)),
+          text: Some(just!("foo", 12..15)),
+        }),
+        0..16,
+      )],
+    ),
+    (
+      "footnote:id[]",
+      nodes![node!(
+        Macro(Footnote {
+          id: Some(src!("id", 9..11)),
+          text: None,
+        }),
+        0..10,
+      )],
+    ),
+    (
+      "doublefootnote:[ymmv _i_]bar",
+      nodes![
+        node!("double"; 0..6),
+        node!(
+          Macro(Footnote {
+            id: None,
+            text: Some(nodes![
+              node!("ymmv "; 16..21),
+              node!(Italic(nodes![node!("i"; 22..23)]), 21..24),
+            ]),
+          }),
+          6..25,
+        ),
+        node!("bar"; 25..28),
+      ],
+    ),
+  ]);
+}
+
+#[test]
 fn test_parse_inlines() {
   run(vec![
     (
@@ -718,24 +771,6 @@ fn test_parse_inlines() {
         node!("foo "; 0..4),
         node!(Superscript(nodes![node!("bar"; 5..8)]), 4..9),
         node!(" foo"; 9..13),
-      ],
-    ),
-    (
-      "doublefootnote:[ymmv _i_]bar",
-      nodes![
-        node!("double"; 0..6),
-        node!(
-          Macro(Footnote {
-            number: 1,
-            id: None,
-            text: nodes![
-              node!("ymmv "; 16..21),
-              node!(Italic(nodes![node!("i"; 22..23)]), 21..24),
-            ],
-          }),
-          6..25,
-        ),
-        node!("bar"; 25..28),
       ],
     ),
     (

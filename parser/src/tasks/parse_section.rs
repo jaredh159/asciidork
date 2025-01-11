@@ -18,7 +18,7 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    if meta.attrs_has_str_positional("discrete") || meta.attrs_has_str_positional("float") {
+    if meta.attrs.has_str_positional("discrete") || meta.attrs.has_str_positional("float") {
       self.restore_peeked(lines, meta);
       return Ok(None);
     }
@@ -28,7 +28,7 @@ impl<'arena> Parser<'arena> {
     let mut heading_line = lines.consume_current().unwrap();
     let equals = heading_line.consume_current().unwrap();
     heading_line.discard_assert(TokenKind::Whitespace);
-    let id = self.section_id(&heading_line, meta.attrs.as_ref());
+    let id = self.section_id(&heading_line, &meta.attrs);
 
     let out_of_sequence = level > last_level && level - last_level > 1;
     if out_of_sequence {
@@ -50,8 +50,8 @@ impl<'arena> Parser<'arena> {
     if let Some(id) = &id {
       let reftext = meta
         .attrs
-        .as_ref()
-        .and_then(|attrs| attrs.named.get("reftext"))
+        .iter()
+        .find_map(|a| a.named.get("reftext"))
         .cloned();
       self.document.anchors.borrow_mut().insert(
         id.clone(),
@@ -65,7 +65,7 @@ impl<'arena> Parser<'arena> {
       );
     }
 
-    if meta.attrs_has_str_positional_at(0, "bibliography") {
+    if meta.attrs.str_positional_at(0) == Some("bibliography") {
       self.ctx.bibliography_ctx = BiblioContext::Section;
     }
 
@@ -129,7 +129,7 @@ mod tests {
     assert_eq!(
       section,
       Section {
-        meta: ChunkMeta::empty(0),
+        meta: chunk_meta!(0),
         level: 1,
         id: Some(bstr!("_one")),
         heading: nodes![node!("one"; 3..6)],
@@ -144,7 +144,7 @@ mod tests {
     assert_eq!(
       section,
       Section {
-        meta: ChunkMeta::empty(13),
+        meta: chunk_meta!(13),
         level: 1,
         id: Some(bstr!("_two")),
         heading: nodes![node!("two"; 16..19)],

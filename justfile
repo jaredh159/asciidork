@@ -18,10 +18,10 @@ check:
     cargo build
   @just build-playground
 
-test-parser:
+ptest:
   @cd parser && bacon test
 
-test-backend:
+btest:
   @cd dr-html-backend && bacon test
 
 reset-wasm:

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::sync::Once;
+use std::{cell::RefCell, rc::Rc};
 
 use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -14,7 +15,8 @@ use EphemeralState::*;
 pub struct AsciidoctorHtml {
   pub(crate) html: String,
   pub(crate) alt_html: String,
-  pub(crate) footnotes: Vec<(u16, String, String)>,
+  #[allow(clippy::type_complexity)]
+  pub(crate) footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
   pub(crate) doc_meta: DocumentMeta,
   pub(crate) fig_caption_num: usize,
   pub(crate) table_caption_num: usize,
@@ -33,6 +35,13 @@ impl Backend for AsciidoctorHtml {
   type Output = String;
   type Error = Infallible;
   const OUTFILESUFFIX: &'static str = ".html";
+
+  fn set_job_attrs(attrs: &mut asciidork_core::JobAttrs) {
+    attrs.insert_unchecked("backend", JobAttr::readonly("html5"));
+    attrs.insert_unchecked("backend-html5", JobAttr::readonly(true));
+    attrs.insert_unchecked("basebackend", JobAttr::readonly("html"));
+    attrs.insert_unchecked("basebackend-html", JobAttr::readonly(true));
+  }
 
   #[instrument(skip_all)]
   fn enter_document(&mut self, document: &Document) {
@@ -90,7 +99,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_document(&mut self, _document: &Document) {
-    if !self.footnotes.is_empty() {
+    if !self.footnotes.borrow().is_empty() && !self.in_asciidoc_table_cell {
       self.render_footnotes();
     }
     if self.standalone() {
@@ -216,10 +225,10 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_section(&mut self, section: &Section) {
-    let mut section_tag = OpenTag::without_id("div", section.meta.attrs.as_ref());
+    let mut section_tag = OpenTag::without_id("div", &section.meta.attrs);
     section_tag.push_class(section::class(section));
     self.push_open_tag(section_tag);
-    if section.meta.has_str_positional("bibliography") {
+    if section.meta.attrs.has_str_positional("bibliography") {
       self.state.insert(InBibliographySection);
     }
   }
@@ -275,7 +284,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_simple_block_content(&mut self, _children: &[InlineNode], block: &Block) {
     if block.context == BlockContext::Verse {
       self.newlines = Newlines::Preserve;
-    } else if block.has_attr_option("hardbreaks") {
+    } else if block.meta.attrs.has_option("hardbreaks") {
       self.newlines = Newlines::JoinWithBreak;
     }
   }
@@ -287,7 +296,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_sidebar_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["sidebarblock"], block.meta.attrs.as_ref());
+    self.open_element("div", &["sidebarblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
   }
 
@@ -298,7 +307,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["listingblock"], block.meta.attrs.as_ref());
+    self.open_element("div", &["listingblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content"><pre"#);
     if let Some(lang) = self.source_lang(block) {
       self.push([
@@ -326,7 +335,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_literal_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["literalblock"], block.meta.attrs.as_ref());
+    self.open_element("div", &["literalblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content"><pre>"#);
     self.newlines = Newlines::Preserve;
   }
@@ -344,7 +353,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
-    self.open_element("div", &["quoteblock"], block.meta.attrs.as_ref());
+    self.open_element("div", &["quoteblock"], &block.meta.attrs);
     self.render_block_title(&block.meta);
     self.push_str("<blockquote>");
   }
@@ -356,27 +365,23 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["quoteblock"], block.meta.attrs.as_ref());
+    self.open_element("div", &["quoteblock"], &block.meta.attrs);
     self.render_block_title(&block.meta);
     self.push_str("<blockquote>");
   }
 
   #[instrument(skip_all)]
   fn exit_quote_block(&mut self, block: &Block, _content: &BlockContent) {
-    if let Some(attrs) = &block.meta.attrs {
-      self.exit_attributed(
-        block.context,
-        attrs.str_positional_at(1),
-        attrs.str_positional_at(2),
-      );
-    } else {
-      self.exit_attributed(block.context, None, None);
-    }
+    self.exit_attributed(
+      block.context,
+      block.meta.attrs.str_positional_at(1),
+      block.meta.attrs.str_positional_at(2),
+    );
   }
 
   #[instrument(skip_all)]
   fn enter_verse_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["verseblock"], block.meta.attrs.as_ref());
+    self.open_element("div", &["verseblock"], &block.meta.attrs);
     self.render_block_title(&block.meta);
     self.push_str(r#"<pre class="content">"#);
   }
@@ -388,9 +393,9 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
-    if block.has_attr_option("collapsible") {
-      self.open_element("details", &[], block.meta.attrs.as_ref());
-      if block.has_attr_option("open") {
+    if block.meta.attrs.has_option("collapsible") {
+      self.open_element("details", &[], &block.meta.attrs);
+      if block.meta.attrs.has_option("open") {
         self.html.pop();
         self.push_str(" open>");
       }
@@ -402,14 +407,14 @@ impl Backend for AsciidoctorHtml {
       }
       self.push_str("</summary>");
     } else {
-      self.open_element("div", &["exampleblock"], block.meta.attrs.as_ref());
+      self.open_element("div", &["exampleblock"], &block.meta.attrs);
     }
     self.push_str(r#"<div class="content">"#);
   }
 
   #[instrument(skip_all)]
   fn exit_example_block(&mut self, block: &Block, _content: &BlockContent) {
-    if block.has_attr_option("collapsible") {
+    if block.meta.attrs.has_option("collapsible") {
       self.push_str("</div></details>");
     } else {
       self.push_str("</div></div>");
@@ -418,7 +423,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_open_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["openblock"], block.meta.attrs.as_ref());
+    self.open_element("div", &["openblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
   }
 
@@ -436,11 +441,9 @@ impl Backend for AsciidoctorHtml {
       self.push(["<h", &level_str]);
     }
     self.push_str(r#" class="discrete"#);
-    if let Some(roles) = block.meta.attrs.as_ref().map(|a| &a.roles) {
-      for role in roles {
-        self.push_ch(' ');
-        self.push_str(role);
-      }
+    for role in block.meta.attrs.roles() {
+      self.push_ch(' ');
+      self.push_str(role);
     }
     self.push_str("\">");
   }
@@ -452,14 +455,14 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], _depth: u8) {
-    let attrs = block.meta.attrs.as_ref();
-    let custom = attrs.and_then(|a| a.unordered_list_custom_marker_style());
-    let interactive = attrs.map(|a| a.has_option("interactive")).unwrap_or(false);
+    let custom = block.meta.attrs.unordered_list_custom_marker_style();
+    let interactive = block.meta.attrs.has_option("interactive");
     self.list_stack.push(interactive);
-    let mut div = OpenTag::new("div", attrs);
-    let mut ul = OpenTag::new("ul", None);
+    let mut div = OpenTag::new("div", &block.meta.attrs);
+    let mut ul = OpenTag::new("ul", &NoAttrs);
     div.push_class("ulist");
-    if self.state.contains(&InBibliographySection) || block.meta.has_str_positional("bibliography")
+    if self.state.contains(&InBibliographySection)
+      || block.meta.attrs.has_str_positional("bibliography")
     {
       div.push_class("bibliography");
       ul.push_class("bibliography");
@@ -486,7 +489,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_callout_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.autogen_conum = 1;
-    self.open_element("div", &["colist arabic"], block.meta.attrs.as_ref());
+    self.open_element("div", &["colist arabic"], &block.meta.attrs);
     self.push_str(if self.doc_meta.icon_mode() != IconMode::Text { "<table>" } else { "<ol>" });
   }
 
@@ -501,7 +504,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
-    self.open_element("div", &["dlist"], block.meta.attrs.as_ref());
+    self.open_element("div", &["dlist"], &block.meta.attrs);
     self.push_str("<dl>");
   }
 
@@ -538,14 +541,13 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
     self.list_stack.push(false);
-    let attrs = block.meta.attrs.as_ref();
-    let custom = attrs.and_then(|attrs| attrs.ordered_list_custom_number_style());
+    let custom = block.meta.attrs.ordered_list_custom_number_style();
     let list_type = custom
       .and_then(list_type_from_class)
       .unwrap_or_else(|| list_type_from_depth(depth));
     let class = custom.unwrap_or_else(|| list_class_from_depth(depth));
     let classes = &["olist", class];
-    self.open_element("div", classes, block.meta.attrs.as_ref());
+    self.open_element("div", classes, &block.meta.attrs);
     self.render_block_title(&block.meta);
     self.push([r#"<ol class=""#, class, "\""]);
 
@@ -553,7 +555,7 @@ impl Backend for AsciidoctorHtml {
       self.push([" type=\"", list_type, "\""]);
     }
 
-    if let Some(attr_start) = attrs.and_then(|attrs| attrs.named("start")) {
+    if let Some(attr_start) = block.meta.attrs.named("start") {
       self.push([" start=\"", attr_start, "\""]);
     } else {
       match items[0].marker {
@@ -567,7 +569,7 @@ impl Backend for AsciidoctorHtml {
       }
     }
 
-    if block.has_attr_option("reversed") {
+    if block.meta.attrs.has_option("reversed") {
       self.push_str(" reversed>");
     } else {
       self.push_str(">");
@@ -623,7 +625,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_paragraph_block(&mut self, block: &Block) {
     if self.doc_meta.get_doctype() != DocType::Inline {
       if !self.state.contains(&VisitingSimpleTermDescription) {
-        self.open_element("div", &["paragraph"], block.meta.attrs.as_ref());
+        self.open_element("div", &["paragraph"], &block.meta.attrs);
         self.render_block_title(&block.meta);
       }
       self.push_str("<p>");
@@ -646,7 +648,7 @@ impl Backend for AsciidoctorHtml {
     self.open_table_element(block);
     self.table_caption(block);
     self.push_str("<colgroup>");
-    let autowidth = block.meta.has_attr_option("autowidth");
+    let autowidth = block.meta.attrs.has_option("autowidth");
     for width in table.col_widths.distribute() {
       self.push_str("<col");
       if !autowidth {
@@ -672,13 +674,15 @@ impl Backend for AsciidoctorHtml {
   fn asciidoc_table_cell_backend(&mut self) -> Self {
     Self {
       in_asciidoc_table_cell: true,
+      footnotes: Rc::clone(&self.footnotes),
       ..Self::default()
     }
   }
 
   #[instrument(skip_all)]
-  fn visit_asciidoc_table_cell_result(&mut self, result: Result<Self::Output, Self::Error>) {
-    self.html.push_str(&result.unwrap());
+  fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self) {
+    self.in_asciidoc_table_cell = false;
+    self.html.push_str(&cell_backend.into_result().unwrap());
   }
 
   #[instrument(skip_all)]
@@ -741,7 +745,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn visit_thematic_break(&mut self, block: &Block) {
-    self.open_element("hr", &[], block.meta.attrs.as_ref());
+    self.open_element("hr", &[], &block.meta.attrs);
   }
 
   #[instrument(skip_all)]
@@ -765,7 +769,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_text_span(&mut self, attrs: &AttrList, _children: &[InlineNode]) {
-    self.open_element("span", &[], Some(attrs));
+    self.open_element("span", &[], attrs);
   }
 
   #[instrument(skip_all)]
@@ -799,7 +803,7 @@ impl Backend for AsciidoctorHtml {
     // it's possible that other backends would want to do the exact same things
     if target == "#" || Some(target) == self.doc_meta.str("asciidork-docfilename") {
       let doctitle = doc_title
-        .and_then(|t| t.attrs.as_ref()?.named("reftext"))
+        .and_then(|t| t.attrs.named("reftext"))
         .unwrap_or_else(|| self.doc_meta.str("doctitle").unwrap_or("[^top]"))
         .to_string();
       self.push_str(&doctitle);
@@ -894,8 +898,70 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
+  fn visit_icon_macro(&mut self, target: &str, attrs: &AttrList) {
+    self.push_str(r#"<span class="icon"#);
+    attrs.roles.iter().for_each(|role| {
+      self.push_str(" ");
+      self.push_str(role);
+    });
+    self.push_str(r#"">"#);
+    let has_link = if let Some(link) = attrs.named("link") {
+      self.push_str(r#"<a class="image""#);
+      self.push_html_attr("href", link);
+      if let Some(window) = attrs.named("window") {
+        self.push_html_attr("target", window);
+      }
+      self.push_str(">");
+      true
+    } else {
+      false
+    };
+    match self.doc_meta.icon_mode() {
+      IconMode::Text => {
+        self.push_ch('[');
+        self.push_str(attrs.named("alt").unwrap_or(target));
+        self.push_str("&#93;");
+      }
+      IconMode::Image => {
+        self.push_str(r#"<img src=""#);
+        self.push_icon_uri(target, None);
+        self.push_str(r#"" alt=""#);
+        self.push_str(attrs.named("alt").unwrap_or(target));
+        if let Some(width) = attrs.named("width") {
+          self.push([r#"" width=""#, width]);
+        }
+        if let Some(title) = attrs.named("title") {
+          self.push([r#"" title=""#, title]);
+        }
+        self.push_str(r#"">"#);
+      }
+      IconMode::Font => {
+        self.push_str(r#"<i class="fa fa-"#);
+        self.push_str(target);
+        if let Some(size) = attrs.named("size").or(attrs.str_positional_at(0)) {
+          self.push([r#" fa-"#, size]);
+        }
+        if let Some(flip) = attrs.named("flip") {
+          self.push([r#" fa-flip-"#, flip]);
+        }
+        if let Some(rotate) = attrs.named("rotate") {
+          self.push([r#" fa-rotate-"#, rotate]);
+        }
+        if let Some(title) = attrs.named("title") {
+          self.push([r#"" title=""#, title]);
+        }
+        self.push_str(r#""></i>"#);
+      }
+    }
+    if has_link {
+      self.push_str("</a>");
+    }
+    self.push_str("</span>");
+  }
+
+  #[instrument(skip_all)]
   fn visit_image_macro(&mut self, target: &str, attrs: &AttrList) {
-    let mut open_tag = OpenTag::new("span", None);
+    let mut open_tag = OpenTag::new("span", &NoAttrs);
     open_tag.push_class("image");
     open_tag.push_opt_class(attrs.named("float"));
     open_tag.push_opt_prefixed_class(attrs.named("align"), Some("text-"));
@@ -903,7 +969,7 @@ impl Backend for AsciidoctorHtml {
     self.push_open_tag(open_tag);
 
     let with_link = if let Some(link_href) = attrs.named("link") {
-      let mut a_tag = OpenTag::new("a", None);
+      let mut a_tag = OpenTag::new("a", &NoAttrs);
       a_tag.push_class("image");
       a_tag.push_str("\" href=\"");
       if link_href == "self" {
@@ -956,7 +1022,11 @@ impl Backend for AsciidoctorHtml {
     if resolving_xref {
       return;
     }
-    let mut tag = OpenTag::new("a", attrs);
+    let mut tag = if let Some(attrs) = attrs {
+      OpenTag::new("a", attrs)
+    } else {
+      OpenTag::new("a", &NoAttrs)
+    };
     tag.push_str(" href=\"");
     if matches!(scheme, Some(UrlScheme::Mailto)) {
       tag.push_str("mailto:");
@@ -1113,7 +1183,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
     let classes = &["admonitionblock", kind.lowercase_str()];
-    self.open_element("div", classes, block.meta.attrs.as_ref());
+    self.open_element("div", classes, &block.meta.attrs);
     self.push_str(r#"<table><tr><td class="icon">"#);
     match self.doc_meta.icon_mode() {
       IconMode::Text => {
@@ -1139,7 +1209,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block) {
-    let mut open_tag = OpenTag::new("div", block.meta.attrs.as_ref());
+    let mut open_tag = OpenTag::new("div", &block.meta.attrs);
     open_tag.push_class("imageblock");
     open_tag.push_opt_class(img_attrs.named("float"));
     open_tag.push_opt_prefixed_class(img_attrs.named("align"), Some("text-"));
@@ -1147,7 +1217,12 @@ impl Backend for AsciidoctorHtml {
 
     self.push_str(r#"<div class="content">"#);
     let mut has_link = false;
-    if let Some(href) = &block.named_attr("link").or_else(|| img_attrs.named("link")) {
+    if let Some(href) = &block
+      .meta
+      .attrs
+      .named("link")
+      .or_else(|| img_attrs.named("link"))
+    {
       self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
       has_link = true;
     }
@@ -1186,12 +1261,38 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_footnote(&mut self, _num: u16, _id: Option<&str>, _content: &[InlineNode]) {
-    self.start_buffering();
+  fn enter_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>) {
+    if content.is_some() {
+      self.start_buffering();
+      return;
+    }
+    let prev_ref_num = self
+      .footnotes
+      .borrow()
+      .iter()
+      .enumerate()
+      .filter(|(_, (prev, _))| prev.is_some() && prev.as_ref().map(|s| s.as_str()) == id)
+      .map(|(i, _)| (i + 1).to_string())
+      .next();
+    if let Some(prev_ref_num) = prev_ref_num {
+      self.push([
+        r##"<sup class="footnoteref">[<a class="footnote" href="#_footnotedef_"##,
+        &prev_ref_num,
+        r#"" title="View footnote.">"#,
+        &prev_ref_num,
+        "</a>]</sup>",
+      ]);
+    } else {
+      // TODO: maybe warn?
+    }
   }
 
   #[instrument(skip_all)]
-  fn exit_footnote(&mut self, num: u16, id: Option<&str>, _content: &[InlineNode]) {
+  fn exit_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>) {
+    if content.is_none() {
+      return; // this means the footnore was referring to a previously defined fn by id
+    }
+    let num = self.footnotes.borrow().len() + 1;
     let footnote = self.take_buffer();
     let nums = num.to_string();
     self.push_str(r#"<sup class="footnote""#);
@@ -1201,8 +1302,10 @@ impl Backend for AsciidoctorHtml {
     self.push_str(r#">[<a id="_footnoteref_"#);
     self.push([&nums, r##"" class="footnote" href="#_footnotedef_"##, &nums]);
     self.push([r#"" title="View footnote.">"#, &nums, "</a>]</sup>"]);
-    let id = id.unwrap_or(&nums);
-    self.footnotes.push((num, id.to_string(), footnote));
+    self
+      .footnotes
+      .borrow_mut()
+      .push((id.map(|id| id.to_string()), footnote));
   }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {
@@ -1240,13 +1343,10 @@ impl AsciidoctorHtml {
   }
 
   fn source_lang<'a>(&self, block: &'a Block) -> Option<Cow<'a, str>> {
-    match block
-      .meta
-      .attrs
-      .as_ref()
-      .map(|a| (a.str_positional_at(0), a.str_positional_at(1)))
-      .unwrap_or((None, None))
-    {
+    match (
+      block.meta.attrs.str_positional_at(0),
+      block.meta.attrs.str_positional_at(1),
+    ) {
       (None | Some("source"), Some(lang)) => Some(Cow::Borrowed(lang)),
       _ => self
         .doc_meta
@@ -1274,7 +1374,7 @@ impl AsciidoctorHtml {
     }
   }
 
-  pub(crate) fn open_element(&mut self, element: &str, classes: &[&str], attrs: Option<&AttrList>) {
+  pub(crate) fn open_element(&mut self, element: &str, classes: &[&str], attrs: &impl AttrData) {
     let mut open_tag = OpenTag::new(element, attrs);
     classes.iter().for_each(|c| open_tag.push_class(c));
     self.push_open_tag(open_tag);
@@ -1283,8 +1383,8 @@ impl AsciidoctorHtml {
   fn render_footnotes(&mut self) {
     self.push_str(r#"<div id="footnotes"><hr>"#);
     let footnotes = mem::take(&mut self.footnotes);
-    for (num, _id, footnote) in &footnotes {
-      let num = num.to_string();
+    for (i, (_, footnote)) in footnotes.borrow().iter().enumerate() {
+      let num = (i + 1).to_string();
       self.push_str(r#"<div class="footnote" id="_footnotedef_"#);
       self.push([&num, r##""><a href="#_footnoteref_"##, &num, "\">"]);
       self.push([&num, "</a>. ", footnote, "</div>"]);

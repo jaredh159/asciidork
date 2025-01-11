@@ -18,8 +18,8 @@ impl<'arena> Parser<'arena> {
       if line.is_block_attr_list() || line.is_chunk_title() || line.is_comment() {
         continue;
       } else if let Some(level) = self.line_heading_level(line) {
-        return match meta.attrs_has_str_positional("discrete")
-          || meta.attrs_has_str_positional("float")
+        return match meta.attrs.has_str_positional("discrete")
+          || meta.attrs.has_str_positional("float")
         {
           true => None,
           false => Some(level),

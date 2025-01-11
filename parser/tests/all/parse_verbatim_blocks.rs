@@ -13,7 +13,7 @@ fn test_parse_literal_block() {
       foo `bar`
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("literal", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("literal", 1..8)], None, 0),
       context: Context::Literal,
       content: Content::Simple(just!("foo `bar`", 10..19)),
     }
@@ -72,7 +72,7 @@ fn test_parse_listing_block() {
       foo `bar`
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("listing", 1..8)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("listing", 1..8)], None, 0),
       context: Context::Listing,
       content: Content::Simple(nodes![node!("foo `bar`"; 10..19)]),
     }
@@ -166,7 +166,7 @@ fn test_parse_indented_literal_block() {
        bar
     "},
     Block {
-      meta: ChunkMeta::new(Some(attrs::pos("normal", 1..7)), None, 0),
+      meta: ChunkMeta::new(vecb![attrs::pos("normal", 1..7)], None, 0),
       context: Context::Paragraph,
       content: Content::Simple(nodes![
         node!("foo"; 10..13),

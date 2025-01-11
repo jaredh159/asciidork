@@ -3,7 +3,7 @@ use crate::internal::*;
 
 impl AsciidoctorHtml {
   pub(super) fn open_table_element(&mut self, block: &Block) {
-    let mut tag = OpenTag::new("table", block.meta.attrs.as_ref());
+    let mut tag = OpenTag::new("table", &block.meta.attrs);
     tag.push_class("tableblock");
 
     tag.push_resolved_attr_class(
@@ -26,18 +26,19 @@ impl AsciidoctorHtml {
 
     let explicit_width = block
       .meta
-      .attr_named("width")
+      .attrs
+      .named("width")
       .map(|width| width.strip_suffix('%').unwrap_or(width))
       .and_then(|width| width.parse::<u8>().ok())
       .filter(|width| *width != 100);
 
-    if block.meta.has_attr_option("autowidth") {
+    if block.meta.attrs.has_option("autowidth") {
       tag.push_class("fit-content");
     } else if explicit_width.is_none() {
       tag.push_class("stretch");
     }
 
-    if let Some(float) = block.meta.attr_named("float") {
+    if let Some(float) = block.meta.attrs.named("float") {
       tag.push_class(float);
     }
 
@@ -60,7 +61,7 @@ impl AsciidoctorHtml {
   pub(super) fn table_caption(&mut self, block: &Block) {
     if !self.alt_html.is_empty() {
       self.push_str(r#"<caption class="title">"#);
-      if let Some(caption) = block.meta.attr_named("caption") {
+      if let Some(caption) = block.meta.attrs.named("caption") {
         self.push_str(caption);
       } else if !self.doc_meta.is_false("table-caption") {
         self.table_caption_num += 1;

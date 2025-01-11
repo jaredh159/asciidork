@@ -161,6 +161,18 @@ assert_html!(
 );
 
 assert_html!(
+  topbot_to_frame_ends,
+  adoc! {r#"
+    [frame=topbot]
+    |===
+    |A |B
+    |===
+  "#},
+  contains:
+    r#"<table class="tableblock frame-ends grid-all stretch">"#
+);
+
+assert_html!(
   cell_content_paragraphs,
   adoc! {r#"
     |===
@@ -404,6 +416,21 @@ assert_html!(
     |===
   "#},
   contains: r#"<caption class="title">So wow: My Title</caption>"#
+);
+
+assert_html!(
+  table_multiple_attr_lists,
+  adoc! {r#"
+    [[custom-id]]
+    .My Title
+    [caption="So wow: "]
+    |===
+    |a | b
+    |===
+  "#},
+  contains:
+  r#"<table id="custom-id" class="tableblock"#,
+  r#"<caption class="title">So wow: My Title</caption>"#,
 );
 
 assert_html!(

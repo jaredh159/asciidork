@@ -9,7 +9,7 @@ use bumpalo::Bump;
 use clap::Parser as ClapParser;
 use colored::*;
 
-use asciidork_core::Path;
+use asciidork_core::{JobSettings, Path};
 use asciidork_dr_html_backend::*;
 use asciidork_parser::prelude::*;
 
@@ -66,7 +66,9 @@ fn run(
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len() * 2);
   let mut parser = Parser::from_str(&src, src_file, bump);
-  parser.apply_job_settings(args.clone().try_into()?);
+  let mut job_settings: JobSettings = args.clone().try_into()?;
+  AsciidoctorHtml::set_job_attrs(&mut job_settings.job_attrs);
+  parser.apply_job_settings(job_settings);
   parser.set_resolver(Box::new(CliResolver::new(base_dir)));
 
   let now = SystemTime::now()

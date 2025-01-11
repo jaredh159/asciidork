@@ -17,6 +17,8 @@ pub trait Backend {
 
   const OUTFILESUFFIX: &'static str;
 
+  fn set_job_attrs(attrs: &mut asciidork_core::JobAttrs);
+
   // document
   fn enter_document(&mut self, document: &Document);
   fn exit_document(&mut self, document: &Document);
@@ -106,7 +108,7 @@ pub trait Backend {
   fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection);
   fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection);
   fn asciidoc_table_cell_backend(&mut self) -> Self;
-  fn visit_asciidoc_table_cell_result(&mut self, result: Result<Self::Output, Self::Error>);
+  fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self);
 
   // block content
   fn enter_block_title(&mut self, title: &[InlineNode], block: &Block);
@@ -127,6 +129,7 @@ pub trait Backend {
   fn visit_button_macro(&mut self, text: &str);
   fn visit_menu_macro(&mut self, items: &[&str]);
   fn visit_image_macro(&mut self, target: &str, attrs: &AttrList);
+  fn visit_icon_macro(&mut self, target: &str, attrs: &AttrList);
 
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
     _ = keys;
@@ -184,8 +187,8 @@ pub trait Backend {
   fn exit_inline_superscript(&mut self, children: &[InlineNode]);
   fn enter_inline_quote(&mut self, kind: QuoteKind, children: &[InlineNode]);
   fn exit_inline_quote(&mut self, kind: QuoteKind, children: &[InlineNode]);
-  fn enter_footnote(&mut self, number: u16, id: Option<&str>, content: &[InlineNode]);
-  fn exit_footnote(&mut self, number: u16, id: Option<&str>, content: &[InlineNode]);
+  fn enter_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>);
+  fn exit_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>);
   fn enter_text_span(&mut self, attrs: &AttrList, children: &[InlineNode]);
   fn exit_text_span(&mut self, attrs: &AttrList, children: &[InlineNode]);
   fn enter_xref(&mut self, target: &str, reftext: Option<&[InlineNode]>, kind: XrefKind);

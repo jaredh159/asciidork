@@ -22,7 +22,7 @@ impl<'arena> Parser<'arena> {
       && (self.ctx.bibliography_ctx == BiblioContext::Section
         || meta
           .as_ref()
-          .map_or(false, |m| m.has_str_positional("bibliography")))
+          .map_or(false, |meta| meta.attrs.has_str_positional("bibliography")))
     {
       self.ctx.bibliography_ctx = BiblioContext::List;
     }
@@ -39,7 +39,8 @@ impl<'arena> Parser<'arena> {
       self.ctx.advance_callout_list(self.bump);
     }
 
-    let meta = meta.unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc_start()));
+    let meta =
+      meta.unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc_start(), self.bump));
     Ok(Block {
       meta,
       context: variant.to_context(),
@@ -165,11 +166,18 @@ impl<'arena> Parser<'arena> {
     let Some(mut lines) = self.read_lines()? else {
       return Ok(accum);
     };
+
+    if lines.starts_nested_list(&self.ctx.list.stack, false) {
+      accum.push(self.parse_list(lines, None)?);
+      return Ok(accum);
+    }
+
     if !lines.starts_list_continuation() {
       self.restore_lines(lines);
       return Ok(accum);
     }
-    lines.consume_current();
+
+    lines.consume_current(); // the `+` line starting the continuation
     self.restore_lines(lines);
     self.ctx.list.parsing_continuations = true;
     accum.push(self.parse_block()?.unwrap());

@@ -361,10 +361,12 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     LitMono(text) => backend.visit_inline_lit_mono(text),
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws.as_str()),
-    Macro(Footnote { number, id, text }) => {
-      backend.enter_footnote(*number, id.as_deref(), text);
-      text.iter().for_each(|node| eval_inline(node, ctx, backend));
-      backend.exit_footnote(*number, id.as_deref(), text);
+    Macro(Footnote { id, text }) => {
+      backend.enter_footnote(id.as_deref(), text.as_ref().map(|t| t.as_slice()));
+      if let Some(text) = text {
+        text.iter().for_each(|node| eval_inline(node, ctx, backend));
+      }
+      backend.exit_footnote(id.as_deref(), text.as_ref().map(|t| t.as_slice()));
     }
     Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
     Macro(Button(text)) => backend.visit_button_macro(text),
@@ -435,12 +437,8 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_text_span(attrs, nodes);
     }
     Symbol(kind) => backend.visit_symbol(*kind),
+    Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
     LineComment(_) | Discarded => {}
-    _ => {
-      println!("\nUnhandled inline node type:");
-      println!("  -> {:?}\n", &inline.content);
-      todo!();
-    }
   }
 }
 
@@ -466,7 +464,7 @@ fn eval_table_row(row: &Row, section: TableSection, ctx: &Ctx, backend: &mut imp
       CellContent::AsciiDoc(document) => {
         let mut cell_backend = backend.asciidoc_table_cell_backend();
         visit(document, &mut cell_backend);
-        backend.visit_asciidoc_table_cell_result(cell_backend.into_result());
+        backend.visit_asciidoc_table_cell_result(cell_backend);
       }
     }
     backend.exit_table_cell(cell, section);

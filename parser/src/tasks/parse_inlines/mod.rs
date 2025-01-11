@@ -149,12 +149,8 @@ impl<'arena> Parser<'arena> {
                 lines.restore_if_nonempty(line);
                 let note = self.parse_inlines_until(lines, &[Kind(CloseBracket)])?;
                 extend(&mut macro_loc, &note, 1);
-                let number = {
-                  let mut num_footnotes = self.ctx.num_footnotes.borrow_mut();
-                  *num_footnotes += 1;
-                  *num_footnotes
-                };
-                acc.push_node(Macro(Footnote { number, id, text: note }), macro_loc);
+                let note = if note.is_empty() { None } else { Some(note) };
+                acc.push_node(Macro(Footnote { id, text: note }), macro_loc);
                 break;
               }
               "xref:" => {

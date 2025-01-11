@@ -19,11 +19,12 @@ impl<'arena> Parser<'arena> {
     debug_assert!(first_token.lexeme.len() == 1);
 
     let col_specs = meta
-      .attr_named("cols")
+      .attrs
+      .named("cols")
       .map(|cols_attr| self.parse_col_specs(cols_attr))
       .unwrap_or_else(|| bvec![in self.bump]);
 
-    let mut format = match (meta.attr_named("format"), delim_ch) {
+    let mut format = match (meta.attrs.named("format"), delim_ch) {
       (Some("psv"), _) => DataFormat::Csv('|'),
       (Some("csv"), _) => DataFormat::Csv(','),
       (Some("tsv"), _) => DataFormat::Csv('\t'),
@@ -35,7 +36,7 @@ impl<'arena> Parser<'arena> {
       _ => DataFormat::Prefix(delim_ch as char),
     };
 
-    if let Some(sep) = meta.attr_named("separator") {
+    if let Some(sep) = meta.attrs.named("separator") {
       let msg = "Cell separator must be exactly one character";
       let mut chars = sep.chars();
       match chars.next() {
@@ -65,7 +66,7 @@ impl<'arena> Parser<'arena> {
       col_specs,
       header_row: HeaderRow::Unknown,
       header_reparse_cells: bvec![in self.bump],
-      autowidths: meta.has_attr_option("autowidth"),
+      autowidths: meta.attrs.has_option("autowidth"),
       phantom_cells: HashSet::new(),
       dsv_last_consumed: DsvLastConsumed::Other,
       effective_row_idx: 0,
@@ -77,9 +78,9 @@ impl<'arena> Parser<'arena> {
       },
     };
 
-    if meta.has_attr_option("header") {
+    if meta.attrs.has_option("header") {
       ctx.header_row = HeaderRow::ExplicitlySet;
-    } else if meta.has_attr_option("noheader") {
+    } else if meta.attrs.has_option("noheader") {
       ctx.header_row = HeaderRow::ExplicitlyUnset;
     } else if lines.len() != 1 {
       ctx.header_row = HeaderRow::FoundNone;
@@ -104,7 +105,7 @@ impl<'arena> Parser<'arena> {
       }
     }
 
-    if meta.has_attr_option("footer") && !ctx.table.rows.is_empty() {
+    if meta.attrs.has_option("footer") && !ctx.table.rows.is_empty() {
       ctx.table.footer_row = Some(ctx.table.rows.pop().unwrap());
     }
 

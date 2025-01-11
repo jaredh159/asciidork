@@ -252,7 +252,7 @@ impl<'arena> Parser<'arena> {
     }
     assert!(!lines.is_empty());
     let start = lines.current_token().unwrap().loc.start;
-    let mut attrs = None;
+    let mut attrs = MultiAttrList::new_in(self.bump);
     let mut title = None;
     loop {
       match lines.current() {
@@ -264,7 +264,7 @@ impl<'arena> Parser<'arena> {
         Some(line) if line.is_block_attr_list() => {
           let mut line = lines.consume_current().unwrap();
           line.discard_assert(TokenKind::OpenBracket);
-          attrs = Some(self.parse_block_attr_list(&mut line)?);
+          attrs.push(self.parse_block_attr_list(&mut line)?);
         }
         Some(line) if line.is_block_anchor() => {
           let mut line = lines.consume_current().unwrap();
@@ -274,10 +274,10 @@ impl<'arena> Parser<'arena> {
           let mut anchor_attrs = AttrList::new(anchor.loc, self.bump);
           anchor_attrs.id = Some(anchor.id);
           anchor_attrs.positional.push(anchor.reftext);
-          attrs = Some(anchor_attrs);
+          attrs.push(anchor_attrs);
         }
         // consume trailing comment lines for valid meta
-        Some(line) if line.is_comment() && (attrs.is_some() || title.is_some()) => {
+        Some(line) if line.is_comment() && (!attrs.is_empty() || title.is_some()) => {
           lines.consume_current();
         }
         _ => break,

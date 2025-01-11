@@ -7,12 +7,12 @@ impl<'arena> Parser<'arena> {
   pub(crate) fn section_id(
     &mut self,
     line: &Line<'arena>,
-    attrs: Option<&AttrList<'arena>>,
+    attrs: &MultiAttrList<'arena>,
   ) -> Option<BumpString<'arena>> {
     if self.document.meta.is_false("sectids") {
       return None;
     }
-    if let Some(id) = attrs.and_then(|a| a.id.as_ref()) {
+    if let Some(id) = attrs.id() {
       let custom_id = self.string(&id.src);
       self.ctx.anchor_ids.borrow_mut().insert(custom_id.clone());
       return Some(custom_id);

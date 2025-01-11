@@ -38,10 +38,10 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
   "#};
   let expected = Block {
     meta: ChunkMeta::new(
-      Some(AttrList {
+      vecb![AttrList {
         id: Some(src!("foo", 11..14)),
         ..attr_list!(9..15)
-      }),
+      }],
       Some(just!("A Title", 1..8)),
       0,
     ),
@@ -67,15 +67,16 @@ fn test_simple_blockquote() {
     "};
   let expected = Block {
     meta: ChunkMeta {
-      attrs: Some(AttrList {
+      attrs: vecb![AttrList {
         positional: vecb![
           Some(nodes![node!("quote"; 1..6)]),
           Some(nodes![node!("author"; 7..13)]),
           Some(nodes![node!("location"; 14..22)]),
         ],
         ..attr_list!(0..23)
-      }),
-      ..ChunkMeta::default()
+      }]
+      .into(),
+      ..chunk_meta!(0)
     },
     context: Context::BlockQuote,
     content: Content::Simple(nodes![node!("foo"; 24.. 27)]),
@@ -93,15 +94,16 @@ fn test_parse_delimited_blockquote() {
   "};
   let expected = Block {
     meta: ChunkMeta {
-      attrs: Some(AttrList {
+      attrs: vecb![AttrList {
         positional: vecb![
           Some(nodes![node!("quote"; 1..6)]),
           Some(nodes![node!("author"; 7..13)]),
           Some(nodes![node!("location"; 14..22)]),
         ],
         ..attr_list!(0..23)
-      }),
-      ..ChunkMeta::default()
+      }]
+      .into(),
+      ..chunk_meta!(0)
     },
     context: Context::BlockQuote,
     content: Content::Compound(vecb![Block {
@@ -125,15 +127,16 @@ fn test_delimited_verse_block() {
     "},
     Block {
       meta: ChunkMeta {
-        attrs: Some(AttrList {
+        attrs: vecb![AttrList {
           positional: vecb![
             Some(nodes![node!("verse"; 1..6)]),
             Some(nodes![node!("author"; 7..13)]),
             Some(nodes![node!("location"; 14..22)]),
           ],
           ..attr_list!(0..23)
-        }),
-        ..ChunkMeta::default()
+        }]
+        .into(),
+        ..chunk_meta!(0)
       },
       context: Context::Verse,
       content: Content::Simple(nodes![
