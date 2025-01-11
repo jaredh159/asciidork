@@ -3,9 +3,8 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MacroNode<'arena> {
   Footnote {
-    number: u16,
     id: Option<SourceString<'arena>>,
-    text: InlineNodes<'arena>,
+    text: Option<InlineNodes<'arena>>,
   },
   Image {
     flow: Flow,

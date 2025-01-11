@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::sync::Once;
+use std::{cell::RefCell, rc::Rc};
 
 use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -14,7 +15,8 @@ use EphemeralState::*;
 pub struct AsciidoctorHtml {
   pub(crate) html: String,
   pub(crate) alt_html: String,
-  pub(crate) footnotes: Vec<(u16, String, String)>,
+  #[allow(clippy::type_complexity)]
+  pub(crate) footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
   pub(crate) doc_meta: DocumentMeta,
   pub(crate) fig_caption_num: usize,
   pub(crate) table_caption_num: usize,
@@ -97,7 +99,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_document(&mut self, _document: &Document) {
-    if !self.footnotes.is_empty() {
+    if !self.footnotes.borrow().is_empty() && !self.in_asciidoc_table_cell {
       self.render_footnotes();
     }
     if self.standalone() {
@@ -672,13 +674,15 @@ impl Backend for AsciidoctorHtml {
   fn asciidoc_table_cell_backend(&mut self) -> Self {
     Self {
       in_asciidoc_table_cell: true,
+      footnotes: Rc::clone(&self.footnotes),
       ..Self::default()
     }
   }
 
   #[instrument(skip_all)]
-  fn visit_asciidoc_table_cell_result(&mut self, result: Result<Self::Output, Self::Error>) {
-    self.html.push_str(&result.unwrap());
+  fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self) {
+    self.in_asciidoc_table_cell = false;
+    self.html.push_str(&cell_backend.into_result().unwrap());
   }
 
   #[instrument(skip_all)]
@@ -1257,12 +1261,38 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_footnote(&mut self, _num: u16, _id: Option<&str>, _content: &[InlineNode]) {
-    self.start_buffering();
+  fn enter_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>) {
+    if content.is_some() {
+      self.start_buffering();
+      return;
+    }
+    let prev_ref_num = self
+      .footnotes
+      .borrow()
+      .iter()
+      .enumerate()
+      .filter(|(_, (prev, _))| prev.is_some() && prev.as_ref().map(|s| s.as_str()) == id)
+      .map(|(i, _)| (i + 1).to_string())
+      .next();
+    if let Some(prev_ref_num) = prev_ref_num {
+      self.push([
+        r##"<sup class="footnoteref">[<a class="footnote" href="#_footnotedef_"##,
+        &prev_ref_num,
+        r#"" title="View footnote.">"#,
+        &prev_ref_num,
+        "</a>]</sup>",
+      ]);
+    } else {
+      // TODO: maybe warn?
+    }
   }
 
   #[instrument(skip_all)]
-  fn exit_footnote(&mut self, num: u16, id: Option<&str>, _content: &[InlineNode]) {
+  fn exit_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>) {
+    if content.is_none() {
+      return; // this means the footnore was referring to a previously defined fn by id
+    }
+    let num = self.footnotes.borrow().len() + 1;
     let footnote = self.take_buffer();
     let nums = num.to_string();
     self.push_str(r#"<sup class="footnote""#);
@@ -1272,8 +1302,10 @@ impl Backend for AsciidoctorHtml {
     self.push_str(r#">[<a id="_footnoteref_"#);
     self.push([&nums, r##"" class="footnote" href="#_footnotedef_"##, &nums]);
     self.push([r#"" title="View footnote.">"#, &nums, "</a>]</sup>"]);
-    let id = id.unwrap_or(&nums);
-    self.footnotes.push((num, id.to_string(), footnote));
+    self
+      .footnotes
+      .borrow_mut()
+      .push((id.map(|id| id.to_string()), footnote));
   }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {
@@ -1351,8 +1383,8 @@ impl AsciidoctorHtml {
   fn render_footnotes(&mut self) {
     self.push_str(r#"<div id="footnotes"><hr>"#);
     let footnotes = mem::take(&mut self.footnotes);
-    for (num, _id, footnote) in &footnotes {
-      let num = num.to_string();
+    for (i, (_, footnote)) in footnotes.borrow().iter().enumerate() {
+      let num = (i + 1).to_string();
       self.push_str(r#"<div class="footnote" id="_footnotedef_"#);
       self.push([&num, r##""><a href="#_footnoteref_"##, &num, "\">"]);
       self.push([&num, "</a>. ", footnote, "</div>"]);

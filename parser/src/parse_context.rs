@@ -14,7 +14,6 @@ pub struct ParseContext<'arena> {
   pub anchor_ids: Rc<RefCell<HashSet<BumpString<'arena>>>>,
   /// xrefs are only used for diagnosing errors
   pub xrefs: Rc<RefCell<HashMap<BumpString<'arena>, SourceLocation>>>,
-  pub num_footnotes: Rc<RefCell<u16>>,
   pub can_nest_blocks: bool,
   pub saw_toc_macro: bool,
   pub bibliography_ctx: BiblioContext,
@@ -52,7 +51,6 @@ impl<'arena> ParseContext<'arena> {
       custom_line_comment: None,
       anchor_ids: Rc::new(RefCell::new(HashSet::new())),
       xrefs: Rc::new(RefCell::new(HashMap::new())),
-      num_footnotes: Rc::new(RefCell::new(0)),
       saw_toc_macro: false,
       bibliography_ctx: BiblioContext::None,
       table_cell_ctx: TableCellContext::None,
@@ -74,7 +72,6 @@ impl<'arena> ParseContext<'arena> {
       custom_line_comment: None,
       anchor_ids: Rc::clone(&self.anchor_ids),
       xrefs: Rc::clone(&self.xrefs),
-      num_footnotes: Rc::clone(&self.num_footnotes),
       saw_toc_macro: false,
       bibliography_ctx: BiblioContext::None,
       table_cell_ctx: TableCellContext::AsciiDocCell,
