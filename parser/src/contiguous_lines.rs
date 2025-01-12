@@ -260,6 +260,13 @@ impl<'arena> ContiguousLines<'arena> {
       }
     });
   }
+
+  #[cfg(debug_assertions)]
+  pub fn debug_print(&self) {
+    for line in self.iter() {
+      eprintln!("{}", line.reassemble_src());
+    }
+  }
 }
 
 impl<'arena> DefaultIn<'arena> for Line<'arena> {

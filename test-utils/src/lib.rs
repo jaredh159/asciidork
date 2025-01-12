@@ -62,6 +62,10 @@ macro_rules! assert_block_core {
 
 #[macro_export]
 macro_rules! assert_doc_content {
+  (strict: false, $input:expr, $expected:expr$(,)?) => {{
+    let content = parse_doc_content_loose!($input);
+    expect_eq!(content, $expected, from: $input);
+  }};
   ($input:expr, $expected:expr$(,)?) => {{
     let content = parse_doc_content!($input);
     expect_eq!(content, $expected, from: $input);

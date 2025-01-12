@@ -17,6 +17,10 @@ impl<'arena> Parser<'arena> {
     }
 
     let meta = self.parse_chunk_meta(&mut lines)?;
+    if lines.is_empty() {
+      self.err_line_starting("Unattached block metadata", meta.start)?;
+      return self.parse_block();
+    }
 
     match self.section_start_level(&lines, &meta) {
       Some(0) => {} // skip document titles
