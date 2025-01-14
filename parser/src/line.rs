@@ -384,17 +384,26 @@ impl<'arena> Line<'arena> {
     false
   }
 
-  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec]) -> bool {
-    self.terminates_constrained_in(stop_tokens).is_some()
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec], ctx: &InlineCtx) -> bool {
+    self.terminates_constrained_in(stop_tokens, ctx).is_some()
   }
 
-  pub fn terminates_constrained_in(&self, stop_tokens: &[TokenSpec]) -> Option<usize> {
+  pub fn terminates_constrained_in(
+    &self,
+    stop_tokens: &[TokenSpec],
+    ctx: &InlineCtx,
+  ) -> Option<usize> {
     match self.index_of_seq(stop_tokens) {
       // constrained sequences can't immediately terminate
       // or else `foo __bar` would include an empty italic node
       // TODO: maybe that's only true for _single_ tok sequences?
       Some(0) => None,
-      Some(n) if self.nth_token(n + 1).not_kind(Word) => Some(n),
+      Some(n) if self.nth_token(n + 1).not_kind(Word) => match ctx.specs() {
+        Some(specs) => self
+          .index_of_seq(specs)
+          .map_or(Some(n), |m| if m < n { None } else { Some(n) }),
+        None => Some(n),
+      },
       _ => None,
     }
   }
@@ -995,7 +1004,7 @@ mod tests {
     ];
     for (input, specs, expected) in cases {
       let line = read_line!(input);
-      expect_eq!(line.terminates_constrained_in(specs), expected, from: input);
+      expect_eq!(line.terminates_constrained_in(specs, &InlineCtx::None), expected, from: input);
     }
   }
 

@@ -111,11 +111,11 @@ impl<'arena> ContiguousLines<'arena> {
     self.lines.iter().any(|line| line.contains_len(kind, len))
   }
 
-  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec]) -> bool {
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec], ctx: &InlineCtx) -> bool {
     self
       .lines
       .iter()
-      .any(|line| line.terminates_constrained(stop_tokens))
+      .any(|line| line.terminates_constrained(stop_tokens, ctx))
   }
 
   pub fn is_block_macro(&self) -> bool {

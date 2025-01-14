@@ -6,7 +6,7 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
-  pub fn macro_target_from_passthru(
+  pub(crate) fn macro_target_from_passthru(
     &mut self,
     line: &mut Line<'arena>,
   ) -> Option<SourceString<'arena>> {
@@ -24,6 +24,32 @@ impl<'arena> Parser<'arena> {
     } else {
       None
     }
+  }
+
+  pub(crate) fn starts_constrained(
+    &self,
+    stop_tokens: &[TokenSpec],
+    token: &Token,
+    line: &Line,
+    lines: &mut ContiguousLines,
+  ) -> bool {
+    debug_assert!(!stop_tokens.is_empty());
+    token.kind(stop_tokens.last().unwrap().token_kind())
+      && (line.terminates_constrained(stop_tokens, &self.ctx.inline_ctx)
+        || lines.terminates_constrained(stop_tokens, &self.ctx.inline_ctx))
+  }
+
+  pub(crate) fn starts_unconstrained(
+    &self,
+    stop_tokens: &[TokenSpec],
+    token: &Token,
+    line: &Line,
+    lines: &ContiguousLines,
+  ) -> bool {
+    debug_assert!(!stop_tokens.is_empty());
+    token.kind(stop_tokens[0].token_kind())
+      && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind()))
+      && contains_seq(stop_tokens, line, lines)
   }
 }
 
@@ -140,29 +166,6 @@ impl Substitutions {
 
 pub fn extend(loc: &mut SourceLocation, nodes: &[InlineNode<'_>], adding: usize) {
   loc.end = nodes.last().map(|node| node.loc.end).unwrap_or(loc.end) + adding as u32;
-}
-
-pub fn starts_constrained(
-  stop_tokens: &[TokenSpec],
-  token: &Token,
-  line: &Line,
-  lines: &mut ContiguousLines,
-) -> bool {
-  debug_assert!(!stop_tokens.is_empty());
-  token.kind(stop_tokens.last().unwrap().token_kind())
-    && (line.terminates_constrained(stop_tokens) || lines.terminates_constrained(stop_tokens))
-}
-
-pub fn starts_unconstrained(
-  stop_tokens: &[TokenSpec],
-  token: &Token,
-  line: &Line,
-  lines: &ContiguousLines,
-) -> bool {
-  debug_assert!(!stop_tokens.is_empty());
-  token.kind(stop_tokens[0].token_kind())
-    && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind()))
-    && contains_seq(stop_tokens, line, lines)
 }
 
 pub fn contains_seq(seq: &[TokenSpec], line: &Line, lines: &ContiguousLines) -> bool {
