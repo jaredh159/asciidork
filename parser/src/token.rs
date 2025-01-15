@@ -162,6 +162,9 @@ pub trait TokenIs {
   fn is_kind_len(&self, kind: TokenKind, len: usize) -> bool;
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool;
   fn satisfies(&self, spec: TokenSpec) -> bool;
+  fn can_start_block_macro(&self) -> bool;
+  /// A `dual` macro is one that has a block *and* inline form
+  fn can_start_dual_macro(&self) -> bool;
   fn not_kind(&self, kind: TokenKind) -> bool {
     !self.kind(kind)
   }
@@ -210,6 +213,15 @@ impl TokenIs for Token<'_> {
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {
     self.kind == kind && self.lexeme == lexeme
   }
+
+  fn can_start_block_macro(&self) -> bool {
+    // TODO: there are more block macros than just these two
+    self.kind == TokenKind::MacroName && matches!(self.lexeme.as_str(), "image:" | "toc:")
+  }
+
+  fn can_start_dual_macro(&self) -> bool {
+    self.kind == TokenKind::MacroName && matches!(self.lexeme.as_str(), "image:")
+  }
 }
 
 impl TokenIs for Option<&Token<'_>> {
@@ -231,6 +243,14 @@ impl TokenIs for Option<&Token<'_>> {
 
   fn satisfies(&self, spec: TokenSpec) -> bool {
     self.map_or(false, |t| t.satisfies(spec))
+  }
+
+  fn can_start_block_macro(&self) -> bool {
+    self.map_or(false, |t| t.can_start_block_macro())
+  }
+
+  fn can_start_dual_macro(&self) -> bool {
+    self.map_or(false, |t| t.can_start_dual_macro())
   }
 }
 

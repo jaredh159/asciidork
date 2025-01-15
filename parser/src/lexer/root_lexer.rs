@@ -390,11 +390,6 @@ mod tests {
       ("foo@", vec![(Word, "foo@")]),
       ("foo@.a", vec![(Word, "foo@"), (Dots, "."), (Word, "a")]),
       ("foo.bar", vec![(Word, "foo"), (Dots, "."), (Word, "bar")]),
-      (
-        "roflfootnote:",
-        vec![(Word, "rofl"), (MacroName, "footnote:")],
-      ),
-      ("footnote:", vec![(MacroName, "footnote:")]),
       ("==", vec![(EqualSigns, "==")]),
       ("===", vec![(EqualSigns, "===")]),
       (
@@ -540,6 +535,21 @@ mod tests {
       ),
     ];
     assert_token_cases!(cases);
+  }
+
+  #[test]
+  fn test_macro_names() {
+    assert_token_cases!([
+      (
+        "roflfootnote:",
+        vec![(Word, "rofl"), (MacroName, "footnote:")],
+      ),
+      ("footnote:", vec![(MacroName, "footnote:")]),
+      (
+        "xref::foo",
+        vec![(MacroName, "xref:"), (Colon, ":"), (Word, "foo")]
+      ),
+    ]);
   }
 
   #[test]

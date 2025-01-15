@@ -117,7 +117,7 @@ impl<'arena> Parser<'arena> {
             line.discard(1);
             acc.push_node(Symbol(SymbolKind::DoubleLeftArrow), token.loc.incr_end());
           }
-          MacroName if subs.macros() && line.continues_inline_macro() => {
+          MacroName if subs.macros() && line.continues_inline_macro(&token) => {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
             acc.commit();
@@ -268,7 +268,7 @@ impl<'arena> Parser<'arena> {
             acc.push_text_token(&next_token);
           }
 
-          UriScheme if subs.macros() && line.continues_inline_macro() => {
+          UriScheme if subs.macros() && line.continues_inline_macro(&token) => {
             self.parse_uri_scheme_macro(&token, &mut line, &mut acc)?
           }
 

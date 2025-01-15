@@ -59,6 +59,30 @@ test_inlines_loose!(
 );
 
 test_inlines_loose!(
+  xref_macro_target_w_colon,
+  "xref::/c[] foo xref::/d[]",
+  nodes![
+    node!(
+      Macro(Xref {
+        target: src!(":/c", 5..8),
+        linktext: None,
+        kind: XrefKind::Macro
+      }),
+      0..10
+    ),
+    node!(" foo "; 10..15),
+    node!(
+      Macro(Xref {
+        target: src!(":/d", 20..23),
+        linktext: None,
+        kind: XrefKind::Macro
+      }),
+      15..25
+    )
+  ]
+);
+
+test_inlines_loose!(
   inline_image_macro,
   "image:play.png[]",
   nodes![node!(

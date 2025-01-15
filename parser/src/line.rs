@@ -173,6 +173,7 @@ impl<'arena> Line<'arena> {
 
   pub fn is_block_macro(&self) -> bool {
     self.starts_with_seq(&[Kind(MacroName), Kind(Colon)])
+      && self.current_token().can_start_block_macro()
       && self.contains(OpenBracket)
       && self.ends_with_nonescaped(CloseBracket)
   }
@@ -348,8 +349,8 @@ impl<'arena> Line<'arena> {
     true
   }
 
-  pub fn continues_inline_macro(&self) -> bool {
-    if self.current_is(Colon) || self.current_is(Whitespace) {
+  pub fn continues_inline_macro(&self, prev: &Token) -> bool {
+    if self.current_is(Whitespace) {
       return false;
     }
     let Some(open_idx) = self.index_of_kind(OpenBracket) else {
@@ -358,7 +359,11 @@ impl<'arena> Line<'arena> {
     let Some(end_idx) = self.index_of_seq(&[Not(Backslash), Kind(CloseBracket)]) else {
       return false;
     };
-    end_idx >= open_idx
+    if end_idx < open_idx {
+      false
+    } else {
+      !self.current_is(Colon) || prev.lexeme.as_str() == "xref:"
+    }
   }
 
   pub fn continues_xref_shorthand(&self) -> bool {
@@ -370,7 +375,7 @@ impl<'arena> Line<'arena> {
       && self.nth_token(1).not_kind(Whitespace)
   }
 
-  /// true if there is no whitespace until token type, and token type is found
+  /// `true` if no whitespace until token type *and* token type is found
   pub fn no_whitespace_until(&self, kind: TokenKind) -> bool {
     for token in self.iter() {
       if token.kind(kind) {
