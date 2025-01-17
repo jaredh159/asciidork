@@ -5,15 +5,9 @@ use crate::variants::token::*;
 pub struct Line<'arena> {
   tokens: Deq<'arena, Token<'arena>>,
   orig_len: u32,
+  term_delim: bool,
   pass_macro: bool,
   pass_pluses: u8,
-}
-
-#[derive(Debug, Clone)]
-pub struct Line1<'arena> {
-  tokens: Deq<'arena, Token<'arena>>,
-  orig_len: u32,
-  pass_tokens: bool,
 }
 
 impl<'arena> Line<'arena> {
@@ -21,6 +15,7 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: tokens.len() as u32,
       tokens,
+      term_delim: false,
       pass_macro: false,
       pass_pluses: 0,
     }
@@ -30,6 +25,7 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: 0,
       tokens: Deq::new(bump),
+      term_delim: false,
       pass_macro: false,
       pass_pluses: 0,
     }
@@ -39,6 +35,7 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: 0,
       tokens: Deq::with_capacity(capacity, bump),
+      term_delim: false,
       pass_macro: false,
       pass_pluses: 0,
     }
@@ -63,6 +60,7 @@ impl<'arena> Line<'arena> {
   pub fn push(&mut self, token: Token<'arena>) {
     match token.kind {
       MacroName if token.lexeme == "pass:" => self.pass_macro = true,
+      TermDelimiter => self.term_delim = true,
       Plus if self.tokens.last().not_kind(Backtick) && token.len() < 4 => {
         self.pass_pluses = self.pass_pluses.saturating_add(1)
       }
@@ -595,7 +593,8 @@ impl<'arena> Line<'arena> {
       Digits if second.kind(Dots) && third.kind(Whitespace) => {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
-      _ => {
+      TermDelimiter => None, // we need to see a non-whitespace token first
+      _ if self.term_delim => {
         for token in self.iter().skip(offset) {
           if token.kind(TermDelimiter) {
             return match token.lexeme.as_str() {
@@ -609,6 +608,7 @@ impl<'arena> Line<'arena> {
         }
         None
       }
+      _ => None,
     }
   }
 
@@ -926,6 +926,7 @@ mod tests {
       ("*foo", false),
       (".foo", false),
       ("-foo", false),
+      (" ::", false),
     ];
     for (input, expected) in cases {
       let line = read_line!(input);

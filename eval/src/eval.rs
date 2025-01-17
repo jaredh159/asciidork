@@ -230,6 +230,13 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
           .iter()
           .for_each(|node| eval_inline(node, ctx, backend));
         backend.exit_description_list_term(item);
+        if let ListItemTypeMeta::ExtraTerms(terms) = &item.type_meta {
+          terms.iter().for_each(|(term, _)| {
+            backend.enter_description_list_term(item);
+            term.iter().for_each(|node| eval_inline(node, ctx, backend));
+            backend.exit_description_list_term(item);
+          });
+        }
         backend.enter_description_list_description(&item.blocks, item);
         item.blocks.iter().for_each(|b| eval_block(b, ctx, backend));
         backend.exit_description_list_description(&item.blocks, item);

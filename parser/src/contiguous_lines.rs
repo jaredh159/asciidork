@@ -155,10 +155,29 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn starts_list(&self) -> bool {
-    self
-      .first()
-      .map(|line| line.starts_list_item())
-      .unwrap_or(false)
+    for line in self.lines.iter() {
+      if line.starts_list_item() {
+        return true;
+      } else if line.is_comment() {
+        continue;
+      } else {
+        return false;
+      }
+    }
+    false
+  }
+
+  pub fn starts_extra_description_list_term(&self, ctx: ListMarker) -> bool {
+    for line in self.lines.iter() {
+      if line.list_marker() == Some(ctx) {
+        return true;
+      } else if line.is_comment() {
+        continue;
+      } else {
+        return false;
+      }
+    }
+    false
   }
 
   pub fn starts_with_seq(&self, kinds: &[TokenSpec]) -> bool {
@@ -263,9 +282,11 @@ impl<'arena> ContiguousLines<'arena> {
 
   #[cfg(debug_assertions)]
   pub fn debug_print(&self) {
+    eprintln!("```");
     for line in self.iter() {
       eprintln!("{}", line.reassemble_src());
     }
+    eprintln!("```");
   }
 }
 

@@ -25,6 +25,7 @@ impl<'arena> Parser<'arena> {
     if lines.is_empty() {
       return Ok(inlines);
     }
+
     let span_loc = lines.loc().unwrap().clamp_start();
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;

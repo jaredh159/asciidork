@@ -254,6 +254,9 @@ impl<'arena> Parser<'arena> {
     let start = lines.current_token().unwrap().loc.start;
     let mut attrs = MultiAttrList::new_in(self.bump);
     let mut title = None;
+    if !lines.current().unwrap().is_fully_unconsumed() {
+      return Ok(ChunkMeta { attrs, title, start });
+    }
     loop {
       match lines.current() {
         Some(line) if line.is_chunk_title() => {

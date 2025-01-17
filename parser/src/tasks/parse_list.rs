@@ -185,12 +185,44 @@ impl<'arena> Parser<'arena> {
     self.parse_list_continuation_blocks(accum)
   }
 
-  pub fn parse_description_list_item(
+  fn parse_description_list_item(
     &mut self,
     marker: ListMarker,
     mut line: Line<'arena>,
     mut lines: ContiguousLines<'arena>,
   ) -> Result<Option<ListItem<'arena>>> {
+    let (principle, marker_src) = self.parse_description_list_term(&mut line)?;
+
+    let type_meta = if line.is_empty() {
+      self.restore_lines(lines);
+      let mut terms = BumpVec::new_in(self.bump);
+      self.gather_extra_terms(marker, &mut terms)?;
+      if terms.is_empty() {
+        ListItemTypeMeta::None
+      } else {
+        ListItemTypeMeta::ExtraTerms(terms)
+      }
+    } else {
+      lines.restore_if_nonempty(line);
+      self.restore_lines(lines);
+      ListItemTypeMeta::None
+    };
+
+    let blocks = self.parse_description_list_item_blocks()?;
+
+    Ok(Some(ListItem {
+      blocks,
+      marker,
+      marker_src,
+      type_meta,
+      principle,
+    }))
+  }
+
+  fn parse_description_list_term(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<(InlineNodes<'arena>, SourceString<'arena>)> {
     let principle = {
       let before_delim = line.extract_line_before(&[Kind(TermDelimiter)]);
       self.parse_inlines(&mut before_delim.into_lines())?
@@ -198,26 +230,33 @@ impl<'arena> Parser<'arena> {
 
     let marker_token = line.consume_current().unwrap();
     let marker_src = marker_token.into_source_string();
-
     line.trim_leading_whitespace();
-    lines.restore_if_nonempty(line);
-    let blocks = self.parse_description_list_item_blocks(lines)?;
-
-    Ok(Some(ListItem {
-      blocks,
-      marker,
-      marker_src,
-      type_meta: ListItemTypeMeta::None,
-      principle,
-    }))
+    Ok((principle, marker_src))
   }
 
-  pub fn parse_description_list_item_blocks(
+  fn gather_extra_terms(
     &mut self,
-    lines: ContiguousLines<'arena>,
-  ) -> Result<BumpVec<'arena, Block<'arena>>> {
+    marker: ListMarker,
+    terms: &mut BumpVec<'arena, (InlineNodes<'arena>, SourceString<'arena>)>,
+  ) -> Result<()> {
+    let Some(mut lines) = self.read_lines()? else {
+      return Ok(());
+    };
+    if !lines.starts_extra_description_list_term(marker) {
+      self.restore_lines(lines);
+      return Ok(());
+    }
+    lines.discard_leading_comment_lines();
+    let mut line = lines.consume_current().unwrap();
+    terms.push(self.parse_description_list_term(&mut line)?);
+    lines.restore_if_nonempty(line);
     self.restore_lines(lines);
+    self.gather_extra_terms(marker, terms)
+  }
+
+  fn parse_description_list_item_blocks(&mut self) -> Result<BumpVec<'arena, Block<'arena>>> {
     let mut blocks = BumpVec::new_in(self.bump);
+    // NB: this parse "block" parses the dl list _definition_
     if let Some(block) = self.parse_block()? {
       blocks.push(block);
     }

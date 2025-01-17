@@ -4,12 +4,72 @@ assert_html!(
   simple_description_list,
   adoc! {r#"
     foo:: bar
+    hash:: baz
   "#},
   html! {r#"
     <div class="dlist">
       <dl>
         <dt class="hdlist1">foo</dt>
         <dd><p>bar</p></dd>
+        <dt class="hdlist1">hash</dt>
+        <dd><p>baz</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_html!(
+  rx_lists_tests_1,
+  adoc! {r#"
+    // should not parse a bare dlist delimiter as a dlist
+    ::
+
+    // should not parse an indented bare dlist delimiter as a dlist
+     ::
+
+    // should parse a dlist delimiter preceded by a blank attribute as a dlist
+    {blank}::
+
+    // should parse a dlist if term is include and principal text is []
+    include:: []
+
+    // should parse a dlist if term is include and principal text matches macro form
+    include:: pass:[${placeholder}]
+  "#},
+  html! {r#"
+    <div class="paragraph"><p>::</p></div>
+    <div class="literalblock">
+      <div class="content"><pre>::</pre></div>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1"></dt>
+        <dt class="hdlist1">include</dt>
+        <dd><p>[]</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">include</dt>
+        <dd><p>${placeholder}</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_html!(
+  multiple_terms,
+  adoc! {r#"
+    foo::
+    bar:: baz
+
+  "#},
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">foo</dt>
+        <dt class="hdlist1">bar</dt>
+        <dd><p>baz</p></dd>
       </dl>
     </div>
   "#}
