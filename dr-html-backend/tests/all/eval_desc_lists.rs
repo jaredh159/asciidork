@@ -1,4 +1,6 @@
-use test_utils::{adoc, html};
+use asciidork_core::JobSettings;
+use asciidork_parser::prelude::*;
+use test_utils::*;
 
 assert_html!(
   simple_description_list,
@@ -27,6 +29,10 @@ assert_html!(
     // should not parse an indented bare dlist delimiter as a dlist
      ::
 
+    // missing space before term does not produce description list
+    term1::def1
+    term2::def2
+
     // should parse a dlist delimiter preceded by a blank attribute as a dlist
     {blank}::
 
@@ -35,12 +41,20 @@ assert_html!(
 
     // should parse a dlist if term is include and principal text matches macro form
     include:: pass:[${placeholder}]
+
+    // should parse sibling items using same rules
+    term1;; ;; def1
+    term2;; ;; def2
+
+    // should allow term to end with a semicolon when using double semicolon delimiter
+    term;;; def
   "#},
   html! {r#"
     <div class="paragraph"><p>::</p></div>
     <div class="literalblock">
       <div class="content"><pre>::</pre></div>
     </div>
+    <div class="paragraph"><p>term1::def1 term2::def2</p></div>
     <div class="dlist">
       <dl>
         <dt class="hdlist1"></dt>
@@ -54,6 +68,281 @@ assert_html!(
         <dd><p>${placeholder}</p></dd>
       </dl>
     </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>;; def1</p></dd>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>;; def2</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term;</dt>
+        <dd><p>def</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_html!(
+  rx_lists_tests_2,
+  adoc! {r#"
+    // single-line indented adjacent elements
+    term1:: def1
+     term2:: def2
+
+    // single-line elements separated by blank line should create a single list
+    term1:: def1
+
+    term2:: def2
+
+    // a line comment between elements should divide them into separate lists
+    term1:: def1
+
+    //
+
+    term2:: def2
+
+    // a ruler between elements should divide them into separate lists
+    term1:: def1
+
+    '''
+
+    term2:: def2
+
+    // a block title between elements should divide them into separate lists
+    term1:: def1
+
+    .Some more
+    term2:: def2
+  "#},
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+      </dl>
+    </div>
+    <hr>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <div class="title">Some more</div>
+      <dl>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_html!(
+  rx_lists_tests_3,
+  adoc! {r#"
+    // multi-line elements with paragraph content
+    term1::
+    def1
+    term2::
+    def2
+
+    // multi-line elements with indented paragraph content
+    term1::
+     def1
+    term2::
+      def2
+
+    // multi-line elements with blank line before paragraph content
+    term3::
+
+    def3
+    term4::
+
+    def4
+
+    // mixed single and multi-line adjacent elements
+    term5:: def5
+    term6::
+    def6
+  "#},
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term3</dt>
+        <dd><p>def3</p></dd>
+        <dt class="hdlist1">term4</dt>
+        <dd><p>def4</p></dd>
+      </dl>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term5</dt>
+        <dd><p>def5</p></dd>
+        <dt class="hdlist1">term6</dt>
+        <dd><p>def6</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+// NB: asciicoctor does not render `[grays-peak]` as the link text,
+// it uses the term text `Grays Peak`, for now we're not supporting this
+// see `/todo.md#differences-from-asciidoctor`
+assert_html!(
+  anchors_starting_desc_terms,
+  adoc! {r#"
+    // should discover anchor at start of description term text and register it as a reference
+    Highest is <<grays-peak>>, which tops <<mount-evans>>.
+
+    [[mount-evans,Mount Evans]]Mount Evans:: 14,271 feet
+    [[grays-peak]]Grays Peak:: 14,278 feet
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>Highest is <a href="#grays-peak">[grays-peak]</a>, which tops <a href="#mount-evans">Mount Evans</a>.</p>
+    </div>
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1"><a id="mount-evans"></a>Mount Evans</dt>
+        <dd><p>14,271 feet</p></dd>
+        <dt class="hdlist1"><a id="grays-peak"></a>Grays Peak</dt>
+        <dd><p>14,278 feet</p></dd>
+      </dl>
+    </div>
+  "##}
+);
+
+assert_html!(
+  literal_block_inside_desc_list,
+  adoc! {r#"
+    // literal block inside description list
+    term::
+    +
+    ....
+    literal, line 1
+
+    literal, line 2
+    ....
+    anotherterm:: def
+  "#},
+   "<div class=\"dlist\"><dl><dt class=\"hdlist1\">term</dt><dd><div class=\"literalblock\"><div class=\"content\"><pre>literal, line 1\n\nliteral, line 2</pre></div></div></dd><dt class=\"hdlist1\">anotherterm</dt><dd><p>def</p></dd></dl></div>"
+);
+
+assert_html!(
+  trailing_continuation_desc,
+  |job_settings: &mut JobSettings| { job_settings.strict = false },
+  adoc! {r#"
+    // literal block inside description list with trailing line continuation
+    term::
+    +
+    ....
+    literal
+    ....
+    +
+    anotherterm:: def
+  "#},
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term</dt>
+        <dd>
+          <div class="literalblock">
+            <div class="content"><pre>literal</pre></div>
+          </div>
+        </dd>
+        <dt class="hdlist1">anotherterm</dt>
+        <dd><p>def</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_error!(
+  trailing_continuation_desc_err,
+  adoc! {r#"
+    term::
+    +
+    ....
+    literal
+    ....
+    +
+    anotherterm:: def
+  "#},
+  error! {r"
+     --> test.adoc:6:1
+      |
+    6 | +
+      | ^ Dangling list continuation
+  "}
+);
+
+assert_html!(
+  adjacent_tabbed,
+  // single-line indented adjacent elements with tabs
+  "term1::\tdef1\n\tterm2::\tdef2",
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd><p>def1</p></dd>
+        <dt class="hdlist1">term2</dt>
+        <dd><p>def2</p></dd>
+      </dl>
+    </div>
   "#}
 );
 
@@ -62,7 +351,6 @@ assert_html!(
   adoc! {r#"
     foo::
     bar:: baz
-
   "#},
   html! {r#"
     <div class="dlist">

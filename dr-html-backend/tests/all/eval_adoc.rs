@@ -42,6 +42,18 @@ assert_inline_html!(multichar_whitespace, "foo   bar", r#"foo bar"#);
 assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 
 assert_inline_html!(
+  emdash_start_line_swallows_newline,
+  "foo\n-- bar", // rx removes the newline in this case
+  r#"foo&#8201;&#8212;&#8201;bar"#
+);
+
+assert_inline_html!(
+  emdash_end_line_swallows_newline,
+  "foo --\nbar", // rx removes the newline in this case
+  r#"foo&#8201;&#8212;&#8201;bar"#
+);
+
+assert_inline_html!(
   confusing_combo,
   "`*` foo `*`",
   r#"<code>*</code> foo <code>*</code>"#

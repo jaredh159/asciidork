@@ -36,9 +36,9 @@ impl<'arena> ChunkMetaExt<'arena> for ChunkMeta<'arena> {
 
     // https://docs.asciidoctor.org/asciidoc/latest/verbatim/listing-blocks/#indent-method
     if uniform_indented || lines.current_satisfies(Line::is_indented) {
-      return BlockContext::Literal;
+      BlockContext::Literal
+    } else {
+      BlockContext::Paragraph
     }
-
-    BlockContext::Paragraph
   }
 }

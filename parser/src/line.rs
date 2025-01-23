@@ -557,7 +557,11 @@ impl<'arena> Line<'arena> {
 
   pub fn reassemble_src(&self) -> BumpString<'arena> {
     let mut src = BumpString::with_capacity_in(self.src_len(), self.tokens.bump);
-    for token in self.tokens.iter().filter(|t| t.kind != AttrRef) {
+    for token in self
+      .tokens
+      .iter()
+      .filter(|t| !matches!(t.kind, AttrRef | Discard))
+    {
       src.push_str(&token.lexeme);
     }
     src

@@ -244,11 +244,20 @@ impl<'arena> Parser<'arena> {
     mut lines: ContiguousLines<'arena>,
     meta: ChunkMeta<'arena>,
   ) -> Result<Option<Block<'arena>>> {
+    if self.ctx.list.parsing_simple_desc_def() {
+      lines.current_mut().map(|l| l.discard_leading_whitespace());
+    }
     let context = meta.block_paragraph_context(&mut lines);
     // TODO: probably a better stack-like context API is possible here...
     let restore_subs = self.ctx.set_subs_for(context, &meta);
     let inlines = self.parse_inlines(&mut lines)?;
     self.ctx.subs = restore_subs;
+
+    // this can happen when parsing empty desc list principal
+    if inlines.is_empty() {
+      self.restore_lines(lines);
+      return Ok(None);
+    }
 
     self.restore_lines(lines);
     let content = if context == Context::Comment {
@@ -258,7 +267,8 @@ impl<'arena> Parser<'arena> {
       Content::Simple(inlines)
     };
 
-    Ok(Some(Block { meta, context, content }))
+    let paragraph = Block { meta, context, content };
+    Ok(Some(paragraph))
   }
 
   fn parse_quoted_paragraph(

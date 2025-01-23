@@ -1,5 +1,5 @@
 use asciidork_ast::variants::{inline::*, r#macro::*};
-use asciidork_ast::{prelude::*, InlineNodes};
+use asciidork_ast::{prelude::*, AdjacentNewline, InlineNodes};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -83,7 +83,10 @@ fn test_emdashes() {
     (
       "-- foo",
       nodes![
-        node!(Symbol(SymbolKind::SpacedEmDash), 0..3),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
+          0..3
+        ),
         node!("foo"; 3..6)
       ],
     ),
@@ -91,7 +94,10 @@ fn test_emdashes() {
       "foo --",
       nodes![
         node!("foo"; 0..3),
-        node!(Symbol(SymbolKind::SpacedEmDash), 3..7),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
+          3..7
+        ),
       ],
     ),
     (
@@ -108,16 +114,32 @@ fn test_emdashes() {
       "line1\n-- foo",
       nodes![
         node!("line1"; 0..5),
-        node!(Inline::Newline, 5..6),
-        node!(Symbol(SymbolKind::SpacedEmDash), 6..9),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Leading)),
+          5..9
+        ),
         node!("foo"; 9..12),
+      ],
+    ),
+    (
+      "foo --\nbar",
+      nodes![
+        node!("foo"; 0..3),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Trailing)),
+          3..8
+        ),
+        node!("bar"; 7..10),
       ],
     ),
     (
       "foo -- bar",
       nodes![
         node!("foo"; 0..3),
-        node!(Symbol(SymbolKind::SpacedEmDash), 3..7),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
+          3..7
+        ),
         node!("bar"; 7..10),
       ],
     ),

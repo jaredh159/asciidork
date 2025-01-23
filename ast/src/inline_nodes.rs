@@ -41,7 +41,7 @@ impl<'arena> InlineNodes<'arena> {
       Inline::Symbol(SymbolKind::Trademark) => text.push("(TM)"),
       Inline::Symbol(SymbolKind::Registered) => text.push("(R)"),
       Inline::Symbol(SymbolKind::EmDash) => text.push("—"),
-      Inline::Symbol(SymbolKind::SpacedEmDash) => text.push(" — "),
+      Inline::Symbol(SymbolKind::SpacedEmDash(_)) => text.push(" — "),
       Inline::Symbol(SymbolKind::Ellipsis) => text.push("..."),
       Inline::Symbol(SymbolKind::SingleRightArrow) => text.push("->"),
       Inline::Symbol(SymbolKind::DoubleRightArrow) => text.push("=>"),
@@ -112,6 +112,10 @@ impl<'arena> InlineNodes<'arena> {
 
   pub fn nth(&self, n: usize) -> Option<&InlineNode<'arena>> {
     self.get(n)
+  }
+
+  pub fn last_is(&self, kind: &Inline) -> bool {
+    self.last().map_or(false, |node| &node.content == kind)
   }
 }
 

@@ -49,6 +49,13 @@
 - [ ] asciidoctor seems to resolve attr refs case-insensitive, grep `ifdef::showScript[]`
       (is it only for ifdef?) - not sure i want to replicate this, seems undocumented...
 
+## differences from asciidoctor
+
+- asciidoctor uses term of description list as reftext for a preceding anchor without
+  reftext, so `[[foo]]Bar:: baz` produces an anchor with the refext of `Bar`. Currently we
+  don't support this, the author would need to specify the reftext explicitly with
+  `[[foo,Bar]]Bar:: baz`
+
 ## design philosophy
 
 - push complexity into the lexer, w/ more tokens, we can always ignore token types later

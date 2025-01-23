@@ -177,6 +177,15 @@ impl<'arena> Parser<'arena> {
       return Ok(accum);
     }
 
+    if let Some(marker) = lines.nth(1).and_then(|line| line.list_marker()) {
+      if self.ctx.list.stack.continues_current_list(marker) {
+        self.err_line("Dangling list continuation", lines.current().unwrap())?;
+        lines.consume_current();
+        self.restore_lines(lines);
+        return Ok(accum);
+      }
+    }
+
     lines.consume_current(); // the `+` line starting the continuation
     self.restore_lines(lines);
     self.ctx.list.parsing_continuations = true;

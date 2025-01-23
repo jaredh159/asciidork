@@ -79,12 +79,17 @@ impl<'arena> Accum<'arena> {
       }
       (None, None) => self.push_text_token(&token),
       (None | Some(' '), None | Some(' ')) => {
+        let mut newline = AdjacentNewline::None;
         let mut loc = token.loc;
         if last_char.is_some() {
           loc.start -= 1;
           self.text.drop_last(1);
+        } else if self.inlines.last_is(&Inline::Newline) {
+          self.inlines.pop();
+          newline = AdjacentNewline::Leading;
+          loc.start -= 1;
         }
-        self.push_node(Symbol(SymbolKind::SpacedEmDash), loc.incr_end());
+        self.push_node(Symbol(SymbolKind::SpacedEmDash(newline)), loc.incr_end());
         if let Some(next_token) = next_token {
           next_token.drop_leading_bytes(1);
         }
@@ -101,17 +106,25 @@ impl<'arena> Accum<'arena> {
     if !lines.is_empty() {
       self.commit();
       self.text.loc.end += 1;
-      self.push_node(Inline::Newline, self.text.loc);
+      if self
+        .inlines
+        .last_is(&Inline::Symbol(SymbolKind::SpacedEmDash(
+          AdjacentNewline::None,
+        )))
+      {
+        let emdash = self.inlines.last_mut().unwrap();
+        emdash.loc.end += 1;
+        emdash.content = Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Trailing));
+      } else {
+        self.push_node(Inline::Newline, self.text.loc);
+      }
     }
   }
 
   pub fn trimmed_inlines(mut self) -> InlineNodes<'arena> {
     if self.inlines.remove_trailing_line_comment() {
       self.inlines.remove_trailing_newline();
-      if matches!(
-        self.inlines.last().map(|n| &n.content),
-        Some(Inline::Discarded)
-      ) {
+      if self.inlines.last_is(&Inline::Discarded) {
         self.inlines.pop();
       }
       self.trimmed_inlines()

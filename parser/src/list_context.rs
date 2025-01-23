@@ -2,6 +2,32 @@ use std::ops::{Deref, DerefMut};
 
 use crate::internal::*;
 
+#[derive(Debug, Default)]
+pub(crate) struct ListContext {
+  pub(crate) stack: ListStack,
+  pub(crate) parsing_continuations: bool,
+}
+
+impl ListContext {
+  pub fn parsing_simple_desc_def(&self) -> bool {
+    if self.parsing_continuations || self.stack.is_empty() {
+      return false;
+    }
+    self.parsing_description_list()
+  }
+
+  pub fn parsing_description_list_continuations(&self) -> bool {
+    self.parsing_description_list() && self.parsing_continuations
+  }
+
+  pub fn parsing_description_list(&self) -> bool {
+    self
+      .stack
+      .last()
+      .map_or(false, |last| last.is_description())
+  }
+}
+
 #[derive(Debug)]
 pub struct ListStack(Vec<ListMarker>);
 
@@ -27,10 +53,6 @@ impl ListStack {
       (ListMarker::Callout(_), ListMarker::Callout(_)) => true,
       (last, next) => *last == next,
     })
-  }
-
-  pub fn parsing_description_list(&self) -> bool {
-    self.last().map_or(false, |last| last.is_description())
   }
 
   pub fn depth(&self) -> u8 {

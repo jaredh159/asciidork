@@ -7,7 +7,7 @@ mod deq;
 mod diagnostic;
 mod lexer;
 mod line;
-mod list_stack;
+mod list_context;
 mod parse_context;
 pub mod parser;
 pub mod regx;
@@ -40,7 +40,7 @@ mod internal {
   pub use crate::diagnostic::*;
   pub use crate::lexer::*;
   pub use crate::line::*;
-  pub use crate::list_stack::*;
+  pub use crate::list_context::*;
   pub use crate::parse_context::*;
   pub use crate::parser::*;
   pub use crate::regx;

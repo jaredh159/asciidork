@@ -863,7 +863,7 @@ impl<'arena> Parser<'arena> {
 
     // description list
     (
-      self.ctx.list.stack.parsing_description_list()
+      self.ctx.list.parsing_description_list()
       && line.starts_description_list_item() || line.is_list_continuation()
     )
 

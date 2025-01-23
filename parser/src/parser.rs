@@ -19,12 +19,6 @@ pub struct ParseResult<'arena> {
   pub warnings: Vec<Diagnostic>,
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct ListContext {
-  pub(crate) stack: ListStack,
-  pub(crate) parsing_continuations: bool,
-}
-
 impl<'arena> Parser<'arena> {
   pub fn new(src: BumpVec<'arena, u8>, file: SourceFile, bump: &'arena Bump) -> Self {
     Parser::from_lexer(Lexer::new(src, file, bump))

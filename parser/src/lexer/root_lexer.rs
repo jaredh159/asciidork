@@ -667,6 +667,7 @@ mod tests {
       ("foo:: foo", vec![foo, (TermDelimiter, "::"), space, foo]),
       ("foo::", vec![foo, (TermDelimiter, "::")]),
       ("foo;;", vec![foo, (TermDelimiter, ";;")]),
+      ("foo;;;", vec![foo, (SemiColon, ";"), (TermDelimiter, ";;")]),
       ("foo:::", vec![foo, (TermDelimiter, ":::")]),
       ("foo::::", vec![foo, (TermDelimiter, "::::")]),
       // doesn't trip up on macros
@@ -691,7 +692,7 @@ mod tests {
 
     refute_produces_token!(
       TermDelimiter,
-      ["foo::foo", "foo;;;", "foo:::::", "foo:::::foo", ":: foo"]
+      ["foo::foo", "foo:::::", "foo:::::foo", ":: foo"]
     );
   }
 

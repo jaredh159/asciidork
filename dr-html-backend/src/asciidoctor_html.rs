@@ -505,6 +505,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.open_element("div", &["dlist"], &block.meta.attrs);
+    self.render_block_title(&block.meta);
     self.push_str("<dl>");
   }
 
@@ -1104,7 +1105,7 @@ impl Backend for AsciidoctorHtml {
       SymbolKind::Registered => self.push_str("&#174;"),
       SymbolKind::Trademark => self.push_str("&#8482;"),
       SymbolKind::EmDash => self.push_str("&#8212;&#8203;"),
-      SymbolKind::SpacedEmDash => self.push_str("&#8201;&#8212;&#8201;"),
+      SymbolKind::SpacedEmDash(_) => self.push_str("&#8201;&#8212;&#8201;"),
       SymbolKind::Ellipsis => self.push_str("&#8230;&#8203;"),
       SymbolKind::SingleRightArrow => self.push_str("&#8594;"),
       SymbolKind::DoubleRightArrow => self.push_str("&#8658;"),

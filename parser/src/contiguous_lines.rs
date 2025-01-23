@@ -1,4 +1,5 @@
 use crate::internal::*;
+use crate::variants::token::*;
 
 #[derive(Debug, Clone)]
 pub struct ContiguousLines<'arena> {
@@ -135,7 +136,6 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn is_quoted_paragraph(&self) -> bool {
-    use TokenKind::*;
     if self.lines.len() < 2 {
       return false;
     }
@@ -234,20 +234,20 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn trim_uniform_leading_whitespace(&mut self) -> bool {
-    if self.is_empty() || !self.first().unwrap().starts(TokenKind::Whitespace) {
+    if self.is_empty() || !self.first().unwrap().starts(Whitespace) {
       return false;
     }
     let len = self.first().unwrap().current_token().unwrap().lexeme.len();
     if !self
       .lines
       .iter()
-      .all(|l| l.current_is_len(TokenKind::Whitespace, len) && l.num_tokens() > 1)
+      .all(|l| l.current_is_len(Whitespace, len) && l.num_tokens() > 1)
     {
       return false;
     }
 
     for line in self.lines.iter_mut() {
-      line.discard_assert(TokenKind::Whitespace);
+      line.discard_assert(Whitespace);
     }
     true
   }
