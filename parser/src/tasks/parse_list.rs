@@ -189,7 +189,9 @@ impl<'arena> Parser<'arena> {
     lines.consume_current(); // the `+` line starting the continuation
     self.restore_lines(lines);
     self.ctx.list.parsing_continuations = true;
-    accum.push(self.parse_block()?.unwrap());
+    if let Some(block) = self.parse_block()? {
+      accum.push(block);
+    }
     self.ctx.list.parsing_continuations = false;
     self.parse_list_continuation_blocks(accum)
   }
@@ -201,29 +203,23 @@ impl<'arena> Parser<'arena> {
     mut lines: ContiguousLines<'arena>,
   ) -> Result<Option<ListItem<'arena>>> {
     let (principle, marker_src) = self.parse_description_list_term(&mut line)?;
+    let mut extra_terms = BumpVec::new_in(self.bump);
 
-    let type_meta = if line.is_empty() {
+    if line.is_empty() {
       self.restore_lines(lines);
-      let mut terms = BumpVec::new_in(self.bump);
-      self.gather_extra_terms(marker, &mut terms)?;
-      if terms.is_empty() {
-        ListItemTypeMeta::None
-      } else {
-        ListItemTypeMeta::ExtraTerms(terms)
-      }
+      self.gather_extra_terms(marker, &mut extra_terms)?;
     } else {
       lines.restore_if_nonempty(line);
       self.restore_lines(lines);
-      ListItemTypeMeta::None
-    };
+    }
 
-    let blocks = self.parse_description_list_item_blocks()?;
+    let description = self.parse_block()?;
 
     Ok(Some(ListItem {
-      blocks,
+      blocks: self.parse_description_list_item_blocks()?,
       marker,
       marker_src,
-      type_meta,
+      type_meta: ListItemTypeMeta::DescList { description, extra_terms },
       principle,
     }))
   }
@@ -265,16 +261,13 @@ impl<'arena> Parser<'arena> {
 
   fn parse_description_list_item_blocks(&mut self) -> Result<BumpVec<'arena, Block<'arena>>> {
     let mut blocks = BumpVec::new_in(self.bump);
-    // NB: this parse "block" parses the dl list _definition_
-    if let Some(block) = self.parse_block()? {
-      blocks.push(block);
-    }
     let Some(lines) = self.read_lines()? else {
       return Ok(blocks);
     };
     if lines.starts_list_continuation() {
       self.restore_lines(lines);
-      return self.parse_list_continuation_blocks(blocks);
+      blocks = self.parse_list_continuation_blocks(blocks)?;
+      return Ok(blocks);
     }
     self.restore_lines(lines);
     Ok(blocks)

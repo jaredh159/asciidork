@@ -515,29 +515,40 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_description_list_term(&mut self, _item: &ListItem) {
+  fn enter_description_list_term(&mut self, _term: &[InlineNode], _item: &ListItem) {
     self.push_str(r#"<dt class="hdlist1">"#);
   }
 
   #[instrument(skip_all)]
-  fn exit_description_list_term(&mut self, _item: &ListItem) {
+  fn exit_description_list_term(&mut self, _term: &[InlineNode], _item: &ListItem) {
     self.push_str("</dt>");
   }
 
   #[instrument(skip_all)]
-  fn enter_description_list_description(&mut self, blocks: &[Block], _item: &ListItem) {
-    if blocks.first().map_or(false, |block| {
-      block.context == BlockContext::Paragraph && matches!(block.content, BlockContent::Simple(_))
-    }) {
-      self.state.insert(VisitingSimpleTermDescription);
-    }
+  fn enter_description_list_description(&mut self, _item: &ListItem) {
     self.push_str("<dd>");
   }
 
   #[instrument(skip_all)]
-  fn exit_description_list_description(&mut self, _blocks: &[Block], _item: &ListItem) {
+  fn exit_description_list_description(&mut self, _item: &ListItem) {
     self.push_str("</dd>");
   }
+
+  #[instrument(skip_all)]
+  fn enter_description_list_description_text(&mut self, _text: &Block, _item: &ListItem) {
+    self.state.insert(VisitingSimpleTermDescription);
+  }
+
+  #[instrument(skip_all)]
+  fn exit_description_list_description_text(&mut self, _text: &Block, _item: &ListItem) {
+    self.state.remove(&VisitingSimpleTermDescription);
+  }
+
+  #[instrument(skip_all)]
+  fn enter_description_list_description_block(&mut self, _block: &Block, _item: &ListItem) {}
+
+  #[instrument(skip_all)]
+  fn exit_description_list_description_block(&mut self, _block: &Block, _item: &ListItem) {}
 
   #[instrument(skip_all)]
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
@@ -1689,7 +1700,7 @@ fn configure_test_tracing() {
       let subscriber = fmt::Subscriber::builder()
         .with_env_filter(EnvFilter::from_default_env())
         .with_test_writer()
-        .with_span_events(FmtSpan::ENTER | FmtSpan::EXIT)
+        .with_span_events(FmtSpan::ENTER)
         .finish();
       tracing::subscriber::set_global_default(subscriber)
         .expect("setting default tracing subscriber failed");

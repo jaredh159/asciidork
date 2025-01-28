@@ -15,7 +15,10 @@ pub struct ListItem<'arena> {
 pub enum ListItemTypeMeta<'arena> {
   Checklist(bool, SourceString<'arena>),
   Callout(SmallVec<[Callout; 4]>),
-  ExtraTerms(BumpVec<'arena, (InlineNodes<'arena>, SourceString<'arena>)>),
+  DescList {
+    description: Option<Block<'arena>>,
+    extra_terms: BumpVec<'arena, (InlineNodes<'arena>, SourceString<'arena>)>,
+  },
   None,
 }
 

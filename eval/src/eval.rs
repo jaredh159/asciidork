@@ -224,22 +224,32 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
     (Context::DescriptionList, Content::List { items, depth, .. }) => {
       backend.enter_description_list(block, items, *depth);
       items.iter().for_each(|item| {
-        backend.enter_description_list_term(item);
+        let ListItemTypeMeta::DescList { extra_terms, description } = &item.type_meta else {
+          unreachable!("eval description list extract meta");
+        };
+        backend.enter_description_list_term(&item.principle, item);
         item
           .principle
           .iter()
           .for_each(|node| eval_inline(node, ctx, backend));
-        backend.exit_description_list_term(item);
-        if let ListItemTypeMeta::ExtraTerms(terms) = &item.type_meta {
-          terms.iter().for_each(|(term, _)| {
-            backend.enter_description_list_term(item);
-            term.iter().for_each(|node| eval_inline(node, ctx, backend));
-            backend.exit_description_list_term(item);
-          });
+        backend.exit_description_list_term(&item.principle, item);
+        extra_terms.iter().for_each(|(term, _)| {
+          backend.enter_description_list_term(term, item);
+          term.iter().for_each(|node| eval_inline(node, ctx, backend));
+          backend.exit_description_list_term(term, item);
+        });
+        backend.enter_description_list_description(item);
+        if let Some(description) = description {
+          backend.enter_description_list_description_text(description, item);
+          eval_block(description, ctx, backend);
+          backend.exit_description_list_description_text(description, item);
         }
-        backend.enter_description_list_description(&item.blocks, item);
-        item.blocks.iter().for_each(|b| eval_block(b, ctx, backend));
-        backend.exit_description_list_description(&item.blocks, item);
+        item.blocks.iter().for_each(|b| {
+          backend.enter_description_list_description_block(b, item);
+          eval_block(b, ctx, backend);
+          backend.exit_description_list_description_block(b, item);
+        });
+        backend.exit_description_list_description(item);
       });
       backend.exit_description_list(block, items, *depth);
     }

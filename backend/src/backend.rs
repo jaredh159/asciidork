@@ -87,10 +87,14 @@ pub trait Backend {
   fn exit_callout_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn enter_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn exit_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
-  fn enter_description_list_term(&mut self, item: &ListItem);
-  fn exit_description_list_term(&mut self, item: &ListItem);
-  fn enter_description_list_description(&mut self, blocks: &[Block], item: &ListItem);
-  fn exit_description_list_description(&mut self, blocks: &[Block], item: &ListItem);
+  fn enter_description_list_term(&mut self, term: &[InlineNode], item: &ListItem);
+  fn exit_description_list_term(&mut self, term: &[InlineNode], item: &ListItem);
+  fn enter_description_list_description(&mut self, item: &ListItem);
+  fn exit_description_list_description(&mut self, item: &ListItem);
+  fn enter_description_list_description_text(&mut self, text: &Block, item: &ListItem);
+  fn exit_description_list_description_text(&mut self, text: &Block, item: &ListItem);
+  fn enter_description_list_description_block(&mut self, block: &Block, item: &ListItem);
+  fn exit_description_list_description_block(&mut self, block: &Block, item: &ListItem);
   fn enter_list_item_principal(&mut self, item: &ListItem, variant: ListVariant);
   fn exit_list_item_principal(&mut self, item: &ListItem, variant: ListVariant);
   fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem, variant: ListVariant);
