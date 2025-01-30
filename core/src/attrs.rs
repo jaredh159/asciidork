@@ -30,11 +30,11 @@ pub trait ReadAttr {
   fn get(&self, key: &str) -> Option<&AttrValue>;
 
   fn is_true(&self, key: &str) -> bool {
-    self.get(key).map_or(false, |attr| attr.is_true())
+    self.get(key).is_some_and(|attr| attr.is_true())
   }
 
   fn is_false(&self, key: &str) -> bool {
-    self.get(key).map_or(false, |attr| attr.is_false())
+    self.get(key).is_some_and(|attr| attr.is_false())
   }
 
   fn is_set(&self, key: &str) -> bool {

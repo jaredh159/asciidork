@@ -589,6 +589,8 @@ fn test_confusing_patterns() {
         node!(InlinePassthru(just!("_", 9..10)), 8..11),
       ],
     ),
+    ("foo * bar * baz", just!("foo * bar * baz", 0..15)),
+    ("foo _ bar _ baz", just!("foo _ bar _ baz", 0..15)),
   ]);
 }
 
