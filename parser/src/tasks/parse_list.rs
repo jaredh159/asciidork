@@ -213,7 +213,9 @@ impl<'arena> Parser<'arena> {
       self.restore_lines(lines);
     }
 
-    let description = self.parse_block()?;
+    let description = self
+      .parse_block()?
+      .filter(|block| block.context != BlockContext::Comment);
 
     Ok(Some(ListItem {
       blocks: self.parse_description_list_item_blocks()?,
@@ -267,9 +269,12 @@ impl<'arena> Parser<'arena> {
     if lines.starts_list_continuation() {
       self.restore_lines(lines);
       blocks = self.parse_list_continuation_blocks(blocks)?;
-      return Ok(blocks);
+    } else if lines.starts_nested_list(&self.ctx.list.stack, true) {
+      self.restore_lines(lines);
+      blocks.push(self.parse_block()?.unwrap());
+    } else {
+      self.restore_lines(lines);
     }
-    self.restore_lines(lines);
     Ok(blocks)
   }
 }

@@ -238,18 +238,20 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
           term.iter().for_each(|node| eval_inline(node, ctx, backend));
           backend.exit_description_list_term(term, item);
         });
-        backend.enter_description_list_description(item);
-        if let Some(description) = description {
-          backend.enter_description_list_description_text(description, item);
-          eval_block(description, ctx, backend);
-          backend.exit_description_list_description_text(description, item);
+        if description.is_some() || !item.blocks.is_empty() {
+          backend.enter_description_list_description(item);
+          if let Some(description) = description {
+            backend.enter_description_list_description_text(description, item);
+            eval_block(description, ctx, backend);
+            backend.exit_description_list_description_text(description, item);
+          }
+          item.blocks.iter().for_each(|b| {
+            backend.enter_description_list_description_block(b, item);
+            eval_block(b, ctx, backend);
+            backend.exit_description_list_description_block(b, item);
+          });
+          backend.exit_description_list_description(item);
         }
-        item.blocks.iter().for_each(|b| {
-          backend.enter_description_list_description_block(b, item);
-          eval_block(b, ctx, backend);
-          backend.exit_description_list_description_block(b, item);
-        });
-        backend.exit_description_list_description(item);
       });
       backend.exit_description_list(block, items, *depth);
     }

@@ -568,8 +568,10 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn list_marker(&self) -> Option<ListMarker> {
-    // PERF: checking for list markers seems sort of sad, wonder if the
-    // Line could be created with some markers to speed these tests up
+    if self.is_comment() {
+      return None;
+    }
+
     let mut offset = 0;
     if self.current_token().kind(Whitespace) {
       offset += 1;
@@ -931,6 +933,7 @@ mod tests {
       (".foo", false),
       ("-foo", false),
       (" ::", false),
+      ("//foo:: bar", false),
     ];
     for (input, expected) in cases {
       let line = read_line!(input);

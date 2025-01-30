@@ -670,6 +670,7 @@ mod tests {
       ("foo;;;", vec![foo, (SemiColon, ";"), (TermDelimiter, ";;")]),
       ("foo:::", vec![foo, (TermDelimiter, ":::")]),
       ("foo::::", vec![foo, (TermDelimiter, "::::")]),
+      ("foo:::::", vec![foo, (Colon, ":"), (TermDelimiter, "::::")]),
       // doesn't trip up on macros
       (
         "image:: foo",
@@ -689,11 +690,7 @@ mod tests {
       ),
     ];
     assert_token_cases!(cases);
-
-    refute_produces_token!(
-      TermDelimiter,
-      ["foo::foo", "foo:::::", "foo:::::foo", ":: foo"]
-    );
+    refute_produces_token!(TermDelimiter, ["foo::foo", "foo:::::foo", ":: foo"]);
   }
 
   #[test]

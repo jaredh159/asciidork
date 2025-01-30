@@ -323,6 +323,14 @@ fn test_parse_comment_line_block() {
       ..empty_block!(0)
     }
   );
+  assert_block!(
+    "//key:: val", // <-- looks like desc list
+    Block {
+      context: Context::Comment,
+      content: Content::Empty(EmptyMetadata::None),
+      ..empty_block!(0)
+    }
+  );
 }
 
 #[test]

@@ -416,9 +416,6 @@ impl<'arena> SourceLexer<'arena> {
 
   fn maybe_term_delimiter(&mut self, ch: u8, at_line_start: bool) -> Token<'arena> {
     let kind = if ch == b':' { Colon } else { SemiColon };
-    if self.pos > 1 && self.src[self.pos as usize - 2] == ch && kind != SemiColon {
-      return self.single(kind);
-    }
     if at_line_start || self.peek() != Some(ch) {
       return self.single(kind);
     }

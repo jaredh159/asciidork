@@ -38,6 +38,30 @@ assert_html!(
 );
 
 assert_html!(
+  simple_nested_desc_list,
+  adoc! {r#"
+    term1:: def1
+    label1::: detail1
+  "#},
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">term1</dt>
+        <dd>
+          <p>def1</p>
+          <div class="dlist">
+            <dl>
+              <dt class="hdlist1">label1</dt>
+              <dd><p>detail1</p></dd>
+            </dl>
+          </div>
+        </dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_html!(
   no_term_text_but_simple_attached_block,
   adoc! {r#"
     term::
@@ -49,6 +73,21 @@ assert_html!(
       <dl>
         <dt class="hdlist1">term</dt>
         <dd><div class="paragraph"><p>paragraph</p></div></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_html!(
+  desc_list_comment_not_confused_with_desc,
+  adoc! {r#"
+    category a::
+    //ignored term:: def
+  "#},
+  html! {r#"
+    <div class="dlist">
+      <dl>
+        <dt class="hdlist1">category a</dt>
       </dl>
     </div>
   "#}
@@ -449,6 +488,20 @@ assert_html!(
       </dl>
     </div>
   "#}
+);
+
+assert_html!(
+  line_separator_trailing,
+  // should match trailing line separator in text of list item
+  "A:: a\nB:: b\u{2028}\nC:: c",
+  contains: "<dd><p>b\u{2028}</p></dd>"
+);
+
+assert_html!(
+  line_separator_within,
+    // should match line separator in text of list item
+  "A:: a\nB:: b\u{2028}b\nC:: c",
+  contains: "<dd><p>b\u{2028}b</p></dd>"
 );
 
 assert_html!(
