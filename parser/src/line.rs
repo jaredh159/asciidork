@@ -5,15 +5,9 @@ use crate::variants::token::*;
 pub struct Line<'arena> {
   tokens: Deq<'arena, Token<'arena>>,
   orig_len: u32,
+  term_delim: bool,
   pass_macro: bool,
   pass_pluses: u8,
-}
-
-#[derive(Debug, Clone)]
-pub struct Line1<'arena> {
-  tokens: Deq<'arena, Token<'arena>>,
-  orig_len: u32,
-  pass_tokens: bool,
 }
 
 impl<'arena> Line<'arena> {
@@ -21,6 +15,7 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: tokens.len() as u32,
       tokens,
+      term_delim: false,
       pass_macro: false,
       pass_pluses: 0,
     }
@@ -30,6 +25,7 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: 0,
       tokens: Deq::new(bump),
+      term_delim: false,
       pass_macro: false,
       pass_pluses: 0,
     }
@@ -39,6 +35,7 @@ impl<'arena> Line<'arena> {
     Line {
       orig_len: 0,
       tokens: Deq::with_capacity(capacity, bump),
+      term_delim: false,
       pass_macro: false,
       pass_pluses: 0,
     }
@@ -63,6 +60,7 @@ impl<'arena> Line<'arena> {
   pub fn push(&mut self, token: Token<'arena>) {
     match token.kind {
       MacroName if token.lexeme == "pass:" => self.pass_macro = true,
+      TermDelimiter => self.term_delim = true,
       Plus if self.tokens.last().not_kind(Backtick) && token.len() < 4 => {
         self.pass_pluses = self.pass_pluses.saturating_add(1)
       }
@@ -173,6 +171,7 @@ impl<'arena> Line<'arena> {
 
   pub fn is_block_macro(&self) -> bool {
     self.starts_with_seq(&[Kind(MacroName), Kind(Colon)])
+      && self.current_token().can_start_block_macro()
       && self.contains(OpenBracket)
       && self.ends_with_nonescaped(CloseBracket)
   }
@@ -258,7 +257,7 @@ impl<'arena> Line<'arena> {
   pub fn first_nonescaped(&self, kind: TokenKind) -> Option<(&Token, usize)> {
     let mut prev: Option<TokenKind> = None;
     for (i, token) in self.iter().enumerate() {
-      if token.kind(kind) && prev.map_or(true, |k| k != Backslash) {
+      if token.kind(kind) && prev != Some(Backslash) {
         return Some((token, i));
       }
       prev = Some(token.kind);
@@ -348,8 +347,8 @@ impl<'arena> Line<'arena> {
     true
   }
 
-  pub fn continues_inline_macro(&self) -> bool {
-    if self.current_is(Colon) || self.current_is(Whitespace) {
+  pub fn continues_inline_macro(&self, prev: &Token) -> bool {
+    if self.current_is(Whitespace) {
       return false;
     }
     let Some(open_idx) = self.index_of_kind(OpenBracket) else {
@@ -358,7 +357,11 @@ impl<'arena> Line<'arena> {
     let Some(end_idx) = self.index_of_seq(&[Not(Backslash), Kind(CloseBracket)]) else {
       return false;
     };
-    end_idx >= open_idx
+    if end_idx < open_idx {
+      false
+    } else {
+      !self.current_is(Colon) || prev.lexeme.as_str() == "xref:"
+    }
   }
 
   pub fn continues_xref_shorthand(&self) -> bool {
@@ -370,7 +373,7 @@ impl<'arena> Line<'arena> {
       && self.nth_token(1).not_kind(Whitespace)
   }
 
-  /// true if there is no whitespace until token type, and token type is found
+  /// `true` if no whitespace until token type *and* token type is found
   pub fn no_whitespace_until(&self, kind: TokenKind) -> bool {
     for token in self.iter() {
       if token.kind(kind) {
@@ -384,17 +387,26 @@ impl<'arena> Line<'arena> {
     false
   }
 
-  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec]) -> bool {
-    self.terminates_constrained_in(stop_tokens).is_some()
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec], ctx: &InlineCtx) -> bool {
+    self.terminates_constrained_in(stop_tokens, ctx).is_some()
   }
 
-  pub fn terminates_constrained_in(&self, stop_tokens: &[TokenSpec]) -> Option<usize> {
+  pub fn terminates_constrained_in(
+    &self,
+    stop_tokens: &[TokenSpec],
+    ctx: &InlineCtx,
+  ) -> Option<usize> {
     match self.index_of_seq(stop_tokens) {
       // constrained sequences can't immediately terminate
       // or else `foo __bar` would include an empty italic node
       // TODO: maybe that's only true for _single_ tok sequences?
       Some(0) => None,
-      Some(n) if self.nth_token(n + 1).not_kind(Word) => Some(n),
+      Some(n) if self.nth_token(n + 1).not_kind(Word) => match ctx.specs() {
+        Some(specs) => self
+          .index_of_seq(specs)
+          .map_or(Some(n), |m| if m < n { None } else { Some(n) }),
+        None => Some(n),
+      },
       _ => None,
     }
   }
@@ -545,15 +557,21 @@ impl<'arena> Line<'arena> {
 
   pub fn reassemble_src(&self) -> BumpString<'arena> {
     let mut src = BumpString::with_capacity_in(self.src_len(), self.tokens.bump);
-    for token in self.tokens.iter().filter(|t| t.kind != AttrRef) {
+    for token in self
+      .tokens
+      .iter()
+      .filter(|t| !matches!(t.kind, AttrRef | Discard))
+    {
       src.push_str(&token.lexeme);
     }
     src
   }
 
   pub fn list_marker(&self) -> Option<ListMarker> {
-    // PERF: checking for list markers seems sort of sad, wonder if the
-    // Line could be created with some markers to speed these tests up
+    if self.is_comment() {
+      return None;
+    }
+
     let mut offset = 0;
     if self.current_token().kind(Whitespace) {
       offset += 1;
@@ -581,7 +599,8 @@ impl<'arena> Line<'arena> {
       Digits if second.kind(Dots) && third.kind(Whitespace) => {
         Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
       }
-      _ => {
+      TermDelimiter => None, // we need to see a non-whitespace token first
+      _ if self.term_delim => {
         for token in self.iter().skip(offset) {
           if token.kind(TermDelimiter) {
             return match token.lexeme.as_str() {
@@ -595,6 +614,7 @@ impl<'arena> Line<'arena> {
         }
         None
       }
+      _ => None,
     }
   }
 
@@ -709,7 +729,7 @@ impl<'arena> Line<'arena> {
     for token in self.iter_mut() {
       if token.kind(AttrRef) {
         attr_loc = Some(token.loc);
-      } else if attr_loc.map_or(false, |loc| loc == token.loc) {
+      } else if attr_loc.is_some_and(|loc| loc == token.loc) {
         token.lexeme = BumpString::from_str_in("", bump);
       } else {
         attr_loc = None;
@@ -912,6 +932,8 @@ mod tests {
       ("*foo", false),
       (".foo", false),
       ("-foo", false),
+      (" ::", false),
+      ("//foo:: bar", false),
     ];
     for (input, expected) in cases {
       let line = read_line!(input);
@@ -995,7 +1017,7 @@ mod tests {
     ];
     for (input, specs, expected) in cases {
       let line = read_line!(input);
-      expect_eq!(line.terminates_constrained_in(specs), expected, from: input);
+      expect_eq!(line.terminates_constrained_in(specs, &InlineCtx::None), expected, from: input);
     }
   }
 

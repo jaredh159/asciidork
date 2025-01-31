@@ -19,12 +19,6 @@ pub struct ParseResult<'arena> {
   pub warnings: Vec<Diagnostic>,
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct ListContext {
-  pub(crate) stack: ListStack,
-  pub(crate) parsing_continuations: bool,
-}
-
 impl<'arena> Parser<'arena> {
   pub fn new(src: BumpVec<'arena, u8>, file: SourceFile, bump: &'arena Bump) -> Self {
     Parser::from_lexer(Lexer::new(src, file, bump))
@@ -254,6 +248,9 @@ impl<'arena> Parser<'arena> {
     let start = lines.current_token().unwrap().loc.start;
     let mut attrs = MultiAttrList::new_in(self.bump);
     let mut title = None;
+    if !lines.current().unwrap().is_fully_unconsumed() {
+      return Ok(ChunkMeta { attrs, title, start });
+    }
     loop {
       match lines.current() {
         Some(line) if line.is_chunk_title() => {

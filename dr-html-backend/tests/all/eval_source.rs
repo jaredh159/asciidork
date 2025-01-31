@@ -19,6 +19,12 @@ assert_html!(
 );
 
 assert_html!(
+  indented_multiline_literal_block2,
+  " a\n// b\n c",
+  wrap_literal("<pre> a\n// b\n c</pre>")
+);
+
+assert_html!(
   source_block_explicit,
   adoc! {r#"
     [source,ruby]

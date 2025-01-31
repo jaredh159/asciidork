@@ -318,7 +318,7 @@ impl<'arena> Parser<'arena> {
       if matches!(node.content, Inline::Newline)
         && paras[index]
           .last()
-          .map_or(false, |n| n.content == Inline::Newline)
+          .is_some_and(|n| n.content == Inline::Newline)
       {
         paras[index].pop();
         index += 1;

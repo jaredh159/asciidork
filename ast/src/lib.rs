@@ -25,8 +25,8 @@ mod internal {
     pub use crate::col_widths::*;
     pub use crate::doc_content::DocContent;
     pub use crate::document::{DocTitle, Document};
+    pub use crate::inline::{AdjacentNewline, CurlyKind::*, QuoteKind::*, SymbolKind};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
-    pub use crate::inline::{CurlyKind::*, QuoteKind::*, SymbolKind};
     pub use crate::inline_nodes::InlineNodes;
     pub use crate::list::*;
     pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};

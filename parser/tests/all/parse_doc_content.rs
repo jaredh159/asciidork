@@ -18,6 +18,47 @@ fn test_not_sectioned() {
 }
 
 #[test]
+fn unattached_meta_skipped() {
+  assert_doc_content!(
+    strict: false,
+    adoc! {"
+      == Sect 1
+
+      [[whoops-custom-id]]
+
+      foobar
+    "},
+    DocContent::Sectioned {
+      preamble: None,
+      sections: vecb![Section {
+        meta: chunk_meta!(0),
+        level: 1,
+        id: Some(bstr!("_sect_1")),
+        heading: just!("Sect 1", 3..9),
+        blocks: vecb![simple_text_block!("foobar", 33..39)]
+      }]
+    }
+  );
+}
+
+assert_error!(
+  unattached_meta_warning,
+  adoc! {"
+    == Sect 1
+
+    [[whoops-custom-id]]
+
+    foobar
+  "},
+  error! {"
+     --> test.adoc:3:1
+      |
+    3 | [[whoops-custom-id]]
+      | ^^^^^^^^^^^^^^^^^^^^ Unattached block metadata
+  "}
+);
+
+#[test]
 fn test_sectioned_w_preamble() {
   assert_doc_content!(
     adoc! {"

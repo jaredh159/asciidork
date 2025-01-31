@@ -365,7 +365,7 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   fn advance_while_with(&mut self, f: impl Fn(u8) -> bool) -> u32 {
-    while self.peek().map_or(false, &f) {
+    while self.peek().is_some_and(&f) {
       self.advance();
     }
     self.pos
@@ -416,9 +416,6 @@ impl<'arena> SourceLexer<'arena> {
 
   fn maybe_term_delimiter(&mut self, ch: u8, at_line_start: bool) -> Token<'arena> {
     let kind = if ch == b':' { Colon } else { SemiColon };
-    if self.pos > 1 && self.src[self.pos as usize - 2] == ch {
-      return self.single(kind);
-    }
     if at_line_start || self.peek() != Some(ch) {
       return self.single(kind);
     }
@@ -493,7 +490,7 @@ impl<'arena> SourceLexer<'arena> {
     match self.peek() {
       Some(c) if c.is_ascii_digit() => {
         self.advance();
-        while self.peek().map_or(false, |c| c.is_ascii_digit()) {
+        while self.peek().is_some_and(|c| c.is_ascii_digit()) {
           self.advance();
         }
         if self.peek() == Some(b'>') {
@@ -545,7 +542,7 @@ impl<'arena> SourceLexer<'arena> {
 
   fn maybe_entity(&mut self) -> Token<'arena> {
     match self.peek() {
-      Some(b'#') if self.peek_n(1).map_or(false, |b| b.is_ascii_digit()) => {
+      Some(b'#') if self.peek_n(1).is_some_and(|b| b.is_ascii_digit()) => {
         self.finish_entity(1, |byte| byte.is_ascii_digit())
       }
       Some(b'#') if self.peek_n(1) == Some(b'x') => {
@@ -562,7 +559,7 @@ impl<'arena> SourceLexer<'arena> {
     let start = self.pos - 1;
     let mut pos = initial_pos;
     loop {
-      if self.peek_n(pos).map_or(false, &f) {
+      if self.peek_n(pos).is_some_and(&f) {
         pos += 1;
       } else if initial_pos < pos && self.peek_n(pos) == Some(b';') {
         self.pos += pos as u32 + 1;

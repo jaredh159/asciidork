@@ -6,7 +6,7 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
-  pub fn macro_target_from_passthru(
+  pub(crate) fn macro_target_from_passthru(
     &mut self,
     line: &mut Line<'arena>,
   ) -> Option<SourceString<'arena>> {
@@ -24,6 +24,33 @@ impl<'arena> Parser<'arena> {
     } else {
       None
     }
+  }
+
+  pub(crate) fn starts_constrained(
+    &self,
+    stop_tokens: &[TokenSpec],
+    token: &Token,
+    line: &Line,
+    lines: &mut ContiguousLines,
+  ) -> bool {
+    debug_assert!(!stop_tokens.is_empty());
+    !line.starts(Whitespace)
+      && token.kind(stop_tokens.last().unwrap().token_kind())
+      && (line.terminates_constrained(stop_tokens, &self.ctx.inline_ctx)
+        || lines.terminates_constrained(stop_tokens, &self.ctx.inline_ctx))
+  }
+
+  pub(crate) fn starts_unconstrained(
+    &self,
+    stop_tokens: &[TokenSpec],
+    token: &Token,
+    line: &Line,
+    lines: &ContiguousLines,
+  ) -> bool {
+    debug_assert!(!stop_tokens.is_empty());
+    token.kind(stop_tokens[0].token_kind())
+      && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind()))
+      && contains_seq(stop_tokens, line, lines)
   }
 }
 
@@ -53,12 +80,17 @@ impl<'arena> Accum<'arena> {
       }
       (None, None) => self.push_text_token(&token),
       (None | Some(' '), None | Some(' ')) => {
+        let mut newline = AdjacentNewline::None;
         let mut loc = token.loc;
         if last_char.is_some() {
           loc.start -= 1;
           self.text.drop_last(1);
+        } else if self.inlines.last_is(&Inline::Newline) {
+          self.inlines.pop();
+          newline = AdjacentNewline::Leading;
+          loc.start -= 1;
         }
-        self.push_node(Symbol(SymbolKind::SpacedEmDash), loc.incr_end());
+        self.push_node(Symbol(SymbolKind::SpacedEmDash(newline)), loc.incr_end());
         if let Some(next_token) = next_token {
           next_token.drop_leading_bytes(1);
         }
@@ -75,17 +107,25 @@ impl<'arena> Accum<'arena> {
     if !lines.is_empty() {
       self.commit();
       self.text.loc.end += 1;
-      self.push_node(Inline::Newline, self.text.loc);
+      if self
+        .inlines
+        .last_is(&Inline::Symbol(SymbolKind::SpacedEmDash(
+          AdjacentNewline::None,
+        )))
+      {
+        let emdash = self.inlines.last_mut().unwrap();
+        emdash.loc.end += 1;
+        emdash.content = Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Trailing));
+      } else {
+        self.push_node(Inline::Newline, self.text.loc);
+      }
     }
   }
 
   pub fn trimmed_inlines(mut self) -> InlineNodes<'arena> {
     if self.inlines.remove_trailing_line_comment() {
       self.inlines.remove_trailing_newline();
-      if matches!(
-        self.inlines.last().map(|n| &n.content),
-        Some(Inline::Discarded)
-      ) {
+      if self.inlines.last_is(&Inline::Discarded) {
         self.inlines.pop();
       }
       self.trimmed_inlines()
@@ -140,29 +180,6 @@ impl Substitutions {
 
 pub fn extend(loc: &mut SourceLocation, nodes: &[InlineNode<'_>], adding: usize) {
   loc.end = nodes.last().map(|node| node.loc.end).unwrap_or(loc.end) + adding as u32;
-}
-
-pub fn starts_constrained(
-  stop_tokens: &[TokenSpec],
-  token: &Token,
-  line: &Line,
-  lines: &mut ContiguousLines,
-) -> bool {
-  debug_assert!(!stop_tokens.is_empty());
-  token.kind(stop_tokens.last().unwrap().token_kind())
-    && (line.terminates_constrained(stop_tokens) || lines.terminates_constrained(stop_tokens))
-}
-
-pub fn starts_unconstrained(
-  stop_tokens: &[TokenSpec],
-  token: &Token,
-  line: &Line,
-  lines: &ContiguousLines,
-) -> bool {
-  debug_assert!(!stop_tokens.is_empty());
-  token.kind(stop_tokens[0].token_kind())
-    && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind()))
-    && contains_seq(stop_tokens, line, lines)
 }
 
 pub fn contains_seq(seq: &[TokenSpec], line: &Line, lines: &ContiguousLines) -> bool {

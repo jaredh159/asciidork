@@ -22,7 +22,7 @@ impl<'arena> Parser<'arena> {
       && (self.ctx.bibliography_ctx == BiblioContext::Section
         || meta
           .as_ref()
-          .map_or(false, |meta| meta.attrs.has_str_positional("bibliography")))
+          .is_some_and(|meta| meta.attrs.has_str_positional("bibliography")))
     {
       self.ctx.bibliography_ctx = BiblioContext::List;
     }
@@ -177,20 +177,59 @@ impl<'arena> Parser<'arena> {
       return Ok(accum);
     }
 
+    if let Some(marker) = lines.nth(1).and_then(|line| line.list_marker()) {
+      if self.ctx.list.stack.continues_current_list(marker) {
+        self.err_line("Dangling list continuation", lines.current().unwrap())?;
+        lines.consume_current();
+        self.restore_lines(lines);
+        return Ok(accum);
+      }
+    }
+
     lines.consume_current(); // the `+` line starting the continuation
     self.restore_lines(lines);
     self.ctx.list.parsing_continuations = true;
-    accum.push(self.parse_block()?.unwrap());
+    if let Some(block) = self.parse_block()? {
+      accum.push(block);
+    }
     self.ctx.list.parsing_continuations = false;
     self.parse_list_continuation_blocks(accum)
   }
 
-  pub fn parse_description_list_item(
+  fn parse_description_list_item(
     &mut self,
     marker: ListMarker,
     mut line: Line<'arena>,
     mut lines: ContiguousLines<'arena>,
   ) -> Result<Option<ListItem<'arena>>> {
+    let (principle, marker_src) = self.parse_description_list_term(&mut line)?;
+    let mut extra_terms = BumpVec::new_in(self.bump);
+
+    if line.is_empty() {
+      self.restore_lines(lines);
+      self.gather_extra_terms(marker, &mut extra_terms)?;
+    } else {
+      lines.restore_if_nonempty(line);
+      self.restore_lines(lines);
+    }
+
+    let description = self
+      .parse_block()?
+      .filter(|block| block.context != BlockContext::Comment);
+
+    Ok(Some(ListItem {
+      blocks: self.parse_description_list_item_blocks()?,
+      marker,
+      marker_src,
+      type_meta: ListItemTypeMeta::DescList { description, extra_terms },
+      principle,
+    }))
+  }
+
+  fn parse_description_list_term(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<(InlineNodes<'arena>, SourceString<'arena>)> {
     let principle = {
       let before_delim = line.extract_line_before(&[Kind(TermDelimiter)]);
       self.parse_inlines(&mut before_delim.into_lines())?
@@ -198,37 +237,44 @@ impl<'arena> Parser<'arena> {
 
     let marker_token = line.consume_current().unwrap();
     let marker_src = marker_token.into_source_string();
-
     line.trim_leading_whitespace();
-    lines.restore_if_nonempty(line);
-    let blocks = self.parse_description_list_item_blocks(lines)?;
-
-    Ok(Some(ListItem {
-      blocks,
-      marker,
-      marker_src,
-      type_meta: ListItemTypeMeta::None,
-      principle,
-    }))
+    Ok((principle, marker_src))
   }
 
-  pub fn parse_description_list_item_blocks(
+  fn gather_extra_terms(
     &mut self,
-    lines: ContiguousLines<'arena>,
-  ) -> Result<BumpVec<'arena, Block<'arena>>> {
-    self.restore_lines(lines);
-    let mut blocks = BumpVec::new_in(self.bump);
-    if let Some(block) = self.parse_block()? {
-      blocks.push(block);
+    marker: ListMarker,
+    terms: &mut BumpVec<'arena, (InlineNodes<'arena>, SourceString<'arena>)>,
+  ) -> Result<()> {
+    let Some(mut lines) = self.read_lines()? else {
+      return Ok(());
+    };
+    if !lines.starts_extra_description_list_term(marker) {
+      self.restore_lines(lines);
+      return Ok(());
     }
+    lines.discard_leading_comment_lines();
+    let mut line = lines.consume_current().unwrap();
+    terms.push(self.parse_description_list_term(&mut line)?);
+    lines.restore_if_nonempty(line);
+    self.restore_lines(lines);
+    self.gather_extra_terms(marker, terms)
+  }
+
+  fn parse_description_list_item_blocks(&mut self) -> Result<BumpVec<'arena, Block<'arena>>> {
+    let mut blocks = BumpVec::new_in(self.bump);
     let Some(lines) = self.read_lines()? else {
       return Ok(blocks);
     };
     if lines.starts_list_continuation() {
       self.restore_lines(lines);
-      return self.parse_list_continuation_blocks(blocks);
+      blocks = self.parse_list_continuation_blocks(blocks)?;
+    } else if lines.starts_nested_list(&self.ctx.list.stack, true) {
+      self.restore_lines(lines);
+      blocks.push(self.parse_block()?.unwrap());
+    } else {
+      self.restore_lines(lines);
     }
-    self.restore_lines(lines);
     Ok(blocks)
   }
 }

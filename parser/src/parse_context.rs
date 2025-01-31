@@ -18,10 +18,28 @@ pub struct ParseContext<'arena> {
   pub saw_toc_macro: bool,
   pub bibliography_ctx: BiblioContext,
   pub table_cell_ctx: TableCellContext,
+  pub inline_ctx: InlineCtx,
   pub passthrus: BumpVec<'arena, Option<InlineNodes<'arena>>>,
   pub max_include_depth: u16,
   pub ifdef_stack: BumpVec<'arena, BumpString<'arena>>,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum InlineCtx {
+  None,
+  Single([TokenSpec; 1]),
+  Double([TokenSpec; 2]),
+}
+
+impl InlineCtx {
+  pub const fn specs(&self) -> Option<&[TokenSpec]> {
+    match self {
+      InlineCtx::None => None,
+      InlineCtx::Single(specs) => Some(specs),
+      InlineCtx::Double(specs) => Some(specs),
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -55,6 +73,7 @@ impl<'arena> ParseContext<'arena> {
       bibliography_ctx: BiblioContext::None,
       table_cell_ctx: TableCellContext::None,
       passthrus: BumpVec::new_in(bump),
+      inline_ctx: InlineCtx::None,
       max_include_depth: 64,
       ifdef_stack: BumpVec::new_in(bump),
     }
@@ -76,6 +95,7 @@ impl<'arena> ParseContext<'arena> {
       bibliography_ctx: BiblioContext::None,
       table_cell_ctx: TableCellContext::AsciiDocCell,
       passthrus: BumpVec::new_in(bump),
+      inline_ctx: InlineCtx::None,
       max_include_depth: 64,
       ifdef_stack: BumpVec::new_in(bump),
     }

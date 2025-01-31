@@ -64,12 +64,19 @@ pub enum SpecialCharKind {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum AdjacentNewline {
+  None,
+  Leading,
+  Trailing,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SymbolKind {
   Copyright,
   Registered,
   Trademark,
   EmDash,
-  SpacedEmDash,
+  SpacedEmDash(AdjacentNewline),
   Ellipsis,
   SingleRightArrow,
   DoubleRightArrow,

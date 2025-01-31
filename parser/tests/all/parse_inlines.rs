@@ -1,5 +1,5 @@
 use asciidork_ast::variants::{inline::*, r#macro::*};
-use asciidork_ast::{prelude::*, InlineNodes};
+use asciidork_ast::{prelude::*, AdjacentNewline, InlineNodes};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -83,7 +83,10 @@ fn test_emdashes() {
     (
       "-- foo",
       nodes![
-        node!(Symbol(SymbolKind::SpacedEmDash), 0..3),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
+          0..3
+        ),
         node!("foo"; 3..6)
       ],
     ),
@@ -91,7 +94,10 @@ fn test_emdashes() {
       "foo --",
       nodes![
         node!("foo"; 0..3),
-        node!(Symbol(SymbolKind::SpacedEmDash), 3..7),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
+          3..7
+        ),
       ],
     ),
     (
@@ -108,16 +114,32 @@ fn test_emdashes() {
       "line1\n-- foo",
       nodes![
         node!("line1"; 0..5),
-        node!(Inline::Newline, 5..6),
-        node!(Symbol(SymbolKind::SpacedEmDash), 6..9),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Leading)),
+          5..9
+        ),
         node!("foo"; 9..12),
+      ],
+    ),
+    (
+      "foo --\nbar",
+      nodes![
+        node!("foo"; 0..3),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Trailing)),
+          3..8
+        ),
+        node!("bar"; 7..10),
       ],
     ),
     (
       "foo -- bar",
       nodes![
         node!("foo"; 0..3),
-        node!(Symbol(SymbolKind::SpacedEmDash), 3..7),
+        node!(
+          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
+          3..7
+        ),
         node!("bar"; 7..10),
       ],
     ),
@@ -446,6 +468,133 @@ fn test_inline_anchors() {
 }
 
 #[test]
+fn test_mono() {
+  run(vec![
+    (
+      "foo `*` bar",
+      nodes![
+        node!("foo "; 0..4),
+        node!(Mono(just!("*", 5..6)), 4..7),
+        node!(" bar"; 7..11),
+      ],
+    ),
+    (
+      "foo `bar`",
+      nodes![
+        node!("foo "; 0..4),
+        node!(Mono(nodes![node!("bar"; 5..8)]), 4..9),
+      ],
+    ),
+    (
+      "`*_foo_*`",
+      nodes![node!(
+        Mono(nodes![node!(
+          Bold(nodes![node!(Italic(nodes![node!("foo"; 3..6)]), 2..7)]),
+          1..8,
+        )]),
+        0..9,
+      )],
+    ),
+    (
+      "foo `bar`",
+      nodes![
+        node!("foo "; 0..4),
+        node!(Mono(nodes![node!("bar"; 5..8)]), 4..9),
+      ],
+    ),
+    (
+      "foo b``ar``",
+      nodes![
+        node!("foo b"; 0..5),
+        node!(Mono(nodes![node!("ar"; 7..9)]), 5..11),
+      ],
+    ),
+    (
+      "foo `\"bar\"`",
+      nodes![
+        node!("foo "; 0..4),
+        node!(Mono(nodes![node!("\"bar\""; 5..10)]), 4..11),
+      ],
+    ),
+    (
+      "foo `'bar'`",
+      nodes![
+        node!("foo "; 0..4),
+        node!(Mono(nodes![node!("'bar'"; 5..10)]), 4..11),
+      ],
+    ),
+  ]);
+  // jared
+}
+
+// NB: asciidoctor does not get these right
+#[test]
+fn test_confusing_patterns() {
+  run(vec![
+    (
+      // this span should not be parsed as bold
+      // v---------v
+      "__*__ bar __*__",
+      nodes![
+        node!(Italic(just!("*", 2..3)), 0..5),
+        node!(" bar "; 5..10),
+        node!(Italic(just!("*", 12..13)), 10..15),
+      ],
+    ),
+    (
+      "**_** bar **_**",
+      nodes![
+        node!(Bold(just!("_", 2..3)), 0..5),
+        node!(" bar "; 5..10),
+        node!(Bold(just!("_", 12..13)), 10..15),
+      ],
+    ),
+    (
+      "`*` bar `*`",
+      nodes![
+        node!(Mono(just!("*", 1..2)), 0..3),
+        node!(" bar "; 3..8),
+        node!(Mono(just!("*", 9..10)), 8..11),
+      ],
+    ),
+    (
+      "_*_ bar _*_",
+      nodes![
+        node!(Italic(just!("*", 1..2)), 0..3),
+        node!(" bar "; 3..8),
+        node!(Italic(just!("*", 9..10)), 8..11),
+      ],
+    ),
+    (
+      "*_* bar *_*",
+      nodes![
+        node!(Bold(just!("_", 1..2)), 0..3),
+        node!(" bar "; 3..8),
+        node!(Bold(just!("_", 9..10)), 8..11),
+      ],
+    ),
+    (
+      "#_# bar #_#",
+      nodes![
+        node!(Highlight(just!("_", 1..2)), 0..3),
+        node!(" bar "; 3..8),
+        node!(Highlight(just!("_", 9..10)), 8..11),
+      ],
+    ),
+    (
+      "+_+ bar +_+",
+      nodes![
+        node!(InlinePassthru(just!("_", 1..2)), 0..3),
+        node!(" bar "; 3..8),
+        node!(InlinePassthru(just!("_", 9..10)), 8..11),
+      ],
+    ),
+    ("foo * bar * baz", just!("foo * bar * baz", 0..15)),
+    ("foo _ bar _ baz", just!("foo _ bar _ baz", 0..15)),
+  ]);
+}
+
+#[test]
 fn test_footnotes() {
   run(vec![
     (
@@ -517,16 +666,6 @@ fn test_parse_inlines() {
       )],
     ),
     (
-      "`*_foo_*`",
-      nodes![node!(
-        Mono(nodes![node!(
-          Bold(nodes![node!(Italic(nodes![node!("foo"; 3..6)]), 2..7)]),
-          1..8,
-        )]),
-        0..9,
-      )],
-    ),
-    (
       "+_foo\nbar_+",
       // not sure if this is "spec", but it's what asciidoctor currently does
       nodes![node!(
@@ -591,20 +730,6 @@ fn test_parse_inlines() {
       ],
     ),
     (
-      "foo `bar`",
-      nodes![
-        node!("foo "; 0..4),
-        node!(Mono(nodes![node!("bar"; 5..8)]), 4..9),
-      ],
-    ),
-    (
-      "foo b``ar``",
-      nodes![
-        node!("foo b"; 0..5),
-        node!(Mono(nodes![node!("ar"; 7..9)]), 5..11),
-      ],
-    ),
-    (
       "foo *bar*",
       nodes![
         node!("foo "; 0..4),
@@ -664,20 +789,6 @@ fn test_parse_inlines() {
     ),
     ("foo 'bar'", nodes![node!("foo 'bar'"; 0..9)]),
     ("foo \"bar\"", nodes![node!("foo \"bar\""; 0..9)]),
-    (
-      "foo `\"bar\"`",
-      nodes![
-        node!("foo "; 0..4),
-        node!(Mono(nodes![node!("\"bar\""; 5..10)]), 4..11),
-      ],
-    ),
-    (
-      "foo `'bar'`",
-      nodes![
-        node!("foo "; 0..4),
-        node!(Mono(nodes![node!("'bar'"; 5..10)]), 4..11),
-      ],
-    ),
     (
       "foo \"`bar`\"",
       nodes![

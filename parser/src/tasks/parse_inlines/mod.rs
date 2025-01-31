@@ -1,5 +1,3 @@
-use regex::Regex;
-
 mod inline_preproc;
 mod inline_utils;
 
@@ -25,6 +23,7 @@ impl<'arena> Parser<'arena> {
     if lines.is_empty() {
       return Ok(inlines);
     }
+
     let span_loc = lines.loc().unwrap().clamp_start();
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
@@ -117,7 +116,7 @@ impl<'arena> Parser<'arena> {
             line.discard(1);
             acc.push_node(Symbol(SymbolKind::DoubleLeftArrow), token.loc.incr_end());
           }
-          MacroName if subs.macros() && line.continues_inline_macro() => {
+          MacroName if subs.macros() && line.continues_inline_macro(&token) => {
             let mut macro_loc = token.loc;
             let line_end = line.last_location().unwrap();
             acc.commit();
@@ -137,8 +136,7 @@ impl<'arena> Parser<'arena> {
                 line.discard_assert(CloseBracket);
                 macro_loc.end = keys_src.loc.end + 1;
                 let mut keys = BumpVec::new_in(self.bump);
-                let re = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
-                for captures in re.captures_iter(&keys_src).step_by(2) {
+                for captures in regx::KBD_MACRO_KEYS.captures_iter(&keys_src).step_by(2) {
                   let key = captures.get(1).unwrap().as_str();
                   keys.push(self.string(key));
                 }
@@ -268,7 +266,7 @@ impl<'arena> Parser<'arena> {
             acc.push_text_token(&next_token);
           }
 
-          UriScheme if subs.macros() && line.continues_inline_macro() => {
+          UriScheme if subs.macros() && line.continues_inline_macro(&token) => {
             self.parse_uri_scheme_macro(&token, &mut line, &mut acc)?
           }
 
@@ -291,7 +289,7 @@ impl<'arena> Parser<'arena> {
           AttrRef
             if self.ctx.table_cell_ctx != TableCellContext::None
               // we know it was blank if there's no inserted token w/ same loc
-              && line.current_token().map_or(false, |t| t.loc != token.loc) =>
+              && line.current_token().is_some_and(|t| t.loc != token.loc) =>
           {
             acc.push_node(Discarded, token.loc)
           }
@@ -415,33 +413,36 @@ impl<'arena> Parser<'arena> {
 
           Underscore
             if subs.inline_formatting()
-              && starts_constrained(&[Kind(Underscore)], &token, &line, lines) =>
+              && self.starts_constrained(&[Kind(Underscore)], &token, &line, lines) =>
           {
+            self.ctx.inline_ctx = InlineCtx::Single([Kind(Underscore)]);
             self.parse_node(Italic, [Kind(Underscore)], &token, &mut acc, line, lines)?;
             break;
           }
 
           Underscore
             if subs.inline_formatting()
-              && starts_unconstrained(&[Kind(Underscore); 2], &token, &line, lines) =>
+              && self.starts_unconstrained(&[Kind(Underscore); 2], &token, &line, lines) =>
           {
+            self.ctx.inline_ctx = InlineCtx::Double([Kind(Underscore); 2]);
             self.parse_node(Italic, [Kind(Underscore); 2], &token, &mut acc, line, lines)?;
-
             break;
           }
 
           Star
             if subs.inline_formatting()
-              && starts_constrained(&[Kind(Star)], &token, &line, lines) =>
+              && self.starts_constrained(&[Kind(Star)], &token, &line, lines) =>
           {
+            self.ctx.inline_ctx = InlineCtx::Single([Kind(Star)]);
             self.parse_node(Bold, [Kind(Star)], &token, &mut acc, line, lines)?;
             break;
           }
 
           Star
             if subs.inline_formatting()
-              && starts_unconstrained(&[Kind(Star)], &token, &line, lines) =>
+              && self.starts_unconstrained(&[Kind(Star); 2], &token, &line, lines) =>
           {
+            self.ctx.inline_ctx = InlineCtx::Double([Kind(Star); 2]);
             self.parse_node(Bold, [Kind(Star); 2], &token, &mut acc, line, lines)?;
             break;
           }
@@ -547,15 +548,16 @@ impl<'arena> Parser<'arena> {
 
           Backtick
             if subs.inline_formatting()
-              && starts_constrained(&[Kind(Backtick)], &token, &line, lines) =>
+              && self.starts_constrained(&[Kind(Backtick)], &token, &line, lines) =>
           {
+            self.ctx.inline_ctx = InlineCtx::Single([Kind(Backtick)]);
             self.parse_node(Mono, [Kind(Backtick)], &token, &mut acc, line, lines)?;
             break;
           }
 
           Backtick
             if subs.inline_formatting()
-              && starts_unconstrained(&[Kind(Backtick)], &token, &line, lines) =>
+              && self.starts_unconstrained(&[Kind(Backtick)], &token, &line, lines) =>
           {
             self.parse_node(Mono, [Kind(Backtick); 2], &token, &mut acc, line, lines)?;
             break;
@@ -564,7 +566,12 @@ impl<'arena> Parser<'arena> {
           DoubleQuote
             if subs.inline_formatting()
               && line.current_is(Backtick)
-              && starts_constrained(&[Kind(Backtick), Kind(DoubleQuote)], &token, &line, lines) =>
+              && self.starts_constrained(
+                &[Kind(Backtick), Kind(DoubleQuote)],
+                &token,
+                &line,
+                lines,
+              ) =>
           {
             self.parse_node(
               |inner| Quote(Double, inner),
@@ -580,7 +587,12 @@ impl<'arena> Parser<'arena> {
           SingleQuote
             if subs.inline_formatting()
               && line.current_is(Backtick)
-              && starts_constrained(&[Kind(Backtick), Kind(SingleQuote)], &token, &line, lines) =>
+              && self.starts_constrained(
+                &[Kind(Backtick), Kind(SingleQuote)],
+                &token,
+                &line,
+                lines,
+              ) =>
           {
             self.parse_node(
               |inner| Quote(Single, inner),
@@ -628,13 +640,15 @@ impl<'arena> Parser<'arena> {
 
           Hash
             if subs.inline_formatting()
-              && starts_unconstrained(&[Kind(Hash); 2], &token, &line, lines) =>
+              && self.starts_unconstrained(&[Kind(Hash); 2], &token, &line, lines) =>
           {
+            self.ctx.inline_ctx = InlineCtx::Double([Kind(Hash); 2]);
             self.parse_node(Highlight, [Kind(Hash); 2], &token, &mut acc, line, lines)?;
             break;
           }
 
           Hash if subs.inline_formatting() && contains_seq(&[Kind(Hash)], &line, lines) => {
+            self.ctx.inline_ctx = InlineCtx::Single([Kind(Hash)]);
             self.parse_node(Highlight, [Kind(Hash)], &token, &mut acc, line, lines)?;
             break;
           }
@@ -656,7 +670,7 @@ impl<'arena> Parser<'arena> {
           Plus
             if subs.inline_formatting()
               && token.is_len(2)
-              && starts_unconstrained(&[Len(2, Plus)], &token, &line, lines) =>
+              && self.starts_unconstrained(&[Len(2, Plus)], &token, &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.parse_node(
@@ -673,7 +687,7 @@ impl<'arena> Parser<'arena> {
 
           Plus
             if subs.inline_formatting()
-              && starts_constrained(&[Len(1, Plus)], &token, &line, lines) =>
+              && self.starts_constrained(&[Len(1, Plus)], &token, &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.parse_node(
@@ -835,6 +849,7 @@ impl<'arena> Parser<'arena> {
     extend(&mut loc, &inner, stop_len);
     state.push_node(wrap(inner), loc);
     push_newline_if_needed(state, lines);
+    self.ctx.inline_ctx = InlineCtx::None;
     Ok(())
   }
 
@@ -845,7 +860,7 @@ impl<'arena> Parser<'arena> {
 
     // description list
     (
-      self.ctx.list.stack.parsing_description_list()
+      self.ctx.list.parsing_description_list()
       && line.starts_description_list_item() || line.is_list_continuation()
     )
 
@@ -936,7 +951,7 @@ fn push_newline_if_needed<'arena>(state: &mut Accum<'arena>, lines: &ContiguousL
 
   if lines
     .current()
-    .map_or(false, |line| line.is_fully_unconsumed())
+    .is_some_and(|line| line.is_fully_unconsumed())
   {
     state.text.loc.end += 1;
     state.push_node(Inline::Newline, state.text.loc);

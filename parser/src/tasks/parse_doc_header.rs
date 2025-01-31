@@ -46,9 +46,9 @@ impl<'arena> Parser<'arena> {
       return Ok(());
     }
     let meta = self.parse_chunk_meta(lines)?;
-    if !lines
+    if lines
       .current()
-      .map_or(false, |first| self.line_heading_level(first) == Some(0))
+      .is_none_or(|first| self.line_heading_level(first) != Some(0))
     {
       // author and revision must follow doc title, so if non title, skip
       self.restore_peeked_meta(meta);

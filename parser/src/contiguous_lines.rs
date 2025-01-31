@@ -1,4 +1,5 @@
 use crate::internal::*;
+use crate::variants::token::*;
 
 #[derive(Debug, Clone)]
 pub struct ContiguousLines<'arena> {
@@ -111,11 +112,11 @@ impl<'arena> ContiguousLines<'arena> {
     self.lines.iter().any(|line| line.contains_len(kind, len))
   }
 
-  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec]) -> bool {
+  pub fn terminates_constrained(&self, stop_tokens: &[TokenSpec], ctx: &InlineCtx) -> bool {
     self
       .lines
       .iter()
-      .any(|line| line.terminates_constrained(stop_tokens))
+      .any(|line| line.terminates_constrained(stop_tokens, ctx))
   }
 
   pub fn is_block_macro(&self) -> bool {
@@ -135,7 +136,6 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn is_quoted_paragraph(&self) -> bool {
-    use TokenKind::*;
     if self.lines.len() < 2 {
       return false;
     }
@@ -155,10 +155,29 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn starts_list(&self) -> bool {
-    self
-      .first()
-      .map(|line| line.starts_list_item())
-      .unwrap_or(false)
+    for line in self.lines.iter() {
+      if line.starts_list_item() {
+        return true;
+      } else if line.is_comment() {
+        continue;
+      } else {
+        return false;
+      }
+    }
+    false
+  }
+
+  pub fn starts_extra_description_list_term(&self, ctx: ListMarker) -> bool {
+    for line in self.lines.iter() {
+      if line.list_marker() == Some(ctx) {
+        return true;
+      } else if line.is_comment() {
+        continue;
+      } else {
+        return false;
+      }
+    }
+    false
   }
 
   pub fn starts_with_seq(&self, kinds: &[TokenSpec]) -> bool {
@@ -215,20 +234,20 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn trim_uniform_leading_whitespace(&mut self) -> bool {
-    if self.is_empty() || !self.first().unwrap().starts(TokenKind::Whitespace) {
+    if self.is_empty() || !self.first().unwrap().starts(Whitespace) {
       return false;
     }
     let len = self.first().unwrap().current_token().unwrap().lexeme.len();
     if !self
       .lines
       .iter()
-      .all(|l| l.current_is_len(TokenKind::Whitespace, len) && l.num_tokens() > 1)
+      .all(|l| l.current_is_len(Whitespace, len) && l.num_tokens() > 1)
     {
       return false;
     }
 
     for line in self.lines.iter_mut() {
-      line.discard_assert(TokenKind::Whitespace);
+      line.discard_assert(Whitespace);
     }
     true
   }
@@ -259,6 +278,15 @@ impl<'arena> ContiguousLines<'arena> {
         line.set_indentation(line_indent - current + indent);
       }
     });
+  }
+
+  #[cfg(debug_assertions)]
+  pub fn debug_print(&self) {
+    eprintln!("```");
+    for line in self.iter() {
+      eprintln!("{}", line.reassemble_src());
+    }
+    eprintln!("```");
   }
 }
 

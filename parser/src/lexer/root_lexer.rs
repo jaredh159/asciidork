@@ -390,11 +390,6 @@ mod tests {
       ("foo@", vec![(Word, "foo@")]),
       ("foo@.a", vec![(Word, "foo@"), (Dots, "."), (Word, "a")]),
       ("foo.bar", vec![(Word, "foo"), (Dots, "."), (Word, "bar")]),
-      (
-        "roflfootnote:",
-        vec![(Word, "rofl"), (MacroName, "footnote:")],
-      ),
-      ("footnote:", vec![(MacroName, "footnote:")]),
       ("==", vec![(EqualSigns, "==")]),
       ("===", vec![(EqualSigns, "===")]),
       (
@@ -543,6 +538,21 @@ mod tests {
   }
 
   #[test]
+  fn test_macro_names() {
+    assert_token_cases!([
+      (
+        "roflfootnote:",
+        vec![(Word, "rofl"), (MacroName, "footnote:")],
+      ),
+      ("footnote:", vec![(MacroName, "footnote:")]),
+      (
+        "xref::foo",
+        vec![(MacroName, "xref:"), (Colon, ":"), (Word, "foo")]
+      ),
+    ]);
+  }
+
+  #[test]
   fn test_entity_tokens() {
     assert_token_cases!([
       ("&amp;", vec![(Entity, "&amp;")]),
@@ -657,8 +667,10 @@ mod tests {
       ("foo:: foo", vec![foo, (TermDelimiter, "::"), space, foo]),
       ("foo::", vec![foo, (TermDelimiter, "::")]),
       ("foo;;", vec![foo, (TermDelimiter, ";;")]),
+      ("foo;;;", vec![foo, (SemiColon, ";"), (TermDelimiter, ";;")]),
       ("foo:::", vec![foo, (TermDelimiter, ":::")]),
       ("foo::::", vec![foo, (TermDelimiter, "::::")]),
+      ("foo:::::", vec![foo, (Colon, ":"), (TermDelimiter, "::::")]),
       // doesn't trip up on macros
       (
         "image:: foo",
@@ -678,11 +690,7 @@ mod tests {
       ),
     ];
     assert_token_cases!(cases);
-
-    refute_produces_token!(
-      TermDelimiter,
-      ["foo::foo", "foo;;;", "foo:::::", "foo:::::foo", ":: foo"]
-    );
+    refute_produces_token!(TermDelimiter, ["foo::foo", "foo:::::foo", ":: foo"]);
   }
 
   #[test]

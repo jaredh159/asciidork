@@ -184,12 +184,12 @@ fn terminates_plus(len: u8, line: &Line, lines: &ContiguousLines) -> Option<usiz
 
 fn terminates_constrained_plus(line: &Line, lines: &ContiguousLines) -> Option<usize> {
   let stop = &[TokenSpec::Len(1, TokenKind::Plus)];
-  if let Some(n) = line.terminates_constrained_in(stop) {
+  if let Some(n) = line.terminates_constrained_in(stop, &InlineCtx::None) {
     return Some(n);
   }
   let mut n = line.num_tokens();
   for line in lines.iter() {
-    if let Some(m) = line.terminates_constrained_in(stop) {
+    if let Some(m) = line.terminates_constrained_in(stop, &InlineCtx::None) {
       return Some(n + m);
     } else {
       n += line.num_tokens();
