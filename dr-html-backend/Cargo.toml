@@ -1,6 +1,6 @@
 [package]
 name = "asciidork-dr-html-backend"
-version = "0.15.0"
+version = "0.15.1"
 edition = "2021"
 description = "Asciidork Asciidoctor HTML backend"
 license = "MIT"
@@ -9,7 +9,7 @@ license = "MIT"
 asciidork-ast = { path = "../ast", version = "0.15.0" }
 asciidork-backend = { path = "../backend", version = "0.15.0" }
 asciidork-eval = { path = "../eval", version = "0.15.0" }
-asciidork-core = { path = "../core", version = "0.12.0" }
+asciidork-core = { path = "../core", version = "0.15.1" }
 lazy_static = "1.4.0"
 regex = "1.10.2"
 tracing = { version = "0.1", features = ["release_max_level_off"] }
