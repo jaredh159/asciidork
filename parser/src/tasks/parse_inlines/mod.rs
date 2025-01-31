@@ -854,12 +854,14 @@ impl<'arena> Parser<'arena> {
   }
 
   fn should_stop_at(&self, line: &Line<'arena>) -> bool {
-    if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
-      return true;
-    }
+    // delimiter
+    (line.current_is(DelimiterLine) && self.ctx.can_nest_blocks)
+
+    // new block from attr list-ish
+    || line.is_block_attr_list() || line.is_block_anchor()
 
     // description list
-    (
+    || (
       self.ctx.list.parsing_description_list()
       && line.starts_description_list_item() || line.is_list_continuation()
     )

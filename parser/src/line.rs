@@ -177,7 +177,8 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_block_attr_list(&self) -> bool {
-    self.starts(OpenBracket)
+    self.is_fully_unconsumed()
+      && self.starts(OpenBracket)
       && self.ends_with_nonescaped(CloseBracket)
       && !self.peek_token().kind(OpenBracket)
   }
