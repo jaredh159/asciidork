@@ -115,7 +115,7 @@ impl<'arena> InlineNodes<'arena> {
   }
 
   pub fn last_is(&self, kind: &Inline) -> bool {
-    self.last().map_or(false, |node| &node.content == kind)
+    self.last().is_some_and(|node| &node.content == kind)
   }
 }
 

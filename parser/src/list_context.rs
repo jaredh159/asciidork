@@ -21,10 +21,7 @@ impl ListContext {
   }
 
   pub fn parsing_description_list(&self) -> bool {
-    self
-      .stack
-      .last()
-      .map_or(false, |last| last.is_description())
+    self.stack.last().is_some_and(|last| last.is_description())
   }
 }
 
@@ -48,7 +45,7 @@ impl ListStack {
   }
 
   pub fn continues_current_list(&self, next: ListMarker) -> bool {
-    self.last().map_or(false, |last| match (last, next) {
+    self.last().is_some_and(|last| match (last, next) {
       (ListMarker::Digits(_), ListMarker::Digits(_)) => true,
       (ListMarker::Callout(_), ListMarker::Callout(_)) => true,
       (last, next) => *last == next,

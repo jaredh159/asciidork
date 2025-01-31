@@ -1,5 +1,3 @@
-use regex::Regex;
-
 mod inline_preproc;
 mod inline_utils;
 
@@ -138,8 +136,7 @@ impl<'arena> Parser<'arena> {
                 line.discard_assert(CloseBracket);
                 macro_loc.end = keys_src.loc.end + 1;
                 let mut keys = BumpVec::new_in(self.bump);
-                let re = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
-                for captures in re.captures_iter(&keys_src).step_by(2) {
+                for captures in regx::KBD_MACRO_KEYS.captures_iter(&keys_src).step_by(2) {
                   let key = captures.get(1).unwrap().as_str();
                   keys.push(self.string(key));
                 }
@@ -292,7 +289,7 @@ impl<'arena> Parser<'arena> {
           AttrRef
             if self.ctx.table_cell_ctx != TableCellContext::None
               // we know it was blank if there's no inserted token w/ same loc
-              && line.current_token().map_or(false, |t| t.loc != token.loc) =>
+              && line.current_token().is_some_and(|t| t.loc != token.loc) =>
           {
             acc.push_node(Discarded, token.loc)
           }
@@ -954,7 +951,7 @@ fn push_newline_if_needed<'arena>(state: &mut Accum<'arena>, lines: &ContiguousL
 
   if lines
     .current()
-    .map_or(false, |line| line.is_fully_unconsumed())
+    .is_some_and(|line| line.is_fully_unconsumed())
   {
     state.text.loc.end += 1;
     state.push_node(Inline::Newline, state.text.loc);

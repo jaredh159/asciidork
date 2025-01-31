@@ -257,7 +257,7 @@ impl<'arena> Line<'arena> {
   pub fn first_nonescaped(&self, kind: TokenKind) -> Option<(&Token, usize)> {
     let mut prev: Option<TokenKind> = None;
     for (i, token) in self.iter().enumerate() {
-      if token.kind(kind) && prev.map_or(true, |k| k != Backslash) {
+      if token.kind(kind) && prev != Some(Backslash) {
         return Some((token, i));
       }
       prev = Some(token.kind);
@@ -729,7 +729,7 @@ impl<'arena> Line<'arena> {
     for token in self.iter_mut() {
       if token.kind(AttrRef) {
         attr_loc = Some(token.loc);
-      } else if attr_loc.map_or(false, |loc| loc == token.loc) {
+      } else if attr_loc.is_some_and(|loc| loc == token.loc) {
         token.lexeme = BumpString::from_str_in("", bump);
       } else {
         attr_loc = None;

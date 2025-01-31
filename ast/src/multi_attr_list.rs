@@ -15,7 +15,7 @@ impl<'arena> MultiAttrList<'arena> {
   }
 }
 
-impl<'arena> AttrData for MultiAttrList<'arena> {
+impl AttrData for MultiAttrList<'_> {
   fn is_empty(&self) -> bool {
     self.0.is_empty() || self.0.iter().all(AttrList::is_empty)
   }

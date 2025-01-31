@@ -22,7 +22,7 @@ impl<'arena> Parser<'arena> {
       && (self.ctx.bibliography_ctx == BiblioContext::Section
         || meta
           .as_ref()
-          .map_or(false, |meta| meta.attrs.has_str_positional("bibliography")))
+          .is_some_and(|meta| meta.attrs.has_str_positional("bibliography")))
     {
       self.ctx.bibliography_ctx = BiblioContext::List;
     }

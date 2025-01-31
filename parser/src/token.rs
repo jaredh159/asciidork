@@ -226,31 +226,31 @@ impl TokenIs for Token<'_> {
 
 impl TokenIs for Option<&Token<'_>> {
   fn is_len(&self, len: usize) -> bool {
-    self.map_or(false, |t| t.is_len(len))
+    self.is_some_and(|t| t.is_len(len))
   }
 
   fn kind(&self, kind: TokenKind) -> bool {
-    self.map_or(false, |t| t.kind(kind))
+    self.is_some_and(|t| t.kind(kind))
   }
 
   fn is_kind_len(&self, kind: TokenKind, len: usize) -> bool {
-    self.map_or(false, |t| t.is_kind_len(kind, len))
+    self.is_some_and(|t| t.is_kind_len(kind, len))
   }
 
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {
-    self.map_or(false, |t| t.matches(kind, lexeme))
+    self.is_some_and(|t| t.matches(kind, lexeme))
   }
 
   fn satisfies(&self, spec: TokenSpec) -> bool {
-    self.map_or(false, |t| t.satisfies(spec))
+    self.is_some_and(|t| t.satisfies(spec))
   }
 
   fn can_start_block_macro(&self) -> bool {
-    self.map_or(false, |t| t.can_start_block_macro())
+    self.is_some_and(|t| t.can_start_block_macro())
   }
 
   fn can_start_dual_macro(&self) -> bool {
-    self.map_or(false, |t| t.can_start_dual_macro())
+    self.is_some_and(|t| t.can_start_dual_macro())
   }
 }
 

@@ -27,3 +27,7 @@ lazy_static! {
 lazy_static! {
   pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)\s+.+"#).unwrap();
 }
+
+lazy_static! {
+  pub static ref KBD_MACRO_KEYS: Regex = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
+}

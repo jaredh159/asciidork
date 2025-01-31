@@ -28,7 +28,7 @@ pub trait AttrData {
   fn roles(&self) -> impl Iterator<Item = &SourceString>;
 }
 
-impl<'arena> AttrData for AttrList<'arena> {
+impl AttrData for AttrList<'_> {
   fn roles(&self) -> impl Iterator<Item = &SourceString> {
     self.roles.iter().filter(|s| !s.is_empty())
   }
