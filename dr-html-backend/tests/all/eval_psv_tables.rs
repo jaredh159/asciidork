@@ -517,3 +517,16 @@ assert_html!(
     r#"<p class="tableblock">one</p>"#,
     r#"<p class="tableblock">two</p>"#,
 );
+
+assert_html!(
+  preserves_slash_not_escaping_delim,
+  adoc! {r#"
+    |===
+    a|
+    ----
+    slash preserved \
+    ----
+    |===
+  "#},
+  contains: r#"<pre>slash preserved \</pre>"#
+);

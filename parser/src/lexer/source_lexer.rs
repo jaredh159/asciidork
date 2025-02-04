@@ -71,6 +71,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'.') => Some(self.repeating(b'.', Dots)),
       Some(b'/') => Some(self.repeating(b'/', ForwardSlashes)),
       Some(b'!') => Some(self.single(Bang)),
+      Some(b'?') => Some(self.single(QuestionMark)),
       Some(b'`') => Some(self.single(Backtick)),
       Some(b'+') => Some(self.repeating(b'+', Plus)),
       Some(b'[') => Some(self.single(OpenBracket)),
@@ -93,7 +94,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x81\xA0") => Some(self.codepoint(3)), // word joiner
       Some(0xE3) if self.peek_bytes::<2>() == Some(b"\x80\x80") => Some(self.codepoint(3)), // ideographic space
       Some(0xEF) if self.peek_bytes::<2>() == Some(b"\xBB\xBF") => Some(self.codepoint(3)), // zero-width no-break space
-      Some(_) => Some(self.word(at_line_start)),
+      Some(_) => Some(self.word()),
       None => None,
     }
   }
@@ -245,7 +246,7 @@ impl<'arena> SourceLexer<'arena> {
     self.token(Digits, start, end)
   }
 
-  fn word(&mut self, at_line_start: bool) -> Token<'arena> {
+  fn word(&mut self) -> Token<'arena> {
     let start = self.pos - 1;
     let end = self.advance_to_word_boundary(true);
     // PERF: if i feel clear about the safety of how i move across
@@ -256,12 +257,10 @@ impl<'arena> SourceLexer<'arena> {
     match self.peek() {
       // directives
       Some(b':')
-        if at_line_start
-          && matches!(
-            lexeme,
-            b"include" | b"ifdef" | b"ifndef" | b"endif" | b"ifeval"
-          )
-          && self.remaining_len() > 4 =>
+        if matches!(
+          lexeme,
+          b"include" | b"ifdef" | b"ifndef" | b"endif" | b"ifeval"
+        ) && self.remaining_len() > 4 =>
       {
         if self.peek_n(1) == Some(b':') && !self.peek_n(2).unwrap().is_ascii_whitespace() {
           self.advance();

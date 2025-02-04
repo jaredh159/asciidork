@@ -119,7 +119,8 @@ impl<'arena> Parser<'arena> {
       }
 
       end = token.loc.end;
-      if !token.kind(TokenKind::Backslash) {
+      // NB: allow for escaping a delimiter, but other backslashes should pass thru
+      if !token.kind(TokenKind::Backslash) || !self.starts_psv_cell(tokens, ctx.cell_separator) {
         cell_tokens.push(token);
       } else if let Some(next) = tokens.consume_current() {
         end = next.loc.end;

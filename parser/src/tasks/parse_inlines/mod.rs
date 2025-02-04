@@ -27,7 +27,7 @@ impl<'arena> Parser<'arena> {
     let span_loc = lines.loc().unwrap().clamp_start();
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
-    let mut acc = Accum { inlines, text };
+    let mut acc = Accum::new(inlines, text);
 
     while let Some(mut line) = lines.consume_current() {
       if self.should_stop_at(&line) {
@@ -647,58 +647,12 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
-          Hash if subs.inline_formatting() && contains_seq(&[Kind(Hash)], &line, lines) => {
+          Hash
+            if subs.inline_formatting()
+              && self.starts_constrained(&[Kind(Hash)], &token, &line, lines) =>
+          {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Hash)]);
             self.parse_node(Highlight, [Kind(Hash)], &token, &mut acc, line, lines)?;
-            break;
-          }
-
-          Plus if token.is_len(3) && contains_len(Plus, 3, &line, lines) => {
-            self.ctx.subs = Substitutions::none();
-            self.parse_node(
-              InlinePassthru,
-              [TokenSpec::Len(3, Plus)],
-              &token,
-              &mut acc,
-              line,
-              lines,
-            )?;
-            self.ctx.subs = subs;
-            break;
-          }
-
-          Plus
-            if subs.inline_formatting()
-              && token.is_len(2)
-              && self.starts_unconstrained(&[Len(2, Plus)], &token, &line, lines) =>
-          {
-            self.ctx.subs.remove(Subs::InlineFormatting);
-            self.parse_node(
-              InlinePassthru,
-              [Len(2, Plus)],
-              &token,
-              &mut acc,
-              line,
-              lines,
-            )?;
-            self.ctx.subs = subs;
-            break;
-          }
-
-          Plus
-            if subs.inline_formatting()
-              && self.starts_constrained(&[Len(1, Plus)], &token, &line, lines) =>
-          {
-            self.ctx.subs.remove(Subs::InlineFormatting);
-            self.parse_node(
-              InlinePassthru,
-              [Len(1, Plus)],
-              &token,
-              &mut acc,
-              line,
-              lines,
-            )?;
-            self.ctx.subs = subs;
             break;
           }
 
@@ -743,11 +697,16 @@ impl<'arena> Parser<'arena> {
 
           Discard | AttrRef => acc.text.loc = token.loc.clamp_end(),
 
-          Backslash if !line.is_empty() => {
-            acc.push_node(Discarded, token.loc);
-            // pushing the next token as text prevents recognizing the pattern
-            let next_token = line.consume_current().unwrap();
-            acc.push_text_token(&next_token);
+          Backslash => {
+            match line.current_token().map(|t| t.kind) {
+              Some(Word) | None => acc.push_text_token(&token),
+              _ => {
+                acc.push_node(Discarded, token.loc);
+                // pushing the next token as text prevents recognizing the pattern
+                let next_token = line.consume_current().unwrap();
+                acc.push_text_token(&next_token);
+              }
+            }
           }
 
           _ if subs.macros() && token.kind(UriScheme) => {
@@ -854,12 +813,14 @@ impl<'arena> Parser<'arena> {
   }
 
   fn should_stop_at(&self, line: &Line<'arena>) -> bool {
-    if line.current_is(DelimiterLine) && self.ctx.can_nest_blocks {
-      return true;
-    }
+    // delimiter
+    (line.current_is(DelimiterLine) && self.ctx.can_nest_blocks)
+
+    // new block from attr list-ish
+    || line.is_block_attr_list() || line.is_block_anchor()
 
     // description list
-    (
+    || (
       self.ctx.list.parsing_description_list()
       && line.starts_description_list_item() || line.is_list_continuation()
     )

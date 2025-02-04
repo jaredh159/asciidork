@@ -27,6 +27,7 @@ btest:
 reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm
 
+# NB: if it tags and fails to publish, run `cargo workspaces publish --publish-as-is`
 publish type:
   @cargo workspaces publish {{type}} --message "release v%v" --no-individual-tags
 

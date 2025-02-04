@@ -177,7 +177,8 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_block_attr_list(&self) -> bool {
-    self.starts(OpenBracket)
+    self.is_fully_unconsumed()
+      && self.starts(OpenBracket)
       && self.ends_with_nonescaped(CloseBracket)
       && !self.peek_token().kind(OpenBracket)
   }
@@ -504,8 +505,7 @@ impl<'arena> Line<'arena> {
       for token in self.iter() {
         match token.kind {
           Whitespace | GreaterThan | OpenBracket | OpenParens | CloseParens | Bang | SemiColon
-          | Colon | Star => break,
-          Word if token.lexeme.starts_with('?') => break,
+          | Colon | Star | QuestionMark => break,
           _ => num_tokens += 1,
         }
       }

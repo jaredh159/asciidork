@@ -148,6 +148,20 @@ assert_html!(
 );
 
 assert_html!(
+  detects_admonition_in_cell,
+  adoc! {r#"
+    |===
+    a|foo
+    [WARNING]
+    ====
+    be careful!
+    ====
+    |===
+  "#},
+  contains: r#"<div class="admonitionblock warning">"#
+);
+
+assert_html!(
   preserves_newlines_if_cell_starts_newline,
   adoc! {r#"
     |===

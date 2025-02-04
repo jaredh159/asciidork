@@ -148,6 +148,25 @@ fn test_parse_discrete_headings() {
 }
 
 #[test]
+fn test_multi_blocks_without_empty_lines() {
+  let cases = vec![
+    adoc! {"
+      foo
+      [WARNING]
+      bar
+    "},
+    adoc! {"
+      foo
+      [[block-anchor]]
+      bar
+    "},
+  ];
+  for case in cases {
+    assert_eq!(parse_blocks!(case).len(), 2);
+  }
+}
+
+#[test]
 fn test_incomplete_heading_doesnt_panic() {
   assert_block!("== ", simple_text_block!("== ", 0..3));
 }
