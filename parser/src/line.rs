@@ -505,8 +505,7 @@ impl<'arena> Line<'arena> {
       for token in self.iter() {
         match token.kind {
           Whitespace | GreaterThan | OpenBracket | OpenParens | CloseParens | Bang | SemiColon
-          | Colon | Star => break,
-          Word if token.lexeme.starts_with('?') => break,
+          | Colon | Star | QuestionMark => break,
           _ => num_tokens += 1,
         }
       }

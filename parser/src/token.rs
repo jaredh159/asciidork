@@ -48,6 +48,7 @@ pub enum TokenKind {
   Pipe,
   Plus,
   PreprocPassthru,
+  QuestionMark,
   SemiColon,
   SingleQuote,
   Star,

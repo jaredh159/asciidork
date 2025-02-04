@@ -61,6 +61,12 @@ pub struct Accum<'arena> {
 }
 
 impl<'arena> Accum<'arena> {
+  pub const fn new(inlines: InlineNodes<'arena>, text: CollectText<'arena>) -> Self {
+    Self { inlines, text }
+  }
+}
+
+impl<'arena> Accum<'arena> {
   pub fn commit(&mut self) {
     self.text.commit_inlines(&mut self.inlines);
   }

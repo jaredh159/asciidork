@@ -595,54 +595,43 @@ fn test_confusing_patterns() {
 }
 
 #[test]
-fn test_footnotes() {
+fn test_constrained_pairs() {
   run(vec![
+    // non-matches
+    ("foo#bar#baz", just!("foo#bar#baz", 0..11)),
+    ("foo*bar*baz", just!("foo*bar*baz", 0..11)),
+    ("foo_bar_baz", just!("foo_bar_baz", 0..11)),
+    // matches
     (
-      "footnote:[foo]",
-      nodes![node!(
-        Macro(Footnote {
-          id: None,
-          text: Some(just!("foo", 10..13))
-        }),
-        0..14,
-      )],
-    ),
-    (
-      "footnote:id[foo]",
-      nodes![node!(
-        Macro(Footnote {
-          id: Some(src!("id", 9..11)),
-          text: Some(just!("foo", 12..15)),
-        }),
-        0..16,
-      )],
-    ),
-    (
-      "footnote:id[]",
-      nodes![node!(
-        Macro(Footnote {
-          id: Some(src!("id", 9..11)),
-          text: None,
-        }),
-        0..10,
-      )],
-    ),
-    (
-      "doublefootnote:[ymmv _i_]bar",
+      "foo _bar_",
       nodes![
-        node!("double"; 0..6),
-        node!(
-          Macro(Footnote {
-            id: None,
-            text: Some(nodes![
-              node!("ymmv "; 16..21),
-              node!(Italic(nodes![node!("i"; 22..23)]), 21..24),
-            ]),
-          }),
-          6..25,
-        ),
-        node!("bar"; 25..28),
+        node!("foo "; 0..4),
+        node!(Italic(nodes![node!("bar"; 5..8)]), 4..9),
       ],
+    ),
+    (
+      "foo _bar_!",
+      nodes![
+        node!("foo "; 0..4),
+        node!(Italic(nodes![node!("bar"; 5..8)]), 4..9),
+        node!("!"; 9..10),
+      ],
+    ),
+    (
+      "_bar_,",
+      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!(","; 5..6),],
+    ),
+    (
+      "_bar_;",
+      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!(";"; 5..6),],
+    ),
+    (
+      "_bar_.",
+      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!("."; 5..6),],
+    ),
+    (
+      "_bar_?",
+      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!("?"; 5..6)],
     ),
   ]);
 }

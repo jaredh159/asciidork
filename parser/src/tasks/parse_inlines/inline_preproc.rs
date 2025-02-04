@@ -21,7 +21,7 @@ impl<'arena> Parser<'arena> {
             replaced.push_nonpass(token);
           };
         }
-        TokenKind::Plus if prev_kind != Some(TokenKind::Backtick) && token.len() < 4 => {
+        TokenKind::Plus if could_be_plus_passthru(prev_kind, token.len()) => {
           if let Some(n) = terminates_plus(token.len() as u8, line, lines) {
             let subs = Substitutions::from_pass_plus_token(&token);
             let placeholder = self.pass_placeholder(&token, line, lines, n, subs)?;
@@ -196,6 +196,17 @@ fn terminates_constrained_plus(line: &Line, lines: &ContiguousLines) -> Option<u
     }
   }
   None
+}
+
+#[inline(always)]
+fn could_be_plus_passthru(prev_kind: Option<TokenKind>, len: usize) -> bool {
+  if prev_kind == Some(TokenKind::Backtick) || len > 3 {
+    false
+  } else if len == 1 {
+    prev_kind.is_none() || prev_kind == Some(TokenKind::Whitespace)
+  } else {
+    true
+  }
 }
 
 #[cfg(test)]

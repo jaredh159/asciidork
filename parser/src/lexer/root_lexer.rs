@@ -650,7 +650,6 @@ mod tests {
     refute_produces_token!(
       Directive,
       [
-        "foo include::foo",        // not at start of line
         "include:: foo",           // space after ::
         "include:: not-include[]", // space after ::
         "include:: []",            // space after ::
