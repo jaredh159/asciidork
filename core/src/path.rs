@@ -15,11 +15,19 @@ pub struct Path {
 }
 
 impl Path {
+  pub fn new_specifying_separator(path: impl Into<String>, separator: char) -> Path {
+    Path::from_optional_sep(path, Some(separator))
+  }
+
   pub fn new(path: impl Into<String>) -> Path {
+    Path::from_optional_sep(path, None)
+  }
+
+  fn from_optional_sep(path: impl Into<String>, separator: Option<char>) -> Path {
     let path: String = path.into();
     let mut path = path.as_str();
     let mut components = Vec::with_capacity(4);
-    let separator = match drive_prefix(path) {
+    let inferred_separator = match drive_prefix(path) {
       Some(prefix) => {
         components.push(Component::DrivePrefix(prefix));
         path = &path[2..];
@@ -35,11 +43,11 @@ impl Path {
         }
       }
     };
-    if path.starts_with(separator) {
+    if path.starts_with(inferred_separator) {
       components.push(Component::Root);
       path = &path[1..];
     }
-    path.split(separator).for_each(|s| match s {
+    path.split(inferred_separator).for_each(|s| match s {
       "" => {}
       "." => components.push(Component::CurrentDir),
       ".." => components.push(Component::ParentDir),
@@ -47,7 +55,10 @@ impl Path {
       "http:" => components.push(Component::UriScheme("http".to_string())),
       _ => components.push(Component::Normal(s.to_string())),
     });
-    Path { separator, components }
+    Path {
+      separator: separator.unwrap_or(inferred_separator),
+      components,
+    }
   }
 
   pub fn push(&mut self, other: impl Into<Path>) {
