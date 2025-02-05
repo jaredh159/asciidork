@@ -147,3 +147,26 @@ macro_rules! _html {
     .unwrap()
   }};
 }
+
+pub mod source {
+  pub fn wrap_listing(inner: &str) -> String {
+    format!(
+      r#"<div class="listingblock"><div class="content">{}</div></div>"#,
+      inner.trim(),
+    )
+  }
+
+  pub fn wrap_literal(inner: &str) -> String {
+    format!(
+      r#"<div class="literalblock"><div class="content">{}</div></div>"#,
+      inner.trim(),
+    )
+  }
+
+  pub fn wrap(lang: &str, inner: &str) -> String {
+    wrap_listing(&format!(
+      r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
+      inner.trim(),
+    ))
+  }
+}

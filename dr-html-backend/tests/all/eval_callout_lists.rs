@@ -1,3 +1,4 @@
+use crate::helpers::source;
 use test_utils::{adoc, html, raw_html};
 
 assert_html!(
@@ -203,15 +204,8 @@ assert_html!(
 
 // helpers
 
-fn wrap_listing(inner: &str) -> String {
-  format!(
-    r#"<div class="listingblock"><div class="content">{}</div></div>"#,
-    inner.trim(),
-  )
-}
-
 fn wrap_source_appending(lang: &str, inner: &str, rest: String) -> String {
-  let listing = wrap_listing(&format!(
+  let listing = source::wrap_listing(&format!(
     r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
     inner.trim(),
   ));

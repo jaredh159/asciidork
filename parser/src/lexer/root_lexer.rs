@@ -113,6 +113,19 @@ impl<'arena> RootLexer<'arena> {
     self.sources[idx as usize].leveloffset
   }
 
+  pub fn at_newline(&self) -> bool {
+    self.peek_is(b'\n') || self.peek_is(b'\r')
+  }
+
+  pub fn skip_newline(&mut self) {
+    if self.peek_is(b'\r') {
+      self.skip_byte();
+    }
+    if self.peek_is(b'\n') {
+      self.skip_byte();
+    }
+  }
+
   pub fn peek(&self) -> Option<u8> {
     // case: we're in the middle of a temporary buffer
     if let Some((tmp_buf, _)) = &self.tmp_buf {
@@ -309,7 +322,6 @@ mod tests {
   fn test_tokens() {
     let cases = vec![
       ("|===", vec![(Pipe, "|"), (EqualSigns, "===")]),
-      ("////", vec![(DelimiterLine, "////")]),
       ("<.>", vec![(CalloutNumber, "<.>")]),
       ("<1>", vec![(CalloutNumber, "<1>")]),
       ("<255>", vec![(CalloutNumber, "<255>")]),
@@ -359,18 +371,6 @@ mod tests {
         vec![(Dashes, "----"), (Whitespace, " "), (Word, "foo")],
       ),
       ("-----", vec![(Dashes, "-----")]),
-      ("--", vec![(DelimiterLine, "--")]),
-      ("--\n", vec![(DelimiterLine, "--"), (Newline, "\n")]),
-      ("****", vec![(DelimiterLine, "****")]),
-      ("====", vec![(DelimiterLine, "====")]),
-      ("____", vec![(DelimiterLine, "____")]),
-      ("----", vec![(DelimiterLine, "----")]),
-      ("....", vec![(DelimiterLine, "....")]),
-      ("++++", vec![(DelimiterLine, "++++")]),
-      (
-        "****\nfoo",
-        vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],
-      ),
       (
         "foo****",
         vec![
@@ -553,6 +553,44 @@ mod tests {
   }
 
   #[test]
+  fn test_delimiter_lines() {
+    assert_token_cases!([
+      ("////", vec![(DelimiterLine, "////")]),
+      ("--", vec![(DelimiterLine, "--")]),
+      ("--\n", vec![(DelimiterLine, "--"), (Newline, "\n")]),
+      ("--\r\n", vec![(DelimiterLine, "--"), (Newline, "\r\n")]),
+      ("****", vec![(DelimiterLine, "****")]),
+      ("====", vec![(DelimiterLine, "====")]),
+      ("____", vec![(DelimiterLine, "____")]),
+      ("----", vec![(DelimiterLine, "----")]),
+      ("----\r\n", vec![(DelimiterLine, "----"), (Newline, "\r\n")]),
+      ("....", vec![(DelimiterLine, "....")]),
+      ("++++", vec![(DelimiterLine, "++++")]),
+      (
+        "****\nfoo",
+        vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],
+      ),
+    ]);
+  }
+
+  #[test]
+  fn test_newlines() {
+    assert_token_cases!([
+      ("foo\n", vec![(Word, "foo"), (Newline, "\n")]),
+      ("foo\r\n", vec![(Word, "foo"), (Newline, "\r\n")]),
+      ("\r\nfoo", vec![(Newline, "\r\n"), (Word, "foo")]),
+      (
+        "foo\r\nbar",
+        vec![(Word, "foo"), (Newline, "\r\n"), (Word, "bar")]
+      ),
+      (
+        "foo\nbar",
+        vec![(Word, "foo"), (Newline, "\n"), (Word, "bar")],
+      ),
+    ]);
+  }
+
+  #[test]
   fn test_entity_tokens() {
     assert_token_cases!([
       ("&amp;", vec![(Entity, "&amp;")]),
@@ -665,6 +703,11 @@ mod tests {
     let cases = vec![
       ("foo:: foo", vec![foo, (TermDelimiter, "::"), space, foo]),
       ("foo::", vec![foo, (TermDelimiter, "::")]),
+      ("foo::\n", vec![foo, (TermDelimiter, "::"), (Newline, "\n")]),
+      (
+        "foo::\r\n",
+        vec![foo, (TermDelimiter, "::"), (Newline, "\r\n")],
+      ),
       ("foo;;", vec![foo, (TermDelimiter, ";;")]),
       ("foo;;;", vec![foo, (SemiColon, ";"), (TermDelimiter, ";;")]),
       ("foo:::", vec![foo, (TermDelimiter, ":::")]),
@@ -760,6 +803,24 @@ mod tests {
   }
 
   #[test]
+  fn test_line_of_win_crlf() {
+    let lexer = test_lexer!("foo\r\nbar\r\n\r\nbaz\r\n");
+    assert_eq!(lexer.line_of(0), "foo");
+    assert_eq!(lexer.line_of(1), "foo");
+    assert_eq!(lexer.line_of(2), "foo");
+    assert_eq!(lexer.line_of(3), "foo"); // newline '\r'
+    assert_eq!(lexer.line_of(4), "foo"); // newline '\n'
+    assert_eq!(lexer.line_of(5), "bar");
+    assert_eq!(lexer.line_of(6), "bar");
+    assert_eq!(lexer.line_of(7), "bar");
+    assert_eq!(lexer.line_of(8), "bar"); // newline '\r'
+    assert_eq!(lexer.line_of(9), "bar"); // newline '\n'
+    assert_eq!(lexer.line_of(10), ""); // empty line
+    assert_eq!(lexer.line_of(11), ""); // empty line
+    assert_eq!(lexer.line_of(12), "baz");
+  }
+
+  #[test]
   fn test_line_num() {
     let input = adoc! {
       "= :
@@ -775,6 +836,20 @@ mod tests {
     assert_next_token_line(&mut lexer, 2, Word);
     assert_next_token_line(&mut lexer, 2, Newline);
     assert_next_token_line(&mut lexer, 3, Newline);
+  }
+
+  #[test]
+  fn test_line_num_win_crlf() {
+    let input = "foo\r\nbar\r\n\r\nbaz\r\n";
+    let lexer = test_lexer!(input);
+    assert_eq!(lexer.line_number(0), 1);
+    assert_eq!(lexer.line_number(3), 1); // newline '\r'
+    assert_eq!(lexer.line_number(4), 1); // newline '\n'
+    assert_eq!(lexer.line_number(5), 2); // 'b' of 'bar'
+    assert_eq!(lexer.line_number(9), 2); // '\n' of 'bar\r\n'
+    assert_eq!(lexer.line_number(10), 3); // empty line '\r'
+    assert_eq!(lexer.line_number(11), 3); // empty line '\n'
+    assert_eq!(lexer.line_number(12), 4); // 'b' of 'baz'
   }
 
   fn assert_next_token_line(lexer: &mut RootLexer, line: u32, expected_kind: TokenKind) {

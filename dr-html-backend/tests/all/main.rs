@@ -23,5 +23,6 @@ mod eval_source;
 mod eval_standalone;
 mod eval_toc;
 mod eval_verses;
+mod eval_win_crlf;
 mod eval_xrefs;
 mod eval_xrefs_interdoc;

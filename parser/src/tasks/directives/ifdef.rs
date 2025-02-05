@@ -63,14 +63,14 @@ impl<'arena> Parser<'arena> {
       if token.matches(TokenKind::Directive, "endif::") {
         let mut line = Line::empty(self.bump);
         line.push(token);
-        while !self.lexer.peek_is(b'\n') && !self.lexer.is_eof() {
+        while !self.lexer.at_newline() && !self.lexer.is_eof() {
           line.push(self.lexer.next_token());
         }
         if line.is_directive_endif() {
           depth -= 1;
           if depth == 0 {
-            if self.lexer.peek_is(b'\n') {
-              self.lexer.skip_byte();
+            if self.lexer.at_newline() {
+              self.lexer.skip_newline();
             }
             break self.read_line();
           }

@@ -93,13 +93,11 @@ impl<'arena> Parser<'arena> {
 
     let mut drop_line = false;
     let mut line = Line::empty(self.bump);
-    while !self.lexer.peek_is(b'\n') && !self.lexer.is_eof() {
+    while !self.lexer.at_newline() && !self.lexer.is_eof() {
       let token = self.lexer.next_token();
       self.push_token_replacing_attr_ref(token, &mut line, &mut drop_line)?;
     }
-    if self.lexer.peek_is(b'\n') {
-      self.lexer.skip_byte();
-    }
+    self.lexer.skip_newline();
     if drop_line {
       return self.read_line();
     }
@@ -137,7 +135,7 @@ impl<'arena> Parser<'arena> {
         }
       }
       lines.push(line);
-      if self.lexer.peek_is(b'\n') {
+      if self.lexer.at_newline() {
         break;
       }
     }

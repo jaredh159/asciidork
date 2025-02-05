@@ -375,6 +375,15 @@ macro_rules! adoc {
 }
 
 #[macro_export]
+macro_rules! adoc_win_crlf {
+  ($s:expr) => {{
+    let s = ::indoc::indoc!($s).to_string().replace("\n", "\r\n");
+    let static_str: &'static str = Box::leak(s.into_boxed_str());
+    static_str
+  }};
+}
+
+#[macro_export]
 macro_rules! bytes {
   ($s:expr) => {
     ::indoc::indoc!($s).as_bytes()

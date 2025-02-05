@@ -86,6 +86,10 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'|') => Some(self.single(Pipe)),
       Some(b'\'') => Some(self.single(SingleQuote)),
       Some(b'\\') => Some(self.single(Backslash)),
+      Some(b'\r') if self.peek_is(b'\n') => {
+        self.advance();
+        Some(self.token(Newline, self.pos - 2, self.pos))
+      }
       Some(b) if b.is_ascii_digit() => Some(self.digits()),
       Some(b) if b == b';' || b == b':' => Some(self.maybe_term_delimiter(b, at_line_start)),
       Some(0xC2) if self.peek_is(0xA0) => Some(self.codepoint(2)), // no-break space
@@ -117,9 +121,18 @@ impl<'arena> SourceLexer<'arena> {
     self.pos == self.src.len() as u32
   }
 
-  pub fn consume_empty_lines(&mut self) {
-    while self.peek() == Some(b'\n') {
+  pub fn skip_newline(&mut self) {
+    if self.peek_is(b'\r') {
       self.advance();
+    }
+    if self.peek_is(b'\n') {
+      self.advance();
+    }
+  }
+
+  pub fn consume_empty_lines(&mut self) {
+    while self.at_newline() {
+      self.skip_newline();
     }
   }
 
@@ -141,14 +154,14 @@ impl<'arena> SourceLexer<'arena> {
       self.nth(4),
     ];
     match sequence {
-      [Some(b'-'), Some(b'-'), Some(b'\n') | None, _, _] => Some((2, b'-')),
-      [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n') | None]
-      | [Some(b'_'), Some(b'_'), Some(b'_'), Some(b'_'), Some(b'\n') | None]
-      | [Some(b'-'), Some(b'-'), Some(b'-'), Some(b'-'), Some(b'\n') | None]
-      | [Some(b'+'), Some(b'+'), Some(b'+'), Some(b'+'), Some(b'\n') | None]
-      | [Some(b'.'), Some(b'.'), Some(b'.'), Some(b'.'), Some(b'\n') | None]
-      | [Some(b'/'), Some(b'/'), Some(b'/'), Some(b'/'), Some(b'\n') | None]
-      | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n') | None] => {
+      [Some(b'-'), Some(b'-'), Some(b'\n' | b'\r') | None, _, _] => Some((2, b'-')),
+      [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n' | b'\r') | None]
+      | [Some(b'_'), Some(b'_'), Some(b'_'), Some(b'_'), Some(b'\n' | b'\r') | None]
+      | [Some(b'-'), Some(b'-'), Some(b'-'), Some(b'-'), Some(b'\n' | b'\r') | None]
+      | [Some(b'+'), Some(b'+'), Some(b'+'), Some(b'+'), Some(b'\n' | b'\r') | None]
+      | [Some(b'.'), Some(b'.'), Some(b'.'), Some(b'.'), Some(b'\n' | b'\r') | None]
+      | [Some(b'/'), Some(b'/'), Some(b'/'), Some(b'/'), Some(b'\n' | b'\r') | None]
+      | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n' | b'\r') | None] => {
         Some((4, sequence[0].unwrap()))
       }
       _ => None,
@@ -172,12 +185,20 @@ impl<'arena> SourceLexer<'arena> {
       start -= 1;
     }
 
-    while end < self.src.len() as u32 && self.src[end as usize] != b'\n' {
+    let src_len = self.src.len() as u32;
+    loop {
+      if end >= src_len {
+        break;
+      }
+      let next = self.src[end as usize];
+      if next == b'\r' || next == b'\n' {
+        break;
+      }
       end += 1;
     }
 
     let str = std::str::from_utf8(&self.src[start as usize..end as usize]).unwrap();
-    BumpString::from_str_in(str, self.bump)
+    BumpString::from_str_in(str.trim_ascii_end(), self.bump)
   }
 
   pub fn line_number_with_offset(&self, location: u32) -> (u32, u32) {
@@ -199,11 +220,16 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   fn at_line_start(&self) -> bool {
+    // NB: only check for `\n` b/c backing up, we'll see it first if `\r\n`
     self.pos == 0 || self.src.get(self.pos as usize - 1) == Some(&b'\n')
   }
 
   fn at_empty_line(&self) -> bool {
-    self.at_line_start() && self.peek_is(b'\n')
+    self.at_line_start() && self.at_newline()
+  }
+
+  fn at_newline(&self) -> bool {
+    self.peek_is(b'\n') || self.peek_is(b'\r')
   }
 
   fn nth(&self, n: u32) -> Option<u8> {
@@ -400,9 +426,9 @@ impl<'arena> SourceLexer<'arena> {
       match self.peek() {
         Some(b'@') if with_at => break,
         Some(
-          b' ' | b'\t' | b'\n' | b':' | b';' | b'<' | b'>' | b',' | b'^' | b'_' | b'~' | b'*'
-          | b'!' | b'?' | b'`' | b'+' | b'.' | b'[' | b']' | b'{' | b'}' | b'(' | b')' | b'='
-          | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&' | b'-',
+          b' ' | b'\t' | b'\n' | b'\r' | b':' | b';' | b'<' | b'>' | b',' | b'^' | b'_' | b'~'
+          | b'*' | b'!' | b'?' | b'`' | b'+' | b'.' | b'[' | b']' | b'{' | b'}' | b'(' | b')'
+          | b'=' | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&' | b'-',
         ) => break,
         None => break,
         _ => {
@@ -421,7 +447,7 @@ impl<'arena> SourceLexer<'arena> {
 
     let mut peek = self.src[self.pos as usize + 1..].iter();
     match peek.next() {
-      None | Some(b' ' | b'\n' | b'\t') => {
+      None | Some(b' ' | b'\n' | b'\r' | b'\t') => {
         self.advance();
         let end = self.pos;
         return self.token(TermDelimiter, end - 2, end);
@@ -433,7 +459,7 @@ impl<'arena> SourceLexer<'arena> {
           num_colons += 1;
           next = peek.next();
         }
-        if matches!(next, None | Some(b' ' | b'\n' | b'\t')) {
+        if matches!(next, None | Some(b' ' | b'\n' | b'\r' | b'\t')) {
           self.skip(num_colons - 1);
           let end = self.pos;
           return self.token(TermDelimiter, end - num_colons, end);
@@ -451,9 +477,13 @@ impl<'arena> SourceLexer<'arena> {
     }
     matches!(
       (peek.next(), peek.next(), peek.next()),
-      (Some(b' ' | b'\t' | b'\n') | None, _, _)
-        | (Some(b':'), Some(b' ' | b'\t' | b'\n') | None, _)
-        | (Some(b':'), Some(b':'), Some(b' ' | b'\t' | b'\n') | None)
+      (Some(b' ' | b'\t' | b'\n' | b'\r') | None, _, _)
+        | (Some(b':'), Some(b' ' | b'\t' | b'\n' | b'\r') | None, _)
+        | (
+          Some(b':'),
+          Some(b':'),
+          Some(b' ' | b'\t' | b'\n' | b'\r') | None
+        )
     )
   }
 
