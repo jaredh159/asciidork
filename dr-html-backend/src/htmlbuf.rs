@@ -56,7 +56,7 @@ pub trait HtmlBuf {
 
 pub fn push_img_path(buf: &mut String, target: &str, doc_meta: &DocumentMeta) {
   if let Some(imagesdir) = doc_meta.str("imagesdir") {
-    let mut path = Path::new(imagesdir);
+    let mut path = Path::new_specifying_separator(imagesdir, '/');
     path.push(target);
     push_url_encoded(buf, &path.to_string());
   } else {

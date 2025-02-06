@@ -1,3 +1,4 @@
+use crate::helpers::source;
 use test_utils::{adoc, html, raw_html};
 
 assert_html!(
@@ -15,13 +16,13 @@ assert_html!(
 assert_html!(
   indented_multiline_literal_block,
   " foo bar\n so baz",
-  wrap_literal("<pre>foo bar\nso baz</pre>")
+  source::wrap_literal("<pre>foo bar\nso baz</pre>")
 );
 
 assert_html!(
   indented_multiline_literal_block2,
   " a\n// b\n c",
-  wrap_literal("<pre> a\n// b\n c</pre>")
+  source::wrap_literal("<pre> a\n// b\n c</pre>")
 );
 
 assert_html!(
@@ -36,7 +37,7 @@ assert_html!(
     end
     ----
   "#},
-  wrap_source(
+  source::wrap(
     "ruby",
     raw_html! {r#"
       require 'sinatra'
@@ -58,7 +59,7 @@ assert_html!(
       end
     ----
   "#},
-  wrap_source(
+  source::wrap(
     "ruby",
     raw_html! {r#"
       get '/hi' do
@@ -90,7 +91,7 @@ assert_html!(
       "Hello World!"
     end
   "#},
-  wrap_source(
+  source::wrap(
     "ruby",
     raw_html! {r#"
       require 'sinatra'
@@ -110,7 +111,7 @@ assert_html!(
     require 'sinatra'
     ----
   "#},
-  wrap_source("ruby", "require 'sinatra'")
+  source::wrap("ruby", "require 'sinatra'")
 );
 
 assert_html!(
@@ -123,7 +124,7 @@ assert_html!(
     System.out.println("Hello, world!");
     ----
   "#},
-  wrap_source("java", r#"System.out.println("Hello, world!");"#)
+  source::wrap("java", r#"System.out.println("Hello, world!");"#)
 );
 
 assert_html!(
@@ -136,7 +137,7 @@ assert_html!(
     }
     ----
   "#},
-  wrap_source(
+  source::wrap(
     "rust",
     raw_html! {r#"
       fn main() {
@@ -154,7 +155,7 @@ assert_html!(
     so baz
     ----
   "#},
-  wrap_listing(raw_html! {r#"
+  source::wrap_listing(raw_html! {r#"
     <pre>foo &lt;bar&gt;
     so baz</pre>
   "#})
@@ -169,31 +170,8 @@ assert_html!(
     so baz
     --
   "#},
-  wrap_listing(raw_html! {r#"
+  source::wrap_listing(raw_html! {r#"
     <pre>foo bar
     so baz</pre>
   "#})
 );
-
-// helpers
-
-fn wrap_listing(inner: &str) -> String {
-  format!(
-    r#"<div class="listingblock"><div class="content">{}</div></div>"#,
-    inner.trim(),
-  )
-}
-
-fn wrap_literal(inner: &str) -> String {
-  format!(
-    r#"<div class="literalblock"><div class="content">{}</div></div>"#,
-    inner.trim(),
-  )
-}
-
-fn wrap_source(lang: &str, inner: &str) -> String {
-  wrap_listing(&format!(
-    r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
-    inner.trim(),
-  ))
-}

@@ -295,7 +295,13 @@ fn include_directive_resolves_attr_refs() {
   "};
   let mut parser = test_parser!(input);
   parser.apply_job_settings(JobSettings::r#unsafe());
+
+  #[cfg(unix)]
   parser.set_resolver(Box::new(AssertResolver::new("fixtures/dir/other.adoc")));
+
+  #[cfg(windows)]
+  parser.set_resolver(Box::new(AssertResolver::new("fixtures\\dir\\other.adoc")));
+
   assert!(parser.parse().is_ok());
 }
 

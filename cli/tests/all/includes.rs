@@ -2,6 +2,7 @@ use std::process::{Command, Stdio};
 
 use test_utils::*;
 
+#[cfg(unix)]
 #[test]
 fn test_cli_app_single_include() {
   let stdout = run_cli(
@@ -28,6 +29,7 @@ fn test_cli_app_single_include() {
   );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_relative_includes() {
   let stdout = run_cli(
@@ -47,6 +49,7 @@ fn test_relative_includes() {
   );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_remote_relative_includes() {
   let stdout = run_cli(
@@ -73,6 +76,7 @@ fn test_remote_relative_includes() {
   );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_relative_nested_includes() {
   let stdout = run_cli(
@@ -91,6 +95,7 @@ fn test_relative_nested_includes() {
   );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_url_includes() {
   let stdout = run_cli(
@@ -113,6 +118,7 @@ fn test_url_includes() {
   );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_cli_app_doc_attrs() {
   let stdout = run_cli(
@@ -136,6 +142,26 @@ fn test_cli_app_doc_attrs() {
       </div>
       <div class="paragraph">
         <p>docname: attrs</p>
+      </div>
+    "#}
+    .replace("{cwd}", &cwd())
+  );
+}
+
+#[test]
+fn test_cli_runs_on_windows() {
+  let stdout = run_cli(
+    &["--embedded", "--strict", "--safe-mode", "unsafe"],
+    "tests/all/fixtures/gen/gchild-include.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="paragraph">
+        <p>first line of grandchild</p>
+      </div>
+      <div class="paragraph">
+        <p>last line of grandchild</p>
       </div>
     "#}
     .replace("{cwd}", &cwd())

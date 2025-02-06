@@ -1,3 +1,4 @@
+use crate::helpers::source;
 use test_utils::{adoc, raw_html};
 
 assert_html!(
@@ -12,7 +13,7 @@ assert_html!(
     end
     ----
   "#},
-  wrap_source(
+  source::wrap(
     "ruby",
     raw_html! {r#"
       require 'sinatra' <b class="conum">(1)</b>
@@ -34,7 +35,7 @@ assert_html!(
     </section>
     ----
   "#},
-  wrap_source(
+  source::wrap(
     "xml",
     raw_html! {r#"
       &lt;section&gt;
@@ -55,7 +56,7 @@ assert_html!(
     puts "2" # <2>
     ----
   "#},
-  wrap_source(
+  source::wrap(
     "ruby",
     raw_html! {r#"
       puts "1" <i class="conum" data-value="1"></i><b>(1)</b>
@@ -76,7 +77,7 @@ assert_html!(
     require 'sinatra' --<5>
     ----
   "#},
-  wrap_source(
+  source::wrap(
     "ruby",
     raw_html! {r#"
       require 'sinatra' # <b class="conum">(1)</b>
@@ -87,19 +88,3 @@ assert_html!(
     "#}
   )
 );
-
-// helpers
-
-fn wrap_listing(inner: &str) -> String {
-  format!(
-    r#"<div class="listingblock"><div class="content">{}</div></div>"#,
-    inner.trim(),
-  )
-}
-
-fn wrap_source(lang: &str, inner: &str) -> String {
-  wrap_listing(&format!(
-    r#"<pre class="highlight"><code class="language-{lang}" data-lang="{lang}">{}</code></pre>"#,
-    inner.trim(),
-  ))
-}
