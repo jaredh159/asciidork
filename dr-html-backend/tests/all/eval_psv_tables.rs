@@ -173,6 +173,19 @@ assert_html!(
 );
 
 assert_html!(
+  topbot_doc_attr_to_frame_ends,
+  adoc! {r#"
+    :table-frame: topbot
+
+    |===
+    |A |B
+    |===
+  "#},
+  contains:
+    r#"<table class="tableblock frame-ends grid-all stretch">"#
+);
+
+assert_html!(
   cell_content_paragraphs,
   adoc! {r#"
     |===
