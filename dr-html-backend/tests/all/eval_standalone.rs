@@ -128,3 +128,30 @@ assert_standalone_body!(
     </body>
   "#}
 );
+
+assert_html!(
+  level_0_heading_best_effort,
+  |job_settings: &mut JobSettings| { job_settings.strict = false },
+  adoc! {r#"
+    foo bar
+
+    = Doc title
+  "#},
+  contains:
+    r#"<div class="sect0"><h1 id="_doc_title">Doc title</h1></div>"#
+);
+
+assert_error!(
+  level_0_heading_from_malformed_header,
+  adoc! {"
+    :toc: macro
+
+    = Title
+  "},
+  error! {"
+     --> test.adoc:3:1
+      |
+    3 | = Title
+      | ^^^^^^^ Level 0 section allowed only in doctype=book, or doc header may be malformed
+  "}
+);

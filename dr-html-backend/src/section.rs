@@ -22,13 +22,14 @@ pub fn number_prefix(level: u8, sect_nums: &mut [u16; 5]) -> String {
 
 pub fn class(section: &Section) -> &'static str {
   match section.level {
+    0 => "sect0",
     1 => "sect1",
     2 => "sect2",
     3 => "sect3",
     4 => "sect4",
     5 => "sect5",
     6 => "sect6",
-    _ => unreachable!("section::class()"),
+    _ => unreachable!("section::class() level={}", section.level),
   }
 }
 
