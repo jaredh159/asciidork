@@ -308,6 +308,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["listingblock"], &block.meta.attrs);
+    self.render_block_title(&block.meta);
     self.push_str(r#"<div class="content"><pre"#);
     if let Some(lang) = self.source_lang(block) {
       self.push([

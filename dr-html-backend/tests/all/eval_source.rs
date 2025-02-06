@@ -50,6 +50,19 @@ assert_html!(
 );
 
 assert_html!(
+  source_w_title,
+  adoc! {r#"
+    .Example
+    [source,ruby]
+    ----
+    require 'sinatra'
+    ----
+  "#},
+  contains:
+    r#"<div class="listingblock"><div class="title">Example</div><div class="content"><pre"#
+);
+
+assert_html!(
   source_block_indent_0,
   adoc! {r#"
     [source,ruby,indent=0]
