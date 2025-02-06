@@ -17,6 +17,29 @@ assert_html!(
 );
 
 assert_html!(
+  included_csv,
+  resolving: b"A1,\nB1,B2",
+  adoc! {r#"
+    ,===
+    include::some_file.adoc[]
+    ,===
+  "#},
+  contains: r#"<p class="tableblock">A1</p>"#,
+);
+
+assert_html!(
+  included_csv_2,
+  resolving: b"A1,\nB1,B2",
+  adoc! {r#"
+    [%header,format=csv]
+    |===
+    include::some_file.adoc[]
+    |===
+  "#},
+  contains: r#"<th class="tableblock halign-left valign-top">A1</th>"#,
+);
+
+assert_html!(
   inline_include_no_newline,
   resolving: b"Line-2",
   adoc! {r#"
