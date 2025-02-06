@@ -674,7 +674,11 @@ impl<'arena> Parser<'arena> {
           }
 
           SingleQuote if line.current_is(Word) && subs.inline_formatting() => {
-            if acc.text.is_empty() || acc.text.ends_with(char::is_whitespace) {
+            if acc.text.is_empty()
+              || acc
+                .text
+                .ends_with(|c| c.is_whitespace() || c.is_ascii_punctuation())
+            {
               acc.push_text_token(&token);
             } else {
               acc.push_node(CurlyQuote(LegacyImplicitApostrophe), token.loc);
