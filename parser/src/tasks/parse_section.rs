@@ -18,6 +18,13 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
+    if level == 0 && self.document.meta.get_doctype() != DocType::Book {
+      self.err_line(
+        "Level 0 section allowed only in doctype=book, or doc header may be malformed",
+        line,
+      )?;
+    }
+
     if meta.attrs.has_str_positional("discrete") || meta.attrs.has_str_positional("float") {
       self.restore_peeked(lines, meta);
       return Ok(None);
