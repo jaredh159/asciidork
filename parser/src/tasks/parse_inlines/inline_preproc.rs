@@ -183,6 +183,9 @@ fn terminates_plus(len: u8, line: &Line, lines: &ContiguousLines) -> Option<usiz
 }
 
 fn terminates_constrained_plus(line: &Line, lines: &ContiguousLines) -> Option<usize> {
+  if line.current_is(TokenKind::Newline) {
+    return None;
+  }
   let stop = &[TokenSpec::Len(1, TokenKind::Plus)];
   if let Some(n) = line.terminates_constrained_in(stop, &InlineCtx::None) {
     return Some(n);

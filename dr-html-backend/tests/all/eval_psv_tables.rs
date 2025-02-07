@@ -186,6 +186,22 @@ assert_html!(
 );
 
 assert_html!(
+  break_in_table,
+  adoc! {r#"
+    |===
+    |A +
+    B
+    |C +
+    D +
+    E
+    |===
+  "#},
+  contains:
+    r#"<p class="tableblock">A<br> B</p>"#,
+    r#"<p class="tableblock">C<br> D<br> E</p>"#,
+);
+
+assert_html!(
   comments_in_table,
   adoc! {r#"
     |===

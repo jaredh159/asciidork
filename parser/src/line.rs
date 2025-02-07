@@ -213,9 +213,10 @@ impl<'arena> Line<'arena> {
     }
   }
 
-  pub fn discard_assert(&mut self, kind: TokenKind) {
-    let token = self.consume_current();
-    debug_assert!(token.unwrap().kind(kind));
+  pub fn discard_assert(&mut self, kind: TokenKind) -> Token<'arena> {
+    let token = self.consume_current().unwrap();
+    assert!(token.kind == kind);
+    token
   }
 
   pub fn discard_last(&mut self) -> Option<Token<'arena>> {

@@ -689,12 +689,23 @@ impl<'arena> Parser<'arena> {
             acc.push_node(MultiCharWhitespace(token.lexeme), token.loc);
           }
 
-          Whitespace if line.current_is(Plus) && line.num_tokens() == 1 => {
+          Whitespace
+            if line.current_is(Plus)
+              && line
+                .peek_token()
+                .is_none_or(|t| t.kind == TokenKind::Newline) =>
+          {
             let mut loc = token.loc;
             line.discard_assert(Plus);
             loc.end += 2; // plus and newline
             acc.push_node(LineBreak, loc);
-            break;
+            if !line.is_empty() {
+              // NB: see `break_in_table` test, we can get here only when
+              // we've coalesced tokens including a break in a table cell
+              loc.end = line.discard_assert(TokenKind::Newline).loc.end;
+            } else {
+              break;
+            }
           }
 
           TokenKind::Newline => acc.push_node(Inline::Newline, token.loc),
