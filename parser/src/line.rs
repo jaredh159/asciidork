@@ -165,6 +165,11 @@ impl<'arena> Line<'arena> {
     self.tokens.is_empty()
   }
 
+  /// `true` if line has no tokens, or *only* whitespace
+  pub fn is_emptyish(&self) -> bool {
+    self.is_empty() || self.tokens.iter().all(|t| t.is_whitespaceish())
+  }
+
   pub fn is_heading(&self) -> bool {
     self.unadjusted_heading_level().is_some()
   }

@@ -123,7 +123,7 @@ impl<'arena> Parser<'arena> {
     }
     let mut lines = Deq::new(self.bump);
     while let Some(line) = self.read_line()? {
-      if line.is_empty() {
+      if line.is_emptyish() {
         if lines.is_empty() {
           // this case can happen if our first non-empty line was an include directive
           // that then resolved to an initial empty line, otherwise consume_empty_lines
