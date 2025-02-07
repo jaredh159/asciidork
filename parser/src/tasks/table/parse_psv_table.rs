@@ -25,7 +25,7 @@ impl<'arena> Parser<'arena> {
       tokens.consume_current();
     }
 
-    ctx.num_cols = cells.iter().map(|c| c.col_span as usize).sum::<usize>();
+    ctx.num_cols = cells.iter().map(|c| c.col_span as usize).sum();
     self.finish_implicit_header_row(cells, ctx)
   }
 

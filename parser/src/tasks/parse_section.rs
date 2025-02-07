@@ -9,6 +9,9 @@ impl<'arena> Parser<'arena> {
     let meta = self.parse_chunk_meta(&mut lines)?;
 
     let Some(line) = lines.current() else {
+      if !meta.is_empty() {
+        self.err_line_starting("Unattached block metadata", meta.start)?;
+      }
       self.restore_peeked_meta(meta);
       return Ok(None);
     };
