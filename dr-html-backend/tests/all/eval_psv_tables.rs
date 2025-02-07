@@ -186,6 +186,35 @@ assert_html!(
 );
 
 assert_html!(
+  comments_in_table,
+  adoc! {r#"
+    |===
+    // x
+    // y
+    |a | b
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup>
+        <col style="width: 50%;">
+        <col style="width: 50%;">
+      </colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">a</p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">b</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+assert_html!(
   cell_content_paragraphs,
   adoc! {r#"
     |===

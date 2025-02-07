@@ -344,6 +344,9 @@ impl<'arena> Parser<'arena> {
         self.restore_lines(lines);
         return Ok(TableTokens::new(tokens));
       }
+      if line.is_comment() {
+        continue;
+      }
       if let Some(loc) = line.last_loc() {
         end = loc.end;
       }
@@ -354,6 +357,9 @@ impl<'arena> Parser<'arena> {
       }
     }
     while let Some(next_line) = self.read_line()? {
+      if next_line.is_comment() {
+        continue;
+      }
       if !tokens.is_empty() {
         tokens.push(newline_token(end, self.bump));
         end += 1;

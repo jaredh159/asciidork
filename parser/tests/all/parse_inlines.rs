@@ -524,7 +524,6 @@ fn test_mono() {
       ],
     ),
   ]);
-  // jared
 }
 
 // NB: asciidoctor does not get these right
