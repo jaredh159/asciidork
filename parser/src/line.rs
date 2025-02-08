@@ -208,6 +208,10 @@ impl<'arena> Line<'arena> {
     self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter() == Some(delimiter)
   }
 
+  pub fn is_any_delimiter(&self) -> bool {
+    self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter().is_some()
+  }
+
   pub fn is_indented(&self) -> bool {
     self.starts(Whitespace) && self.num_tokens() > 1
   }
@@ -640,9 +644,9 @@ impl<'arena> Line<'arena> {
       return false;
     }
     match self.current_token().map(|t| t.kind) {
+      None | Some(Plus) => false,
       Some(OpenBracket) => !self.is_block_attr_list(),
-      Some(Plus) | None => false,
-      _ => !self.starts_list_item(),
+      _ => !self.starts_list_item() && !self.is_any_delimiter(),
     }
   }
 
@@ -847,6 +851,7 @@ mod tests {
       ("[circles]", false),
       ("term::", false),
       ("term:: desc", false),
+      ("====", false),
     ];
     for (input, expected) in cases {
       let line = read_line!(input);
