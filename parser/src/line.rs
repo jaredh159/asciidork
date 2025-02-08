@@ -165,6 +165,11 @@ impl<'arena> Line<'arena> {
     self.tokens.is_empty()
   }
 
+  /// `true` if line has no tokens, or *only* whitespace
+  pub fn is_emptyish(&self) -> bool {
+    self.is_empty() || self.tokens.iter().all(|t| t.is_whitespaceish())
+  }
+
   pub fn is_heading(&self) -> bool {
     self.unadjusted_heading_level().is_some()
   }
@@ -203,6 +208,10 @@ impl<'arena> Line<'arena> {
     self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter() == Some(delimiter)
   }
 
+  pub fn is_any_delimiter(&self) -> bool {
+    self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter().is_some()
+  }
+
   pub fn is_indented(&self) -> bool {
     self.starts(Whitespace) && self.num_tokens() > 1
   }
@@ -213,9 +222,10 @@ impl<'arena> Line<'arena> {
     }
   }
 
-  pub fn discard_assert(&mut self, kind: TokenKind) {
-    let token = self.consume_current();
-    debug_assert!(token.unwrap().kind(kind));
+  pub fn discard_assert(&mut self, kind: TokenKind) -> Token<'arena> {
+    let token = self.consume_current().unwrap();
+    assert!(token.kind == kind);
+    token
   }
 
   pub fn discard_last(&mut self) -> Option<Token<'arena>> {
@@ -634,9 +644,9 @@ impl<'arena> Line<'arena> {
       return false;
     }
     match self.current_token().map(|t| t.kind) {
+      None | Some(Plus) => false,
       Some(OpenBracket) => !self.is_block_attr_list(),
-      Some(Plus) | None => false,
-      _ => !self.starts_list_item(),
+      _ => !self.starts_list_item() && !self.is_any_delimiter(),
     }
   }
 
@@ -841,6 +851,7 @@ mod tests {
       ("[circles]", false),
       ("term::", false),
       ("term:: desc", false),
+      ("====", false),
     ];
     for (input, expected) in cases {
       let line = read_line!(input);

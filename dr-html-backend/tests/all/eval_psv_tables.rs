@@ -173,6 +173,64 @@ assert_html!(
 );
 
 assert_html!(
+  topbot_doc_attr_to_frame_ends,
+  adoc! {r#"
+    :table-frame: topbot
+
+    |===
+    |A |B
+    |===
+  "#},
+  contains:
+    r#"<table class="tableblock frame-ends grid-all stretch">"#
+);
+
+assert_html!(
+  break_in_table,
+  adoc! {r#"
+    |===
+    |A +
+    B
+    |C +
+    D +
+    E
+    |===
+  "#},
+  contains:
+    r#"<p class="tableblock">A<br> B</p>"#,
+    r#"<p class="tableblock">C<br> D<br> E</p>"#,
+);
+
+assert_html!(
+  comments_in_table,
+  adoc! {r#"
+    |===
+    // x
+    // y
+    |a | b
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup>
+        <col style="width: 50%;">
+        <col style="width: 50%;">
+      </colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">a</p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">b</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+assert_html!(
   cell_content_paragraphs,
   adoc! {r#"
     |===

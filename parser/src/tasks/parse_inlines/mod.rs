@@ -674,7 +674,11 @@ impl<'arena> Parser<'arena> {
           }
 
           SingleQuote if line.current_is(Word) && subs.inline_formatting() => {
-            if acc.text.is_empty() || acc.text.ends_with(char::is_whitespace) {
+            if acc.text.is_empty()
+              || acc
+                .text
+                .ends_with(|c| c.is_whitespace() || c.is_ascii_punctuation())
+            {
               acc.push_text_token(&token);
             } else {
               acc.push_node(CurlyQuote(LegacyImplicitApostrophe), token.loc);
@@ -685,12 +689,23 @@ impl<'arena> Parser<'arena> {
             acc.push_node(MultiCharWhitespace(token.lexeme), token.loc);
           }
 
-          Whitespace if line.current_is(Plus) && line.num_tokens() == 1 => {
+          Whitespace
+            if line.current_is(Plus)
+              && line
+                .peek_token()
+                .is_none_or(|t| t.kind == TokenKind::Newline) =>
+          {
             let mut loc = token.loc;
             line.discard_assert(Plus);
             loc.end += 2; // plus and newline
             acc.push_node(LineBreak, loc);
-            break;
+            if !line.is_empty() {
+              // NB: see `break_in_table` test, we can get here only when
+              // we've coalesced tokens including a break in a table cell
+              loc.end = line.discard_assert(TokenKind::Newline).loc.end;
+            } else {
+              break;
+            }
           }
 
           TokenKind::Newline => acc.push_node(Inline::Newline, token.loc),

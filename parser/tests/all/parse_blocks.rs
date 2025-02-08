@@ -148,7 +148,7 @@ fn test_parse_discrete_headings() {
 }
 
 #[test]
-fn test_multi_blocks_without_empty_lines() {
+fn test_multi_blocks() {
   let cases = vec![
     adoc! {"
       foo
@@ -160,6 +160,9 @@ fn test_multi_blocks_without_empty_lines() {
       [[block-anchor]]
       bar
     "},
+    // middle line should be trimmed and considered an empty line
+    // @see https://docs.asciidoctor.org/asciidoc/latest/normalization
+    "foo\n   \nbar",
   ];
   for case in cases {
     assert_eq!(parse_blocks!(case).len(), 2);
@@ -552,13 +555,6 @@ fn test_parse_multi_para_delimited_sidebar_block() {
       ..empty_block!(0)
     }
   );
-}
-
-#[test]
-fn test_unattached_attr_list() {
-  assert!(parse!("[normal]").is_ok());
-  assert!(parse!("[foo]\n").is_ok());
-  assert!(parse!("[]\n\n").is_ok());
 }
 
 assert_error!(

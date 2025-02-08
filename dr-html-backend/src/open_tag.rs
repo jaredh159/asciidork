@@ -111,6 +111,9 @@ impl OpenTag {
       Some("topbot") if name == "frame" => self.push_prefixed_class("ends", prefix),
       Some(value) => self.push_prefixed_class(value, prefix),
       None => match doc_meta.get(doc_name.unwrap_or(name)) {
+        Some(AttrValue::String(s)) if s == "topbot" && name == "frame" => {
+          self.push_prefixed_class("ends", prefix);
+        }
         Some(AttrValue::String(s)) => self.push_prefixed_class(s, prefix),
         _ => {
           if let Some(default_value) = default_value {

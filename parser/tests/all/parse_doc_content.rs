@@ -58,6 +58,21 @@ assert_error!(
   "}
 );
 
+assert_error!(
+  unattached_meta_warning2,
+  adoc! {"
+    [[whoops-custom-id]]
+
+    == Sect 1
+  "},
+  error! {"
+     --> test.adoc:1:1
+      |
+    1 | [[whoops-custom-id]]
+      | ^^^^^^^^^^^^^^^^^^^^ Unattached block metadata
+  "}
+);
+
 #[test]
 fn test_sectioned_w_preamble() {
   assert_doc_content!(

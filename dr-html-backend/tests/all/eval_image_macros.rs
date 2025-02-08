@@ -381,3 +381,14 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  image_macro_after_trailing_spaces,
+  "<<<\n   \nimage::image_003.png[]\n",
+  html! {r#"
+    <div style="page-break-after: always;"></div>
+    <div class="imageblock">
+      <div class="content"><img src="image_003.png" alt="image 003"></div>
+    </div>
+  "#}
+);

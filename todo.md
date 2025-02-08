@@ -55,6 +55,10 @@
   reftext, so `[[foo]]Bar:: baz` produces an anchor with the refext of `Bar`. Currently we
   don't support this, the author would need to specify the reftext explicitly with
   `[[foo,Bar]]Bar:: baz`
+- asciidoctor allows unnattached block attr lines, like `[[foo]]\n\n`, and seems to attach
+  it to the next block. the documentation says there should be no empty line. asciidork
+  sometimes will attach the metadata, and sometimes will not, but with `--strict` will
+  always emit an error.
 
 ## design philosophy
 
