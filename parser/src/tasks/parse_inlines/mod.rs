@@ -518,7 +518,7 @@ impl<'arena> Parser<'arena> {
 
           Backtick
             if subs.inline_formatting()
-              && line.current_is(Plus)
+              && line.current_token().is_kind_len(Plus, 1)
               && contains_seq(&[Len(1, Plus), Kind(Backtick)], &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
@@ -557,7 +557,7 @@ impl<'arena> Parser<'arena> {
 
           Backtick
             if subs.inline_formatting()
-              && self.starts_unconstrained(&[Kind(Backtick)], &token, &line, lines) =>
+              && self.starts_unconstrained(&[Kind(Backtick); 2], &token, &line, lines) =>
           {
             self.parse_node(Mono, [Kind(Backtick); 2], &token, &mut acc, line, lines)?;
             break;

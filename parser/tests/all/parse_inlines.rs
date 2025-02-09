@@ -394,14 +394,6 @@ fn test_joining_newlines() {
       ],
     ),
     (
-      "`+{name}+`\nbar",
-      nodes![
-        node!(LitMono(src!("{name}", 2..8)), 0..10),
-        node!(Inline::Newline, 10..11),
-        node!("bar"; 11..14),
-      ],
-    ),
-    (
       "+_foo_+\nbar",
       nodes![
         node!(InlinePassthru(nodes![node!("_foo_"; 1..6)]), 0..7),
@@ -448,6 +440,35 @@ fn test_line_breaks() {
         node!("foo+"; 0..4),
         node!(Inline::Newline, 4..5),
         node!("bar"; 5..8),
+      ],
+    ),
+  ]);
+}
+
+#[test]
+fn test_lit_mono() {
+  run(vec![
+    (
+      "`+{name}+`\nbar",
+      nodes![
+        node!(LitMono(src!("{name}", 2..8)), 0..10),
+        node!(Inline::Newline, 10..11),
+        node!("bar"; 11..14),
+      ],
+    ),
+    (
+      "`+{name}+`",
+      nodes![node!(LitMono(src!("{name}", 2..8)), 0..10)],
+    ),
+    (
+      "`+_foo_+`",
+      nodes![node!(LitMono(src!("_foo_", 2..7)), 0..9)],
+    ),
+    (
+      "`++f` bar +` baz", // <-- NOT lit mono
+      nodes![
+        node!(Mono(just!("++f", 1..4)), 0..5),
+        node!(" bar +` baz"; 5..16),
       ],
     ),
   ]);
@@ -523,6 +544,7 @@ fn test_mono() {
         node!(Mono(nodes![node!("'bar'"; 5..10)]), 4..11),
       ],
     ),
+    ("`not`mono", just!("`not`mono", 0..9)),
   ]);
 }
 
@@ -833,14 +855,6 @@ fn test_parse_inlines() {
         node!(MultiCharWhitespace(bstr!("   ")), 3..6),
         node!("bar"; 6..9),
       ],
-    ),
-    (
-      "`+{name}+`",
-      nodes![node!(LitMono(src!("{name}", 2..8)), 0..10)],
-    ),
-    (
-      "`+_foo_+`",
-      nodes![node!(LitMono(src!("_foo_", 2..7)), 0..9)],
     ),
     (
       "foo <bar> & lol",
