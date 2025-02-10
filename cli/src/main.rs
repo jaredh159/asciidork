@@ -199,3 +199,5 @@ impl DiagnosticColor for Colorizer {
     format!("{}", Into::<String>::into(s).red().bold())
   }
 }
+
+// hack: force cli version publish - dec4b426

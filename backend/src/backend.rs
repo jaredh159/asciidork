@@ -70,7 +70,7 @@ pub trait Backend {
   fn enter_passthrough_block(&mut self, block: &Block, content: &BlockContent);
   fn exit_passthrough_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block);
-  fn exit_image_block(&mut self, block: &Block);
+  fn exit_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block);
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn enter_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
