@@ -186,7 +186,7 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
     }
     (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs })) => {
       backend.enter_image_block(target, attrs, block);
-      backend.exit_image_block(block);
+      backend.exit_image_block(target, attrs, block);
     }
     (Context::DocumentAttributeDecl, Content::DocumentAttribute(name, entry)) => {
       backend.visit_document_attribute_decl(name, entry);

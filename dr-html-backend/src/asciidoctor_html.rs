@@ -163,7 +163,7 @@ impl Backend for AsciidoctorHtml {
     if self.render_doc_title() {
       self.push_str("</h1>");
     } else {
-      self.take_buffer(); // discard
+      self.swap_take_buffer(); // discard
     }
     self.render_document_authors();
   }
@@ -308,7 +308,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["listingblock"], &block.meta.attrs);
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
     self.push_str(r#"<div class="content"><pre"#);
     if let Some(lang) = self.source_lang(block) {
       self.push([
@@ -355,7 +355,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
     self.push_str("<blockquote>");
   }
 
@@ -367,7 +367,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
     self.push_str("<blockquote>");
   }
 
@@ -383,7 +383,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_verse_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["verseblock"], &block.meta.attrs);
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
     self.push_str(r#"<pre class="content">"#);
   }
 
@@ -477,7 +477,7 @@ impl Backend for AsciidoctorHtml {
       ul.push_class("checklist");
     }
     self.push_open_tag(div);
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
     self.push_open_tag(ul);
   }
 
@@ -506,7 +506,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.open_element("div", &["dlist"], &block.meta.attrs);
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
     self.push_str("<dl>");
   }
 
@@ -561,7 +561,7 @@ impl Backend for AsciidoctorHtml {
     let class = custom.unwrap_or_else(|| list_class_from_depth(depth));
     let classes = &["olist", class];
     self.open_element("div", classes, &block.meta.attrs);
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
     self.push([r#"<ol class=""#, class, "\""]);
 
     if list_type != "1" {
@@ -639,7 +639,7 @@ impl Backend for AsciidoctorHtml {
     if self.doc_meta.get_doctype() != DocType::Inline {
       if !self.state.contains(&VisitingSimpleTermDescription) {
         self.open_element("div", &["paragraph"], &block.meta.attrs);
-        self.render_block_title(&block.meta);
+        self.render_buffered_block_title(&block.meta);
       }
       self.push_str("<p>");
     }
@@ -999,7 +999,7 @@ impl Backend for AsciidoctorHtml {
       false
     };
 
-    self.render_image(target, attrs);
+    self.render_image(target, attrs, false);
     if with_link {
       self.push_str("</a>");
     }
@@ -1212,7 +1212,7 @@ impl Backend for AsciidoctorHtml {
         self.push([kind.str(), r#""></i></td><td class="content">"#]);
       }
     }
-    self.render_block_title(&block.meta);
+    self.render_buffered_block_title(&block.meta);
   }
 
   #[instrument(skip_all)]
@@ -1239,7 +1239,7 @@ impl Backend for AsciidoctorHtml {
       self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
       has_link = true;
     }
-    self.render_image(img_target, img_attrs);
+    self.render_image(img_target, img_attrs, true);
     if has_link {
       self.push_str("</a>");
     }
@@ -1247,14 +1247,19 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_image_block(&mut self, block: &Block) {
+  fn exit_image_block(&mut self, _target: &str, attrs: &AttrList, block: &Block) {
     let prefix = if self.doc_meta.is_false("figure-caption") {
       None
     } else {
       self.fig_caption_num += 1;
       Some(Cow::Owned(format!("Figure {}. ", self.fig_caption_num)))
     };
-    self.render_prefixed_block_title(&block.meta, prefix);
+    if let Some(title) = attrs.named("title") {
+      self.render_block_title(title, prefix);
+    } else if block.meta.title.is_some() {
+      let title = self.take_buffer();
+      self.render_block_title(&title, prefix);
+    }
     self.push_str(r#"</div>"#);
   }
 
@@ -1306,7 +1311,7 @@ impl Backend for AsciidoctorHtml {
       return; // this means the footnore was referring to a previously defined fn by id
     }
     let num = self.footnotes.borrow().len() + 1;
-    let footnote = self.take_buffer();
+    let footnote = self.swap_take_buffer();
     let nums = num.to_string();
     self.push_str(r#"<sup class="footnote""#);
     if let Some(id) = id {
@@ -1346,9 +1351,17 @@ impl AsciidoctorHtml {
   }
 
   pub(crate) fn push_buffered(&mut self) {
-    let mut buffer = String::new();
-    mem::swap(&mut buffer, &mut self.alt_html);
+    let buffer = self.take_buffer();
     self.push_str(&buffer);
+  }
+
+  fn take_buffer(&mut self) -> String {
+    mem::take(&mut self.alt_html)
+  }
+
+  fn swap_take_buffer(&mut self) -> String {
+    std::mem::swap(&mut self.alt_html, &mut self.html);
+    std::mem::take(&mut self.alt_html)
   }
 
   pub(crate) fn push_open_tag(&mut self, tag: OpenTag) {
@@ -1368,23 +1381,20 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn render_block_title(&mut self, meta: &ChunkMeta) {
+  fn render_buffered_block_title(&mut self, meta: &ChunkMeta) {
     if meta.title.is_some() {
-      self.push_str(r#"<div class="title">"#);
-      self.push_buffered();
-      self.push_str("</div>");
+      let buf = self.take_buffer();
+      self.render_block_title(&buf, None);
     }
   }
 
-  fn render_prefixed_block_title(&mut self, meta: &ChunkMeta, prefix: Option<Cow<str>>) {
-    if meta.title.is_some() {
-      self.push_str(r#"<div class="title">"#);
-      if let Some(prefix) = prefix {
-        self.push_str(&prefix);
-      }
-      self.push_buffered();
-      self.push_str("</div>");
+  fn render_block_title(&mut self, title: &str, prefix: Option<Cow<str>>) {
+    self.push_str(r#"<div class="title">"#);
+    if let Some(prefix) = prefix {
+      self.push_str(&prefix);
     }
+    self.push_str(title);
+    self.push_str("</div>");
   }
 
   pub(crate) fn open_element(&mut self, element: &str, classes: &[&str], attrs: &impl AttrData) {
@@ -1494,13 +1504,6 @@ impl AsciidoctorHtml {
     mem::swap(&mut self.html, &mut self.alt_html);
   }
 
-  fn take_buffer(&mut self) -> String {
-    mem::swap(&mut self.alt_html, &mut self.html);
-    let mut buffered = String::new();
-    mem::swap(&mut buffered, &mut self.alt_html);
-    buffered
-  }
-
   // TODO: handle embedding images, data-uri, etc., this is a naive impl
   // @see https://github.com/jaredh159/asciidork/issues/7
   fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
@@ -1596,7 +1599,7 @@ impl AsciidoctorHtml {
     self.push_str("</object>");
   }
 
-  fn render_image(&mut self, target: &str, attrs: &AttrList) {
+  fn render_image(&mut self, target: &str, attrs: &AttrList, is_block: bool) {
     let format = attrs.named("format").or_else(|| file::ext(target));
     let is_svg = matches!(format, Some("svg" | "SVG"));
     if is_svg && attrs.has_option("interactive") && self.doc_meta.safe_mode != SafeMode::Secure {
@@ -1618,7 +1621,9 @@ impl AsciidoctorHtml {
     self.push_ch('"');
     self.push_named_or_pos_attr("width", 1, attrs);
     self.push_named_or_pos_attr("height", 2, attrs);
-    self.push_named_attr("title", attrs);
+    if !is_block {
+      self.push_named_attr("title", attrs);
+    }
     self.push_ch('>');
   }
 }

@@ -149,6 +149,21 @@ assert_html!(
   "#}
 );
 
+assert_html!(
+  block_image_title_rendered_below,
+  adoc! {r#"
+    image::flower.jpg[title="So pretty"]
+  "#},
+  html! {r#"
+    <div class="imageblock">
+      <div class="content">
+        <img src="flower.jpg" alt="flower">
+      </div>
+      <div class="title">Figure 1. So pretty</div>
+    </div>
+  "#}
+);
+
 // https://docs.asciidoctor.org/asciidoc/latest/macros/image-position/
 assert_html!(
   image_size,
