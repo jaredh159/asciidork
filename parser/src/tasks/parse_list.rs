@@ -39,8 +39,8 @@ impl<'arena> Parser<'arena> {
       self.ctx.advance_callout_list(self.bump);
     }
 
-    let meta =
-      meta.unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc_start(), self.bump));
+    let meta = meta
+      .unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc().clamp_start(), self.bump));
     Ok(Block {
       meta,
       context: variant.to_context(),
@@ -83,14 +83,14 @@ impl<'arena> Parser<'arena> {
     } else if list_variant == ListVariant::Callout {
       let conum = marker.callout_num().unwrap_or(*autogen_conum);
       if conum != *autogen_conum {
-        self.err_at_loc(
+        self.err_at(
           format!("Unexpected callout number, expected `<{autogen_conum}>`"),
           marker_src.loc,
         )?;
       }
       let callouts = self.ctx.get_callouts(conum);
       if callouts.is_empty() {
-        self.err_at_loc(
+        self.err_at(
           format!("No callout found for number `{}`", conum),
           marker_src.loc,
         )?;

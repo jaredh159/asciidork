@@ -203,22 +203,22 @@ impl<'arena> Parser<'arena> {
       AttrIr::Positional(tokens, _) | AttrIr::Id(tokens) if formatted_text => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
-          tokens.first().unwrap().loc.start,
-          tokens.last().unwrap().loc.end,
+          SourceLocation::spanning(tokens.first().unwrap().loc, tokens.last().unwrap().loc),
         )?;
       }
       AttrIr::Options(groups) | AttrIr::Roles(groups) if formatted_text => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
-          groups.first().unwrap().first().unwrap().loc.start,
-          groups.last().unwrap().last().unwrap().loc.end,
+          SourceLocation::spanning(
+            groups.first().unwrap().first().unwrap().loc,
+            groups.last().unwrap().last().unwrap().loc,
+          ),
         )?;
       }
       AttrIr::Named(name, tokens) if formatted_text => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
-          name.loc.start,
-          tokens.last().unwrap().loc.end,
+          SourceLocation::spanning(name.loc, tokens.last().unwrap().loc),
         )?;
       }
       AttrIr::Positional(mut tokens, with_shorthand) => {
@@ -253,7 +253,7 @@ impl<'arena> Parser<'arena> {
         let mut line = Line::new(tokens);
         let src = line.consume_to_string(self.bump);
         if attr_list.id.is_some() {
-          self.err_at("More than one id attribute", src.loc.start, src.loc.end)?;
+          self.err_at("More than one id attribute", src.loc)?;
         } else {
           attr_list.id = Some(src);
         }

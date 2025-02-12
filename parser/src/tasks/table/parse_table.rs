@@ -40,11 +40,11 @@ impl<'arena> Parser<'arena> {
       let msg = "Cell separator must be exactly one character";
       let mut chars = sep.chars();
       match chars.next() {
-        None => self.err_at_pattern(msg, meta.start, "separator")?,
+        None => self.err_at_pattern(msg, meta.start_loc, "separator")?,
         Some(ch) => {
           format.replace_separator(ch);
           if chars.next().is_some() {
-            self.err_at_pattern(msg, meta.start, sep)?;
+            self.err_at_pattern(msg, meta.start_loc, sep)?;
           }
         }
       }

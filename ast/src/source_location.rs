@@ -19,9 +19,28 @@ impl SourceLocation {
     Self { start, end, include_depth }
   }
 
+  pub fn spanning(start: Self, end: Self) -> Self {
+    debug_assert!(start.start <= end.start);
+    debug_assert!(start.end <= end.end);
+    debug_assert!(start.include_depth == end.include_depth);
+    Self {
+      start: start.start,
+      end: end.end,
+      include_depth: start.include_depth,
+    }
+  }
+
   pub fn extend(&mut self, other: SourceLocation) {
     self.start = self.start.min(other.start);
     self.end = self.end.max(other.end);
+  }
+
+  pub fn adding_to_end(&self, adding: u32) -> SourceLocation {
+    Self::new_depth(self.start, self.end + adding, self.include_depth)
+  }
+
+  pub fn setting_end(&self, end: u32) -> SourceLocation {
+    Self::new_depth(self.start, end, self.include_depth)
   }
 
   #[must_use]

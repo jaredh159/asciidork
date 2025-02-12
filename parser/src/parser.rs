@@ -243,11 +243,11 @@ impl<'arena> Parser<'arena> {
       return Ok(meta);
     }
     assert!(!lines.is_empty());
-    let start = lines.current_token().unwrap().loc.start;
+    let start_loc = lines.current_token().unwrap().loc;
     let mut attrs = MultiAttrList::new_in(self.bump);
     let mut title = None;
     if !lines.current().unwrap().is_fully_unconsumed() {
-      return Ok(ChunkMeta { attrs, title, start });
+      return Ok(ChunkMeta::new(attrs, title, start_loc));
     }
     loop {
       match lines.current() {
@@ -278,7 +278,7 @@ impl<'arena> Parser<'arena> {
         _ => break,
       }
     }
-    Ok(ChunkMeta { attrs, title, start })
+    Ok(ChunkMeta::new(attrs, title, start_loc))
   }
 
   pub(crate) fn string(&self, s: &str) -> BumpString<'arena> {

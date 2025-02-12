@@ -18,7 +18,7 @@ impl<'arena> Parser<'arena> {
 
     let meta = self.parse_chunk_meta(&mut lines)?;
     if lines.is_empty() {
-      self.err_line_starting("Unattached block metadata", meta.start)?;
+      self.err_line_starting("Unattached block metadata", meta.start_loc)?;
       return self.parse_block();
     }
 
@@ -31,7 +31,7 @@ impl<'arena> Parser<'arena> {
         } else {
           let section = self.parse_section()?.unwrap();
           return Ok(Some(Block {
-            meta: ChunkMeta::empty(section.meta.start, self.bump),
+            meta: ChunkMeta::empty(section.meta.start_loc, self.bump),
             context: Context::Section,
             content: Content::Section(section),
           }));
@@ -45,7 +45,7 @@ impl<'arena> Parser<'arena> {
     if lines.is_block_macro() {
       return match first_token.lexeme.as_str() {
         "image:" => self.parse_image_block(lines, meta),
-        "toc:" => self.parse_toc_macro(first_token.loc, lines, meta),
+        "toc:" => self.parse_toc_macro(lines, meta),
         _ => todo!("unhandled block macro type: `{:?}`", first_token.lexeme),
       }
       .map(Some);
@@ -75,7 +75,7 @@ impl<'arena> Parser<'arena> {
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines)? {
           self.restore_lines(lines);
           if let Err(err) = self.document.meta.insert_doc_attr(&key, value.clone()) {
-            self.err_at(err, meta.start, end)?;
+            self.err_at(err, meta.start_loc.setting_end(end))?;
           }
           return Ok(Some(Block {
             meta,
@@ -133,12 +133,12 @@ impl<'arena> Parser<'arena> {
   // they are the documented way to separate adjacent lists
   fn parse_comment_block(&mut self, lines: &mut ContiguousLines<'arena>) -> Option<Block<'arena>> {
     if lines.starts_with_comment_line() {
-      let start = lines.current_token().unwrap().loc.start;
+      let start_loc = lines.current_token().unwrap().loc.clamp_start();
       lines.consume_current();
       lines.discard_leading_comment_lines();
       if lines.is_empty() {
         return Some(Block {
-          meta: ChunkMeta::empty(start, self.bump),
+          meta: ChunkMeta::empty(start_loc, self.bump),
           context: Context::Comment,
           content: Content::Empty(EmptyMetadata::None),
         });
@@ -318,16 +318,14 @@ impl<'arena> Parser<'arena> {
 
   fn parse_toc_macro(
     &mut self,
-    token_loc: SourceLocation,
     lines: ContiguousLines<'arena>,
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     self.ctx.saw_toc_macro = true;
     if self.document.toc.is_none() {
-      self.err_at(
+      self.err_line(
         "Found macro placing Table of Contents, but TOC not enabled",
-        token_loc.start,
-        lines.current().unwrap().last_loc().unwrap().end,
+        lines.current().unwrap(),
       )?;
     }
     Ok(Block {

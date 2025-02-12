@@ -21,7 +21,7 @@ impl<'arena> Parser<'arena> {
           let trimmed = tokens.consume_current().unwrap();
           start = trimmed.loc.end;
         }
-        Some(quote.loc.start)
+        Some(quote.loc)
       } else {
         None
       }
@@ -30,8 +30,8 @@ impl<'arena> Parser<'arena> {
     loop {
       if tokens.current().is_none() || (quote.is_none() && self.consume_dsv_delimiter(tokens, ctx))
       {
-        if let Some(start) = quote {
-          self.err_at("Unclosed CSV quote", start, start + 1)?;
+        if let Some(loc) = quote {
+          self.err_at("Unclosed CSV quote", loc.clamp_start().incr_end())?;
         }
         return self
           .finish_cell(CellSpec::default(), cell_tokens, col_index, ctx, start..end)
@@ -49,7 +49,7 @@ impl<'arena> Parser<'arena> {
       end = token.loc.end;
       match token.kind {
         DoubleQuote if quote.is_none() => {
-          self.err_at_loc(
+          self.err_at(
             "Double quote not allowed here, entire field must be quoted",
             token.loc,
           )?;

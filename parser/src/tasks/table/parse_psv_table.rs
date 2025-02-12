@@ -72,7 +72,7 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     }
 
-    let spec_start = tokens.current().unwrap().loc.start;
+    let spec_loc = tokens.current().unwrap().loc;
     let (spec, mut start) = match self.consume_cell_start(tokens, ctx.format.separator()) {
       Some((spec, start)) => (spec, start),
       None => {
@@ -89,8 +89,7 @@ impl<'arena> Parser<'arena> {
           spec.col_span.unwrap(),
           ctx.num_cols
         ),
-        spec_start,
-        start - 1,
+        spec_loc.setting_end(start - 1),
       )?;
     }
 
@@ -835,7 +834,7 @@ mod tests {
       Block {
         meta: ChunkMeta {
           title: Some(just!("Simple psv table", 1..17)),
-          ..chunk_meta!(0)
+          ..chunk_meta!(0..1)
         },
         content: BlockContent::Table(Table {
           col_widths: ColWidths::new(vecb![w(1), w(1), w(1)]),

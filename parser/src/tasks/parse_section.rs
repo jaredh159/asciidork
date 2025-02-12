@@ -10,7 +10,7 @@ impl<'arena> Parser<'arena> {
 
     let Some(line) = lines.current() else {
       if !meta.is_empty() {
-        self.err_line_starting("Unattached block metadata", meta.start)?;
+        self.err_line_starting("Unattached block metadata", meta.start_loc)?;
       }
       self.restore_peeked_meta(meta);
       return Ok(None);

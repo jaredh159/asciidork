@@ -27,6 +27,10 @@ impl ListItem<'_> {
     self.marker_src.loc.start
   }
 
+  pub const fn loc(&self) -> SourceLocation {
+    self.marker_src.loc
+  }
+
   pub fn last_loc(&self) -> Option<SourceLocation> {
     self
       .blocks
