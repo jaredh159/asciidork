@@ -19,8 +19,7 @@ impl<'arena> Parser<'arena> {
         } else {
           "Duplicate anchor id"
         },
-        id.loc.start,
-        id.loc.end,
+        id.loc,
       )?;
     } else {
       anchors.insert(id.src.clone(), anchor);

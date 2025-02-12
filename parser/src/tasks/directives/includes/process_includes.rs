@@ -46,7 +46,7 @@ impl<'arena> Parser<'arena> {
     if let Some(max_depth) = self.exceeded_max_include_depth() {
       self.err_line_starting(
         format!("Maximum include depth of {} exceeded", max_depth),
-        directive.first_token.loc.start,
+        directive.first_token.loc,
       )?;
       return Ok(DirectiveAction::Passthrough);
     }
@@ -209,8 +209,11 @@ impl<'arena> Parser<'arena> {
   ) -> Result<()> {
     self.err_at(
       msg,
-      directive.first_token.loc.end,
-      directive.first_token.loc.end + directive.target.len() as u32,
+      SourceLocation::new_depth(
+        directive.first_token.loc.end,
+        directive.first_token.loc.end + directive.target.len() as u32,
+        directive.first_token.loc.include_depth,
+      ),
     )
   }
 

@@ -51,11 +51,10 @@ impl<'arena> Parser<'arena> {
 
     let attr = if let Some(re_match) = captures.get(2) {
       if is_negated {
-        let start = line.loc().unwrap().start + re_match.start() as u32;
+        let loc = line.loc().unwrap();
         self.err_at(
           "Cannot unset attr with `!` AND provide value",
-          start + 1,
-          start + 1 + re_match.len() as u32,
+          loc.incr_start().adding_to_end(re_match.end() as u32),
         )?;
       }
 

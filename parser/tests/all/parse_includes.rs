@@ -270,6 +270,42 @@ assert_error!(
   "}
 );
 
+assert_error!(
+  err_in_included_file_longer_than_parent,
+  resolving: bytes! {"
+    included file is longer than
+    original file, to produce out of bounds
+    error from incorrect diagnostic file
+
+    xref:a.adoc#b[c]
+  "},
+  adoc! {"
+    include::other.adoc[]
+  "},
+  error! {"
+     --> other.adoc:5:6
+      |
+    5 | xref:a.adoc#b[c]
+      |      ^^^^^^^^ Invalid cross reference, no anchor found for `a.adoc#b`
+  "}
+);
+
+assert_error!(
+  csv_unterminated_quote_err_from_include,
+  resolving: b"one,\"two",
+  adoc! {r#"
+      ,===
+      include::other.csv[]
+      ,===
+    "#},
+  error! { r#"
+       --> other.csv:1:5
+        |
+      1 | one,"two
+        |     ^ Unclosed CSV quote
+    "#}
+);
+
 #[test]
 fn include_resolver_gets_passed_correct_target() {
   let cases = [

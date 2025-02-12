@@ -4,24 +4,32 @@ use crate::internal::*;
 pub struct ChunkMeta<'arena> {
   pub attrs: MultiAttrList<'arena>,
   pub title: Option<InlineNodes<'arena>>,
-  pub start: u32, // rename
+  pub start_loc: SourceLocation,
 }
 
 impl<'arena> ChunkMeta<'arena> {
-  pub fn empty(start: u32, bump: &'arena Bump) -> Self {
+  pub fn empty(start_loc: SourceLocation, bump: &'arena Bump) -> Self {
     Self {
       title: None,
       attrs: MultiAttrList::new_in(bump),
-      start,
+      start_loc,
     }
   }
 
   pub fn new(
     attrs: impl Into<MultiAttrList<'arena>>,
     title: Option<InlineNodes<'arena>>,
-    start: u32,
+    start_loc: impl Into<SourceLocation>,
   ) -> Self {
-    Self { title, attrs: attrs.into(), start }
+    let mut cm = Self {
+      title,
+      attrs: attrs.into(),
+      start_loc: start_loc.into(),
+    };
+    if cm.is_empty() {
+      cm.start_loc = cm.start_loc.clamp_start();
+    }
+    cm
   }
 
   pub fn is_empty(&self) -> bool {

@@ -33,7 +33,7 @@ impl<'arena> Parser<'arena> {
     if !endif_attrs.is_empty() && expected != &endif_attrs {
       self.err_at_pattern(
         format!("Mismatched endif directive, expected `{}`", &expected),
-        line.loc().unwrap().start,
+        line.loc().unwrap(),
         &endif_attrs,
       )?;
       return Ok(DirectiveAction::Passthrough);

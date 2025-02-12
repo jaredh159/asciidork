@@ -251,7 +251,7 @@ impl<'arena> Parser<'arena> {
     if !expected_tags.is_empty() {
       let mut tags = expected_tags.into_iter().collect::<Vec<_>>();
       tags.sort_unstable();
-      self.err_at_loc(
+      self.err_at(
         format!(
           "Tag{} `{}` not found in included file",
           if tags.len() > 1 { "s" } else { "" },

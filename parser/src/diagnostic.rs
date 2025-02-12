@@ -11,21 +11,9 @@ pub struct Diagnostic {
 }
 
 impl Parser<'_> {
-  pub(crate) fn err_at(&self, message: impl Into<String>, start: u32, end: u32) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(start);
-    self.handle_err(Diagnostic {
-      line_num,
-      line: self.lexer.line_of(start).to_string(),
-      message: message.into(),
-      underline_start: offset,
-      underline_width: end - start,
-      source_file: self.lexer.source_file().clone(),
-    })
-  }
-
   pub(crate) fn err_line(&self, message: impl Into<String>, line: &Line) -> Result<()> {
-    let start = line.loc().expect("non empty line for `err_line`").start;
-    let (line_num, offset) = self.lexer.line_number_with_offset(start);
+    let loc = line.loc().expect("non empty line for `err_line`");
+    let (line_num, offset) = self.lexer.line_number_with_offset(loc);
     let line = line.reassemble_src().to_string();
     self.handle_err(Diagnostic {
       line_num,
@@ -33,20 +21,24 @@ impl Parser<'_> {
       underline_start: offset,
       underline_width: line.len() as u32,
       line,
-      source_file: self.lexer.source_file().clone(),
+      source_file: self.lexer.source_file_at(loc.include_depth).clone(),
     })
   }
 
-  pub(crate) fn err_line_starting(&self, message: impl Into<String>, start: u32) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(start);
-    let line = self.lexer.line_of(start);
+  pub(crate) fn err_line_starting(
+    &self,
+    message: impl Into<String>,
+    loc: SourceLocation,
+  ) -> Result<()> {
+    let (line_num, offset) = self.lexer.line_number_with_offset(loc);
+    let line = self.lexer.line_of(loc);
     self.handle_err(Diagnostic {
       line_num,
       message: message.into(),
       underline_start: offset,
       underline_width: line.len() as u32,
       line: String::from(line.as_str()),
-      source_file: self.lexer.source_file().clone(),
+      source_file: self.lexer.source_file_at(loc.include_depth).clone(),
     })
   }
 
@@ -83,7 +75,7 @@ impl Parser<'_> {
   pub(crate) fn err_at_pattern(
     &self,
     message: impl Into<String>,
-    line_start: u32,
+    line_start: SourceLocation,
     pattern: &str,
   ) -> Result<()> {
     let (line_num, _) = self.lexer.line_number_with_offset(line_start);
@@ -95,7 +87,7 @@ impl Parser<'_> {
         message: message.into(),
         underline_start: idx as u32,
         underline_width: pattern.len() as u32,
-        source_file: self.lexer.source_file().clone(),
+        source_file: self.lexer.source_file_at(line_start.include_depth).clone(),
       });
     }
     self.handle_err(Diagnostic {
@@ -104,48 +96,56 @@ impl Parser<'_> {
       message: message.into(),
       underline_start: 0,
       underline_width: line.len() as u32,
-      source_file: self.lexer.source_file().clone(),
+      source_file: self.lexer.source_file_at(line_start.include_depth).clone(),
     })
   }
 
-  pub(crate) fn err_at_loc(&self, message: impl Into<String>, loc: SourceLocation) -> Result<()> {
-    self.err_at(message, loc.start, loc.end)
+  pub(crate) fn err_at(&self, message: impl Into<String>, loc: SourceLocation) -> Result<()> {
+    let (line_num, offset) = self.lexer.line_number_with_offset(loc);
+    self.handle_err(Diagnostic {
+      line_num,
+      line: self.lexer.line_of(loc).to_string(),
+      message: message.into(),
+      underline_start: offset,
+      underline_width: loc.end - loc.start,
+      source_file: self.lexer.source_file_at(loc.include_depth).clone(),
+    })
   }
 
   pub(crate) fn err_token_full(&self, message: impl Into<String>, token: &Token) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc.start);
+    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc);
     self.handle_err(Diagnostic {
       line_num,
-      line: self.lexer.line_of(token.loc.start).to_string(),
+      line: self.lexer.line_of(token.loc).to_string(),
       message: message.into(),
       underline_start: offset,
       underline_width: token.lexeme.len() as u32,
-      source_file: self.lexer.source_file().clone(),
+      source_file: self.lexer.source_file_at(token.loc.include_depth).clone(),
     })
   }
 
   pub(crate) fn err_token_start(&self, message: impl Into<String>, token: &Token) -> Result<()> {
-    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc.start);
+    let (line_num, offset) = self.lexer.line_number_with_offset(token.loc);
     self.handle_err(Diagnostic {
       line_num,
-      line: self.lexer.line_of(token.loc.start).to_string(),
+      line: self.lexer.line_of(token.loc).to_string(),
       message: message.into(),
       underline_start: offset,
       underline_width: 1,
-      source_file: self.lexer.source_file().clone(),
+      source_file: self.lexer.source_file_at(token.loc.include_depth).clone(),
     })
   }
 
   pub(crate) fn err_token(&self, message: impl Into<String>, token: Option<&Token>) -> Result<()> {
     let location = token.map_or_else(|| self.lexer.loc(), |t| t.loc);
-    let (line_num, offset) = self.lexer.line_number_with_offset(location.start);
+    let (line_num, offset) = self.lexer.line_number_with_offset(location);
     self.handle_err(Diagnostic {
       line_num,
-      line: self.lexer.line_of(location.start).to_string(),
+      line: self.lexer.line_of(location).to_string(),
       message: message.into(),
       underline_start: offset,
       underline_width: 1,
-      source_file: self.lexer.source_file().clone(),
+      source_file: self.lexer.source_file_at(location.include_depth).clone(),
     })
   }
 

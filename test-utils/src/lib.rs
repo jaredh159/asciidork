@@ -253,7 +253,7 @@ macro_rules! cell {
 macro_rules! empty_block {
   ($start:expr) => {
     Block {
-      meta: ChunkMeta::empty($start, leaked_bump()),
+      meta: ChunkMeta::empty($start.into(), leaked_bump()),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
     }
@@ -263,7 +263,7 @@ macro_rules! empty_block {
 #[macro_export]
 macro_rules! chunk_meta {
   ($start:expr) => {
-    ChunkMeta::empty($start, leaked_bump())
+    ChunkMeta::empty($start.into(), leaked_bump())
   };
 }
 

@@ -139,7 +139,7 @@ fn test_list_custom_marker() {
       principle: just!("foo", 2..5),
       type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
-        meta: ChunkMeta::new(vecb![attrs::pos("circles", 7..14)], None, 6),
+        meta: ChunkMeta::new(vecb![attrs::pos("circles", 7..14)], None, 6..7),
         content: Content::List {
           depth: 2,
           variant: ListVariant::Unordered,

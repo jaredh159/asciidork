@@ -35,7 +35,7 @@ impl Parser<'_> {
   }
 
   fn invalid_xref(&self, target: &str, loc: SourceLocation) -> Result<()> {
-    self.err_at_loc(
+    self.err_at(
       format!("Invalid cross reference, no anchor found for `{target}`"),
       loc,
     )

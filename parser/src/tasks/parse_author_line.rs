@@ -36,15 +36,13 @@ impl<'arena> Parser<'arena> {
     if first_start == usize::MAX {
       self.err_token("invalid author line", line.current_token())
     } else if first_start > 0 {
-      let start = line.current_token().unwrap().loc.start;
-      self.err_at("invalid author line", start, start + first_start as u32)
+      let loc = line.current_token().unwrap().loc;
+      self.err_at("invalid author line", loc.adding_to_end(first_start as u32))
     } else if last_end < num_bytes {
-      let start = line.current_token().unwrap().loc.start;
-      self.err_at(
-        "invalid author line",
-        start + last_end as u32,
-        start + num_bytes as u32,
-      )
+      let mut loc = line.current_token().unwrap().loc;
+      loc.start += last_end as u32;
+      loc.end += num_bytes as u32;
+      self.err_at("invalid author line", loc)
     } else {
       Ok(())
     }
