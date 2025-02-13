@@ -109,6 +109,10 @@ impl<'arena> RootLexer<'arena> {
       .map(|(i, _)| i as u16)
   }
 
+  pub fn byte_before(&self, loc: SourceLocation) -> Option<u8> {
+    self.sources[loc.include_depth as usize].byte_before(loc.start)
+  }
+
   pub fn leveloffset(&self, idx: u16) -> i8 {
     self.sources[idx as usize].leveloffset
   }

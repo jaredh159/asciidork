@@ -34,7 +34,13 @@ impl<'arena> Parser<'arena> {
     lines: &mut ContiguousLines,
   ) -> bool {
     debug_assert!(!stop_tokens.is_empty());
-    !line.starts(Whitespace)
+    self.lexer.byte_before(token.loc).is_none_or(|c| {
+      c.is_ascii_whitespace()
+        || matches!(
+          c,
+          b'`' | b'*' | b'_' | b'[' | b'#' | b'+' | b'|' | b'\'' | b'=' | b'"' | b','
+        )
+    }) && !line.starts(Whitespace)
       && token.kind(stop_tokens.last().unwrap().token_kind())
       && (line.terminates_constrained(stop_tokens, &self.ctx.inline_ctx)
         || lines.terminates_constrained(stop_tokens, &self.ctx.inline_ctx))

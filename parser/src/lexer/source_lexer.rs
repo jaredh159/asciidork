@@ -169,7 +169,15 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   pub fn truncate(&mut self) {
-    self.src.truncate(self.offset as usize);
+    self.src.truncate(self.pos as usize);
+  }
+
+  pub fn byte_before(&self, pos: u32) -> Option<u8> {
+    if pos.saturating_sub(self.offset) == 0 {
+      None
+    } else {
+      self.src.get((pos - 1 - self.offset) as usize).copied()
+    }
   }
 
   pub fn raw_lines(&'arena self) -> impl Iterator<Item = &'arena str> {

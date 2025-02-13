@@ -205,7 +205,7 @@ impl<'arena> Parser<'arena> {
     if self.document.meta.get_doctype() == DocType::Inline {
       if self.peeked_lines.is_none() {
         // tmp:
-        self.peeked_lines = self.read_lines().expect("tmep");
+        self.peeked_lines = self.read_lines().expect("tmp");
       }
       self.lexer.truncate();
     }

@@ -619,6 +619,7 @@ fn test_confusing_patterns() {
 fn test_constrained_pairs() {
   run(vec![
     // non-matches
+    ("(*) foo * b", just!("(*) foo * b", 0..11)),
     ("foo#bar#baz", just!("foo#bar#baz", 0..11)),
     ("foo*bar*baz", just!("foo*bar*baz", 0..11)),
     ("foo_bar_baz", just!("foo_bar_baz", 0..11)),
