@@ -63,12 +63,14 @@ assert_html!(
 assert_html!(
   example_block,
   adoc! {r#"
+    .My Title
     ====
     foo
     ====
   "#},
   html! {r#"
     <div class="exampleblock">
+      <div class="title">Example 1. My Title</div>
       <div class="content">
         <div class="paragraph">
           <p>foo</p>

@@ -58,20 +58,6 @@ impl AsciidoctorHtml {
     self.push_open_tag(tag);
   }
 
-  pub(super) fn table_caption(&mut self, block: &Block) {
-    if !self.alt_html.is_empty() {
-      self.push_str(r#"<caption class="title">"#);
-      if let Some(caption) = block.meta.attrs.named("caption") {
-        self.push_str(caption);
-      } else if !self.doc_meta.is_false("table-caption") {
-        self.table_caption_num += 1;
-        self.push(["Table ", &num_str!(self.table_caption_num), ". "]);
-      }
-      let title = std::mem::take(&mut self.alt_html);
-      self.push([&title, "</caption>"]);
-    }
-  }
-
   pub(super) fn open_cell(&mut self, cell: &Cell, section: TableSection) {
     if matches!(section, TableSection::Header) || matches!(cell.content, CellContent::Header(_)) {
       self.push_str("<th");
