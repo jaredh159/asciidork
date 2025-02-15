@@ -81,6 +81,28 @@ assert_html!(
 );
 
 assert_html!(
+  nested_example_block,
+  adoc! {r#"
+    ====
+    ======
+    foo
+    ======
+    ====
+  "#},
+  html! {r#"
+    <div class="exampleblock">
+      <div class="content">
+        <div class="exampleblock">
+          <div class="content">
+            <div class="paragraph"><p>foo</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   delimited_quote,
   adoc! {r#"
     [quote,Monty Python and the Holy Grail]

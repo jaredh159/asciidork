@@ -164,6 +164,17 @@ impl<'arena> SourceLexer<'arena> {
       | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n' | b'\r') | None] => {
         Some((4, sequence[0].unwrap()))
       }
+      [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'=')] => {
+        let mut n = 5;
+        while self.nth(n) == Some(b'=') {
+          n += 1;
+        }
+        if matches!(self.nth(n), Some(b'\n' | b'\r') | None) {
+          Some((n, b'='))
+        } else {
+          None
+        }
+      }
       _ => None,
     }
   }

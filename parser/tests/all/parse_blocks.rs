@@ -411,6 +411,32 @@ fn test_parse_delimited_example_block() {
 }
 
 #[test]
+fn test_parse_nested_example_block() {
+  assert_block!(
+    adoc! {"
+      ====
+      ======
+      foo
+      ======
+      ====
+    "},
+    Block {
+      context: Context::Example,
+      content: Content::Compound(vecb![Block {
+        context: Context::Example,
+        content: Content::Compound(vecb![Block {
+          context: Context::Paragraph,
+          content: Content::Simple(just!("foo", 12..15)),
+          ..empty_block!(12)
+        }]),
+        ..empty_block!(5)
+      }]),
+      ..empty_block!(0)
+    },
+  );
+}
+
+#[test]
 fn test_undelimited_sidebar() {
   assert_block!(
     adoc! {"

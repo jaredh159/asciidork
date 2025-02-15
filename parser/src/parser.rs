@@ -166,15 +166,17 @@ impl<'arena> Parser<'arena> {
   }
 
   fn at_delimiter(&self, delimiter: Delimiter) -> bool {
-    match delimiter {
-      Delimiter::BlockQuote => self.lexer.at_delimiter_line() == Some((4, b'_')),
-      Delimiter::Example => self.lexer.at_delimiter_line() == Some((4, b'=')),
-      Delimiter::Open => self.lexer.at_delimiter_line() == Some((2, b'-')),
-      Delimiter::Sidebar => self.lexer.at_delimiter_line() == Some((4, b'*')),
-      Delimiter::Listing => self.lexer.at_delimiter_line() == Some((4, b'-')),
-      Delimiter::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
-      Delimiter::Passthrough => self.lexer.at_delimiter_line() == Some((4, b'+')),
-      Delimiter::Comment => self.lexer.at_delimiter_line() == Some((4, b'/')),
+    match delimiter.kind {
+      DelimiterKind::BlockQuote => self.lexer.at_delimiter_line() == Some((4, b'_')),
+      DelimiterKind::Example => {
+        self.lexer.at_delimiter_line() == Some((delimiter.len as u32, b'='))
+      }
+      DelimiterKind::Open => self.lexer.at_delimiter_line() == Some((2, b'-')),
+      DelimiterKind::Sidebar => self.lexer.at_delimiter_line() == Some((4, b'*')),
+      DelimiterKind::Listing => self.lexer.at_delimiter_line() == Some((4, b'-')),
+      DelimiterKind::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
+      DelimiterKind::Passthrough => self.lexer.at_delimiter_line() == Some((4, b'+')),
+      DelimiterKind::Comment => self.lexer.at_delimiter_line() == Some((4, b'/')),
     }
   }
 

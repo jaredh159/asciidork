@@ -205,11 +205,11 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
-    self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter() == Some(delimiter)
+    self.num_tokens() == 1 && self.current_token().unwrap().to_delimiter() == Some(delimiter)
   }
 
   pub fn is_any_delimiter(&self) -> bool {
-    self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter().is_some()
+    self.num_tokens() == 1 && self.current_token().unwrap().to_delimiter_kind().is_some()
   }
 
   pub fn is_indented(&self) -> bool {

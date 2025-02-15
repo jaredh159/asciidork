@@ -57,13 +57,13 @@ impl<'arena> Parser<'arena> {
 
     match first_token.kind {
       DelimiterLine
-        if self.ctx.delimiter.is_some() && self.ctx.delimiter == first_token.to_delimeter() =>
+        if self.ctx.delimiter.is_some() && self.ctx.delimiter == first_token.to_delimiter() =>
       {
         self.restore_lines(lines);
         return Ok(None);
       }
       DelimiterLine => {
-        let delimiter = first_token.to_delimeter().unwrap();
+        let delimiter = first_token.to_delimiter().unwrap();
         return self.parse_delimited_block(delimiter, lines, meta);
       }
       Pipe | Colon | Bang | Comma
@@ -157,7 +157,7 @@ impl<'arena> Parser<'arena> {
     self.ctx.delimiter = Some(delimiter);
     let delimiter_token = lines.consume_current_token().unwrap();
     self.restore_lines(lines);
-    let context = meta.block_style_or(Context::from(delimiter));
+    let context = meta.block_style_or(Context::from(delimiter.kind));
     let restore_subs = self.ctx.set_subs_for(context, &meta);
 
     // newlines have a different meaning in a these contexts, so we have to

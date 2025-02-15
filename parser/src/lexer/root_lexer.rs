@@ -559,6 +559,7 @@ mod tests {
   #[test]
   fn test_delimiter_lines() {
     assert_token_cases!([
+      ("======", vec![(DelimiterLine, "======")]),
       ("////", vec![(DelimiterLine, "////")]),
       ("--", vec![(DelimiterLine, "--")]),
       ("--\n", vec![(DelimiterLine, "--"), (Newline, "\n")]),

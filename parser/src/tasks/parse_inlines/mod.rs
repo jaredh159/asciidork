@@ -847,7 +847,7 @@ impl<'arena> Parser<'arena> {
     // within the verbatim block are rendered as is
     || (
       self.ctx.delimiter.is_some()
-      && self.ctx.delimiter == line.current_token().and_then(|t| t.to_delimeter())
+      && self.ctx.delimiter == line.current_token().and_then(|t| t.to_delimiter())
     )
   }
 
