@@ -103,6 +103,12 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
+  pub fn str_from_loc(&self, loc: SourceLocation) -> &str {
+    let start = loc.start as usize;
+    let end = loc.end as usize;
+    std::str::from_utf8(&self.src[start..end]).unwrap()
+  }
+
   pub fn codepoint(&mut self, n: u32) -> Token<'arena> {
     debug_assert!(n > 1);
     self.pos += n - 1;

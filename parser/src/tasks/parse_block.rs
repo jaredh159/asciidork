@@ -8,7 +8,7 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    if let Some(comment_block) = self.parse_comment_block(&mut lines) {
+    if let Some(comment_block) = self.parse_inline_comment_block(&mut lines) {
       if let Some(meta) = self.peeked_meta.take() {
         assert!(meta.is_empty());
       }
@@ -131,7 +131,10 @@ impl<'arena> Parser<'arena> {
 
   // important to represent these as an ast node because
   // they are the documented way to separate adjacent lists
-  fn parse_comment_block(&mut self, lines: &mut ContiguousLines<'arena>) -> Option<Block<'arena>> {
+  fn parse_inline_comment_block(
+    &mut self,
+    lines: &mut ContiguousLines<'arena>,
+  ) -> Option<Block<'arena>> {
     if lines.starts_with_comment_line() {
       let start_loc = lines.current_token().unwrap().loc.clamp_start();
       lines.consume_current();
@@ -191,9 +194,14 @@ impl<'arena> Parser<'arena> {
       }
 
       if context == Context::Comment {
+        let start_loc = lines.first_loc().unwrap_or(delimiter_token.loc);
+        let mut end_loc = lines.last_loc().unwrap_or(delimiter_token.loc);
         lines.discard_until(|l| l.starts_with(|token| token.lexeme == "////"));
+        end_loc = lines.first_loc().unwrap_or(end_loc);
         self.restore_lines(lines);
-        Content::Empty(EmptyMetadata::None)
+        let span_loc = SourceLocation::spanning(start_loc, end_loc.clamp_start());
+        let comment = self.lexer.src_string_from_loc(span_loc);
+        Content::Empty(EmptyMetadata::Comment(comment))
       } else {
         self.ctx.can_nest_blocks = false;
         let simple = Content::Simple(self.parse_inlines(&mut lines)?);

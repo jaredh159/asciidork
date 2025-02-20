@@ -46,6 +46,7 @@ pub enum EmptyMetadata<'arena> {
     content: InlineNodes<'arena>,
     id: Option<BumpString<'arena>>,
   },
+  Comment(SourceString<'arena>),
   None,
 }
 
