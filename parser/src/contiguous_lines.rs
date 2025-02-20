@@ -135,6 +135,10 @@ impl<'arena> ContiguousLines<'arena> {
     self.lines.last().and_then(|line| line.last_loc())
   }
 
+  pub fn first_loc(&self) -> Option<SourceLocation> {
+    self.lines.first().and_then(|line| line.loc())
+  }
+
   pub fn is_quoted_paragraph(&self) -> bool {
     if self.lines.len() < 2 {
       return false;

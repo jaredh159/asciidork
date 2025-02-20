@@ -91,6 +91,17 @@ impl<'arena> RootLexer<'arena> {
     &self.sources[idx as usize].file
   }
 
+  pub fn str_from_loc(&self, loc: SourceLocation) -> &str {
+    self.sources[loc.include_depth as usize].str_from_loc(loc)
+  }
+
+  pub fn src_string_from_loc(&self, loc: SourceLocation) -> SourceString<'arena> {
+    let src_str = self.str_from_loc(loc);
+    let mut src = BumpString::with_capacity_in(src_str.len(), self.bump);
+    src.push_str(src_str);
+    SourceString::new(src, loc)
+  }
+
   pub const fn source_is_primary(&self) -> bool {
     self.idx == 0
   }
@@ -107,6 +118,10 @@ impl<'arena> RootLexer<'arena> {
       .enumerate()
       .find(|(_, file)| file.matches_xref_target(xref_target))
       .map(|(i, _)| i as u16)
+  }
+
+  pub fn byte_before(&self, loc: SourceLocation) -> Option<u8> {
+    self.sources[loc.include_depth as usize].byte_before(loc.start)
   }
 
   pub fn leveloffset(&self, idx: u16) -> i8 {
@@ -555,6 +570,7 @@ mod tests {
   #[test]
   fn test_delimiter_lines() {
     assert_token_cases!([
+      ("======", vec![(DelimiterLine, "======")]),
       ("////", vec![(DelimiterLine, "////")]),
       ("--", vec![(DelimiterLine, "--")]),
       ("--\n", vec![(DelimiterLine, "--"), (Newline, "\n")]),

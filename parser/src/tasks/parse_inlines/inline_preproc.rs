@@ -1,6 +1,7 @@
 use std::fmt::Write;
 
 use crate::internal::*;
+use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
   pub(super) fn replace_inline_pass(
@@ -13,18 +14,19 @@ impl<'arena> Parser<'arena> {
     while let Some(token) = line.consume_current() {
       let kind = token.kind;
       match token.kind {
-        TokenKind::MacroName if token.lexeme == "pass:" => {
+        MacroName if token.lexeme == "pass:" => {
           if let Some((n, subs)) = self.terminates_valid_pass_macro(line, lines) {
-            let placeholder = self.pass_placeholder(&token, line, lines, n, subs)?;
+            let placeholder = self.pass_placeholder(&token, 0, line, lines, n, subs)?;
             replaced.push_nonpass(placeholder);
           } else {
             replaced.push_nonpass(token);
           };
         }
-        TokenKind::Plus if could_be_plus_passthru(prev_kind, token.len()) => {
-          if let Some(n) = terminates_plus(token.len() as u8, line, lines) {
-            let subs = Substitutions::from_pass_plus_token(&token);
-            let placeholder = self.pass_placeholder(&token, line, lines, n, subs)?;
+        Plus if could_be_plus_passthru(prev_kind, line) => {
+          let count = line.iter().take_while(|t| t.kind(Plus)).count() + 1;
+          if let Some(n) = terminates_plus(count, line, lines) {
+            let subs = Substitutions::from_pass_plus_len(count);
+            let placeholder = self.pass_placeholder(&token, count, line, lines, n, subs)?;
             replaced.push_nonpass(placeholder);
           } else {
             replaced.push_nonpass(token);
@@ -41,17 +43,22 @@ impl<'arena> Parser<'arena> {
   fn pass_placeholder(
     &mut self,
     start_token: &Token<'arena>,
+    plus_count: usize,
     line: &mut Line<'arena>,
     lines: &mut ContiguousLines<'arena>,
-    num_passthru_tokens: usize,
+    mut num_passthru_tokens: usize,
     subs: Substitutions,
   ) -> Result<Token<'arena>> {
     let mut loc = start_token.loc;
+    if plus_count > 1 {
+      line.discard(plus_count - 1);
+      num_passthru_tokens -= plus_count - 1;
+    }
     let mut passlines = self.passthru_parse_lines(num_passthru_tokens, line, lines);
-    let extend = match start_token.len() as u32 {
-      5 => 1, // `pass:` ends with `]`
-      n => n, // plus ends with same-len plus
-    };
+    if plus_count > 1 {
+      line.discard(plus_count - 1);
+    }
+    let extend = if start_token.kind == Plus { plus_count as u32 } else { 1 };
     loc.end = passlines.last_loc().unwrap().end + extend;
     let restore_subs = self.ctx.subs;
     self.ctx.subs = subs;
@@ -61,7 +68,7 @@ impl<'arena> Parser<'arena> {
     let index = self.ctx.passthrus.len() - 1;
     let mut lexeme = BumpString::with_capacity_in(6, self.bump);
     write!(lexeme, "^{:05}", index).unwrap();
-    Ok(Token::new(TokenKind::PreprocPassthru, loc, lexeme))
+    Ok(Token::new(PreprocPassthru, loc, lexeme))
   }
 
   fn passthru_parse_lines(
@@ -110,17 +117,17 @@ impl<'arena> Parser<'arena> {
     while num_target_tokens < line.num_tokens() {
       let token = line.nth_token(num_target_tokens).unwrap();
       match token.kind {
-        TokenKind::OpenBracket => break,
-        TokenKind::Word | TokenKind::Comma => num_target_tokens += 1,
+        OpenBracket => break,
+        Word | Comma => num_target_tokens += 1,
         _ => return None,
       }
     }
 
     let mut n = 1;
-    let mut last = TokenKind::OpenBracket;
+    let mut last = OpenBracket;
     while num_target_tokens + n < line.num_tokens() {
       let token = line.nth_token(num_target_tokens + n).unwrap();
-      if token.kind == TokenKind::CloseBracket && last != TokenKind::Backslash {
+      if token.kind == CloseBracket && last != Backslash {
         let subs = pass_macro_subs(line, num_target_tokens, self.bump);
         return Some((n - 1, subs));
       }
@@ -131,7 +138,7 @@ impl<'arena> Parser<'arena> {
     // search rest of paragraph
     for next_line in lines.iter() {
       for token in next_line.iter() {
-        if token.kind == TokenKind::CloseBracket && last != TokenKind::Backslash {
+        if token.kind == CloseBracket && last != Backslash {
           let subs = pass_macro_subs(line, num_target_tokens, self.bump);
           return Some((n - 1, subs));
         }
@@ -153,27 +160,25 @@ fn pass_macro_subs<'arena>(
   for _ in 0..n_target_tokens {
     target.push_str(&line.consume_current().unwrap().lexeme);
   }
-  line.discard_assert(TokenKind::OpenBracket);
+  line.discard_assert(OpenBracket);
   Substitutions::from_pass_macro_target(target)
 }
 
-fn terminates_plus(len: u8, line: &Line, lines: &ContiguousLines) -> Option<usize> {
-  if len == 1 {
+fn terminates_plus(plus_count: usize, line: &Line, lines: &ContiguousLines) -> Option<usize> {
+  if plus_count == 1 {
     return terminates_constrained_plus(line, lines);
   }
 
-  let spec = TokenSpec::Len(len, TokenKind::Plus);
-  let mut n = 0;
-  for token in line.iter() {
-    if token.satisfies(spec) {
-      return Some(n);
-    } else {
-      n += 1;
-    }
+  let spec = &[TokenSpec::Kind(Plus); 3][..plus_count];
+
+  if let Some(n) = line.index_of_seq(spec) {
+    return Some(n);
   }
+
   // search rest of paragraph
+  let mut n = line.num_tokens();
   for line in lines.iter() {
-    if let Some(m) = line.index_of_seq(&[spec]) {
+    if let Some(m) = line.index_of_seq(spec) {
       return Some(n + m);
     } else {
       n += line.num_tokens();
@@ -183,10 +188,10 @@ fn terminates_plus(len: u8, line: &Line, lines: &ContiguousLines) -> Option<usiz
 }
 
 fn terminates_constrained_plus(line: &Line, lines: &ContiguousLines) -> Option<usize> {
-  if line.current_is(TokenKind::Newline) {
+  if line.current_is(Newline) {
     return None;
   }
-  let stop = &[TokenSpec::Len(1, TokenKind::Plus)];
+  let stop = &[TokenSpec::Len(1, Plus)];
   if let Some(n) = line.terminates_constrained_in(stop, &InlineCtx::None) {
     return Some(n);
   }
@@ -202,11 +207,11 @@ fn terminates_constrained_plus(line: &Line, lines: &ContiguousLines) -> Option<u
 }
 
 #[inline(always)]
-fn could_be_plus_passthru(prev_kind: Option<TokenKind>, len: usize) -> bool {
-  if prev_kind == Some(TokenKind::Backtick) || len > 3 {
+fn could_be_plus_passthru(prev_kind: Option<TokenKind>, line: &Line) -> bool {
+  if prev_kind == Some(Backtick) || line.starts_with_seq(&[TokenSpec::Kind(Plus); 3]) {
     false
-  } else if len == 1 {
-    prev_kind.is_none() || prev_kind == Some(TokenKind::Whitespace)
+  } else if !line.starts(Plus) {
+    prev_kind.is_none() || matches!(prev_kind, Some(Whitespace | Plus))
   } else {
     true
   }
@@ -233,11 +238,11 @@ mod tests {
     assert_eq!(
       std::array::from_fn(|_| replaced.consume_current().unwrap()),
       [
-        Token::new(TokenKind::Word, 0..3, bstr!("foo")),
-        Token::new(TokenKind::Whitespace, 3..4, bstr!(" ")),
-        Token::new(TokenKind::PreprocPassthru, 4..9, bstr!("^00000")),
-        Token::new(TokenKind::Whitespace, 9..10, bstr!(" ")),
-        Token::new(TokenKind::Word, 10..13, bstr!("baz")),
+        Token::new(Word, 0..3, bstr!("foo")),
+        Token::new(Whitespace, 3..4, bstr!(" ")),
+        Token::new(PreprocPassthru, 4..9, bstr!("^00000")),
+        Token::new(Whitespace, 9..10, bstr!(" ")),
+        Token::new(Word, 10..13, bstr!("baz")),
       ]
     );
   }

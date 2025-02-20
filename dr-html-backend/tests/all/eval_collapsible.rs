@@ -35,7 +35,7 @@ assert_html!(
 );
 
 assert_html!(
-  collapsible_custom_title_an_open,
+  collapsible_custom_title_and_open,
   adoc! {r#"
     .Custom Title
     [%collapsible%open]

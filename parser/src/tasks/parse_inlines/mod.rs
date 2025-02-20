@@ -398,7 +398,7 @@ impl<'arena> Parser<'arena> {
             }
           }
 
-          MaybeEmail if subs.macros() && EMAIL_RE.is_match(&token.lexeme) => {
+          MaybeEmail if subs.macros() && regx::EMAIL_RE.is_match(&token.lexeme) => {
             let loc = token.loc;
             acc.push_node(
               Macro(Link {
@@ -518,19 +518,13 @@ impl<'arena> Parser<'arena> {
 
           Backtick
             if subs.inline_formatting()
-              && line.current_token().is_kind_len(Plus, 1)
+              && line.starts_with_seq(&[Kind(Plus), Not(Plus)])
               && contains_seq(&[Len(1, Plus), Kind(Backtick)], &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_node(
-              |mut inner| {
-                assert!(inner.len() == 1, "invalid lit mono");
-                match inner.pop().unwrap() {
-                  InlineNode { content: Text(lit), loc } => LitMono(SourceString::new(lit, loc)),
-                  _ => panic!("invalid lit mono"),
-                }
-              },
+              extract_lit_mono,
               [Len(1, Plus), Kind(Backtick)],
               &token,
               &mut acc,
@@ -847,7 +841,7 @@ impl<'arena> Parser<'arena> {
     // within the verbatim block are rendered as is
     || (
       self.ctx.delimiter.is_some()
-      && self.ctx.delimiter == line.current_token().and_then(|t| t.to_delimeter())
+      && self.ctx.delimiter == line.current_token().and_then(|t| t.to_delimiter())
     )
   }
 

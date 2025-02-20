@@ -18,8 +18,6 @@ pub struct AsciidoctorHtml {
   #[allow(clippy::type_complexity)]
   pub(crate) footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
   pub(crate) doc_meta: DocumentMeta,
-  pub(crate) fig_caption_num: usize,
-  pub(crate) table_caption_num: usize,
   pub(crate) list_stack: Vec<bool>,
   pub(crate) default_newlines: Newlines,
   pub(crate) newlines: Newlines,
@@ -29,6 +27,10 @@ pub struct AsciidoctorHtml {
   pub(crate) in_asciidoc_table_cell: bool,
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
+  pub(crate) fig_caption_num: usize,
+  pub(crate) table_caption_num: usize,
+  pub(crate) example_caption_num: usize,
+  pub(crate) listing_caption_num: usize,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -308,7 +310,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["listingblock"], &block.meta.attrs);
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
     self.push_str(r#"<div class="content"><pre"#);
     if let Some(lang) = self.source_lang(block) {
       self.push([
@@ -355,7 +357,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
     self.push_str("<blockquote>");
   }
 
@@ -367,7 +369,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
     self.push_str("<blockquote>");
   }
 
@@ -383,7 +385,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_verse_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["verseblock"], &block.meta.attrs);
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
     self.push_str(r#"<pre class="content">"#);
   }
 
@@ -409,6 +411,7 @@ impl Backend for AsciidoctorHtml {
       self.push_str("</summary>");
     } else {
       self.open_element("div", &["exampleblock"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
     }
     self.push_str(r#"<div class="content">"#);
   }
@@ -477,7 +480,7 @@ impl Backend for AsciidoctorHtml {
       ul.push_class("checklist");
     }
     self.push_open_tag(div);
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
     self.push_open_tag(ul);
   }
 
@@ -506,7 +509,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.open_element("div", &["dlist"], &block.meta.attrs);
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
     self.push_str("<dl>");
   }
 
@@ -561,7 +564,7 @@ impl Backend for AsciidoctorHtml {
     let class = custom.unwrap_or_else(|| list_class_from_depth(depth));
     let classes = &["olist", class];
     self.open_element("div", classes, &block.meta.attrs);
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
     self.push([r#"<ol class=""#, class, "\""]);
 
     if list_type != "1" {
@@ -639,7 +642,7 @@ impl Backend for AsciidoctorHtml {
     if self.doc_meta.get_doctype() != DocType::Inline {
       if !self.state.contains(&VisitingSimpleTermDescription) {
         self.open_element("div", &["paragraph"], &block.meta.attrs);
-        self.render_buffered_block_title(&block.meta);
+        self.render_buffered_block_title(block);
       }
       self.push_str("<p>");
     }
@@ -659,7 +662,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_table(&mut self, table: &Table, block: &Block) {
     self.open_table_element(block);
-    self.table_caption(block);
+    self.render_buffered_block_title(block);
     self.push_str("<colgroup>");
     let autowidth = block.meta.attrs.has_option("autowidth");
     for width in table.col_widths.distribute() {
@@ -1212,7 +1215,7 @@ impl Backend for AsciidoctorHtml {
         self.push([kind.str(), r#""></i></td><td class="content">"#]);
       }
     }
-    self.render_buffered_block_title(&block.meta);
+    self.render_buffered_block_title(block);
   }
 
   #[instrument(skip_all)]
@@ -1248,17 +1251,11 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_image_block(&mut self, _target: &str, attrs: &AttrList, block: &Block) {
-    let prefix = if self.doc_meta.is_false("figure-caption") {
-      None
-    } else {
-      self.fig_caption_num += 1;
-      Some(Cow::Owned(format!("Figure {}. ", self.fig_caption_num)))
-    };
     if let Some(title) = attrs.named("title") {
-      self.render_block_title(title, prefix);
+      self.render_block_title(title, block);
     } else if block.meta.title.is_some() {
       let title = self.take_buffer();
-      self.render_block_title(&title, prefix);
+      self.render_block_title(&title, block);
     }
     self.push_str(r#"</div>"#);
   }
@@ -1381,20 +1378,44 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn render_buffered_block_title(&mut self, meta: &ChunkMeta) {
-    if meta.title.is_some() {
+  fn render_buffered_block_title(&mut self, block: &Block) {
+    if block.meta.title.is_some() {
       let buf = self.take_buffer();
-      self.render_block_title(&buf, None);
+      self.render_block_title(&buf, block);
     }
   }
 
-  fn render_block_title(&mut self, title: &str, prefix: Option<Cow<str>>) {
-    self.push_str(r#"<div class="title">"#);
-    if let Some(prefix) = prefix {
-      self.push_str(&prefix);
+  fn render_block_title(&mut self, title: &str, block: &Block) {
+    if block.context == BlockContext::Table {
+      self.push_str(r#"<caption class="title">"#);
+    } else {
+      self.push_str(r#"<div class="title">"#);
+    }
+    if let Some(custom_caption) = block.meta.attrs.named("caption") {
+      self.push_str(custom_caption);
+    } else if let Some(caption) = block
+      .context
+      .caption_attr_name()
+      .and_then(|attr_name| self.doc_meta.string(attr_name))
+    {
+      self.push_str(&caption);
+      self.push_ch(' ');
+      let num = match block.context {
+        BlockContext::Table => incr(&mut self.table_caption_num),
+        BlockContext::Image => incr(&mut self.fig_caption_num),
+        BlockContext::Example => incr(&mut self.example_caption_num),
+        BlockContext::Listing => incr(&mut self.listing_caption_num),
+        _ => unreachable!(),
+      };
+      self.push_str(&num.to_string());
+      self.push_str(". ");
     }
     self.push_str(title);
-    self.push_str("</div>");
+    if block.context == BlockContext::Table {
+      self.push_str(r#"</caption>"#);
+    } else {
+      self.push_str(r#"</div>"#);
+    }
   }
 
   pub(crate) fn open_element(&mut self, element: &str, classes: &[&str], attrs: &impl AttrData) {
@@ -1687,6 +1708,11 @@ macro_rules! num_str {
       _ => Cow::Owned($n.to_string()),
     }
   };
+}
+
+fn incr(num: &mut usize) -> usize {
+  *num += 1;
+  *num
 }
 
 pub(crate) use num_str;

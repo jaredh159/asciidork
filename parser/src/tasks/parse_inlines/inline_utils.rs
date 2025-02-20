@@ -1,5 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use Inline::Symbol;
 
 use crate::internal::*;
@@ -34,7 +32,13 @@ impl<'arena> Parser<'arena> {
     lines: &mut ContiguousLines,
   ) -> bool {
     debug_assert!(!stop_tokens.is_empty());
-    !line.starts(Whitespace)
+    self.lexer.byte_before(token.loc).is_none_or(|c| {
+      c.is_ascii_whitespace()
+        || matches!(
+          c,
+          b'`' | b'*' | b'_' | b'[' | b'#' | b'+' | b'|' | b'\'' | b'=' | b'"' | b','
+        )
+    }) && !line.starts(Whitespace)
       && token.kind(stop_tokens.last().unwrap().token_kind())
       && (line.terminates_constrained(stop_tokens, &self.ctx.inline_ctx)
         || lines.terminates_constrained(stop_tokens, &self.ctx.inline_ctx))
@@ -51,6 +55,28 @@ impl<'arena> Parser<'arena> {
     token.kind(stop_tokens[0].token_kind())
       && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind()))
       && contains_seq(stop_tokens, line, lines)
+  }
+}
+
+pub(crate) fn extract_lit_mono(mut nodes: InlineNodes) -> Inline {
+  assert!(nodes.len() == 1, "invalid lit mono len");
+  match nodes.pop().unwrap() {
+    InlineNode { content: Inline::Text(lit_mono), loc } => {
+      Inline::LitMono(SourceString::new(lit_mono, loc))
+    }
+    InlineNode {
+      content: Inline::InlinePassthru(mut pnodes),
+      ..
+    } => {
+      assert!(pnodes.len() == 1, "invalid lit mono len (passthru)");
+      match pnodes.pop().unwrap() {
+        InlineNode { content: Inline::Text(lit), loc } => {
+          Inline::LitMono(SourceString::new(lit, loc))
+        }
+        _ => unreachable!("invalid lit mono (passthru inner)"),
+      }
+    }
+    _ => unreachable!("invalid lit mono (type)"),
   }
 }
 
@@ -175,8 +201,8 @@ impl Substitutions {
     subs
   }
 
-  pub fn from_pass_plus_token(token: &Token) -> Self {
-    if token.len() == 3 {
+  pub const fn from_pass_plus_len(len: usize) -> Self {
+    if len == 3 {
       Substitutions::none()
     } else {
       Substitutions::only_special_chars()
@@ -214,11 +240,4 @@ pub fn finish_macro<'arena>(
 
 fn is_word_char(c: char) -> bool {
   c.is_alphanumeric() || c == '_'
-}
-
-lazy_static! {
-  pub static ref EMAIL_RE: Regex = Regex::new(
-    r"^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})"
-  )
-  .unwrap();
 }

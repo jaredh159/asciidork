@@ -73,7 +73,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'!') => Some(self.single(Bang)),
       Some(b'?') => Some(self.single(QuestionMark)),
       Some(b'`') => Some(self.single(Backtick)),
-      Some(b'+') => Some(self.repeating(b'+', Plus)),
+      Some(b'+') => Some(self.single(Plus)),
       Some(b'[') => Some(self.single(OpenBracket)),
       Some(b']') => Some(self.single(CloseBracket)),
       Some(b'{') => Some(self.maybe_attr_ref()),
@@ -101,6 +101,12 @@ impl<'arena> SourceLexer<'arena> {
       Some(_) => Some(self.word()),
       None => None,
     }
+  }
+
+  pub fn str_from_loc(&self, loc: SourceLocation) -> &str {
+    let start = loc.start as usize;
+    let end = loc.end as usize;
+    std::str::from_utf8(&self.src[start..end]).unwrap()
   }
 
   pub fn codepoint(&mut self, n: u32) -> Token<'arena> {
@@ -164,12 +170,31 @@ impl<'arena> SourceLexer<'arena> {
       | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n' | b'\r') | None] => {
         Some((4, sequence[0].unwrap()))
       }
+      [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'=')] => {
+        let mut n = 5;
+        while self.nth(n) == Some(b'=') {
+          n += 1;
+        }
+        if matches!(self.nth(n), Some(b'\n' | b'\r') | None) {
+          Some((n, b'='))
+        } else {
+          None
+        }
+      }
       _ => None,
     }
   }
 
   pub fn truncate(&mut self) {
-    self.src.truncate(self.offset as usize);
+    self.src.truncate(self.pos as usize);
+  }
+
+  pub fn byte_before(&self, pos: u32) -> Option<u8> {
+    if pos.saturating_sub(self.offset) == 0 {
+      None
+    } else {
+      self.src.get((pos - 1 - self.offset) as usize).copied()
+    }
   }
 
   pub fn raw_lines(&'arena self) -> impl Iterator<Item = &'arena str> {

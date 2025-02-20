@@ -46,6 +46,7 @@ pub enum EmptyMetadata<'arena> {
     content: InlineNodes<'arena>,
     id: Option<BumpString<'arena>>,
   },
+  Comment(SourceString<'arena>),
   None,
 }
 
@@ -111,6 +112,15 @@ impl BlockContent<'_> {
 }
 
 impl BlockContext {
+  pub const fn caption_attr_name(&self) -> Option<&'static str> {
+    match self {
+      BlockContext::Table => Some("table-caption"),
+      BlockContext::Image => Some("figure-caption"),
+      BlockContext::Example => Some("example-caption"),
+      BlockContext::Listing => Some("listing-caption"),
+      _ => None,
+    }
+  }
   pub fn derive_admonition(string: &str) -> Option<Self> {
     match string {
       "CAUTION" => Some(BlockContext::AdmonitionCaution),

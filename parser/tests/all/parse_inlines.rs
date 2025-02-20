@@ -449,6 +449,10 @@ fn test_line_breaks() {
 fn test_lit_mono() {
   run(vec![
     (
+      "`++a`b`++`",
+      nodes![node!(LitMono(src!("a`b`", 3..7)), 0..10)],
+    ),
+    (
       "`+{name}+`\nbar",
       nodes![
         node!(LitMono(src!("{name}", 2..8)), 0..10),
@@ -619,6 +623,8 @@ fn test_confusing_patterns() {
 fn test_constrained_pairs() {
   run(vec![
     // non-matches
+    ("*foo * bars", just!("*foo * bars", 0..11)),
+    ("(*) foo * b", just!("(*) foo * b", 0..11)),
     ("foo#bar#baz", just!("foo#bar#baz", 0..11)),
     ("foo*bar*baz", just!("foo*bar*baz", 0..11)),
     ("foo_bar_baz", just!("foo_bar_baz", 0..11)),

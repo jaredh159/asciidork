@@ -43,6 +43,13 @@ assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
 
 assert_inline_html!(
+  passthru_inside_litmono,
+  //     v----v -- inline passthru
+  "foo `++a`b`++`",
+  r#"foo <code>a`b`</code>"#
+);
+
+assert_inline_html!(
   not_passthrough,
   "`\\d+[a]\\d+[b]`",
   "<code>\\d+[a]\\d+[b]</code>"

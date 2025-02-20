@@ -65,7 +65,7 @@ fn test_parse_comment_block() {
     "},
     Block {
       context: Context::Comment,
-      content: Content::Empty(EmptyMetadata::None),
+      content: Content::Empty(EmptyMetadata::Comment(src!("A comment block\n", 5..21))),
       ..empty_block!(0)
     }
   );
@@ -85,7 +85,10 @@ fn test_parse_comment_style_block() {
     Block {
       meta: ChunkMeta::new(vecb![attrs::pos("comment", 1..8)], None, 0..1),
       context: Context::Comment,
-      content: Content::Empty(EmptyMetadata::None),
+      content: Content::Empty(EmptyMetadata::Comment(src!(
+        "A comment block.\n\nNotice it's a delimited block",
+        13..60
+      ))),
     }
   );
 }
@@ -403,6 +406,32 @@ fn test_parse_delimited_example_block() {
       content: Content::Compound(vecb![Block {
         context: Context::Paragraph,
         content: Content::Simple(just!("foo", 5..8)),
+        ..empty_block!(5)
+      }]),
+      ..empty_block!(0)
+    },
+  );
+}
+
+#[test]
+fn test_parse_nested_example_block() {
+  assert_block!(
+    adoc! {"
+      ====
+      ======
+      foo
+      ======
+      ====
+    "},
+    Block {
+      context: Context::Example,
+      content: Content::Compound(vecb![Block {
+        context: Context::Example,
+        content: Content::Compound(vecb![Block {
+          context: Context::Paragraph,
+          content: Content::Simple(just!("foo", 12..15)),
+          ..empty_block!(12)
+        }]),
         ..empty_block!(5)
       }]),
       ..empty_block!(0)

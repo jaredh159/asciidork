@@ -205,11 +205,11 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
-    self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter() == Some(delimiter)
+    self.num_tokens() == 1 && self.current_token().unwrap().to_delimiter() == Some(delimiter)
   }
 
   pub fn is_any_delimiter(&self) -> bool {
-    self.num_tokens() == 1 && self.current_token().unwrap().to_delimeter().is_some()
+    self.num_tokens() == 1 && self.current_token().unwrap().to_delimiter_kind().is_some()
   }
 
   pub fn is_indented(&self) -> bool {
@@ -408,16 +408,21 @@ impl<'arena> Line<'arena> {
     ctx: &InlineCtx,
   ) -> Option<usize> {
     match self.index_of_seq(stop_tokens) {
-      // constrained sequences can't immediately terminate
-      // or else `foo __bar` would include an empty italic node
-      // TODO: maybe that's only true for _single_ tok sequences?
       Some(0) => None,
-      Some(n) if self.nth_token(n + 1).not_kind(Word) => match ctx.specs() {
-        Some(specs) => self
-          .index_of_seq(specs)
-          .map_or(Some(n), |m| if m < n { None } else { Some(n) }),
-        None => Some(n),
-      },
+      Some(n) => {
+        if self.nth_token(n + 1).kind(Word) || self.nth_token(n - 1).is_whitespaceish() {
+          None
+        } else {
+          match ctx.specs() {
+            Some(specs) => {
+              self
+                .index_of_seq(specs)
+                .map_or(Some(n), |m| if m < n { None } else { Some(n) })
+            }
+            None => Some(n),
+          }
+        }
+      }
       _ => None,
     }
   }
