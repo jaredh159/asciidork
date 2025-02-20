@@ -7,6 +7,14 @@ lazy_static! {
   pub static ref ATTR_VAL_REPLACE: Regex = Regex::new(r"\{([^\s}]+)\}").unwrap();
 }
 
+// email
+lazy_static! {
+  pub static ref EMAIL_RE: Regex = Regex::new(
+    r"^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})"
+  )
+  .unwrap();
+}
+
 // directives
 lazy_static! {
   pub static ref DIRECTIVE_INCLUDE: Regex =

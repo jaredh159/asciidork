@@ -73,7 +73,7 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'!') => Some(self.single(Bang)),
       Some(b'?') => Some(self.single(QuestionMark)),
       Some(b'`') => Some(self.single(Backtick)),
-      Some(b'+') => Some(self.repeating(b'+', Plus)),
+      Some(b'+') => Some(self.single(Plus)),
       Some(b'[') => Some(self.single(OpenBracket)),
       Some(b']') => Some(self.single(CloseBracket)),
       Some(b'{') => Some(self.maybe_attr_ref()),
