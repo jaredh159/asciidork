@@ -104,3 +104,11 @@
   between lines in the output without introducing separate paragraphs." from
   `/hard-line-breaks` in docs, but i can't seem to replicate this behavior in
   asciidoctor...
+- asciidork parses monos in both of the following lines, but asciidoc doesn't because of
+  it's regex-based approach, but per the discussion on zulip, our approach is preferred:
+
+```adoc
+// @see https://asciidoc.zulipchat.com/#narrow/channel/335214-general
+foo `bar`"
+"foo `bar`"
+```

@@ -11,7 +11,13 @@ impl<'arena> Parser<'arena> {
   ) -> Result<()> {
     let mut replaced = Line::with_capacity(line.num_tokens(), self.bump);
     let mut prev_kind = None;
+    let mut skip_tokens = 0;
     while let Some(token) = line.consume_current() {
+      if skip_tokens > 0 {
+        replaced.push_nonpass(token);
+        skip_tokens -= 1;
+        continue;
+      }
       let kind = token.kind;
       match token.kind {
         MacroName if token.lexeme == "pass:" => {
@@ -27,6 +33,7 @@ impl<'arena> Parser<'arena> {
           if let Some(n) = terminates_plus(count, line, lines) {
             let subs = Substitutions::from_pass_plus_len(count);
             let placeholder = self.pass_placeholder(&token, count, line, lines, n, subs)?;
+            skip_tokens = count;
             replaced.push_nonpass(placeholder);
           } else {
             replaced.push_nonpass(token);
