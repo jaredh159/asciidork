@@ -201,6 +201,7 @@ impl<'arena> Parser<'arena> {
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'arena>, Vec<Diagnostic>> {
     self.parse_document_header()?;
+    self.prepare_toc();
 
     // ensure we only read a single "paragraph" for `inline` doc_type
     // https://docs.asciidoctor.org/asciidoc/latest/document/doctype/#inline-doctype-rules

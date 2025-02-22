@@ -3,7 +3,7 @@ use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_document_header(&mut self) -> Result<()> {
-    let Some(mut block) = self.read_lines()? else {
+    let Some(mut block) = self.parse_prefixed_exception_blocks()? else {
       return Ok(());
     };
 
@@ -15,11 +15,62 @@ impl<'arena> Parser<'arena> {
     self.parse_doc_attrs(&mut block)?;
     self.parse_doc_title_author_revision(&mut block)?;
     self.parse_doc_attrs(&mut block)?;
-    self.setup_toc();
     Ok(())
   }
 
-  fn setup_toc(&mut self) {
+  fn parse_prefixed_exception_blocks(&mut self) -> Result<Option<ContiguousLines<'arena>>> {
+    let Some(mut lines) = self.read_lines()? else {
+      return Ok(None);
+    };
+
+    lines.discard_leading_comment_lines();
+    if lines.is_empty() {
+      return self.parse_prefixed_exception_blocks();
+    }
+
+    if lines.current_satisfies(|l| l.is_attr_decl()) {
+      self.parse_doc_attrs(&mut lines)?;
+      self.restore_lines(lines);
+      return self.parse_prefixed_exception_blocks();
+    }
+
+    if self.discard_comment_block(&mut lines)? {
+      self.restore_lines(lines);
+      return self.parse_prefixed_exception_blocks();
+    }
+
+    if lines.is_empty() {
+      return self.parse_prefixed_exception_blocks();
+    }
+
+    Ok(Some(lines))
+  }
+
+  fn discard_comment_block(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<bool> {
+    if !lines.current_satisfies(Line::is_comment_block_delimiter) {
+      return Ok(false);
+    }
+
+    let block_start = lines.consume_current().unwrap();
+    if lines.discard_until(Line::is_comment_block_delimiter) {
+      lines.consume_current();
+      return Ok(true);
+    }
+
+    loop {
+      let Some(mut next_lines) = self.read_lines()? else {
+        self.err_line("Unclosed comment block, started here", &block_start)?;
+        return Ok(false);
+      };
+      if next_lines.discard_until(Line::is_comment_block_delimiter) {
+        next_lines.consume_current();
+        self.restore_lines(next_lines);
+        return Ok(true);
+      }
+    }
+  }
+
+  pub(crate) fn prepare_toc(&mut self) {
     let Some(toc_attr) = self.document.meta.get("toc") else {
       return;
     };

@@ -208,8 +208,17 @@ impl<'arena> Line<'arena> {
     self.num_tokens() == 1 && self.current_token().unwrap().to_delimiter() == Some(delimiter)
   }
 
+  pub fn is_delimiter_kind(&self, delimiter_kind: DelimiterKind) -> bool {
+    self.num_tokens() == 1
+      && self.current_token().unwrap().to_delimiter().map(|d| d.kind) == Some(delimiter_kind)
+  }
+
   pub fn is_any_delimiter(&self) -> bool {
     self.num_tokens() == 1 && self.current_token().unwrap().to_delimiter_kind().is_some()
+  }
+
+  pub fn is_comment_block_delimiter(&self) -> bool {
+    self.is_delimiter_kind(DelimiterKind::Comment)
   }
 
   pub fn is_indented(&self) -> bool {

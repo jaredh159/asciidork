@@ -56,22 +56,6 @@ fn test_line_followed_by_comment_is_trimmed() {
 }
 
 #[test]
-fn test_parse_comment_block() {
-  assert_block!(
-    adoc! {"
-      ////
-      A comment block
-      ////
-    "},
-    Block {
-      context: Context::Comment,
-      content: Content::Empty(EmptyMetadata::Comment(src!("A comment block\n", 5..21))),
-      ..empty_block!(0)
-    }
-  );
-}
-
-#[test]
 fn test_parse_comment_style_block() {
   assert_block!(
     adoc! {"
@@ -339,22 +323,37 @@ fn test_parse_admonitions() {
 }
 
 #[test]
-fn test_parse_comment_line_block() {
-  assert_block!(
-    "//-",
-    Block {
-      context: Context::Comment,
-      content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0)
-    }
-  );
-  assert_block!(
-    "//key:: val", // <-- looks like desc list
-    Block {
-      context: Context::Comment,
-      content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0)
-    }
+fn test_parse_comment_blocks() {
+  assert_blocks!(
+    adoc! {"
+      not doc header
+
+      //-
+
+      //key:: val
+
+      ////
+      A comment block
+      ////
+    "},
+    &[
+      simple_text_block!("not doc header", 0..14),
+      Block {
+        context: Context::Comment,
+        content: Content::Empty(EmptyMetadata::None),
+        ..empty_block!(16)
+      },
+      Block {
+        context: Context::Comment,
+        content: Content::Empty(EmptyMetadata::None),
+        ..empty_block!(21)
+      },
+      Block {
+        context: Context::Comment,
+        content: Content::Empty(EmptyMetadata::Comment(src!("A comment block\n", 39..55))),
+        ..empty_block!(34)
+      }
+    ]
   );
 }
 
