@@ -1,11 +1,11 @@
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 
 use test_utils::*;
 
 #[cfg(unix)]
 #[test]
 fn test_cli_app_single_include() {
-  let stdout = run_cli(
+  let stdout = run_expecting_success(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/a.adoc",
   );
@@ -29,10 +29,42 @@ fn test_cli_app_single_include() {
   );
 }
 
+#[test]
+fn test_cli_include_case_fail_strict() {
+  let stderr = run_expecting_err(
+    &["--embedded", "--strict", "--safe-mode", "unsafe"],
+    "tests/all/fixtures/gen/case-fail.adoc",
+  );
+
+  #[cfg(any(target_os = "windows", target_os = "macos"))]
+  expect_eq!(
+    stderr.trim(),
+    adoc! {r#"
+      --> case-fail.adoc:1:10
+        |
+      1 | include::sub/inNER.adoc[]
+        |          ^^^^^^^^^^^^^^ Include error: Case mismatch in file path. Maybe you meant to include `inner.adoc`?
+
+      Error: "Parse error""#}
+  );
+
+  #[cfg(target_os = "linux")]
+  expect_eq!(
+    stderr.trim(),
+    adoc! {r#"
+      --> case-fail.adoc:1:10
+        |
+      1 | include::sub/inNER.adoc[]
+        |          ^^^^^^^^^^^^^^ Include error: File not found
+
+      Error: "Parse error""#}
+  );
+}
+
 #[cfg(unix)]
 #[test]
 fn test_relative_includes() {
-  let stdout = run_cli(
+  let stdout = run_expecting_success(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/parent-include.adoc",
   );
@@ -52,7 +84,7 @@ fn test_relative_includes() {
 #[cfg(unix)]
 #[test]
 fn test_remote_relative_includes() {
-  let stdout = run_cli(
+  let stdout = run_expecting_success(
     &[
       "--embedded",
       "--strict",
@@ -79,7 +111,7 @@ fn test_remote_relative_includes() {
 #[cfg(unix)]
 #[test]
 fn test_relative_nested_includes() {
-  let stdout = run_cli(
+  let stdout = run_expecting_success(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/relative-include.adoc",
   );
@@ -98,7 +130,7 @@ fn test_relative_nested_includes() {
 #[cfg(unix)]
 #[test]
 fn test_url_includes() {
-  let stdout = run_cli(
+  let stdout = run_expecting_success(
     &[
       "--embedded",
       "--strict",
@@ -121,7 +153,7 @@ fn test_url_includes() {
 #[cfg(unix)]
 #[test]
 fn test_cli_app_doc_attrs() {
-  let stdout = run_cli(
+  let stdout = run_expecting_success(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/attrs.adoc",
   );
@@ -150,7 +182,7 @@ fn test_cli_app_doc_attrs() {
 
 #[test]
 fn test_cli_runs_on_windows() {
-  let stdout = run_cli(
+  let stdout = run_expecting_success(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/gchild-include.adoc",
   );
@@ -168,18 +200,8 @@ fn test_cli_runs_on_windows() {
   );
 }
 
-fn run_cli(args: &[&str], input: &str) -> String {
-  let child = Command::new("cargo")
-    .arg("run")
-    .args(["--quiet", "--"])
-    .args(["--input", input])
-    .args(args)
-    .stdin(Stdio::piped())
-    .stderr(Stdio::piped())
-    .stdout(Stdio::piped())
-    .spawn()
-    .unwrap();
-
+fn run_expecting_success(args: &[&str], input: &str) -> String {
+  let child = cmd(args, input);
   let output = child.wait_with_output().unwrap();
   let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -188,7 +210,35 @@ fn run_cli(args: &[&str], input: &str) -> String {
     println!("{stderr}");
     panic!("\nCommand failed: {:?}", output.status);
   }
+
   stdout.to_string()
+}
+
+fn run_expecting_err(args: &[&str], input: &str) -> String {
+  let child = cmd(args, input);
+  let output = child.wait_with_output().unwrap();
+  let stderr = String::from_utf8_lossy(&output.stderr);
+
+  if output.status.success() {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    println!("{stdout}");
+    panic!("\nExpected error, but got none");
+  }
+
+  stderr.to_string()
+}
+
+fn cmd(args: &[&str], input: &str) -> Child {
+  Command::new("cargo")
+    .arg("run")
+    .args(["--quiet", "--"])
+    .args(["--input", input])
+    .args(args)
+    .stdin(Stdio::piped())
+    .stderr(Stdio::piped())
+    .stdout(Stdio::piped())
+    .spawn()
+    .unwrap()
 }
 
 fn cwd() -> String {

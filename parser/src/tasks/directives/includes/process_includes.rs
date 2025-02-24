@@ -119,7 +119,7 @@ impl<'arena> Parser<'arena> {
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(err @ ResolveError::NotFound | err @ ResolveError::Io(..)) => {
-        self.target_err(format!("Include resolver error: {}", err), &directive)?;
+        self.target_err(format!("Include error: {}", err), &directive)?;
         let mut msg = self.string("+++Unresolved directive in ");
         msg.push_str(self.lexer.source_file().file_name());
         msg.push_str(" - ");
@@ -130,7 +130,7 @@ impl<'arena> Parser<'arena> {
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(error) => {
-        self.target_err(format!("Include resolver error: {}", error), &directive)?;
+        self.target_err(format!("Include error: {}", error), &directive)?;
         Ok(DirectiveAction::Passthrough)
       }
     }

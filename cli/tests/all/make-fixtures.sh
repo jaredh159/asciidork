@@ -39,3 +39,6 @@ printf "with trailing space    \n"          >> fixtures/gen/trailing.adoc
 printf -- "----\ninclude::trailing.adoc[]\n">> fixtures/gen/preproc.adoc
 printf -- "----\n\n"                        >> fixtures/gen/preproc.adoc
 
+# case insensitivity
+printf "include::sub/inNER.adoc[]\n\n"     >> fixtures/gen/case-fail.adoc
+
