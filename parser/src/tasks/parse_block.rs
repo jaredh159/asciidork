@@ -67,7 +67,9 @@ impl<'arena> Parser<'arena> {
         return self.parse_delimited_block(delimiter, lines, meta);
       }
       Pipe | Colon | Bang | Comma
-        if lines.nth_token(1).is_kind_len(EqualSigns, 3) && lines.nth_token(2).is_none() =>
+        if lines.nth_token(1).kind(EqualSigns)
+          && lines.nth_token(2).is_none()
+          && lines.nth_token(1).unwrap().len() > 2 =>
       {
         return Ok(Some(self.parse_table(lines, meta)?));
       }

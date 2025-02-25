@@ -394,7 +394,7 @@ fn include_resolver_error_uri_read_not_supported() {
      --> test.adoc:1:10
       |
     1 | include::http://a.com/b[]
-      |          ^^^^^^^^^^^^^^ Include resolver error: URI read not supported
+      |          ^^^^^^^^^^^^^^ Include error: URI read not supported
   "};
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected_err);
 }

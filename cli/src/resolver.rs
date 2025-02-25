@@ -9,6 +9,7 @@ use ResolveError::*;
 
 pub struct CliResolver {
   base_dir: Option<PathBuf>,
+  strict: bool,
 }
 
 impl IncludeResolver for CliResolver {
@@ -41,8 +42,8 @@ impl IncludeResolver for CliResolver {
 }
 
 impl CliResolver {
-  pub const fn new(base_dir: Option<PathBuf>) -> Self {
-    Self { base_dir }
+  pub const fn new(base_dir: Option<PathBuf>, strict: bool) -> Self {
+    Self { base_dir, strict }
   }
 
   fn resolve_filepath(
@@ -50,16 +51,29 @@ impl CliResolver {
     path: String,
     buffer: &mut dyn IncludeBuffer,
   ) -> std::result::Result<usize, ResolveError> {
-    let path = PathBuf::from(path);
-    if path.exists() {
-      let file = File::open(path)?;
-      let len = file.metadata().map(|m| m.len() as usize)?;
-      buffer.initialize(len);
-      let bytes = buffer.as_bytes_mut();
-      Read::read_exact(&mut BufReader::new(file), bytes)?;
-      Ok(len)
-    } else {
-      Err(NotFound)
+    let pathb = PathBuf::from(path);
+    let Ok(pathc) = dunce::canonicalize(&pathb) else {
+      return Err(NotFound);
+    };
+
+    if self.strict && pathb != pathc {
+      match (pathb.file_name(), pathc.file_name()) {
+        // only send back the filename so we don't accidentally expose
+        // full system filepaths in error messages for security reasons
+        (Some(pfn), Some(cfn)) if pfn != cfn => {
+          return Err(CaseMismatch(Some(cfn.to_string_lossy().to_string())))
+        }
+        _ => return Err(CaseMismatch(None)),
+      }
+    } else if !pathb.exists() {
+      return Err(NotFound);
     }
+
+    let file = File::open(pathb)?;
+    let len = file.metadata().map(|m| m.len() as usize)?;
+    buffer.initialize(len);
+    let bytes = buffer.as_bytes_mut();
+    Read::read_exact(&mut BufReader::new(file), bytes)?;
+    Ok(len)
   }
 }

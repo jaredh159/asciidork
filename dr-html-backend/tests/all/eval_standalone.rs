@@ -129,6 +129,49 @@ assert_standalone_body!(
   "#}
 );
 
+test_non_embedded_contains!(
+  exceptions_before_doc_title,
+  adoc! {"
+    :toc: left
+
+    :foo: bar
+
+    // foobar
+
+    // comment w/ attr below
+    :thing: cool
+
+    :wow: baz
+    // attr w/ comment below
+
+    ////
+    a comment block
+    ////
+
+    ////
+    a comment block
+
+    with an empty line
+    ////
+
+    :a: b
+    ////
+    comment block after attr
+    ////
+
+    ////
+    comment block before attr
+    ////
+    :c: d
+
+    ////
+    comment block before title
+    ////
+    = Doc Title
+  "},
+  ["<h1>Doc Title</h1>"],
+);
+
 assert_html!(
   level_0_heading_best_effort,
   |job_settings: &mut JobSettings| { job_settings.strict = false },
@@ -144,7 +187,7 @@ assert_html!(
 assert_error!(
   level_0_heading_from_malformed_header,
   adoc! {"
-    :toc: macro
+    paragraph
 
     = Title
   "},
@@ -152,6 +195,6 @@ assert_error!(
      --> test.adoc:3:1
       |
     3 | = Title
-      | ^^^^^^^ Level 0 section allowed only in doctype=book, or doc header may be malformed
+      | ^^^^^^^ Level 0 section allowed only in doctype=book
   "}
 );

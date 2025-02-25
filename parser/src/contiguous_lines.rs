@@ -228,13 +228,14 @@ impl<'arena> ContiguousLines<'arena> {
     }
   }
 
-  pub fn discard_until(&mut self, predicate: impl Fn(&Line<'arena>) -> bool) {
+  pub fn discard_until(&mut self, predicate: impl Fn(&Line<'arena>) -> bool) -> bool {
     while let Some(line) = self.first() {
       if predicate(line) {
-        return;
+        return true;
       }
       self.consume_current();
     }
+    false
   }
 
   pub fn trim_uniform_leading_whitespace(&mut self) -> bool {

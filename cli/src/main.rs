@@ -32,7 +32,7 @@ fn run(
 ) -> Result<(), Box<dyn Error>> {
   let (src, src_file, base_dir, input_mtime) = {
     if let Some(pathbuf) = &args.input {
-      let abspath = fs::canonicalize(pathbuf)?;
+      let abspath = dunce::canonicalize(pathbuf)?;
       let mut file = fs::File::open(pathbuf.clone())?;
       let mut input_mtime = None;
       let mut src = file
@@ -65,11 +65,12 @@ fn run(
 
   let parse_start = Instant::now();
   let bump = &Bump::with_capacity(src.len() * 2);
+  let strict = args.strict;
   let mut parser = Parser::from_str(&src, src_file, bump);
   let mut job_settings: JobSettings = args.clone().try_into()?;
   AsciidoctorHtml::set_job_attrs(&mut job_settings.job_attrs);
   parser.apply_job_settings(job_settings);
-  parser.set_resolver(Box::new(CliResolver::new(base_dir)));
+  parser.set_resolver(Box::new(CliResolver::new(base_dir, strict)));
 
   let now = SystemTime::now()
     .duration_since(UNIX_EPOCH)

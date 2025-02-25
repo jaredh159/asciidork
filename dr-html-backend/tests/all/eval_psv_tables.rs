@@ -37,6 +37,17 @@ assert_html!(
 );
 
 assert_html!(
+  supports_arbitrary_len_delims,
+  adoc! {r#"
+    |=====
+    |a | b
+    |c | d
+    |=====
+  "#},
+  contains: "<p class=\"tableblock\">a</p>"
+);
+
+assert_html!(
   table_cell_doctype,
   adoc! {r#"
     |===

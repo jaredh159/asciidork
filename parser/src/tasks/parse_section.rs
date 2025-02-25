@@ -22,10 +22,7 @@ impl<'arena> Parser<'arena> {
     };
 
     if level == 0 && self.document.meta.get_doctype() != DocType::Book {
-      self.err_line(
-        "Level 0 section allowed only in doctype=book, or doc header may be malformed",
-        line,
-      )?;
+      self.err_line("Level 0 section allowed only in doctype=book", line)?;
     }
 
     if meta.attrs.has_str_positional("discrete") || meta.attrs.has_str_positional("float") {
