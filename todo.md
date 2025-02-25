@@ -59,6 +59,19 @@
   it to the next block. the documentation says there should be no empty line. asciidork
   sometimes will attach the metadata, and sometimes will not, but with `--strict` will
   always emit an error.
+- asciidoctor permits attr decls to be joined to a paragraph, and the attr will be
+  resolved. eg: `:a: b\n{a}` will product `b`. this is despite the fact that the docs say
+  that attr decls in the body should be declared "between blocks". currently we store the
+  attr decl correctly, but don't resolve it in the joined paragraph, only in subsequent
+  blocks, which likely won't be a problem in real world usage.
+- asciidork parses monos in both of the following lines, but asciidoc doesn't because of
+  it's regex-based approach, but per the discussion on zulip, our approach is preferred:
+
+```adoc
+// @see https://asciidoc.zulipchat.com/#narrow/channel/335214-general
+foo `bar`"
+"foo `bar`"
+```
 
 ## design philosophy
 
@@ -104,11 +117,3 @@
   between lines in the output without introducing separate paragraphs." from
   `/hard-line-breaks` in docs, but i can't seem to replicate this behavior in
   asciidoctor...
-- asciidork parses monos in both of the following lines, but asciidoc doesn't because of
-  it's regex-based approach, but per the discussion on zulip, our approach is preferred:
-
-```adoc
-// @see https://asciidoc.zulipchat.com/#narrow/channel/335214-general
-foo `bar`"
-"foo `bar`"
-```
