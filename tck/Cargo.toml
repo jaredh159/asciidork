@@ -2,6 +2,8 @@
 name = "asciidork-tck"
 version = "0.18.0"
 edition = "2021"
+description = "Asciidork TCK Adapter"
+license = "MIT"
 
 [[bin]]
 name = "asciidork-tck"
