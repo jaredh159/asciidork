@@ -1,0 +1,17 @@
+{
+  "name": "document",
+  "type": "block",
+  "attributes": { "icons": "font", "toc": "" },
+  "header": {
+    "title": [
+      {
+        "name": "text",
+        "type": "string",
+        "value": "Document Title",
+        "location": [{ "line": 1, "col": 3 }, { "line": 1, "col": 16 }]
+      }
+    ],
+    "location": [{ "line": 1, "col": 1 }, { "line": 3, "col": 5 }]
+  },
+  "location": [{ "line": 1, "col": 1 }, { "line": 3, "col": 5 }]
+}

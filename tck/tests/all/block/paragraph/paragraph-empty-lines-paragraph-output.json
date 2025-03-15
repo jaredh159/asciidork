@@ -1,0 +1,33 @@
+{
+  "name": "document",
+  "type": "block",
+  "blocks": [
+    {
+      "name": "paragraph",
+      "type": "block",
+      "inlines": [
+        {
+          "name": "text",
+          "type": "string",
+          "value": "This document has multiple paragraphs.",
+          "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 38 }]
+        }
+      ],
+      "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 38 }]
+    },
+    {
+      "name": "paragraph",
+      "type": "block",
+      "inlines": [
+        {
+          "name": "text",
+          "type": "string",
+          "value": "Paragraphs are separated by one or more empty lines.",
+          "location": [{ "line": 4, "col": 1 }, { "line": 4, "col": 52 }]
+        }
+      ],
+      "location": [{ "line": 4, "col": 1 }, { "line": 4, "col": 52 }]
+    }
+  ],
+  "location": [{ "line": 1, "col": 1 }, { "line": 4, "col": 52 }]
+}

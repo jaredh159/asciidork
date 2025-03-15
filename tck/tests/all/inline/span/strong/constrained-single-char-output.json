@@ -1,0 +1,23 @@
+[
+  {
+    "name": "span",
+    "type": "inline",
+    "variant": "strong",
+    "form": "constrained",
+    "inlines": [
+      {
+        "name": "text",
+        "type": "string",
+        "value": "s",
+        "location": [
+          { "line": 1, "col": 2 },
+          { "line": 1, "col": 2 }
+        ]
+      }
+    ],
+    "location": [
+      { "line": 1, "col": 1 },
+      { "line": 1, "col": 3 }
+    ]
+  }
+]
