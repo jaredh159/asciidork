@@ -3,9 +3,14 @@ use std::borrow::Cow;
 use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
-  pub(super) fn parse_doc_attrs(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
+  pub(super) fn parse_doc_attrs(
+    &mut self,
+    lines: &mut ContiguousLines<'arena>,
+  ) -> Result<Option<u32>> {
     lines.discard_leading_comment_lines();
-    while let Some((key, value, _)) = self.parse_doc_attr(lines)? {
+    let mut last_end: Option<u32> = None;
+    while let Some((key, value, end)) = self.parse_doc_attr(lines)? {
+      last_end = Some(end);
       if key == "doctype" {
         if let AttrValue::String(s) = &value {
           match s.as_str().parse::<DocType>() {
@@ -20,7 +25,7 @@ impl<'arena> Parser<'arena> {
       }
       lines.discard_leading_comment_lines();
     }
-    Ok(())
+    Ok(last_end)
   }
 
   pub(super) fn parse_doc_attr(
@@ -51,7 +56,7 @@ impl<'arena> Parser<'arena> {
 
     let attr = if let Some(re_match) = captures.get(2) {
       if is_negated {
-        let loc = line.loc().unwrap();
+        let loc = line.first_loc().unwrap();
         self.err_at(
           "Cannot unset attr with `!` AND provide value",
           loc.incr_start().adding_to_end(re_match.end() as u32),
@@ -69,11 +74,7 @@ impl<'arena> Parser<'arena> {
       Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &attr);
     }
 
-    Ok(Some((
-      key.to_string(),
-      attr,
-      line.last_location().unwrap().end,
-    )))
+    Ok(Some((key.to_string(), attr, line.last_loc().unwrap().end)))
   }
 
   pub(crate) fn replace_attr_vals<'h>(&self, haystack: &'h str) -> Cow<'h, str> {

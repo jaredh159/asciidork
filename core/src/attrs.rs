@@ -189,6 +189,10 @@ impl Attrs {
     self.0.insert(key, value);
     Ok(())
   }
+
+  pub fn iter(&self) -> impl Iterator<Item = (&String, &AttrValue)> {
+    self.0.iter()
+  }
 }
 
 pub(crate) trait RemoveAttr {

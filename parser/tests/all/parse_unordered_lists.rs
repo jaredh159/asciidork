@@ -57,7 +57,7 @@ fn test_simple_nested_list() {
             }],
           },
           context: Context::UnorderedList,
-          ..empty_block!(6)
+          ..empty_block!(6, 12)
         }],
       },
       ListItem {
@@ -97,7 +97,7 @@ fn test_nested_list_separated_by_newlines() {
           }],
         },
         context: Context::UnorderedList,
-        ..empty_block!(8)
+        ..empty_block!(8, 14)
       }],
     },]
   );
@@ -151,6 +151,7 @@ fn test_list_custom_marker() {
           }],
         },
         context: Context::UnorderedList,
+        loc: (16..22).into(),
       }],
     }]
   );
@@ -208,7 +209,7 @@ fn test_single_continuation() {
       blocks: vecb![Block {
         content: BlockContent::Simple(just!("with continuation", 14..31)),
         context: BlockContext::Paragraph,
-        ..empty_block!(14)
+        ..empty_block!(14, 31)
       }],
     }]
   );
@@ -234,12 +235,12 @@ fn test_double_continuation() {
         Block {
           content: BlockContent::Simple(just!("with continuation", 14..31)),
           context: BlockContext::Paragraph,
-          ..empty_block!(14)
+          ..empty_block!(14, 31)
         },
         Block {
           content: BlockContent::Simple(just!("and another", 34..45)),
           context: BlockContext::Paragraph,
-          ..empty_block!(34)
+          ..empty_block!(34, 45)
         },
       ],
     }]
@@ -275,12 +276,12 @@ fn test_two_items_w_listing_continuations() {
           Block {
             content: BlockContent::Simple(just!("listing 1", 19..28)),
             context: BlockContext::Listing,
-            ..empty_block!(14)
+            ..empty_block!(14, 33)
           },
           Block {
             content: BlockContent::Simple(just!("some more principle", 36..55)),
             context: BlockContext::Paragraph,
-            ..empty_block!(36)
+            ..empty_block!(36, 55)
           },
         ],
       },
@@ -292,7 +293,7 @@ fn test_two_items_w_listing_continuations() {
         blocks: vecb![Block {
           content: BlockContent::Simple(just!("listing 2", 83..92)),
           context: BlockContext::Listing,
-          ..empty_block!(78)
+          ..empty_block!(78, 97)
         }],
       },
     ]

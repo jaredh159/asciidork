@@ -133,10 +133,6 @@ impl<'arena> Line<'arena> {
     self.tokens.last()
   }
 
-  pub fn last_loc(&self) -> Option<SourceLocation> {
-    self.last_token().map(|t| t.loc)
-  }
-
   pub fn nth_token(&self, n: usize) -> Option<&Token<'arena>> {
     self.tokens.get(n)
   }
@@ -442,7 +438,7 @@ impl<'arena> Line<'arena> {
     kind: TokenKind,
     bump: &'arena Bump,
   ) -> SourceString<'arena> {
-    let mut loc = self.loc().expect("no tokens to consume");
+    let mut loc = self.first_loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_if_not(kind) {
       if token.kind != AttrRef && token.kind != Backslash {
@@ -459,7 +455,7 @@ impl<'arena> Line<'arena> {
     spec: &[TokenSpec],
     bump: &'arena Bump,
   ) -> SourceString<'arena> {
-    let mut loc = self.loc().expect("no tokens to consume");
+    let mut loc = self.first_loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     loop {
       let Some(peek) = self.current_token() else {
@@ -477,7 +473,7 @@ impl<'arena> Line<'arena> {
 
   #[must_use]
   pub fn consume_to_string(&mut self, bump: &'arena Bump) -> SourceString<'arena> {
-    let mut loc = self.loc().expect("no tokens to consume");
+    let mut loc = self.first_loc().expect("no tokens to consume");
     let mut s = BumpString::new_in(bump);
     while let Some(token) = self.consume_current() {
       s.push_str(&token.lexeme);
@@ -520,7 +516,7 @@ impl<'arena> Line<'arena> {
     stop: Option<TokenKind>,
     bump: &'arena Bump,
   ) -> SourceString<'arena> {
-    let mut loc = start.map_or_else(|| self.loc().unwrap(), |t| t.loc);
+    let mut loc = start.map_or_else(|| self.first_loc().unwrap(), |t| t.loc);
     let mut num_tokens = 0;
 
     if let Some(stop) = stop {
@@ -563,12 +559,19 @@ impl<'arena> Line<'arena> {
     ContiguousLines::new(lines)
   }
 
-  pub fn loc(&self) -> Option<SourceLocation> {
+  pub fn first_loc(&self) -> Option<SourceLocation> {
     self.current_token().map(|t| t.loc)
   }
 
-  pub fn last_location(&self) -> Option<SourceLocation> {
+  pub fn last_loc(&self) -> Option<SourceLocation> {
     self.last_token().map(|t| t.loc)
+  }
+
+  pub fn loc(&self) -> Option<SourceLocation> {
+    self
+      .first_loc()
+      .zip(self.last_loc())
+      .map(|(start, end)| SourceLocation::spanning(start, end))
   }
 
   pub fn src_len(&self) -> usize {
@@ -708,7 +711,7 @@ impl<'arena> Line<'arena> {
       Token { kind: Word, lexeme, .. } if *lexeme == "x" => ("[x]", true),
       _ => return None,
     };
-    let mut loc = self.loc().unwrap();
+    let mut loc = self.first_loc().unwrap();
     loc.end += 2;
     self.discard(3);
     let src = BumpString::from_str_in(src, bump);

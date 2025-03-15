@@ -24,7 +24,7 @@ impl<'arena> Parser<'arena> {
       return Ok(inlines);
     }
 
-    let span_loc = lines.loc().unwrap().clamp_start();
+    let span_loc = lines.first_loc().unwrap().clamp_start();
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
     let mut acc = Accum::new(inlines, text);
@@ -118,7 +118,7 @@ impl<'arena> Parser<'arena> {
           }
           MacroName if subs.macros() && line.continues_inline_macro(&token) => {
             let mut macro_loc = token.loc;
-            let line_end = line.last_location().unwrap();
+            let line_end = line.last_loc().unwrap();
             acc.commit();
             match token.lexeme.as_str() {
               "image:" => {
@@ -371,7 +371,7 @@ impl<'arena> Parser<'arena> {
             acc.push_node(Discarded, token.loc);
             let scheme_token = line.consume_current().unwrap();
             let mut loc = scheme_token.loc;
-            let line_end = line.last_location().unwrap();
+            let line_end = line.last_loc().unwrap();
             let target = line.consume_url(Some(&scheme_token), Some(GreaterThan), self.bump);
             if target.src == scheme_token.lexeme {
               // turns out we don't have a valid uri here, backtrack
@@ -720,7 +720,7 @@ impl<'arena> Parser<'arena> {
 
           _ if subs.macros() && token.kind(UriScheme) => {
             let mut loc = token.loc;
-            let line_end = line.last_location().unwrap();
+            let line_end = line.last_loc().unwrap();
             let target = line.consume_url(Some(&token), None, self.bump);
             if target.src == token.lexeme {
               acc.push_text_token(&token);
@@ -771,7 +771,7 @@ impl<'arena> Parser<'arena> {
     acc: &mut Accum<'arena>,
   ) -> Result<()> {
     let mut macro_loc = token.loc;
-    let line_end = line.last_location().unwrap();
+    let line_end = line.last_loc().unwrap();
     acc.commit();
     let target = line.consume_url(Some(token), Some(OpenBracket), self.bump);
     line.discard_assert(OpenBracket);

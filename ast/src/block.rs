@@ -5,6 +5,7 @@ pub struct Block<'arena> {
   pub meta: ChunkMeta<'arena>,
   pub content: BlockContent<'arena>,
   pub context: BlockContext,
+  pub loc: MultiSourceLocation,
 }
 
 impl Block<'_> {

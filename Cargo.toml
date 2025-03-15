@@ -10,6 +10,7 @@ members = [
   "eval",
   "parser",
   "test-utils",
+  "tck",
 ]
 
 resolver = "2"

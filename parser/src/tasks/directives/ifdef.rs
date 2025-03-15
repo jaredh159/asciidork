@@ -23,7 +23,7 @@ impl<'arena> Parser<'arena> {
         let mut src = BumpString::with_capacity_in(embedded.len() + 1, self.bump);
         src.push_str(embedded);
         src.push('\n');
-        let offset = line.loc().unwrap().start + embedded_line.start() as u32;
+        let offset = line.first_loc().unwrap().start + embedded_line.start() as u32;
         self.lexer.set_tmp_buf(&src, BufLoc::Offset(offset));
         let line = self.read_line()?.unwrap();
         Ok(DirectiveAction::SubstituteLine(line))

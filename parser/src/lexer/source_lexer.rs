@@ -189,6 +189,10 @@ impl<'arena> SourceLexer<'arena> {
     self.src.truncate(self.pos as usize);
   }
 
+  pub fn byte_at(&self, pos: u32) -> Option<u8> {
+    self.src.get((pos - self.offset) as usize).copied()
+  }
+
   pub fn byte_before(&self, pos: u32) -> Option<u8> {
     if pos.saturating_sub(self.offset) == 0 {
       None

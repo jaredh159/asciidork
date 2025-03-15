@@ -12,7 +12,7 @@ pub struct Diagnostic {
 
 impl Parser<'_> {
   pub(crate) fn err_line(&self, message: impl Into<String>, line: &Line) -> Result<()> {
-    let loc = line.loc().expect("non empty line for `err_line`");
+    let loc = line.first_loc().expect("non empty line for `err_line`");
     let (line_num, offset) = self.lexer.line_number_with_offset(loc);
     let line = line.reassemble_src().to_string();
     self.handle_err(Diagnostic {

@@ -33,6 +33,7 @@ impl<'arena> Parser<'arena> {
     let last_level = self.ctx.section_level;
     self.ctx.section_level = level;
     let mut heading_line = lines.consume_current().unwrap();
+    let mut loc: MultiSourceLocation = heading_line.loc().unwrap().into();
     let equals = heading_line.consume_current().unwrap();
     heading_line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&heading_line, &meta.attrs);
@@ -79,12 +80,20 @@ impl<'arena> Parser<'arena> {
     self.restore_lines(lines);
     let mut blocks = BumpVec::new_in(self.bump);
     while let Some(inner) = self.parse_block()? {
+      loc.extend_end(&inner.loc);
       blocks.push(inner);
     }
 
     self.ctx.bibliography_ctx = BiblioContext::None;
     self.ctx.section_level = last_level;
-    Ok(Some(Section { meta, level, id, heading, blocks }))
+    Ok(Some(Section {
+      meta,
+      level,
+      id,
+      heading,
+      blocks,
+      loc,
+    }))
   }
 
   pub fn push_toc_node(
@@ -118,6 +127,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use pretty_assertions::assert_eq;
   use test_utils::*;
 
   #[test]
@@ -143,8 +153,10 @@ mod tests {
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("foo"; 8..11)]),
+          loc: (8..11).into(),
           ..empty_block!(8)
-        }]
+        }],
+        loc: (0..11).into()
       }
     );
     let section = parser.parse_section().unwrap().unwrap();
@@ -158,8 +170,10 @@ mod tests {
         blocks: vecb![Block {
           context: BlockContext::Paragraph,
           content: BlockContent::Simple(nodes![node!("bar"; 21..24)]),
+          loc: (21..24).into(),
           ..empty_block!(21)
-        }]
+        }],
+        loc: (13..24).into()
       }
     );
   }

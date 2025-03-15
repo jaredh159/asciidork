@@ -20,7 +20,7 @@ pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
   };
   backend.enter_document(ctx.doc);
   backend.enter_header();
-  if let Some(doc_title) = &doc.title {
+  if let Some(doc_title) = doc.title() {
     backend.enter_document_title(&doc_title.main);
     doc_title
       .main
@@ -412,7 +412,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       let is_biblio = anchor.map(|a| a.is_biblio).unwrap_or(false);
       backend.enter_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
       if ctx.resolving_xref.replace(true) {
-        backend.visit_missing_xref(target, *kind, ctx.doc.title.as_ref());
+        backend.visit_missing_xref(target, *kind, ctx.doc.title());
       } else if let Some(text) = anchor
         .map(|anchor| {
           anchor
@@ -430,7 +430,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
         backend.exit_xref_text(text, is_biblio);
       } else {
-        backend.visit_missing_xref(target, *kind, ctx.doc.title.as_ref());
+        backend.visit_missing_xref(target, *kind, ctx.doc.title());
       }
       ctx.resolving_xref.replace(false);
       backend.exit_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);

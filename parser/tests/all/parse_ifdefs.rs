@@ -68,7 +68,7 @@ fn ifdefs_join() {
         node!(Inline::Newline, 22..23),
         node!("line 2"; 45..51),
       ]),
-      ..empty_block!(16)
+      ..empty_block!(16, 51)
     }],
   );
 }
@@ -119,7 +119,7 @@ fn ifdefs_nested() {
           node!(Inline::Newline, 61..62),
           node!("line 3"; 102..108),
         ]),
-        ..empty_block!(55)
+        ..empty_block!(55, 108)
       },
       Block {
         content: BlockContent::Simple(nodes![
@@ -127,7 +127,7 @@ fn ifdefs_nested() {
           node!(Inline::Newline, 222..223),
           node!("line 7"; 263..269),
         ]),
-        ..empty_block!(216)
+        ..empty_block!(216, 269)
       },
       Block {
         content: BlockContent::Simple(nodes![
@@ -135,7 +135,7 @@ fn ifdefs_nested() {
           node!(Inline::Newline, 287..288),
           node!("line 12"; 395..402),
         ]),
-        ..empty_block!(281)
+        ..empty_block!(281, 402)
       },
     ],
   );

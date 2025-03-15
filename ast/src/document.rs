@@ -7,8 +7,7 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Document<'arena> {
   pub meta: DocumentMeta,
-  pub title: Option<DocTitle<'arena>>,
-  pub subtitle: Option<InlineNodes<'arena>>,
+  pub header: Option<DocHeader<'arena>>,
   pub content: DocContent<'arena>,
   pub toc: Option<TableOfContents<'arena>>,
   pub anchors: Rc<RefCell<HashMap<BumpString<'arena>, Anchor<'arena>>>>,
@@ -22,8 +21,7 @@ impl<'arena> Document<'arena> {
 
   pub fn from_content(content: DocContent<'arena>) -> Self {
     Self {
-      title: None,
-      subtitle: None,
+      header: None,
       content,
       toc: None,
       anchors: Rc::new(RefCell::new(HashMap::new())),
@@ -31,6 +29,19 @@ impl<'arena> Document<'arena> {
       source_filenames: Vec::new(),
     }
   }
+
+  pub fn title(&self) -> Option<&DocTitle<'arena>> {
+    self
+      .header
+      .as_ref()
+      .and_then(|header| header.title.as_ref())
+  }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
+pub struct DocHeader<'arena> {
+  pub title: Option<DocTitle<'arena>>,
+  pub loc: SourceLocation,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

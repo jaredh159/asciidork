@@ -4,28 +4,23 @@ use crate::internal::*;
 use crate::variants::token::*;
 
 impl Parser<'_> {
-  pub(super) fn parse_revision_line(&mut self, lines: &mut ContiguousLines) {
-    let Some(line) = lines.current() else {
-      return;
-    };
-
+  pub(super) fn parse_revision_line(&mut self, lines: &mut ContiguousLines) -> Option<u32> {
+    let line = lines.current()?;
     if !line.current_is(Word) && !line.current_is(Digits) {
-      return;
+      return None;
     }
 
     // https://regexr.com/7mbsk
     let pattern = r"^([^\s,:]+)(?:,\s*([^\s:]+))?(?::\s*(.+))?$";
     let re = Regex::new(pattern).unwrap();
     let src = line.reassemble_src();
-    let Some(captures) = re.captures(&src) else {
-      return;
-    };
-
+    let captures = re.captures(&src)?;
     let raw_version = captures.get(1).unwrap().as_str();
     if !raw_version.chars().any(|c| c.is_ascii_digit()) {
-      return;
+      return None;
     }
 
+    let end = lines.consume_current().unwrap().last_loc().unwrap().end;
     let vre = Regex::new(r"\d.*$").unwrap();
     let version = vre
       .captures(raw_version)
@@ -38,14 +33,13 @@ impl Parser<'_> {
     // only revision, must start with `v` then digit
     if captures.get(2).is_none() && captures.get(3).is_none() {
       if Regex::new(r"^v(\d[^\s]+)$").unwrap().is_match(raw_version) {
-        lines.consume_current();
         self
           .document
           .meta
           .insert_header_attr("revnumber", version)
           .unwrap();
       }
-      return;
+      return Some(end);
     }
     self
       .document
@@ -56,30 +50,27 @@ impl Parser<'_> {
     // version and remark
     if captures.get(2).is_none() && captures.get(3).is_some() {
       let remark = captures.get(3).unwrap().as_str().to_string();
-      lines.consume_current();
       self
         .document
         .meta
         .insert_header_attr("revremark", remark)
         .unwrap();
-      return;
+      return Some(end);
     }
 
     // version and only date
     if captures.get(2).is_some() && captures.get(3).is_none() {
       let date = captures.get(2).unwrap().as_str().to_string();
-      lines.consume_current();
       self
         .document
         .meta
         .insert_header_attr("revdate", date)
         .unwrap();
-      return;
+      return Some(end);
     }
 
     let date = captures.get(2).unwrap().as_str().to_string();
     let remark = captures.get(3).unwrap().as_str().to_string();
-    lines.consume_current();
     self
       .document
       .meta
@@ -90,6 +81,7 @@ impl Parser<'_> {
       .meta
       .insert_header_attr("revremark", remark)
       .unwrap();
+    Some(end)
   }
 }
 

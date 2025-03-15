@@ -124,11 +124,10 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn loc(&self) -> Option<SourceLocation> {
-    if let Some(line) = self.lines.first() {
-      line.loc()
-    } else {
-      None
-    }
+    self
+      .first_loc()
+      .zip(self.last_loc())
+      .map(|(start, end)| SourceLocation::spanning(start, end))
   }
 
   pub fn last_loc(&self) -> Option<SourceLocation> {
@@ -136,7 +135,7 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn first_loc(&self) -> Option<SourceLocation> {
-    self.lines.first().and_then(|line| line.loc())
+    self.lines.first().and_then(|line| line.first_loc())
   }
 
   pub fn is_quoted_paragraph(&self) -> bool {
@@ -222,9 +221,16 @@ impl<'arena> ContiguousLines<'arena> {
     self.first().map(Line::is_comment).unwrap_or(false)
   }
 
-  pub fn discard_leading_comment_lines(&mut self) {
+  pub fn discard_leading_comment_lines(&mut self) -> Option<SourceLocation> {
+    let mut loc = SourceLocation::default();
     while self.starts_with_comment_line() {
-      self.consume_current();
+      let line = self.consume_current().unwrap();
+      loc.extend(line.last_loc().unwrap());
+    }
+    if loc.is_empty() {
+      None
+    } else {
+      Some(loc)
     }
   }
 

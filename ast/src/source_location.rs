@@ -92,6 +92,11 @@ impl SourceLocation {
   pub const fn size(&self) -> u32 {
     self.end - self.start
   }
+
+  #[must_use]
+  pub const fn is_empty(&self) -> bool {
+    self.start == self.end
+  }
 }
 
 impl From<u32> for SourceLocation {

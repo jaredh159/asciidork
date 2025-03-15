@@ -132,6 +132,7 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use pretty_assertions::assert_eq;
   use test_utils::*;
   use ColWidth::*;
 
@@ -184,6 +185,7 @@ mod tests {
             content: CellContent::AsciiDoc(Document {
               content: DocContent::Blocks(vecb![Block {
                 meta: chunk_meta!(8),
+                loc: (8..13).into(),
                 content: BlockContent::List {
                   variant: ListVariant::Unordered,
                   depth: 1,
@@ -225,6 +227,7 @@ mod tests {
           content: DocContent::Blocks(vecb![Block {
             context: BlockContext::Literal,
             content: BlockContent::Simple(just!("literal", 23..30)),
+            loc: (23..30).into(),
             ..empty_block!(21)
           }]),
           meta: doc_meta!(DocType::Article),
@@ -836,6 +839,7 @@ mod tests {
           title: Some(just!("Simple psv table", 1..17)),
           ..chunk_meta!(0..1)
         },
+        loc: (18..54).into(),
         content: BlockContent::Table(Table {
           col_widths: ColWidths::new(vecb![w(1), w(1), w(1)]),
           rows: vecb![

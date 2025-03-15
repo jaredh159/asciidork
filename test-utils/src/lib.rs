@@ -55,8 +55,8 @@ macro_rules! test_lexer {
 macro_rules! assert_block_core {
   ($input:expr, $expected_ctx:expr, $expected_content:expr$(,)?) => {
     let block = parse_single_block!($input);
-    assert_eq!(block.context, $expected_ctx);
-    assert_eq!(block.content, $expected_content);
+    expect_eq!(block.context, $expected_ctx, from: $input);
+    expect_eq!(block.content, $expected_content, from: $input);
   };
 }
 
@@ -256,6 +256,15 @@ macro_rules! empty_block {
       meta: ChunkMeta::empty($start.into(), leaked_bump()),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
+      loc: $start.into(),
+    }
+  };
+  ($start:expr, $end:expr) => {
+    Block {
+      meta: ChunkMeta::empty($start.into(), leaked_bump()),
+      context: BlockContext::Paragraph,
+      content: BlockContent::Simple(nodes![]),
+      loc: ($start..$end).into(),
     }
   };
 }
@@ -346,6 +355,7 @@ macro_rules! simple_text_block {
     Block {
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!($text; $range)]),
+      loc: $range.into(),
       ..empty_block!($range.start)
     }
   }

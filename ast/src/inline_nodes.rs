@@ -56,6 +56,20 @@ impl<'arena> InlineNodes<'arena> {
     text
   }
 
+  pub fn loc(&self) -> Option<MultiSourceLocation> {
+    self
+      .loc_span()
+      .map(|(start, end)| MultiSourceLocation::spanning(start, end))
+  }
+
+  pub fn loc_span(&self) -> Option<(SourceLocation, SourceLocation)> {
+    self.first_loc().zip(self.last_loc())
+  }
+
+  pub fn first_loc(&self) -> Option<SourceLocation> {
+    self.first().map(|node| node.loc)
+  }
+
   pub fn last_loc(&self) -> Option<SourceLocation> {
     self.last().map(|node| node.loc)
   }

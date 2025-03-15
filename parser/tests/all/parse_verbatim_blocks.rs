@@ -16,6 +16,7 @@ fn test_parse_literal_block() {
       meta: ChunkMeta::new(vecb![attrs::pos("literal", 1..8)], None, 0..1),
       context: Context::Literal,
       content: Content::Simple(just!("foo `bar`", 10..19)),
+      loc: (10..19).into(),
     }
   );
 }
@@ -37,7 +38,7 @@ fn test_parse_delimited_literal_block() {
         node!(Newline, 14..15),
         node!("baz"; 15..18),
       ]),
-      ..empty_block!(0)
+      ..empty_block!(0, 23)
     }
   );
 }
@@ -59,7 +60,7 @@ fn test_parse_delimited_literal_block_w_double_newline() {
       node!(Newline, 15..16),
       node!("baz"; 16..19),
     ]),
-    ..empty_block!(0)
+    ..empty_block!(0, 24)
   };
   assert_block!(input, expected);
 }
@@ -75,6 +76,7 @@ fn test_parse_listing_block() {
       meta: ChunkMeta::new(vecb![attrs::pos("listing", 1..8)], None, 0..1),
       context: Context::Listing,
       content: Content::Simple(nodes![node!("foo `bar`"; 10..19)]),
+      loc: (10..19).into(),
     }
   );
 }
@@ -94,7 +96,7 @@ fn test_parse_delimited_listing_block() {
       node!(Newline, 14..15),
       node!("baz"; 15..18),
     ]),
-    ..empty_block!(0)
+    ..empty_block!(0, 23)
   };
   assert_block!(input, expected);
 }
@@ -116,7 +118,7 @@ fn test_parse_delimited_listing_block_w_double_newline() {
       node!(Newline, 15..16),
       node!("baz"; 16..19),
     ]),
-    ..empty_block!(0)
+    ..empty_block!(0, 24)
   };
   assert_block!(input, expected);
 }
@@ -128,7 +130,8 @@ fn test_parse_indented_literal_block() {
     Block {
       context: Context::Literal,
       content: Content::Simple(just!("foo bar", 1..8)),
-      ..empty_block!(0)
+      loc: (1..8).into(),
+      ..empty_block!(0, 8)
     }
   );
 
@@ -137,7 +140,8 @@ fn test_parse_indented_literal_block() {
     Block {
       context: Context::Literal,
       content: Content::Simple(just!("foo bar", 2..9)),
-      ..empty_block!(0)
+      loc: (2..9).into(),
+      ..empty_block!(0, 9)
     }
   );
 
@@ -154,7 +158,7 @@ fn test_parse_indented_literal_block() {
         node!(Newline, 4..5),
         node!("bar"; 5..8),
       ]),
-      ..empty_block!(0)
+      ..empty_block!(0, 8)
     }
   );
 
@@ -173,6 +177,7 @@ fn test_parse_indented_literal_block() {
         node!(Newline, 13..14),
         node!("bar"; 15..18),
       ]),
+      loc: (10..18).into(),
     }
   );
 }

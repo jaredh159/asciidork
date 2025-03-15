@@ -266,7 +266,7 @@ fn test_globally_unique_callouts() {
           node!(callout(1, 0, 0), 20..24), // <-- doc callout
         ]),
         context: Context::Literal,
-        ..empty_block!(5)
+        ..empty_block!(5, 29)
       },
       Block {
         meta: chunk_meta!(31),
@@ -281,7 +281,7 @@ fn test_globally_unique_callouts() {
                   node!("puts 'foo'"; 44..54),
                   node!(callout(1, 0, 1), 54..58), // <-- cell callout
                 ]),
-                ..empty_block!(39)
+                ..empty_block!(39, 63)
               }]),
               meta: doc_meta!(DocType::Article),
               ..Document::new(leaked_bump())
@@ -291,6 +291,7 @@ fn test_globally_unique_callouts() {
           footer_row: None,
         }),
         context: Context::Table,
+        loc: (31..68).into(),
       }
     ]),
   );
