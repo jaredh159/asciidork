@@ -14,9 +14,11 @@ use asciidork_dr_html_backend::*;
 use asciidork_parser::prelude::*;
 
 mod args;
+mod error;
 mod resolver;
 
 use args::{Args, Output};
+use error::DiagnosticError;
 use resolver::CliResolver;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -108,8 +110,13 @@ fn run(
       }
     },
     Err(diagnostics) => {
-      print_diagnostics(&mut stderr, diagnostics);
-      return Err("Parse error".into());
+      if args.json_errors {
+        print_json_diagnostics(&mut stderr, diagnostics);
+        std::process::exit(1);
+      } else {
+        print_human_diagnostics(&mut stderr, diagnostics);
+        return Err("Parse error".into());
+      }
     }
   }
   Ok(())
@@ -181,10 +188,16 @@ fn format_html(html: String) -> String {
   String::from_utf8_lossy(&output.stdout).to_string()
 }
 
-fn print_diagnostics(dest: &mut impl Write, diagnostics: Vec<Diagnostic>) {
+fn print_human_diagnostics(dest: &mut impl Write, diagnostics: Vec<Diagnostic>) {
   for diagnostic in diagnostics {
     writeln!(dest, "\n{}", diagnostic.plain_text_with(Colorizer)).unwrap();
   }
+}
+
+fn print_json_diagnostics(dest: &mut impl Write, diagnostics: Vec<Diagnostic>) {
+  let errors: Vec<DiagnosticError> = diagnostics.into_iter().map(DiagnosticError::from).collect();
+  let json = miniserde::json::to_string(&errors);
+  writeln!(dest, "{}", json).unwrap();
 }
 
 struct Colorizer;
