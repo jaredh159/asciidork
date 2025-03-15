@@ -42,6 +42,9 @@ pub struct Args {
   #[clap(long, default_value = "false")]
   pub strict: bool,
 
+  #[clap(long, default_value = "false")]
+  pub json_errors: bool,
+
   #[clap(
     short = 'B',
     long,

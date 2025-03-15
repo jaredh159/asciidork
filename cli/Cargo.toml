@@ -4,6 +4,7 @@ version = "0.17.1"
 edition = "2021"
 description = "Asciidork CLI"
 license = "MIT"
+default-run = "asciidork"
 
 [[bin]]
 name = "asciidork"
@@ -22,6 +23,7 @@ lazy_static = "1.4.0"
 regex = { version = "1.10.2", features = ["std", "use_std"] }
 minreq = { version = "2.12.0", features = ["https"] }
 dunce = "1.0.5"
+miniserde = "0.1.42"
 
 [dev-dependencies]
 test-utils = { path = "../test-utils" }
