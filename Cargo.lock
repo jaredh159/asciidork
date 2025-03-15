@@ -151,6 +151,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "asciidork-tck"
+version = "0.1.0"
+dependencies = [
+ "asciidork-ast",
+ "asciidork-parser",
+ "bumpalo",
+ "pretty_assertions",
+ "serde_json",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -626,17 +637,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "tck"
-version = "0.1.0"
-dependencies = [
- "asciidork-ast",
- "asciidork-parser",
- "bumpalo",
- "pretty_assertions",
- "serde_json",
 ]
 
 [[package]]
