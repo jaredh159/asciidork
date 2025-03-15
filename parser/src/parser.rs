@@ -81,7 +81,7 @@ impl<'arena> Parser<'arena> {
     self
       .peeked_lines
       .as_ref()
-      .and_then(|lines| lines.loc())
+      .and_then(|lines| lines.first_loc())
       .unwrap_or_else(|| self.lexer.loc())
   }
 

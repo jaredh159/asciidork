@@ -121,7 +121,7 @@ impl<'arena> Parser<'arena> {
       return self._parse_attr_list(line, false, false);
     }
 
-    let mut attrs = AttrList::new(line.loc().unwrap().decr_start(), self.bump);
+    let mut attrs = AttrList::new(line.first_loc().unwrap().decr_start(), self.bump);
     if line.current_is(CloseBracket) {
       let end_bracket = line.consume_current().unwrap();
       attrs.loc.extend(end_bracket.loc);
@@ -147,7 +147,7 @@ impl<'arena> Parser<'arena> {
     full_line: bool,
     formatted_text: bool,
   ) -> Result<AttrList<'arena>> {
-    let mut attrs = AttrList::new(line.loc().unwrap().decr_start(), self.bump);
+    let mut attrs = AttrList::new(line.first_loc().unwrap().decr_start(), self.bump);
 
     if line.current_is(CloseBracket) {
       let end_bracket = line.consume_current().unwrap();

@@ -3,69 +3,83 @@ use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_document_header(&mut self) -> Result<()> {
-    let Some(mut block) = self.parse_prefixed_exception_blocks()? else {
+    let mut header = DocHeader::default();
+    let Some(mut block) = self.parse_prefixed_exception_blocks(&mut header)? else {
+      self.finalize_doc_header(header);
       return Ok(());
     };
 
     if !self.is_doc_header(&block) {
       self.peeked_lines = Some(block);
+      self.finalize_doc_header(header);
       return Ok(());
     }
 
-    self.parse_doc_attrs(&mut block)?;
-    self.parse_doc_title_author_revision(&mut block)?;
-    self.parse_doc_attrs(&mut block)?;
+    self.parse_header_doc_attrs(&mut block, &mut header)?;
+    self.parse_doc_title_author_revision(&mut block, &mut header)?;
+    self.parse_header_doc_attrs(&mut block, &mut header)?;
+    self.finalize_doc_header(header);
     Ok(())
   }
 
-  fn parse_prefixed_exception_blocks(&mut self) -> Result<Option<ContiguousLines<'arena>>> {
+  fn parse_prefixed_exception_blocks(
+    &mut self,
+    header: &mut DocHeader,
+  ) -> Result<Option<ContiguousLines<'arena>>> {
     let Some(mut lines) = self.read_lines()? else {
       return Ok(None);
     };
 
-    lines.discard_leading_comment_lines();
+    if let Some(discarded) = lines.discard_leading_comment_lines() {
+      header.loc.extend(discarded);
+    }
+
     if lines.is_empty() {
-      return self.parse_prefixed_exception_blocks();
+      return self.parse_prefixed_exception_blocks(header);
     }
 
     if lines.current_satisfies(|l| l.is_attr_decl()) {
-      self.parse_doc_attrs(&mut lines)?;
+      self.parse_header_doc_attrs(&mut lines, header)?;
       self.restore_lines(lines);
-      return self.parse_prefixed_exception_blocks();
+      return self.parse_prefixed_exception_blocks(header);
     }
 
-    if self.discard_comment_block(&mut lines)? {
+    if let Some(end) = self.discard_comment_block(&mut lines)? {
       self.restore_lines(lines);
-      return self.parse_prefixed_exception_blocks();
+      header.loc.extend(end);
+      return self.parse_prefixed_exception_blocks(header);
     }
 
     if lines.is_empty() {
-      return self.parse_prefixed_exception_blocks();
+      return self.parse_prefixed_exception_blocks(header);
     }
 
     Ok(Some(lines))
   }
 
-  fn discard_comment_block(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<bool> {
+  fn discard_comment_block(
+    &mut self,
+    lines: &mut ContiguousLines<'arena>,
+  ) -> Result<Option<SourceLocation>> {
     if !lines.current_satisfies(Line::is_comment_block_delimiter) {
-      return Ok(false);
+      return Ok(None);
     }
 
     let block_start = lines.consume_current().unwrap();
     if lines.discard_until(Line::is_comment_block_delimiter) {
-      lines.consume_current();
-      return Ok(true);
+      let end_delim = lines.consume_current().unwrap();
+      return Ok(end_delim.first_loc());
     }
 
     loop {
       let Some(mut next_lines) = self.read_lines()? else {
         self.err_line("Unclosed comment block, started here", &block_start)?;
-        return Ok(false);
+        return Ok(None);
       };
       if next_lines.discard_until(Line::is_comment_block_delimiter) {
-        next_lines.consume_current();
+        let end_delim = next_lines.consume_current().unwrap();
         self.restore_lines(next_lines);
-        return Ok(true);
+        return Ok(end_delim.first_loc());
       }
     }
   }
@@ -92,7 +106,11 @@ impl<'arena> Parser<'arena> {
     self.document.toc = Some(TableOfContents { title, nodes, position })
   }
 
-  fn parse_doc_title_author_revision(&mut self, lines: &mut ContiguousLines<'arena>) -> Result<()> {
+  fn parse_doc_title_author_revision(
+    &mut self,
+    lines: &mut ContiguousLines<'arena>,
+    header: &mut DocHeader<'arena>,
+  ) -> Result<()> {
     if lines.is_empty() {
       return Ok(());
     }
@@ -112,20 +130,25 @@ impl<'arena> Parser<'arena> {
     self
       .document
       .meta
-      .insert_header_attr("doctitle", header_line.reassemble_src().as_str())
+      .insert_header_attr("_derived_doctitle", header_line.reassemble_src().as_str())
       .unwrap();
 
-    self.document.title = Some(DocTitle {
+    header.loc.extend(header_line.last_loc().unwrap());
+    header.title = Some(DocTitle {
       attrs: meta.attrs,
       main: self.parse_inlines(&mut header_line.into_lines())?,
       subtitle: None, // TODO: subtitle
     });
 
     if lines.starts(Word) {
-      self.parse_author_line(lines.consume_current().unwrap())?;
+      let author_line = lines.consume_current().unwrap();
+      header.loc.extend(author_line.last_loc().unwrap());
+      self.parse_author_line(author_line)?;
       // revision line can only follow an author line (and requires a doc header)
       if self.document.meta.is_set("author") {
-        self.parse_revision_line(lines);
+        if let Some(end) = self.parse_revision_line(lines) {
+          header.loc.end = end;
+        }
       }
     }
 
@@ -144,12 +167,102 @@ impl<'arena> Parser<'arena> {
     }
     false
   }
+
+  fn finalize_doc_header(&mut self, header: DocHeader<'arena>) {
+    if header.title.is_some() || !header.loc.is_empty() {
+      self.document.header = Some(header);
+    }
+  }
+
+  fn parse_header_doc_attrs(
+    &mut self,
+    lines: &mut ContiguousLines<'arena>,
+    header: &mut DocHeader,
+  ) -> Result<()> {
+    if let Some(end) = self.parse_doc_attrs(lines)? {
+      header.loc.end = end;
+    }
+    Ok(())
+  }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
   use test_utils::*;
+
+  #[test]
+  fn header_existence_and_loc() {
+    let cases: Vec<(&str, Option<SourceLocation>)> = vec![
+      ("foobar\n\n", None),
+      ("= Title\n\n", Some((0..7).into())),
+      ("// rofl\n\n", Some((0..7).into())),
+      (
+        adoc! {"
+          = Title
+          :a: b
+        "},
+        Some((0..13).into()),
+      ),
+      (
+        adoc! {"
+          ////
+          block comment
+          ////
+
+          foobar
+        "},
+        Some((0..23).into()),
+      ),
+      (
+        adoc! {"
+          = Title
+          Bob Law
+        "},
+        Some((0..15).into()),
+      ),
+      (
+        adoc! {"
+          = Document Title
+        "},
+        Some((0..16).into()),
+      ),
+      (
+        adoc! {"
+          = Title
+          Bob Law
+          v1.2334
+        "},
+        Some((0..23).into()),
+      ),
+      (
+        adoc! {"
+          ////
+          block comment
+          ////
+
+          // line comment
+
+          :a: b
+
+          = Title
+          :c: d
+
+          foobar
+        "},
+        Some((0..62).into()),
+      ),
+    ];
+    for (input, expected) in cases {
+      let mut parser = test_parser!(input);
+      parser.parse_document_header().unwrap();
+      expect_eq!(
+        parser.document.header.as_ref().map(|h| h.loc),
+        expected,
+        from: input
+      );
+    }
+  }
 
   #[test]
   fn test_is_doc_header() {

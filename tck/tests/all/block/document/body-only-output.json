@@ -1,0 +1,29 @@
+{
+  "name": "document",
+  "type": "block",
+  "blocks": [
+    {
+      "name": "paragraph",
+      "type": "block",
+      "inlines": [
+        {
+          "name": "text",
+          "type": "string",
+          "value": "body only",
+          "location": [
+            { "line": 1, "col": 1 },
+            { "line": 1, "col": 9 }
+          ]
+        }
+      ],
+      "location": [
+        { "line": 1, "col": 1 },
+        { "line": 1, "col": 9 }
+      ]
+    }
+  ],
+  "location": [
+    { "line": 1, "col": 1 },
+    { "line": 1, "col": 9 }
+  ]
+}

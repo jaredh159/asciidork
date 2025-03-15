@@ -8,6 +8,8 @@ impl<'arena> Parser<'arena> {
     meta: Option<ChunkMeta<'arena>>,
   ) -> Result<Block<'arena>> {
     let first_line = lines.consume_current().unwrap();
+    let start_loc = first_line.first_loc().unwrap();
+    let mut last_loc = first_line.last_loc().unwrap();
     let marker = first_line.list_marker().unwrap();
     let variant = ListVariant::from(marker);
     lines.restore_if_nonempty(first_line);
@@ -28,6 +30,7 @@ impl<'arena> Parser<'arena> {
     }
 
     while let Some(item) = self.parse_list_item(variant, &mut auto_conum)? {
+      last_loc = item.last_loc().unwrap_or(last_loc);
       items.push(item);
     }
 
@@ -39,12 +42,11 @@ impl<'arena> Parser<'arena> {
       self.ctx.advance_callout_list(self.bump);
     }
 
-    let meta = meta
-      .unwrap_or_else(|| ChunkMeta::empty(items.first().unwrap().loc().clamp_start(), self.bump));
     Ok(Block {
-      meta,
+      meta: meta.unwrap_or_else(|| ChunkMeta::empty(start_loc.clamp_start(), self.bump)),
       context: variant.to_context(),
       content: BlockContent::List { variant, depth, items },
+      loc: MultiSourceLocation::spanning(start_loc, last_loc),
     })
   }
 

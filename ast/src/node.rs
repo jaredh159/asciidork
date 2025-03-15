@@ -19,6 +19,7 @@ pub struct Section<'arena> {
   pub id: Option<BumpString<'arena>>,
   pub heading: InlineNodes<'arena>,
   pub blocks: BumpVec<'arena, Block<'arena>>,
+  pub loc: MultiSourceLocation,
 }
 
 #[derive(Default, Clone, Copy, Eq, PartialEq)]

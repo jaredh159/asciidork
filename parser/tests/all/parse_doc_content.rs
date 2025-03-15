@@ -35,7 +35,8 @@ fn unattached_meta_skipped() {
         level: 1,
         id: Some(bstr!("_sect_1")),
         heading: just!("Sect 1", 3..9),
-        blocks: vecb![simple_text_block!("foobar", 33..39)]
+        blocks: vecb![simple_text_block!("foobar", 33..39)],
+        loc: (0..39).into()
       }]
     }
   );
@@ -90,7 +91,8 @@ fn test_sectioned_w_preamble() {
         level: 1,
         id: Some(bstr!("_sect_1")),
         heading: just!("Sect 1", 13..19),
-        blocks: vecb![simple_text_block!("Para 1", 21..27)]
+        blocks: vecb![simple_text_block!("Para 1", 21..27)],
+        loc: (10..27).into()
       }]
     }
   );
@@ -113,7 +115,8 @@ fn comment_only_preamble_discarded() {
         level: 1,
         id: Some(bstr!("_sect_1")),
         heading: just!("Sect 1", 13..19),
-        blocks: vecb![simple_text_block!("Para 1", 21..27)]
+        blocks: vecb![simple_text_block!("Para 1", 21..27)],
+        loc: (10..27).into()
       }]
     }
   );
@@ -134,7 +137,8 @@ fn test_sectioned_no_preamble() {
         level: 1,
         id: Some(bstr!("_sect_1")),
         heading: just!("Sect 1", 3..9),
-        blocks: vecb![simple_text_block!("Para 1", 11..17)]
+        blocks: vecb![simple_text_block!("Para 1", 11..17)],
+        loc: (0..17).into()
       }]
     }
   );
@@ -164,15 +168,17 @@ fn test_section_offset() {
               "leveloffset".to_string(),
               AttrValue::String("1".to_string())
             ),
-            ..empty_block!(11)
-          }]
+            ..empty_block!(11, 26)
+          }],
+          loc: (0..26).into()
         },
         Section {
           meta: chunk_meta!(28),
           level: 1,
           id: Some(bstr!("_sect_2")),
           heading: just!("Sect 2", 30..36),
-          blocks: vecb![]
+          blocks: vecb![],
+          loc: (28..36).into()
         }
       ]
     }

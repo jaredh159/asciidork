@@ -11,7 +11,7 @@ fn test_basic_thematic_break() {
     Block {
       context: Context::ThematicBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0)
+      ..empty_block!(0, 3)
     }
   );
 }
@@ -27,6 +27,7 @@ fn test_thematic_break_w_attrs() {
       meta: ChunkMeta::new(vecb![attrs::role("fancy", 2..7)], None, 0..1),
       context: Context::ThematicBreak,
       content: Content::Empty(EmptyMetadata::None),
+      loc: (0..12).into(),
     }
   );
 }
@@ -46,7 +47,7 @@ fn test_break_in_flow_of_blocks() {
       Block {
         context: Context::ThematicBreak,
         content: Content::Empty(EmptyMetadata::None),
-        ..empty_block!(7)
+        ..empty_block!(7, 10)
       },
       simple_text_block!("World", 12..17),
     ]
@@ -67,7 +68,7 @@ fn test_break_not_followed_by_empty_line() {
       Block {
         context: Context::ThematicBreak,
         content: Content::Empty(EmptyMetadata::None),
-        ..empty_block!(7)
+        ..empty_block!(7, 10)
       },
       simple_text_block!("World", 11..16),
     ]
@@ -91,7 +92,7 @@ fn test_invalid_break_not_preceded_by_empty_line() {
         node!(Newline, 7..8),
         node!("bar"; 8..11),
       ]),
-      ..empty_block!(0)
+      ..empty_block!(0, 11)
     }],
   );
 }
@@ -103,7 +104,7 @@ fn test_page_break() {
     Block {
       context: Context::PageBreak,
       content: Content::Empty(EmptyMetadata::None),
-      ..empty_block!(0)
+      ..empty_block!(0, 3)
     }
   );
 }
@@ -119,6 +120,7 @@ fn test_page_break_w_attrs() {
       meta: ChunkMeta::new(vecb![attrs::opt("always", 2..8)], None, 0..1),
       context: Context::PageBreak,
       content: Content::Empty(EmptyMetadata::None),
+      loc: (0..13).into(),
     }
   );
 }

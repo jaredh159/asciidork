@@ -1,0 +1,30 @@
+{
+  "name": "document",
+  "type": "block",
+  "blocks": [
+    {
+      "name": "list",
+      "type": "block",
+      "variant": "unordered",
+      "marker": "*",
+      "items": [
+        {
+          "name": "listItem",
+          "type": "block",
+          "marker": "*",
+          "principal": [
+            {
+              "name": "text",
+              "type": "string",
+              "value": "water",
+              "location": [{ "line": 1, "col": 3 }, { "line": 1, "col": 7 }]
+            }
+          ],
+          "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 7 }]
+        }
+      ],
+      "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 7 }]
+    }
+  ],
+  "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 7 }]
+}

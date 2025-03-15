@@ -30,10 +30,15 @@ impl<'arena> Parser<'arena> {
           return Ok(None);
         } else {
           let section = self.parse_section()?.unwrap();
+          let mut loc: MultiSourceLocation = section.meta.start_loc.into();
+          if let Some(sec_loc) = section.blocks.last().map(|b| &b.loc) {
+            loc.extend_end(sec_loc);
+          }
           return Ok(Some(Block {
             meta: ChunkMeta::empty(section.meta.start_loc, self.bump),
             context: Context::Section,
             content: Content::Section(section),
+            loc,
           }));
         }
       }
@@ -63,8 +68,7 @@ impl<'arena> Parser<'arena> {
         return Ok(None);
       }
       DelimiterLine => {
-        let delimiter = first_token.to_delimiter().unwrap();
-        return self.parse_delimited_block(delimiter, lines, meta);
+        return self.parse_delimited_block(lines, meta);
       }
       Pipe | Colon | Bang | Comma
         if lines.nth_token(1).kind(EqualSigns)
@@ -76,13 +80,15 @@ impl<'arena> Parser<'arena> {
       Colon => {
         if let Some((key, value, end)) = self.parse_doc_attr(&mut lines)? {
           self.restore_lines(lines);
+          let attr_loc = meta.start_loc.setting_end(end);
           if let Err(err) = self.document.meta.insert_doc_attr(&key, value.clone()) {
-            self.err_at(err, meta.start_loc.setting_end(end))?;
+            self.err_at(err, attr_loc)?;
           }
           return Ok(Some(Block {
             meta,
             context: Context::DocumentAttributeDecl,
             content: Content::DocumentAttribute(key, value),
+            loc: attr_loc.into(),
           }));
         }
       }
@@ -118,6 +124,7 @@ impl<'arena> Parser<'arena> {
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     let mut line = lines.consume_current().unwrap();
+    let line_end_loc = line.last_loc().unwrap();
     let level = self.line_heading_level(&line).unwrap();
     line.discard_assert(TokenKind::EqualSigns);
     line.discard_assert(TokenKind::Whitespace);
@@ -125,9 +132,10 @@ impl<'arena> Parser<'arena> {
     let content = self.parse_inlines(&mut line.into_lines())?;
     self.restore_lines(lines);
     Ok(Block {
-      meta,
       context: Context::DiscreteHeading,
       content: Content::Empty(EmptyMetadata::DiscreteHeading { level, content, id }),
+      loc: MultiSourceLocation::spanning(meta.start_loc, line_end_loc),
+      meta,
     })
   }
 
@@ -139,13 +147,16 @@ impl<'arena> Parser<'arena> {
   ) -> Option<Block<'arena>> {
     if lines.starts_with_comment_line() {
       let start_loc = lines.current_token().unwrap().loc.clamp_start();
-      lines.consume_current();
-      lines.discard_leading_comment_lines();
+      let mut end_loc = lines.consume_current().unwrap().last_loc().unwrap();
+      if let Some(final_loc) = lines.discard_leading_comment_lines() {
+        end_loc = final_loc;
+      }
       if lines.is_empty() {
         return Some(Block {
           meta: ChunkMeta::empty(start_loc, self.bump),
           context: Context::Comment,
           content: Content::Empty(EmptyMetadata::None),
+          loc: MultiSourceLocation::spanning(start_loc, end_loc),
         });
       }
     }
@@ -154,13 +165,13 @@ impl<'arena> Parser<'arena> {
 
   fn parse_delimited_block(
     &mut self,
-    delimiter: Delimiter,
     mut lines: ContiguousLines<'arena>,
     meta: ChunkMeta<'arena>,
   ) -> Result<Option<Block<'arena>>> {
+    let open_token = lines.consume_current_token().unwrap();
+    let delimiter = open_token.to_delimiter().unwrap();
     let prev = self.ctx.delimiter;
     self.ctx.delimiter = Some(delimiter);
-    let delimiter_token = lines.consume_current_token().unwrap();
     self.restore_lines(lines);
     let context = meta.block_style_or(Context::from(delimiter.kind));
     let restore_subs = self.ctx.set_subs_for(context, &meta);
@@ -196,8 +207,8 @@ impl<'arena> Parser<'arena> {
       }
 
       if context == Context::Comment {
-        let start_loc = lines.first_loc().unwrap_or(delimiter_token.loc);
-        let mut end_loc = lines.last_loc().unwrap_or(delimiter_token.loc);
+        let start_loc = lines.first_loc().unwrap_or(open_token.loc);
+        let mut end_loc = lines.last_loc().unwrap_or(open_token.loc);
         lines.discard_until(|l| l.starts_with(|token| token.lexeme == "////"));
         end_loc = lines.first_loc().unwrap_or(end_loc);
         self.restore_lines(lines);
@@ -221,15 +232,22 @@ impl<'arena> Parser<'arena> {
     };
 
     self.ctx.subs = restore_subs;
-    if let Some(mut block) = self.read_lines()? {
+    let end_loc = if let Some(mut block) = self.read_lines()? {
       let token = block.consume_current_token().unwrap();
       debug_assert!(token.kind(DelimiterLine));
       self.restore_lines(block);
+      token.loc
     } else {
-      self.err_token_full("This delimiter was never closed", &delimiter_token)?;
+      self.err_token_full("This delimiter was never closed", &open_token)?;
+      self.lexer.loc()
     };
     self.ctx.delimiter = prev;
-    Ok(Some(Block { meta, content, context }))
+    Ok(Some(Block {
+      content,
+      context,
+      loc: MultiSourceLocation::spanning(open_token.loc, end_loc),
+      meta,
+    }))
   }
 
   fn parse_image_block(
@@ -238,6 +256,7 @@ impl<'arena> Parser<'arena> {
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     let mut line = lines.consume_current().unwrap();
+    let loc = line.loc().unwrap();
     line.discard_assert(MacroName);
     line.discard_assert(Colon);
     let target = line.consume_macro_target(self.bump);
@@ -246,6 +265,7 @@ impl<'arena> Parser<'arena> {
       meta,
       context: Context::Image,
       content: Content::Empty(EmptyMetadata::Image { target, attrs }),
+      loc: loc.into(),
     })
   }
 
@@ -263,11 +283,11 @@ impl<'arena> Parser<'arena> {
     let inlines = self.parse_inlines(&mut lines)?;
     self.ctx.subs = restore_subs;
 
-    // this can happen when parsing empty desc list principal
-    if inlines.is_empty() {
+    // can be empty when parsing empty desc list principal
+    let Some(loc) = inlines.loc() else {
       self.restore_lines(lines);
       return Ok(None);
-    }
+    };
 
     self.restore_lines(lines);
     let content = if context == Context::Comment {
@@ -277,7 +297,7 @@ impl<'arena> Parser<'arena> {
       Content::Simple(inlines)
     };
 
-    let paragraph = Block { meta, context, content };
+    let paragraph = Block { meta, context, content, loc };
     Ok(Some(paragraph))
   }
 
@@ -289,10 +309,11 @@ impl<'arena> Parser<'arena> {
     let mut attr_line = lines.pop().unwrap();
     attr_line.discard_assert(TokenKind::Dashes); // `--`
     attr_line.discard_assert(TokenKind::Whitespace);
+    let last_loc = attr_line.last_loc().unwrap();
     let (attr, cite) = attr_line
       .consume_to_string(self.bump)
       .split_once(", ", self.bump);
-    lines
+    let start_token = lines
       .current_mut()
       .unwrap()
       .discard_assert(TokenKind::DoubleQuote);
@@ -308,6 +329,7 @@ impl<'arena> Parser<'arena> {
         attr,
         cite,
       },
+      loc: MultiSourceLocation::spanning(start_token.loc, last_loc),
     }))
   }
 
@@ -317,12 +339,13 @@ impl<'arena> Parser<'arena> {
     mut lines: ContiguousLines<'arena>,
     meta: ChunkMeta<'arena>,
   ) -> Result<Option<Block<'arena>>> {
-    lines.consume_current();
+    let line_loc = lines.consume_current().unwrap().last_loc().unwrap();
     self.restore_lines(lines);
     Ok(Some(Block {
-      meta,
       context,
       content: Content::Empty(EmptyMetadata::None),
+      loc: MultiSourceLocation::spanning(meta.start_loc, line_loc),
+      meta,
     }))
   }
 
@@ -332,16 +355,19 @@ impl<'arena> Parser<'arena> {
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     self.ctx.saw_toc_macro = true;
+    // todo: shouldn't i consume and restore? 👍
+    let line = lines.current().unwrap();
     if self.document.toc.is_none() {
       self.err_line(
         "Found macro placing Table of Contents, but TOC not enabled",
-        lines.current().unwrap(),
+        line,
       )?;
     }
     Ok(Block {
       meta,
       context: Context::TableOfContents,
       content: Content::Empty(EmptyMetadata::None),
+      loc: line.loc().unwrap().into(),
     })
   }
 }
@@ -360,7 +386,7 @@ mod tests {
     let expected = Block {
       context: Context::DocumentAttributeDecl,
       content: Content::DocumentAttribute("figure-caption".to_string(), AttrValue::Bool(false)),
-      ..empty_block!(0)
+      ..empty_block!(0, 17)
     };
     expect_eq!(block, expected);
   }
@@ -383,6 +409,7 @@ mod tests {
       Block {
         context: Context::Paragraph,
         content: Content::Simple(just!("first para", 0..10)),
+        loc: (0..10).into(),
         ..empty_block!(0)
       }
     );

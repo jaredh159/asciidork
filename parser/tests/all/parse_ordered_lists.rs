@@ -46,7 +46,8 @@ fn test_ordered_w_nested_unordered() {
       principle: just!("Linux", 2..7),
       type_meta: ListItemTypeMeta::None,
       blocks: vecb![Block {
-        meta: chunk_meta!(11),
+        meta: chunk_meta!(9),
+        loc: (9..30).into(),
         context: Context::UnorderedList,
         content: Content::List {
           depth: 2,

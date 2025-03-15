@@ -7,9 +7,9 @@ pub struct DocumentMeta {
   authors: Vec<Author>,
   doctype: DocType,
   job_attrs: JobAttrs,
-  header_attrs: Attrs,
   doc_attrs: Attrs,
   default_attrs: Attrs,
+  header_attrs: Attrs,
   pub safe_mode: SafeMode,
   pub embedded: bool,
   pub included_files: HashSet<String>,
@@ -216,6 +216,10 @@ impl DocumentMeta {
       },
     }
   }
+
+  pub const fn header_attrs(&self) -> &Attrs {
+    &self.header_attrs
+  }
 }
 
 impl ReadAttr for DocumentMeta {
@@ -229,6 +233,9 @@ impl ReadAttr for DocumentMeta {
       key => match self.job_attrs.get(key) {
         Some(JobAttr { readonly: true, value }) => Some(value),
         Some(JobAttr { readonly: false, value }) => self.resolve_attr(key).or(Some(value)),
+        _ if key == "doctitle" => self
+          .resolve_attr("doctitle")
+          .or_else(|| self.resolve_attr("_derived_doctitle")),
         _ => self.resolve_attr(key),
       },
     }

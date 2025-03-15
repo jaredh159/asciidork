@@ -1,0 +1,20 @@
+{
+  "name": "document",
+  "type": "block",
+  "blocks": [
+    {
+      "name": "paragraph",
+      "type": "block",
+      "inlines": [
+        {
+          "name": "text",
+          "type": "string",
+          "value": "A paragraph that consists of a single line.",
+          "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 43 }]
+        }
+      ],
+      "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 43 }]
+    }
+  ],
+  "location": [{ "line": 1, "col": 1 }, { "line": 1, "col": 43 }]
+}

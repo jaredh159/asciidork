@@ -21,7 +21,7 @@ fn trims_trailing_from_adoc() {
           node!(Inline::Newline, 7..8, depth: 1),
           node!("and unix"; 8..16, depth: 1), // <-- trimmed
         ]),
-        ..empty_block!(0)
+        ..empty_block!(0, 35)
       }
     ])
   );
@@ -42,7 +42,7 @@ fn no_trim_trailing_non_adoc() {
         content: BlockContent::Simple(nodes![
           node!("text "; 0..5, depth: 1), // <-- not trimmed
         ]),
-        ..empty_block!(0)
+        ..empty_block!(0, 33)
       }
     ])
   );
@@ -64,6 +64,12 @@ fn include_no_trailing_newline() {
           node!(Inline::Newline, 6..7),
           node!("Line-2!"; 0..7, depth: 1),
         ]),
+        loc: MultiSourceLocation {
+          start_pos: 0,
+          start_depth: 0,
+          end_pos: 7,
+          end_depth: 1,
+        },
         ..empty_block!(0)
       }
     ])
@@ -85,7 +91,7 @@ fn include_no_trailing_newline() {
           node!(Inline::Newline, 7..8, depth: 1),
           node!("Line-3"; 33..39),
         ]),
-        ..empty_block!(0)
+        ..empty_block!(0, 39)
       }
     ])
   );
@@ -107,6 +113,12 @@ fn include_with_trailing_newline() {
           node!(Inline::Newline, 6..7),
           node!("Line-2!"; 0..7, depth: 1),
         ]),
+        loc: MultiSourceLocation {
+          start_pos: 0,
+          start_depth: 0,
+          end_pos: 7,
+          end_depth: 1,
+        },
         ..empty_block!(0)
       }
     ])
@@ -128,16 +140,10 @@ fn include_with_trailing_newline() {
           node!(Inline::Newline, 7..8, depth: 1),
           node!("Line-3"; 33..39),
         ]),
-        ..empty_block!(0)
+        ..empty_block!(0, 39)
       }
     ])
   );
-  let input = adoc! {"
-    Line-1
-    include::some_file.adoc[]
-    Line-3
-  "};
-  assert_eq!("Line-3", &input[33..39]);
 }
 
 #[test]
@@ -157,12 +163,18 @@ fn include_with_2_trailing_newlines() {
           node!(Inline::Newline, 6..7),
           node!("Line-2!"; 0..7, depth: 1),
         ]),
+        loc: MultiSourceLocation {
+          start_pos: 0,
+          start_depth: 0,
+          end_pos: 7,
+          end_depth: 1,
+        },
         ..empty_block!(0)
       },
       Block {
         context: BlockContext::Paragraph,
         content: BlockContent::Simple(just!("Line-3", 33..39)),
-        ..empty_block!(33)
+        ..empty_block!(33, 39)
       }
     ])
   );

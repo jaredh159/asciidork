@@ -1,0 +1,22 @@
+{
+  "name": "document",
+  "type": "block",
+  "blocks": [
+    {
+      "name": "listing",
+      "type": "block",
+      "form": "delimited",
+      "delimiter": "----",
+      "inlines": [
+        {
+          "type": "string",
+          "name": "text",
+          "value": "def main\n  puts 'hello'\nend",
+          "location": [{ "line": 2, "col": 1 }, { "line": 4, "col": 3 }]
+        }
+      ],
+      "location": [{ "line": 1, "col": 1 }, { "line": 5, "col": 4 }]
+    }
+  ],
+  "location": [{ "line": 1, "col": 1 }, { "line": 5, "col": 4 }]
+}

@@ -24,6 +24,9 @@ ptest:
 btest:
   @cd dr-html-backend && bacon test
 
+ktest:
+  @cd tck && bacon test
+
 reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm
 

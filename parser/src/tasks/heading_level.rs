@@ -4,7 +4,9 @@ impl<'arena> Parser<'arena> {
   pub fn line_heading_level(&self, line: &Line) -> Option<u8> {
     let unadjusted = line.unadjusted_heading_level()?;
     Some(adjusted_leveloffset(
-      self.lexer.leveloffset(line.loc().unwrap().include_depth),
+      self
+        .lexer
+        .leveloffset(line.first_loc().unwrap().include_depth),
       adjusted_leveloffset(self.ctx.leveloffset, unadjusted),
     ))
   }

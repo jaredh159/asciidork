@@ -14,7 +14,7 @@ impl<'arena> Parser<'arena> {
         }
         self.err_at_pattern(
           "Invalid ifeval directive expression",
-          line.loc().unwrap(),
+          line.first_loc().unwrap(),
           pattern,
         )?;
       }
@@ -24,7 +24,7 @@ impl<'arena> Parser<'arena> {
     if !&captures[1].is_empty() {
       self.err_at_pattern(
         "ifeval directive may not include a target",
-        line.loc().unwrap(),
+        line.first_loc().unwrap(),
         &captures[1],
       )?;
       return Ok(DirectiveAction::Passthrough);

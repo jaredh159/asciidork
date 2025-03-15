@@ -1470,7 +1470,7 @@ impl AsciidoctorHtml {
     self.push_str(r#"<title>"#);
     if let Some(title) = attrs.str("title") {
       self.push_str(title);
-    } else if let Some(title) = document.title.as_ref() {
+    } else if let Some(title) = document.title() {
       for s in title.main.plain_text() {
         self.push_str(s);
       }
