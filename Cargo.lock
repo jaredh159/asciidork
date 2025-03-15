@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-cli"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
@@ -152,7 +152,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-tck"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "asciidork-ast",
  "asciidork-parser",
