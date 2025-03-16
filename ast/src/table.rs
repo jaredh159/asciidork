@@ -185,6 +185,9 @@ impl FromStr for CellContentStyle {
       "l" => Ok(Self::Literal),
       "m" => Ok(Self::Monospace),
       "s" => Ok(Self::Strong),
+      // https://github.com/asciidoctor/asciidoctor/issues/3111
+      // "verse" block no longer supported, ignored as default
+      "v" => Ok(Self::Default),
       _ => Err(()),
     }
   }

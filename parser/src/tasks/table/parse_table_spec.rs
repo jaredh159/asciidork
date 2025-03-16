@@ -110,7 +110,7 @@ impl<'arena> Parser<'arena> {
     // optimization: words are most common, so reject non-candidates
     if first_token.kind(Word) {
       match first_byte {
-        b'a' | b'd' | b'e' | b'h' | b'l' | b'm' | b's' => {}
+        b'a' | b'd' | b'e' | b'h' | b'l' | b'm' | b's' | b'v' => {}
         _ => return None,
       }
       // otherwise, it would need to be one of these to start a spec
