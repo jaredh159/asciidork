@@ -599,3 +599,14 @@ assert_html!(
   "#},
   contains: r#"<pre>slash preserved \</pre>"#
 );
+
+assert_html!(
+  header_cell_in_footer,
+  adoc! {r#"
+    [cols="1h,1s,1e",options="footer"]
+    |===
+    |a | b | c
+    |===
+  "#},
+  contains: r#"<th class="tableblock halign-left valign-top"><p class="tableblock">a</p></th>"#,
+);

@@ -86,8 +86,7 @@ impl AsciidoctorHtml {
 
   pub(super) fn close_cell(&mut self, cell: &Cell, section: TableSection) {
     match (section, &cell.content) {
-      (TableSection::Header, _) => self.push_str("</th>"),
-      (TableSection::Body, CellContent::Header(_)) => self.push_str("</th>"),
+      (TableSection::Header, _) | (_, CellContent::Header(_)) => self.push_str("</th>"),
       (_, CellContent::Literal(_)) => {
         self.newlines = self.default_newlines;
         self.push_str("</pre></div></td>");
