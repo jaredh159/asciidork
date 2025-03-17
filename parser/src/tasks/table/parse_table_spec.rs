@@ -72,7 +72,7 @@ impl<'arena> Parser<'arena> {
       return specs;
     }
     cols_attr
-      .split(',')
+      .split([';', ','])
       .for_each(|col| parse_col_spec(col, &mut specs));
     specs
   }
@@ -420,6 +420,16 @@ mod tests {
       ),
       (
         "1,2",
+        &[
+          ColSpec::default(),
+          ColSpec {
+            width: Proportional(2),
+            ..ColSpec::default()
+          },
+        ],
+      ),
+      (
+        "1;2", // separate by semicolon allowed
         &[
           ColSpec::default(),
           ColSpec {
