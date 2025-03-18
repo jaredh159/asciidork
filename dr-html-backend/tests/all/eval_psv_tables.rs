@@ -1,3 +1,4 @@
+use asciidork_core::JobSettings;
 use test_utils::*;
 
 assert_html!(
@@ -609,4 +610,34 @@ assert_html!(
     |===
   "#},
   contains: r#"<th class="tableblock halign-left valign-top"><p class="tableblock">a</p></th>"#,
+);
+
+assert_html!(
+  drops_cell_w_too_many_cols,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    [cols=2*]
+    |===
+    3+|A
+    |B | C
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup>
+        <col style="width: 50%;">
+        <col style="width: 50%;">
+      </colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">B</p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">C</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
 );

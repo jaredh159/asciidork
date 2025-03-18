@@ -82,6 +82,7 @@ impl<'arena> Parser<'arena> {
       }
     };
 
+    let mut drop_invalid_cell = false;
     if !ctx.counting_cols && spec.col_span.unwrap_or(0) > ctx.num_cols as u8 {
       self.err_at(
         format!(
@@ -91,6 +92,7 @@ impl<'arena> Parser<'arena> {
         ),
         spec_loc.setting_end(start - 1),
       )?;
+      drop_invalid_cell = true;
     }
 
     let mut end = start;
@@ -104,10 +106,18 @@ impl<'arena> Parser<'arena> {
 
     loop {
       if self.starts_psv_cell(tokens, ctx.cell_separator) {
-        return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
+        if drop_invalid_cell {
+          return self.parse_psv_table_cell(tokens, ctx, col_index);
+        } else {
+          return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
+        }
       }
       let Some(token) = tokens.consume_splitting(ctx.embeddable_cell_separator) else {
-        return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
+        if drop_invalid_cell {
+          return self.parse_psv_table_cell(tokens, ctx, col_index);
+        } else {
+          return self.finish_cell(spec, cell_tokens, col_index, ctx, start..end);
+        }
       };
 
       if ctx.counting_cols && token.kind(TokenKind::Newline) {
