@@ -32,7 +32,7 @@ impl AsciidoctorHtml {
       .and_then(|width| width.parse::<u8>().ok())
       .filter(|width| *width != 100);
 
-    if block.meta.attrs.has_option("autowidth") {
+    if block.meta.attrs.has_option("autowidth") && explicit_width.is_none() {
       tag.push_class("fit-content");
     } else if explicit_width.is_none() {
       tag.push_class("stretch");
