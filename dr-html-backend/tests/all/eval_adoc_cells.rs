@@ -148,6 +148,23 @@ assert_html!(
 );
 
 assert_html!(
+  override_unset_notitle_from_parent,
+  adoc! {r#"
+    = Document Title
+    :notitle:
+
+    |===
+    a|
+    = Nested Document Title
+    :!notitle:
+
+    content
+    |===
+  "#},
+  contains: r#"<h1>Nested Document Title</h1>"#
+);
+
+assert_html!(
   detects_admonition_in_cell,
   adoc! {r#"
     |===

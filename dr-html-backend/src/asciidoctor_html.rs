@@ -1591,14 +1591,7 @@ impl AsciidoctorHtml {
   }
 
   fn render_doc_title(&self) -> bool {
-    if self.doc_meta.is_true("noheader")
-      || self.doc_meta.is_true("notitle")
-      || self.doc_meta.is_false("showtitle")
-      || (self.doc_meta.embedded && !self.doc_meta.is_true("showtitle"))
-    {
-      return false;
-    }
-    true
+    !self.doc_meta.is_true("noheader") && self.doc_meta.show_doc_title()
   }
 
   fn render_interactive_svg(&mut self, target: &str, attrs: &AttrList) {

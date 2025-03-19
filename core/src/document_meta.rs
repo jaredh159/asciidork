@@ -220,6 +220,12 @@ impl DocumentMeta {
   pub const fn header_attrs(&self) -> &Attrs {
     &self.header_attrs
   }
+
+  pub fn show_doc_title(&self) -> bool {
+    !(self.is_true("notitle")
+      || self.is_false("showtitle")
+      || (self.embedded && (!self.is_true("showtitle") && !self.is_false("notitle"))))
+  }
 }
 
 impl ReadAttr for DocumentMeta {
