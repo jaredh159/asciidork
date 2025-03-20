@@ -148,6 +148,25 @@ assert_html!(
 );
 
 assert_html!(
+  override_set_showtitle_from_api,
+  |s: &mut JobSettings| {
+    s.job_attrs.insert_unchecked("showtitle", JobAttr::readonly(false));
+  },
+  adoc! {r#"
+    = Document Title
+
+    |===
+    a|
+    = Nested Document Title
+    :showtitle:
+
+    content
+    |===
+  "#},
+  contains: r#"<h1>Nested Document Title</h1>"#
+);
+
+assert_html!(
   override_unset_notitle_from_parent,
   adoc! {r#"
     = Document Title

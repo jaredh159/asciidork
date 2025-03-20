@@ -76,6 +76,9 @@ impl DocumentMeta {
     dm.job_attrs.remove("toc");
     dm.job_attrs.remove("toc-placement");
     dm.job_attrs.remove("toc-position");
+    // https://github.com/asciidoctor/asciidoctor/blob/main/lib/asciidoctor/document.rb#L268
+    dm.job_attrs.remove("showtitle");
+    dm.job_attrs.remove("notitle");
     dm
   }
 
