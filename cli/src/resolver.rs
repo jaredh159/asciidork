@@ -7,6 +7,7 @@ use asciidork_parser::includes::*;
 use IncludeTarget as Target;
 use ResolveError::*;
 
+#[derive(Debug, Clone)]
 pub struct CliResolver {
   base_dir: Option<PathBuf>,
   strict: bool,
@@ -38,6 +39,10 @@ impl IncludeResolver for CliResolver {
       .base_dir
       .clone()
       .map(|pathbuf| pathbuf.to_string_lossy().into())
+  }
+
+  fn clone_box(&self) -> Box<dyn IncludeResolver> {
+    Box::new(self.clone())
   }
 }
 

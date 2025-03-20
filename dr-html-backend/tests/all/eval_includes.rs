@@ -40,6 +40,17 @@ assert_html!(
 );
 
 assert_html!(
+  include_at_adoc_cell_start,
+  resolving: b"included\n",
+  adoc! {r#"
+    |===
+    a|include::some_file.adoc[]
+    |===
+  "#},
+  contains: "included"
+);
+
+assert_html!(
   inline_include_no_newline,
   resolving: b"Line-2",
   adoc! {r#"

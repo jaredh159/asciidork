@@ -69,6 +69,7 @@ impl<'arena> Parser<'arena> {
 
   pub fn cell_parser(&mut self, src: BumpVec<'arena, u8>, offset: u32) -> Parser<'arena> {
     let mut cell_parser = Parser::new(src, self.lexer.source_file().clone(), self.bump);
+    cell_parser.include_resolver = self.include_resolver.as_ref().map(|r| r.clone_box());
     cell_parser.strict = self.strict;
     cell_parser.lexer.adjust_offset(offset);
     cell_parser.ctx = self.ctx.clone_for_cell(self.bump);
@@ -367,6 +368,7 @@ mod tests {
   use test_utils::*;
 
   fn resolve(src: &'static str) -> Box<dyn IncludeResolver> {
+    #[derive(Clone)]
     struct MockResolver(pub Vec<u8>);
     impl IncludeResolver for MockResolver {
       fn resolve(
@@ -381,6 +383,9 @@ mod tests {
       }
       fn get_base_dir(&self) -> Option<String> {
         Some("/".to_string())
+      }
+      fn clone_box(&self) -> Box<dyn IncludeResolver> {
+        Box::new(self.clone())
       }
     }
     Box::new(MockResolver(Vec::from(src.as_bytes())))
