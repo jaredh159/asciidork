@@ -234,6 +234,14 @@ impl<'arena> RootLexer<'arena> {
     self.sources[loc.include_depth as usize].line_number_with_offset(loc.start)
   }
 
+  pub fn reline_diagnostics(&self, offset: u32, diagnostics: &mut [Diagnostic]) {
+    let offset_loc = SourceLocation::new_depth(offset, offset, self.include_depth());
+    let before_offset = self.line_number(offset_loc) - 1;
+    diagnostics
+      .iter_mut()
+      .for_each(|diag| diag.line_num += before_offset);
+  }
+
   pub fn next_token(&mut self) -> Token<'arena> {
     if let Some((ref mut buf_lexer, ref buf_loc)) = self.tmp_buf {
       if let Some(mut token) = buf_lexer.next_token() {

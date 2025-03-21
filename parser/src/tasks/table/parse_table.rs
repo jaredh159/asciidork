@@ -213,8 +213,9 @@ impl<'arena> Parser<'arena> {
       cell_tokens.remove_resolved_attr_refs();
       let cell_parser = self.cell_parser(cell_tokens.into_bytes(), loc.start);
       return match cell_parser.parse() {
-        Ok(ParseResult { document, warnings }) => {
+        Ok(ParseResult { document, mut warnings }) => {
           if !warnings.is_empty() {
+            self.lexer.reline_diagnostics(loc.start, &mut warnings);
             self.errors.borrow_mut().extend(warnings);
           }
           let content = CellContent::AsciiDoc(document);
@@ -222,6 +223,7 @@ impl<'arena> Parser<'arena> {
           Ok(Some((cell, repeat)))
         }
         Err(mut diagnostics) => {
+          self.lexer.reline_diagnostics(loc.start, &mut diagnostics);
           if !diagnostics.is_empty() && self.strict {
             Err(diagnostics.remove(0))
           } else {
