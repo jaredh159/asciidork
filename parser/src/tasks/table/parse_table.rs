@@ -25,6 +25,7 @@ impl<'arena> Parser<'arena> {
       .unwrap_or_else(|| bvec![in self.bump]);
 
     let mut format = match (meta.attrs.named("format"), delim_ch) {
+      (Some("psv"), b'!') if self.ctx.parsing_adoc_cell() => DataFormat::Prefix('!'),
       (Some("psv"), _) => DataFormat::Csv('|'),
       (Some("csv"), _) => DataFormat::Csv(','),
       (Some("tsv"), _) => DataFormat::Csv('\t'),

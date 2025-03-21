@@ -269,6 +269,24 @@ assert_html!(
 );
 
 assert_html!(
+  nested_table_w_explicit_format,
+  adoc! {r#"
+    [cols="2*"]
+    |===
+    |normal cell
+    a|
+    [format=psv]
+    !===
+    !nested cell
+    !===
+    |===
+  "#},
+  contains:
+    r#"<col style="width: 100%;">"#,
+    r#"<p class="tableblock">nested cell</p></td>"#,
+);
+
+assert_html!(
   nested_table_with_custom_separator,
   adoc! {r#"
     |===
