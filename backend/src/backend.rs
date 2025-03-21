@@ -35,7 +35,7 @@ pub trait Backend {
   fn exit_document_title(&mut self, nodes: &[InlineNode]);
 
   // table of contents
-  fn enter_toc(&mut self, _toc: &TableOfContents) {}
+  fn enter_toc(&mut self, _toc: &TableOfContents, _macro_block: Option<&Block>) {}
   fn exit_toc(&mut self, _toc: &TableOfContents) {}
   fn enter_toc_level(&mut self, _level: u8, _nodes: &[TocNode]) {}
   fn exit_toc_level(&mut self, _level: u8, _nodes: &[TocNode]) {}

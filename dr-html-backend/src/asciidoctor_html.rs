@@ -171,12 +171,19 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_toc(&mut self, toc: &TableOfContents) {
-    self.push_str(r#"<div id="toc" class="toc"#);
+  fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    let id = &macro_block
+      .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
+      .unwrap_or("toc".to_string());
+    self.push([r#"<div id=""#, id, r#"" class="toc"#]);
     if matches!(toc.position, TocPosition::Left | TocPosition::Right) {
       self.push_ch('2'); // `toc2` roughly means "toc-aside", per dr src
     }
-    self.push_str(r#""><div id="toctitle">"#);
+    self.push([r#""><div id=""#, id, r#"title""#]);
+    if macro_block.is_some() {
+      self.push_str(r#" class="title""#);
+    }
+    self.push_ch('>');
     self.push_str(&toc.title);
     self.push_str("</div>");
   }
