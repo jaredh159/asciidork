@@ -108,10 +108,11 @@ assert_html!(
 );
 
 assert_html!(
-  toc_macro_custom_id,
+  toc_macro_custom_id_class,
   adoc! {"
     = Doc Title
     :toc: macro
+    :toc-class: table-of-contents
 
     == Section 1
 
@@ -119,7 +120,7 @@ assert_html!(
     toc::[]
   "},
   contains:
-    r#"<div id="custom-id" class="toc">"#,
+    r#"<div id="custom-id" class="table-of-contents">"#,
     r#"<div id="custom-idtitle" class="title">Table of Contents</div>"#,
 );
 

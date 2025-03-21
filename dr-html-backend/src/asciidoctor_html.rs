@@ -175,7 +175,8 @@ impl Backend for AsciidoctorHtml {
     let id = &macro_block
       .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
       .unwrap_or("toc".to_string());
-    self.push([r#"<div id=""#, id, r#"" class="toc"#]);
+    self.push([r#"<div id=""#, id, r#"" class=""#]);
+    self.push_str(&self.doc_meta.string_or("toc-class", "toc"));
     if matches!(toc.position, TocPosition::Left | TocPosition::Right) {
       self.push_ch('2'); // `toc2` roughly means "toc-aside", per dr src
     }
