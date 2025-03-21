@@ -68,17 +68,23 @@ impl DocumentMeta {
     }
   }
 
+  pub fn remove_attr(&mut self, key: &str) {
+    self.header_attrs.remove(key);
+    self.doc_attrs.remove(key);
+    self.job_attrs.remove(key);
+  }
+
   pub fn clone_for_cell(&self) -> Self {
     let mut dm = self.clone();
     dm.set_doctype(DocType::Article);
     // toc in asciidoc cells are disconnected, see:
     // https://github.com/asciidoctor/asciidoctor/issues/4017
-    dm.job_attrs.remove("toc");
-    dm.job_attrs.remove("toc-placement");
-    dm.job_attrs.remove("toc-position");
+    dm.remove_attr("toc");
+    dm.remove_attr("toc-placement");
+    dm.remove_attr("toc-position");
     // https://github.com/asciidoctor/asciidoctor/blob/main/lib/asciidoctor/document.rb#L268
-    dm.job_attrs.remove("showtitle");
-    dm.job_attrs.remove("notitle");
+    dm.remove_attr("showtitle");
+    dm.remove_attr("notitle");
     dm
   }
 
