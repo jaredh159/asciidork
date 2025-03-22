@@ -643,6 +643,20 @@ assert_html!(
 );
 
 assert_html!(
+  explicit_header_with_multiline_cell,
+  adoc! {r#"
+    [cols=2*,options="header"]
+    |===
+    |A1
+
+    A2|B
+    |===
+  "#},
+  contains:
+    r#"<th class="tableblock halign-left valign-top">A1 A2</th>"#
+);
+
+assert_html!(
   no_implicit_header_if_first_cell_multiline,
   adoc! {r#"
     [cols=2*]
