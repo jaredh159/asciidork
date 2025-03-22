@@ -641,3 +641,21 @@ assert_html!(
     </table>
   "#}
 );
+
+assert_html!(
+  no_implicit_header_if_first_cell_multiline,
+  adoc! {r#"
+    [cols=2*]
+    |===
+    |A1
+
+    A1 continued|B1
+
+    |A2
+    |B2
+    |===
+  "#},
+  contains:
+    r#"</colgroup><tbody><tr>"#, // <-- no thead
+    r#"<p class="tableblock">A1</p><p class="tableblock">A1 continued</p>"#
+);

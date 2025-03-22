@@ -194,6 +194,8 @@ impl<'arena> Parser<'arena> {
       if ws.len() > 1 && ws[ws.len() - 2..] == [Newline, Newline] {
         trimmed_implicit_header = true;
         ctx.header_row = HeaderRow::FoundImplicit;
+      } else if cell_tokens.contains_seq(&[TokenSpec::Kind(Newline); 2]) {
+        ctx.header_row = HeaderRow::FoundNone
       }
     } else {
       while cell_tokens.last().is_whitespaceish() {
