@@ -426,4 +426,45 @@ mod tests {
         |  ^^^^^^^^^ Cell separator must be exactly one character
     "#}
   );
+
+  assert_error!(
+    unterminated_table,
+    adoc! {r#"
+      |===
+      foo
+
+      bar...
+    "# },
+    error! { r#"
+       --> test.adoc:1:1
+        |
+      1 | |===
+        | ^^^^ Table never closed, started here
+    "#}
+  );
+
+  assert_error!(
+    unterminated_block_in_adoc_table_cell,
+    adoc! {r#"
+      outside
+
+      * list item
+      +
+      |===
+      |cell
+      a|inside
+
+      ====
+      unterminated example block
+      |===
+
+      eof
+    "# },
+    error! { r#"
+       --> test.adoc:9:1
+        |
+      9 | ====
+        | ^^^^ This delimiter was never closed
+    "#}
+  );
 }

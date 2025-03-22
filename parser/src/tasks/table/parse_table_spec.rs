@@ -71,6 +71,17 @@ impl<'arena> Parser<'arena> {
     if cols_attr.trim().is_empty() {
       return specs;
     }
+
+    // not documented (afaik), but if it's only a number
+    // asciidoctor treats it as a repeat of the default colspec
+    if cols_attr.bytes().all(|b| b.is_ascii_digit()) {
+      let repeat = cols_attr.parse().unwrap_or(1);
+      for _ in 0..repeat {
+        specs.push(ColSpec::default());
+      }
+      return specs;
+    }
+
     cols_attr
       .split([';', ','])
       .for_each(|col| parse_col_spec(col, &mut specs));
@@ -389,6 +400,11 @@ mod tests {
         &[ColSpec::default(), ColSpec::default(), ColSpec::default()],
       ),
       ("1", &[ColSpec::default()]),
+      ("2", &[ColSpec::default(), ColSpec::default()]),
+      (
+        "3",
+        &[ColSpec::default(), ColSpec::default(), ColSpec::default()],
+      ),
       ("~", &[ColSpec { width: Auto, ..ColSpec::default() }]),
       (
         ">",
