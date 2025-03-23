@@ -35,15 +35,17 @@ impl<'arena> Parser<'arena> {
     ctx: &mut TableContext<'arena>,
   ) -> Result<Option<Row<'arena>>> {
     let mut cells = bvec![in self.bump];
+    std::mem::swap(&mut cells, &mut ctx.spilled_cells);
     let mut num_effective_cells = ctx.row_phantom_cells();
-    'outer: while let Some((cell, dupe)) = self.parse_psv_table_cell(tokens, ctx, cells.len())? {
+    while let Some((cell, dupe)) = self.parse_psv_table_cell(tokens, ctx, cells.len())? {
       if dupe > 1 {
         for _ in 1..dupe {
           ctx.add_phantom_cells(&cell, num_effective_cells);
           num_effective_cells += cell.col_span as usize;
-          cells.push(cell.clone());
-          if num_effective_cells >= ctx.num_cols {
-            break 'outer;
+          if num_effective_cells < ctx.num_cols {
+            cells.push(cell.clone());
+          } else {
+            ctx.spilled_cells.push(cell.clone());
           }
         }
       }

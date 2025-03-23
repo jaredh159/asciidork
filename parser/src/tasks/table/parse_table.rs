@@ -71,6 +71,7 @@ impl<'arena> Parser<'arena> {
       phantom_cells: HashSet::new(),
       dsv_last_consumed: DsvLastConsumed::Other,
       effective_row_idx: 0,
+      spilled_cells: bvec![in self.bump],
       table: Table {
         col_widths: col_widths.into(),
         header_row: None,

@@ -673,3 +673,27 @@ assert_html!(
     r#"</colgroup><tbody><tr>"#, // <-- no thead
     r#"<p class="tableblock">A1</p><p class="tableblock">A1 continued</p>"#
 );
+
+assert_html!(
+  repeating_cells_can_wrap_rows,
+  adoc! {r#"
+    |===
+    3*|A
+    |1 3*|2
+    |B |C
+    |===
+  "#},
+  contains: &html! {r#"
+    <tr>
+      <td class="tableblock halign-left valign-top">
+        <p class="tableblock">2</p>
+      </td>
+      <td class="tableblock halign-left valign-top">
+        <p class="tableblock">B</p>
+      </td>
+      <td class="tableblock halign-left valign-top">
+        <p class="tableblock">C</p>
+      </td>
+    </tr>
+  "#}
+);
