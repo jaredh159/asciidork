@@ -585,6 +585,9 @@ impl IncludeResolver for AssertResolver {
   fn get_base_dir(&self) -> Option<String> {
     Some(String::new())
   }
+  fn clone_box(&self) -> Box<dyn IncludeResolver> {
+    unimplemented!()
+  }
 }
 
 impl Drop for AssertResolver {
@@ -618,6 +621,9 @@ impl IncludeResolver for InfiniteResolver {
   fn get_base_dir(&self) -> Option<String> {
     Some(String::new())
   }
+  fn clone_box(&self) -> Box<dyn IncludeResolver> {
+    unimplemented!()
+  }
 }
 
 struct NestedResolver(Vec<&'static str>);
@@ -636,5 +642,8 @@ impl IncludeResolver for NestedResolver {
   }
   fn get_base_dir(&self) -> Option<String> {
     Some(String::new())
+  }
+  fn clone_box(&self) -> Box<dyn IncludeResolver> {
+    unimplemented!()
   }
 }

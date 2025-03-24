@@ -1,3 +1,4 @@
+use asciidork_core::JobSettings;
 use test_utils::*;
 
 assert_html!(
@@ -598,4 +599,101 @@ assert_html!(
     |===
   "#},
   contains: r#"<pre>slash preserved \</pre>"#
+);
+
+assert_html!(
+  header_cell_in_footer,
+  adoc! {r#"
+    [cols="1h,1s,1e",options="footer"]
+    |===
+    |a | b | c
+    |===
+  "#},
+  contains: r#"<th class="tableblock halign-left valign-top"><p class="tableblock">a</p></th>"#,
+);
+
+assert_html!(
+  drops_cell_w_too_many_cols,
+  |s: &mut JobSettings| s.strict = false,
+  adoc! {r#"
+    [cols=2*]
+    |===
+    3+|A
+    |B | C
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup>
+        <col style="width: 50%;">
+        <col style="width: 50%;">
+      </colgroup>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">B</p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">C</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);
+
+assert_html!(
+  explicit_header_with_multiline_cell,
+  adoc! {r#"
+    [cols=2*,options="header"]
+    |===
+    |A1
+
+    A2|B
+    |===
+  "#},
+  contains:
+    r#"<th class="tableblock halign-left valign-top">A1 A2</th>"#
+);
+
+assert_html!(
+  no_implicit_header_if_first_cell_multiline,
+  adoc! {r#"
+    [cols=2*]
+    |===
+    |A1
+
+    A1 continued|B1
+
+    |A2
+    |B2
+    |===
+  "#},
+  contains:
+    r#"</colgroup><tbody><tr>"#, // <-- no thead
+    r#"<p class="tableblock">A1</p><p class="tableblock">A1 continued</p>"#
+);
+
+assert_html!(
+  repeating_cells_can_wrap_rows,
+  adoc! {r#"
+    |===
+    3*|A
+    |1 3*|2
+    |B |C
+    |===
+  "#},
+  contains: &html! {r#"
+    <tr>
+      <td class="tableblock halign-left valign-top">
+        <p class="tableblock">2</p>
+      </td>
+      <td class="tableblock halign-left valign-top">
+        <p class="tableblock">B</p>
+      </td>
+      <td class="tableblock halign-left valign-top">
+        <p class="tableblock">C</p>
+      </td>
+    </tr>
+  "#}
 );

@@ -164,4 +164,8 @@ impl<'arena> ParseContext<'arena> {
     self.subs = customize_subs::from_meta(self.subs, &meta.attrs);
     restore
   }
+
+  pub fn parsing_adoc_cell(&self) -> bool {
+    self.table_cell_ctx == TableCellContext::AsciiDocCell
+  }
 }

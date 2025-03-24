@@ -45,6 +45,8 @@ pub trait IncludeResolver {
   fn get_base_dir(&self) -> Option<String> {
     None
   }
+
+  fn clone_box(&self) -> Box<dyn IncludeResolver>;
 }
 
 pub trait IncludeBuffer {
@@ -117,6 +119,7 @@ impl From<std::io::Error> for ResolveError {
 // test helpers
 
 #[cfg(debug_assertions)]
+#[derive(Clone)]
 pub struct ConstResolver(pub Vec<u8>);
 #[cfg(debug_assertions)]
 impl IncludeResolver for ConstResolver {
@@ -134,9 +137,13 @@ impl IncludeResolver for ConstResolver {
   fn get_base_dir(&self) -> Option<String> {
     Some("/".to_string())
   }
+  fn clone_box(&self) -> Box<dyn IncludeResolver> {
+    Box::new(self.clone())
+  }
 }
 
 #[cfg(debug_assertions)]
+#[derive(Clone)]
 pub struct ErrorResolver(pub ResolveError);
 #[cfg(debug_assertions)]
 impl IncludeResolver for ErrorResolver {
@@ -150,5 +157,8 @@ impl IncludeResolver for ErrorResolver {
 
   fn get_base_dir(&self) -> Option<String> {
     Some("/".to_string())
+  }
+  fn clone_box(&self) -> Box<dyn IncludeResolver> {
+    Box::new(self.clone())
   }
 }

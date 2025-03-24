@@ -30,6 +30,26 @@ jobs:
         run: |
           npm install -g wasm-pack@0.12.1
           cd dr-html-wasm && wasm-pack build --target web
+  accept:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '9.4.0'
+      - uses: actions/checkout@v4
+      - name: build
+        run: cargo build
+      - uses: actions/checkout@v4
+        with:
+          repository: 'jaredh159/asciidork-rx-html-acceptance'
+          path: 'acceptance'
+      - name: install
+        run: cd acceptance && pnpm install
+      - name: accept
+        run: |
+          cd acceptance
+          node ./check.js "$GITHUB_WORKSPACE/target/debug/asciidork" --verbose
 
 env:
   CARGO_TERM_COLOR: always

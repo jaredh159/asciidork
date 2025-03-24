@@ -96,7 +96,7 @@ assert_html!(
       <h2 id="_section_2">Section 2</h2>
       <div class="sectionbody">
         <div id="toc" class="toc">
-          <div id="toctitle">Table of Contents</div>
+          <div id="toctitle" class="title">Table of Contents</div>
           <ul class="sectlevel1">
             <li><a href="#_section_1">Section 1</a></li>
             <li><a href="#_section_2">Section 2</a></li>
@@ -105,6 +105,23 @@ assert_html!(
       </div>
     </div>
   "##}
+);
+
+assert_html!(
+  toc_macro_custom_id_class,
+  adoc! {"
+    = Doc Title
+    :toc: macro
+    :toc-class: table-of-contents
+
+    == Section 1
+
+    [#custom-id]
+    toc::[]
+  "},
+  contains:
+    r#"<div id="custom-id" class="table-of-contents">"#,
+    r#"<div id="custom-idtitle" class="title">Table of Contents</div>"#,
 );
 
 assert_html!(
@@ -174,6 +191,30 @@ assert_html!(
       <p>not sectioned</p>
     </div>
   "#}
+);
+
+assert_html!(
+  table_cell_toc,
+  adoc! {"
+    = Document Title
+    :toc:
+
+    == Section A
+
+    |===
+    a|
+    = Subdocument Title
+    :toc: macro
+
+    [#table-cell-toc]
+    toc::[]
+
+    == Subdocument Section A
+    |===
+  "},
+  contains:
+    r#"<div id="table-cell-toc" class="toc">"#,
+    r#"<div id="table-cell-toctitle" class="title">Table of Contents"#,
 );
 
 test_non_embedded_contains!(

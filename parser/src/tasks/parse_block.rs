@@ -351,16 +351,16 @@ impl<'arena> Parser<'arena> {
 
   fn parse_toc_macro(
     &mut self,
-    lines: ContiguousLines<'arena>,
+    mut lines: ContiguousLines<'arena>,
     meta: ChunkMeta<'arena>,
   ) -> Result<Block<'arena>> {
     self.ctx.saw_toc_macro = true;
-    // todo: shouldn't i consume and restore? 👍
-    let line = lines.current().unwrap();
+    let line = lines.consume_current().unwrap();
+    self.restore_lines(lines);
     if self.document.toc.is_none() {
       self.err_line(
         "Found macro placing Table of Contents, but TOC not enabled",
-        line,
+        &line,
       )?;
     }
     Ok(Block {

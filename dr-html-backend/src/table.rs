@@ -32,7 +32,7 @@ impl AsciidoctorHtml {
       .and_then(|width| width.parse::<u8>().ok())
       .filter(|width| *width != 100);
 
-    if block.meta.attrs.has_option("autowidth") {
+    if block.meta.attrs.has_option("autowidth") && explicit_width.is_none() {
       tag.push_class("fit-content");
     } else if explicit_width.is_none() {
       tag.push_class("stretch");
@@ -86,8 +86,12 @@ impl AsciidoctorHtml {
 
   pub(super) fn close_cell(&mut self, cell: &Cell, section: TableSection) {
     match (section, &cell.content) {
-      (TableSection::Header, _) => self.push_str("</th>"),
-      (TableSection::Body, CellContent::Header(_)) => self.push_str("</th>"),
+      (TableSection::Header, _) | (_, CellContent::Header(_)) => {
+        if self.html.as_bytes().last() == Some(&b' ') {
+          self.html.pop();
+        }
+        self.push_str("</th>");
+      }
       (_, CellContent::Literal(_)) => {
         self.newlines = self.default_newlines;
         self.push_str("</pre></div></td>");
@@ -109,7 +113,7 @@ impl AsciidoctorHtml {
 
   pub(super) fn close_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
     match (section, &cell.content) {
-      (TableSection::Header, _) => {}
+      (TableSection::Header, _) => self.push_str(" "),
       (_, CellContent::Emphasis(_)) => self.push_str("</em></p>"),
       (_, CellContent::Monospace(_)) => self.push_str("</code></p>"),
       (_, CellContent::Strong(_)) => self.push_str("</strong></p>"),

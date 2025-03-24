@@ -25,6 +25,7 @@ impl<'arena> Parser<'arena> {
       .unwrap_or_else(|| bvec![in self.bump]);
 
     let mut format = match (meta.attrs.named("format"), delim_ch) {
+      (Some("psv"), b'!') if self.ctx.parsing_adoc_cell() => DataFormat::Prefix('!'),
       (Some("psv"), _) => DataFormat::Csv('|'),
       (Some("csv"), _) => DataFormat::Csv(','),
       (Some("tsv"), _) => DataFormat::Csv('\t'),
@@ -70,6 +71,7 @@ impl<'arena> Parser<'arena> {
       phantom_cells: HashSet::new(),
       dsv_last_consumed: DsvLastConsumed::Other,
       effective_row_idx: 0,
+      spilled_cells: bvec![in self.bump],
       table: Table {
         col_widths: col_widths.into(),
         header_row: None,
@@ -193,6 +195,8 @@ impl<'arena> Parser<'arena> {
       if ws.len() > 1 && ws[ws.len() - 2..] == [Newline, Newline] {
         trimmed_implicit_header = true;
         ctx.header_row = HeaderRow::FoundImplicit;
+      } else if cell_tokens.contains_seq(&[TokenSpec::Kind(Newline); 2]) {
+        ctx.header_row = HeaderRow::FoundNone
       }
     } else {
       while cell_tokens.last().is_whitespaceish() {
@@ -213,8 +217,9 @@ impl<'arena> Parser<'arena> {
       cell_tokens.remove_resolved_attr_refs();
       let cell_parser = self.cell_parser(cell_tokens.into_bytes(), loc.start);
       return match cell_parser.parse() {
-        Ok(ParseResult { document, warnings }) => {
+        Ok(ParseResult { document, mut warnings }) => {
           if !warnings.is_empty() {
+            self.lexer.reline_diagnostics(loc.start, &mut warnings);
             self.errors.borrow_mut().extend(warnings);
           }
           let content = CellContent::AsciiDoc(document);
@@ -222,6 +227,7 @@ impl<'arena> Parser<'arena> {
           Ok(Some((cell, repeat)))
         }
         Err(mut diagnostics) => {
+          self.lexer.reline_diagnostics(loc.start, &mut diagnostics);
           if !diagnostics.is_empty() && self.strict {
             Err(diagnostics.remove(0))
           } else {
@@ -421,6 +427,47 @@ mod tests {
         |
       1 | [separator=""]
         |  ^^^^^^^^^ Cell separator must be exactly one character
+    "#}
+  );
+
+  assert_error!(
+    unterminated_table,
+    adoc! {r#"
+      |===
+      foo
+
+      bar...
+    "# },
+    error! { r#"
+       --> test.adoc:1:1
+        |
+      1 | |===
+        | ^^^^ Table never closed, started here
+    "#}
+  );
+
+  assert_error!(
+    unterminated_block_in_adoc_table_cell,
+    adoc! {r#"
+      outside
+
+      * list item
+      +
+      |===
+      |cell
+      a|inside
+
+      ====
+      unterminated example block
+      |===
+
+      eof
+    "# },
+    error! { r#"
+       --> test.adoc:9:1
+        |
+      9 | ====
+        | ^^^^ This delimiter was never closed
     "#}
   );
 }

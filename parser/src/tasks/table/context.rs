@@ -20,6 +20,7 @@ pub struct TableContext<'arena> {
   pub effective_row_idx: usize,
   pub dsv_last_consumed: DsvLastConsumed,
   pub table: Table<'arena>,
+  pub spilled_cells: BumpVec<'arena, Cell<'arena>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,6 +115,7 @@ mod tests {
       phantom_cells: HashSet::new(),
       effective_row_idx: 0,
       dsv_last_consumed: DsvLastConsumed::Other,
+      spilled_cells: vecb![],
       table: Table {
         col_widths: ColWidths::new(vecb![]),
         header_row: None,

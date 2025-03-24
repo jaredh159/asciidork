@@ -231,6 +231,7 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   pub fn line_number_with_offset(&self, location: u32) -> (u32, u32) {
+    let location = location - self.offset;
     let mut line_number = 1;
     let mut offset: u32 = 0;
     for idx in 0..location {

@@ -148,6 +148,42 @@ assert_html!(
 );
 
 assert_html!(
+  override_set_showtitle_from_api,
+  |s: &mut JobSettings| {
+    s.job_attrs.insert_unchecked("showtitle", JobAttr::readonly(false));
+  },
+  adoc! {r#"
+    = Document Title
+
+    |===
+    a|
+    = Nested Document Title
+    :showtitle:
+
+    content
+    |===
+  "#},
+  contains: r#"<h1>Nested Document Title</h1>"#
+);
+
+assert_html!(
+  override_unset_notitle_from_parent,
+  adoc! {r#"
+    = Document Title
+    :notitle:
+
+    |===
+    a|
+    = Nested Document Title
+    :!notitle:
+
+    content
+    |===
+  "#},
+  contains: r#"<h1>Nested Document Title</h1>"#
+);
+
+assert_html!(
   detects_admonition_in_cell,
   adoc! {r#"
     |===
@@ -230,6 +266,24 @@ assert_html!(
       </tbody>
     </table>
   "#}
+);
+
+assert_html!(
+  nested_table_w_explicit_format,
+  adoc! {r#"
+    [cols="2*"]
+    |===
+    |normal cell
+    a|
+    [format=psv]
+    !===
+    !nested cell
+    !===
+    |===
+  "#},
+  contains:
+    r#"<col style="width: 100%;">"#,
+    r#"<p class="tableblock">nested cell</p></td>"#,
 );
 
 assert_html!(

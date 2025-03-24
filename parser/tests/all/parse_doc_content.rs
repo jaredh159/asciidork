@@ -74,6 +74,27 @@ assert_error!(
   "}
 );
 
+assert_error!(
+  error_in_asciidoc_cell_has_correct_line,
+  adoc! {"
+    [#foo]
+    == Foo
+
+    [cols=1a]
+    |===
+    |[[foo,Foo]]* not AsciiDoc
+
+    | AsciiDoc
+    |===
+  "},
+  error! {"
+     --> test.adoc:6:3
+      |
+    6 | [[foo,Foo]]* not AsciiDoc
+      |   ^^^ Duplicate anchor id
+  "}
+);
+
 #[test]
 fn test_sectioned_w_preamble() {
   assert_doc_content!(

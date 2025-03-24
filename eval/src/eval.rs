@@ -31,6 +31,7 @@ pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
   backend.exit_header();
   eval_toc_at(
     &[TocPosition::Auto, TocPosition::Left, TocPosition::Right],
+    None,
     &ctx,
     backend,
   );
@@ -51,7 +52,7 @@ fn eval_doc_content(ctx: &Ctx, backend: &mut impl Backend) {
         backend.enter_preamble(blocks);
         blocks.iter().for_each(|b| eval_block(b, ctx, backend));
         backend.exit_preamble(blocks);
-        eval_toc_at(&[TocPosition::Preamble], ctx, backend);
+        eval_toc_at(&[TocPosition::Preamble], None, ctx, backend);
       }
       sections.iter().for_each(|s| eval_section(s, ctx, backend));
     }
@@ -323,7 +324,7 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
     (Context::PageBreak, _) => {
       backend.visit_page_break(block);
     }
-    (Context::TableOfContents, _) => eval_toc_at(&[TocPosition::Macro], ctx, backend),
+    (Context::TableOfContents, _) => eval_toc_at(&[TocPosition::Macro], Some(block), ctx, backend),
     (Context::Comment, _) => {}
     _ => {
       dbg!(block.context, &block.content);
@@ -491,14 +492,19 @@ fn eval_table_row(row: &Row, section: TableSection, ctx: &Ctx, backend: &mut imp
   backend.exit_table_row(row, section);
 }
 
-fn eval_toc_at(positions: &[TocPosition], ctx: &Ctx, backend: &mut impl Backend) {
+fn eval_toc_at(
+  positions: &[TocPosition],
+  macro_block: Option<&Block>,
+  ctx: &Ctx,
+  backend: &mut impl Backend,
+) {
   let Some(toc) = &ctx.doc.toc else {
     return;
   };
   if !positions.contains(&toc.position) || toc.nodes.is_empty() {
     return;
   }
-  backend.enter_toc(toc);
+  backend.enter_toc(toc, macro_block);
   eval_toc_level(&toc.nodes, ctx, backend);
   backend.exit_toc(toc);
 }
