@@ -5,6 +5,9 @@ edition = "2021"
 description = "Asciidork parser"
 license = "MIT"
 
+[features]
+attr_ref_observation = []
+
 [dependencies]
 asciidork-ast = { path = "../ast", version = "0.18.0" }
 asciidork-core = { path = "../core", version = "0.18.0" }
