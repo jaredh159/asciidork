@@ -12,6 +12,8 @@ pub struct Parser<'arena> {
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) strict: bool, // todo: naming...
   pub(super) include_resolver: Option<Box<dyn IncludeResolver>>,
+  #[cfg(feature = "attr_ref_observation")]
+  pub(super) attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
 }
 
 pub struct ParseResult<'arena> {
@@ -39,6 +41,8 @@ impl<'arena> Parser<'arena> {
       strict: true,
       include_resolver: None,
       lexer,
+      #[cfg(feature = "attr_ref_observation")]
+      attr_ref_observer: None,
     };
     parser.set_source_file_attrs();
     parser
@@ -65,6 +69,11 @@ impl<'arena> Parser<'arena> {
 
   pub fn set_resolver(&mut self, resolver: Box<dyn IncludeResolver>) {
     self.include_resolver = Some(resolver);
+  }
+
+  #[cfg(feature = "attr_ref_observation")]
+  pub fn set_attr_ref_observer(&mut self, observer: Box<dyn AttrRefObserver>) {
+    self.attr_ref_observer = Some(observer);
   }
 
   pub fn cell_parser(&mut self, src: BumpVec<'arena, u8>, offset: u32) -> Parser<'arena> {
