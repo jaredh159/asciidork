@@ -728,7 +728,7 @@ macro_rules! parse_section {
   ($input:expr) => {{
     let doc = parse_doc!($input);
     match doc.content {
-      ::asciidork_ast::DocContent::Sectioned { mut sections, .. } => {
+      ::asciidork_ast::DocContent::Sections(Sectioned { mut sections, .. }) => {
         if sections.len() != 1 {
           panic!("expected one section, found {}", sections.len());
         }

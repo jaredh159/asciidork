@@ -24,7 +24,7 @@ mod internal {
     pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
     pub use crate::chunk_meta::ChunkMeta;
     pub use crate::col_widths::*;
-    pub use crate::doc_content::DocContent;
+    pub use crate::doc_content::{DocContent, Sectioned};
     pub use crate::document::{DocHeader, DocTitle, Document};
     pub use crate::inline::{AdjacentNewline, CurlyKind::*, QuoteKind::*, SymbolKind};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
@@ -56,7 +56,7 @@ pub mod prelude {
   pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::col_widths::*;
-  pub use crate::doc_content::DocContent;
+  pub use crate::doc_content::{DocContent, Sectioned};
   pub use crate::document::{DocHeader, DocTitle, Document};
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind, SymbolKind};
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};

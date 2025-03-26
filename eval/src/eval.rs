@@ -47,14 +47,20 @@ fn eval_doc_content(ctx: &Ctx, backend: &mut impl Backend) {
     DocContent::Blocks(blocks) => {
       blocks.iter().for_each(|b| eval_block(b, ctx, backend));
     }
-    DocContent::Sectioned { sections, preamble } => {
-      if let Some(blocks) = preamble {
+    DocContent::Sections(content) => {
+      if let Some(blocks) = &content.preamble {
         backend.enter_preamble(blocks);
         blocks.iter().for_each(|b| eval_block(b, ctx, backend));
         backend.exit_preamble(blocks);
         eval_toc_at(&[TocPosition::Preamble], None, ctx, backend);
       }
-      sections.iter().for_each(|s| eval_section(s, ctx, backend));
+      content
+        .sections
+        .iter()
+        .for_each(|s| eval_section(s, ctx, backend));
+    }
+    DocContent::Parts(_parts) => {
+      todo!("eval book parts");
     }
   }
   backend.exit_content();

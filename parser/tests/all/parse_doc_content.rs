@@ -28,7 +28,7 @@ fn unattached_meta_skipped() {
 
       foobar
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![Section {
         meta: chunk_meta!(0),
@@ -38,7 +38,7 @@ fn unattached_meta_skipped() {
         blocks: vecb![simple_text_block!("foobar", 33..39)],
         loc: (0..39).into()
       }]
-    }
+    })
   );
 }
 
@@ -105,7 +105,7 @@ fn test_sectioned_w_preamble() {
 
       Para 1
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: Some(vecb![simple_text_block!("Preamble", 0..8)]),
       sections: vecb![Section {
         meta: chunk_meta!(10),
@@ -115,7 +115,7 @@ fn test_sectioned_w_preamble() {
         blocks: vecb![simple_text_block!("Para 1", 21..27)],
         loc: (10..27).into()
       }]
-    }
+    })
   );
 }
 
@@ -129,7 +129,7 @@ fn comment_only_preamble_discarded() {
 
       Para 1
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![Section {
         meta: chunk_meta!(10),
@@ -139,7 +139,7 @@ fn comment_only_preamble_discarded() {
         blocks: vecb![simple_text_block!("Para 1", 21..27)],
         loc: (10..27).into()
       }]
-    }
+    })
   );
 }
 
@@ -151,7 +151,7 @@ fn test_sectioned_no_preamble() {
 
       Para 1
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![Section {
         meta: chunk_meta!(0),
@@ -161,7 +161,7 @@ fn test_sectioned_no_preamble() {
         blocks: vecb![simple_text_block!("Para 1", 11..17)],
         loc: (0..17).into()
       }]
-    }
+    })
   );
 }
 
@@ -175,7 +175,7 @@ fn test_section_offset() {
 
       = Sect 2
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![
         Section {
@@ -202,7 +202,7 @@ fn test_section_offset() {
           loc: (28..36).into()
         }
       ]
-    }
+    })
   );
 }
 
