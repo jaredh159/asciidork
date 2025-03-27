@@ -49,9 +49,9 @@ fn eval_doc_content(ctx: &Ctx, backend: &mut impl Backend) {
     }
     DocContent::Sections(content) => {
       if let Some(blocks) = &content.preamble {
-        backend.enter_preamble(blocks);
+        backend.enter_preamble(ctx.doc.title().is_some(), blocks);
         blocks.iter().for_each(|b| eval_block(b, ctx, backend));
-        backend.exit_preamble(blocks);
+        backend.exit_preamble(ctx.doc.title().is_some(), blocks);
         eval_toc_at(&[TocPosition::Preamble], None, ctx, backend);
       }
       content

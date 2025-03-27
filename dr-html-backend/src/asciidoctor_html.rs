@@ -224,13 +224,17 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_preamble(&mut self, _blocks: &[Block]) {
-    self.push_str(r#"<div id="preamble"><div class="sectionbody">"#);
+  fn enter_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
+    if doc_has_title {
+      self.push_str(r#"<div id="preamble"><div class="sectionbody">"#);
+    }
   }
 
   #[instrument(skip_all)]
-  fn exit_preamble(&mut self, _blocks: &[Block]) {
-    self.push_str("</div></div>");
+  fn exit_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
+    if doc_has_title {
+      self.push_str("</div></div>");
+    }
   }
 
   #[instrument(skip_all)]

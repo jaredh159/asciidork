@@ -182,7 +182,7 @@ assert_html!(
 );
 
 assert_html!(
-  xref_escraped_bracket_in_linktext,
+  xref_escaped_bracket_in_linktext,
   adoc! {r#"
     xref:tigers[[tigers\] are cats]
 
@@ -190,12 +190,8 @@ assert_html!(
     == Tigers
   "#},
   html! {r##"
-    <div id="preamble">
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p><a href="#tigers">[tigers] are cats</a></p>
-        </div>
-      </div>
+    <div class="paragraph">
+      <p><a href="#tigers">[tigers] are cats</a></p>
     </div>
     <div class="sect1">
       <h2 id="tigers">Tigers</h2>

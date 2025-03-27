@@ -29,8 +29,8 @@ pub trait Backend {
   fn enter_footer(&mut self);
   fn exit_footer(&mut self);
   fn visit_document_attribute_decl(&mut self, name: &str, value: &AttrValue);
-  fn enter_preamble(&mut self, blocks: &[Block]);
-  fn exit_preamble(&mut self, blocks: &[Block]);
+  fn enter_preamble(&mut self, doc_has_title: bool, blocks: &[Block]);
+  fn exit_preamble(&mut self, doc_has_title: bool, blocks: &[Block]);
   fn enter_document_title(&mut self, nodes: &[InlineNode]);
   fn exit_document_title(&mut self, nodes: &[InlineNode]);
 

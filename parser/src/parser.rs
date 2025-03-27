@@ -214,12 +214,28 @@ impl<'arena> Parser<'arena> {
       self.lexer.truncate();
     }
 
-    while let Some(chunk) = self.parse_chunk()? {
-      match chunk {
-        Chunk::Block(block) => self.document.content.push_block(block, self.bump),
-        Chunk::Section(section) => self.document.content.push_section(section, self.bump),
-      }
+    // let is_book = self.document.meta.get_doctype() == DocType::Book;
+    let sectioned = self.parse_sectioned()?;
+    // dbg!(&sectioned);
+
+    // if !is_book {
+    if sectioned.sections.is_empty() {
+      self.document.content = DocContent::Blocks(sectioned.preamble.unwrap_or(bvec![in self.bump]));
+    } else {
+      self.document.content = DocContent::Sections(sectioned);
     }
+    // }
+
+    // if book, try to parse more sectioneds
+    // then convert the vec[section] into appropriate doc types
+
+    // while let Some(chunk) = self.parse_chunk(is_book)? {
+    //   match chunk {
+    //     Chunk::Block(block) => self.document.content.push_block(block, self.bump),
+    //     Chunk::Section(section) => self.document.content.push_section(section, self.bump),
+    //     Chunk::Part(_part) => todo!("push part into book parts"),
+    //   }
+    // }
 
     // clear the doc attrs so the backend can see them replayed in decl order
     self.document.meta.clear_doc_attrs();
@@ -232,11 +248,34 @@ impl<'arena> Parser<'arena> {
     })
   }
 
-  fn parse_chunk(&mut self) -> Result<Option<Chunk<'arena>>> {
-    match self.parse_section()? {
-      Some(section) => Ok(Some(Chunk::Section(section))),
-      None => Ok(self.parse_block()?.map(Chunk::Block)),
+  // maybe moveme?
+  fn parse_sectioned(&mut self) -> Result<Sectioned<'arena>> {
+    let mut blocks = bvec![in self.bump];
+    while let Some(block) = self.parse_block()? {
+      blocks.push(block);
     }
+    let preamble = if blocks.is_empty() { None } else { Some(blocks) };
+    let mut sections = bvec![in self.bump];
+    while let Some(section) = self.parse_section()? {
+      sections.push(section);
+    }
+    Ok(Sectioned { preamble, sections })
+  }
+
+  fn parse_chunk(&mut self, is_book: bool) -> Result<Option<Chunk<'arena>>> {
+    if is_book {
+      if let Some(part) = self.parse_book_part()? {
+        return Ok(Some(Chunk::Part(part)));
+      }
+    }
+    if let Some(section) = self.parse_section()? {
+      return Ok(Some(Chunk::Section(section)));
+    }
+    Ok(self.parse_block()?.map(Chunk::Block))
+    // match self.parse_section()? {
+    //   Some(section) => Ok(Some(Chunk::Section(section))),
+    //   None => Ok(self.parse_block()?.map(Chunk::Block)),
+    // }
   }
 
   pub(crate) fn parse_chunk_meta(
@@ -307,6 +346,7 @@ impl<'arena> HasArena<'arena> for Parser<'arena> {
 pub enum Chunk<'arena> {
   Block(Block<'arena>),
   Section(Section<'arena>),
+  Part(Sectioned<'arena>),
 }
 
 pub enum DirectiveAction<'arena> {

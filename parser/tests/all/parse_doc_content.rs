@@ -165,6 +165,23 @@ fn test_sectioned_no_preamble() {
   );
 }
 
+// #[test]
+// fn simple_book_part() {
+//   assert_doc_content!(
+//     adoc! {"
+//      = Book Title
+//      :doctype: book
+
+//      = Part 1
+
+//      == Chapter A
+
+//      content
+//     "},
+//     DocContent::Parts(vecb![])
+//   );
+// }
+
 #[test]
 fn test_section_offset() {
   assert_doc_content!(
