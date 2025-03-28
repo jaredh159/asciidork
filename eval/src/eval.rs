@@ -59,12 +59,32 @@ fn eval_doc_content(ctx: &Ctx, backend: &mut impl Backend) {
         .iter()
         .for_each(|s| eval_section(s, ctx, backend));
     }
-    DocContent::Parts(_parts) => {
-      todo!("eval book parts");
+    DocContent::Parts(parts) => {
+      parts.iter().for_each(|p| eval_book_part(p, ctx, backend));
     }
   }
   backend.exit_content();
 }
+
+fn eval_book_part(part: &Part, ctx: &Ctx, backend: &mut impl Backend) {
+  backend.enter_book_part(part);
+  backend.enter_book_part_title(&part.title);
+  part
+    .title
+    .text
+    .iter()
+    .for_each(|node| eval_inline(node, ctx, backend));
+  backend.exit_book_part_title(&part.title);
+  part
+    .sections
+    .iter()
+    .for_each(|section| eval_section(section, ctx, backend));
+  backend.exit_book_part(part);
+}
+
+//fn eval_book_part_section(part: &Section, ctx: &Ctx, backend: &mut impl Backend) {
+//  //
+//}
 
 fn eval_section(section: &Section, ctx: &Ctx, backend: &mut impl Backend) {
   backend.enter_section(section);

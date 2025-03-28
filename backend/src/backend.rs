@@ -50,6 +50,12 @@ pub trait Backend {
   fn enter_section_heading(&mut self, section: &Section);
   fn exit_section_heading(&mut self, section: &Section);
 
+  // books
+  fn enter_book_part(&mut self, part: &Part);
+  fn exit_book_part(&mut self, part: &Part);
+  fn enter_book_part_title(&mut self, title: &PartTitle);
+  fn exit_book_part_title(&mut self, title: &PartTitle);
+
   // blocks contexts
   fn enter_paragraph_block(&mut self, block: &Block);
   fn exit_paragraph_block(&mut self, block: &Block);

@@ -165,22 +165,36 @@ fn test_sectioned_no_preamble() {
   );
 }
 
-// #[test]
-// fn simple_book_part() {
-//   assert_doc_content!(
-//     adoc! {"
-//      = Book Title
-//      :doctype: book
+#[test]
+fn simple_book_part() {
+  assert_doc_content!(
+    adoc! {"
+     = Book Title
+     :doctype: book
 
-//      = Part 1
+     = Part 1
 
-//      == Chapter A
+     == Chapter A
 
-//      content
-//     "},
-//     DocContent::Parts(vecb![])
-//   );
-// }
+     content
+    "},
+    DocContent::Parts(vecb![Part {
+      title: PartTitle {
+        attrs: MultiAttrList::new_in(leaked_bump()),
+        text: just!("Part 1", 31..37)
+      },
+      intro: None,
+      sections: vecb![Section {
+        meta: chunk_meta!(39),
+        level: 1,
+        id: Some(bstr!("_chapter_a")),
+        heading: just!("Chapter A", 42..51),
+        blocks: vecb![simple_text_block!("content", 53..60)],
+        loc: (39..60).into()
+      }]
+    }])
+  );
+}
 
 #[test]
 fn test_section_offset() {

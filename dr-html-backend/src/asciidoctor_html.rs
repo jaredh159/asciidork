@@ -224,6 +224,26 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
+  fn enter_book_part(&mut self, _part: &Part) {}
+
+  #[instrument(skip_all)]
+  fn exit_book_part(&mut self, _part: &Part) {}
+
+  #[instrument(skip_all)]
+  fn enter_book_part_title(&mut self, title: &PartTitle) {
+    self.push_str("<h1");
+    if let Some(id) = &title.id {
+      self.push([r#" id=""#, id, "\""]);
+    }
+    self.push_str(r#" class="sect0">"#);
+  }
+
+  #[instrument(skip_all)]
+  fn exit_book_part_title(&mut self, _title: &PartTitle) {
+    self.push_str("</h1>");
+  }
+
+  #[instrument(skip_all)]
   fn enter_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
     if doc_has_title {
       self.push_str(r#"<div id="preamble"><div class="sectionbody">"#);

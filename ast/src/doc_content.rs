@@ -2,7 +2,7 @@ use crate::internal::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum DocContent<'arena> {
-  Parts(BumpVec<'arena, Sectioned<'arena>>),
+  Parts(BumpVec<'arena, Part<'arena>>),
   Sections(Sectioned<'arena>),
   Blocks(BumpVec<'arena, Block<'arena>>),
 }
@@ -11,6 +11,20 @@ pub enum DocContent<'arena> {
 pub struct Sectioned<'arena> {
   pub preamble: Option<BumpVec<'arena, Block<'arena>>>,
   pub sections: BumpVec<'arena, Section<'arena>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Part<'arena> {
+  pub title: PartTitle<'arena>,
+  pub intro: Option<BumpVec<'arena, Block<'arena>>>,
+  pub sections: BumpVec<'arena, Section<'arena>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct PartTitle<'arena> {
+  pub id: Option<BumpString<'arena>>,
+  pub attrs: MultiAttrList<'arena>,
+  pub text: InlineNodes<'arena>,
 }
 
 impl<'arena> DocContent<'arena> {
