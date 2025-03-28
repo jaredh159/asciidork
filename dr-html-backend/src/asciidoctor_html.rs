@@ -224,10 +224,14 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_book_part(&mut self, _part: &Part) {}
+  fn enter_book_part(&mut self, _part: &Part) {
+    // self.state.insert(InBookPart);
+  }
 
   #[instrument(skip_all)]
-  fn exit_book_part(&mut self, _part: &Part) {}
+  fn exit_book_part(&mut self, _part: &Part) {
+    // self.state.remove(&InBookPart);
+  }
 
   #[instrument(skip_all)]
   fn enter_book_part_title(&mut self, title: &PartTitle) {
@@ -241,6 +245,16 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_book_part_title(&mut self, _title: &PartTitle) {
     self.push_str("</h1>");
+  }
+
+  #[instrument(skip_all)]
+  fn enter_book_part_intro(&mut self, _part: &Part) {
+    self.push_str(r#"<div class="openblock partintro"><div class="content">"#);
+  }
+
+  #[instrument(skip_all)]
+  fn exit_book_part_intro(&mut self, _part: &Part) {
+    self.push_str("</div></div>");
   }
 
   #[instrument(skip_all)]
@@ -259,6 +273,9 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_section(&mut self, section: &Section) {
+    // if self.state.contains(&InBookPart) && section.level == 0 {
+    //   return;
+    // }
     let mut section_tag = OpenTag::without_id("div", &section.meta.attrs);
     section_tag.push_class(section::class(section));
     self.push_open_tag(section_tag);
@@ -269,6 +286,9 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_section(&mut self, section: &Section) {
+    // if self.state.contains(&InBookPart) && section.level == 0 {
+    //   return;
+    // }
     if section.level == 1 {
       self.push_str("</div>");
     }
@@ -1687,6 +1707,7 @@ pub enum EphemeralState {
   VisitingSimpleTermDescription,
   IsSourceBlock,
   InBibliographySection,
+  // InBookPart,
 }
 
 const fn list_type_from_depth(depth: u8) -> &'static str {

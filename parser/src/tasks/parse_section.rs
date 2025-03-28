@@ -23,6 +23,9 @@ impl<'arena> Parser<'arena> {
 
     if level == 0 && self.document.meta.get_doctype() != DocType::Book {
       self.err_line("Level 0 section allowed only in doctype=book", line)?;
+    } else if level == 0 {
+      self.restore_peeked(lines, meta);
+      return Ok(None);
     }
 
     if meta.attrs.has_str_positional("discrete") || meta.attrs.has_str_positional("float") {

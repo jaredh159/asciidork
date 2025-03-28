@@ -217,12 +217,12 @@ impl<'arena> Parser<'arena> {
     let is_book = self.document.meta.get_doctype() == DocType::Book;
     // dbg!(&sectioned);
     if is_book {
-      println!("is book");
       if let Some(part) = self.parse_book_part()? {
         let mut parts = bvec![in self.bump; part];
         while let Some(part) = self.parse_book_part()? {
           parts.push(part);
         }
+        dbg!(parts.len());
         self.document.content = DocContent::Parts(parts);
       } else {
         //dupe

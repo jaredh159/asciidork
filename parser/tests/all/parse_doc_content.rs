@@ -180,6 +180,7 @@ fn simple_book_part() {
     "},
     DocContent::Parts(vecb![Part {
       title: PartTitle {
+        id: Some(bstr!("_part_1")),
         attrs: MultiAttrList::new_in(leaked_bump()),
         text: just!("Part 1", 31..37)
       },

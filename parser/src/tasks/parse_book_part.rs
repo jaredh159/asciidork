@@ -4,7 +4,6 @@ impl<'arena> Parser<'arena> {
   pub(crate) fn parse_book_part(&mut self) -> Result<Option<Part<'arena>>> {
     // very dupy...
     let Some(mut lines) = self.read_lines()? else {
-      println!("No lines");
       return Ok(None);
     };
 
@@ -30,7 +29,7 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     }
 
-    dbg!(level);
+    // dbg!(level);
 
     // kinda dupy here...
     let mut heading_line = lines.consume_current().unwrap();
@@ -38,7 +37,7 @@ impl<'arena> Parser<'arena> {
     heading_line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&heading_line, &meta.attrs);
     let heading = self.parse_inlines(&mut heading_line.into_lines())?;
-    dbg!(&id);
+    // dbg!(&id);
 
     // this is also muy dupy
     if let Some(id) = &id {

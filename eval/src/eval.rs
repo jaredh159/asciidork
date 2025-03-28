@@ -75,16 +75,17 @@ fn eval_book_part(part: &Part, ctx: &Ctx, backend: &mut impl Backend) {
     .iter()
     .for_each(|node| eval_inline(node, ctx, backend));
   backend.exit_book_part_title(&part.title);
+  if let Some(blocks) = &part.intro {
+    backend.enter_book_part_intro(part);
+    blocks.iter().for_each(|b| eval_block(b, ctx, backend));
+    backend.exit_book_part_intro(part);
+  }
   part
     .sections
     .iter()
     .for_each(|section| eval_section(section, ctx, backend));
   backend.exit_book_part(part);
 }
-
-//fn eval_book_part_section(part: &Section, ctx: &Ctx, backend: &mut impl Backend) {
-//  //
-//}
 
 fn eval_section(section: &Section, ctx: &Ctx, backend: &mut impl Backend) {
   backend.enter_section(section);
