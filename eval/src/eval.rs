@@ -76,6 +76,10 @@ fn eval_book_part(part: &Part, ctx: &Ctx, backend: &mut impl Backend) {
     .for_each(|node| eval_inline(node, ctx, backend));
   backend.exit_book_part_title(&part.title);
   if let Some(blocks) = &part.intro {
+    // jared
+    // 👍 return from uruguay jared:
+    // i "hoisted" the intro title, but need to render it somehow
+    // could call enter_block_title, but might need to remove the block param...?
     backend.enter_book_part_intro(part);
     blocks.iter().for_each(|b| eval_block(b, ctx, backend));
     backend.exit_book_part_intro(part);

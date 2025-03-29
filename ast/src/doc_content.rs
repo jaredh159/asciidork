@@ -23,7 +23,7 @@ pub struct Part<'arena> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PartTitle<'arena> {
   pub id: Option<BumpString<'arena>>,
-  pub attrs: MultiAttrList<'arena>,
+  pub meta: ChunkMeta<'arena>,
   pub text: InlineNodes<'arena>,
 }
 

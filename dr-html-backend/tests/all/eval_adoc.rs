@@ -80,7 +80,7 @@ assert_inline_html!(
 );
 
 assert_inline_html!(
-  char_replacments_symbols,
+  char_replacements_symbols,
   "(C)(TM)(R)...->=><-<=",
   r#"&#169;&#8482;&#174;&#8230;&#8203;&#8594;&#8658;&#8592;&#8656;"#
 );

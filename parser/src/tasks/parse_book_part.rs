@@ -8,7 +8,6 @@ impl<'arena> Parser<'arena> {
     };
 
     let meta = self.parse_chunk_meta(&mut lines)?;
-    lines.debug_print();
 
     let Some(line) = lines.current() else {
       if !meta.is_empty() {
@@ -53,12 +52,24 @@ impl<'arena> Parser<'arena> {
       );
     }
 
-    let sectioned = self.parse_sectioned()?;
+    let title = PartTitle { meta, text: heading, id };
+    Ok(Some(self.hoist_intro_title(title)?))
+    // let
+    // Ok(Some(Part { title, intro: preamble, sections }))
+  }
 
-    Ok(Some(Part {
-      title: PartTitle { attrs: meta.attrs, text: heading, id },
-      intro: sectioned.preamble,
-      sections: sectioned.sections,
-    }))
+  // match asciidoctor behavior of hoisting the title from the first preamble block
+  // @see https://github.com/asciidoctor/asciidoctor/issues/4450
+  fn hoist_intro_title(&mut self, mut title: PartTitle<'arena>) -> Result<Part<'arena>> {
+    let Sectioned { mut preamble, sections } = self.parse_sectioned()?;
+    if let Some(ref mut preamble) = preamble {
+      let intro_title = preamble
+        .first_mut()
+        .and_then(|block| block.meta.title.take());
+      if title.meta.title.is_none() {
+        title.meta.title = intro_title;
+      }
+    }
+    Ok(Part { title, intro: preamble, sections })
   }
 }

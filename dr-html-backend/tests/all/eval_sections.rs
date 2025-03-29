@@ -122,6 +122,30 @@ assert_html!(
 );
 
 assert_html!(
+  appendix,
+  adoc! {r#"
+    == Sect 1
+
+    Sect 1 Content
+
+    [appendix]
+    == Appendix Title
+
+    Appendix Content
+  "#},
+  contains: &html! {r#"
+    <div class="sect1">
+      <h2 id="_appendix_title">Appendix A: Appendix Title</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Appendix Content</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   bad_sequence,
   |s: &mut JobSettings| s.strict = false,
   adoc! {r#"

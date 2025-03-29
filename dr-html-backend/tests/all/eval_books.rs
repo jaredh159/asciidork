@@ -29,6 +29,7 @@ assert_html!(
     = Book Title
     :doctype: book
 
+    [.custom-class]
     = Part 1
 
     [partintro]
@@ -39,7 +40,7 @@ assert_html!(
     content
   "#},
   html! {r#"
-    <h1 id="_part_1" class="sect0">Part 1</h1>
+    <h1 id="_part_1" class="sect0 custom-class">Part 1</h1>
     <div class="openblock partintro">
       <div class="content">
         <div class="paragraph">
@@ -132,4 +133,22 @@ assert_html!(
       </div>
     </div>
   "#}
+);
+
+assert_html!(
+  book_partintro_title,
+  adoc! {r#"
+    = Book
+    :doctype: book
+
+    = Part 1
+
+    .Intro
+    [partintro]
+    Read this first.
+
+    == Chapter 1
+  "#},
+  contains:
+    r#"<div class="openblock partintro"><div class="title">Intro</div>"#
 );

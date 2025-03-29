@@ -222,7 +222,6 @@ impl<'arena> Parser<'arena> {
         while let Some(part) = self.parse_book_part()? {
           parts.push(part);
         }
-        dbg!(parts.len());
         self.document.content = DocContent::Parts(parts);
       } else {
         //dupe

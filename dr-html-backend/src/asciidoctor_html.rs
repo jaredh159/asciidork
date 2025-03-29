@@ -31,6 +31,7 @@ pub struct AsciidoctorHtml {
   pub(crate) table_caption_num: usize,
   pub(crate) example_caption_num: usize,
   pub(crate) listing_caption_num: usize,
+  pub(crate) appendix_caption_num: u8,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -224,14 +225,10 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_book_part(&mut self, _part: &Part) {
-    // self.state.insert(InBookPart);
-  }
+  fn enter_book_part(&mut self, _part: &Part) {}
 
   #[instrument(skip_all)]
-  fn exit_book_part(&mut self, _part: &Part) {
-    // self.state.remove(&InBookPart);
-  }
+  fn exit_book_part(&mut self, _part: &Part) {}
 
   #[instrument(skip_all)]
   fn enter_book_part_title(&mut self, title: &PartTitle) {
@@ -239,7 +236,11 @@ impl Backend for AsciidoctorHtml {
     if let Some(id) = &title.id {
       self.push([r#" id=""#, id, "\""]);
     }
-    self.push_str(r#" class="sect0">"#);
+    self.push_str(r#" class="sect0"#);
+    for role in title.meta.attrs.roles() {
+      self.push([" ", role]);
+    }
+    self.push_str("\">");
   }
 
   #[instrument(skip_all)]
@@ -250,6 +251,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_book_part_intro(&mut self, _part: &Part) {
     self.push_str(r#"<div class="openblock partintro"><div class="content">"#);
+    // jared
   }
 
   #[instrument(skip_all)]
@@ -273,9 +275,6 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_section(&mut self, section: &Section) {
-    // if self.state.contains(&InBookPart) && section.level == 0 {
-    //   return;
-    // }
     let mut section_tag = OpenTag::without_id("div", &section.meta.attrs);
     section_tag.push_class(section::class(section));
     self.push_open_tag(section_tag);
@@ -286,9 +285,6 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_section(&mut self, section: &Section) {
-    // if self.state.contains(&InBookPart) && section.level == 0 {
-    //   return;
-    // }
     if section.level == 1 {
       self.push_str("</div>");
     }
@@ -303,6 +299,15 @@ impl Backend for AsciidoctorHtml {
       self.push(["<h", &level_str, r#" id=""#, id, "\">"]);
     } else {
       self.push(["<h", &level_str, ">"]);
+    }
+    if section.meta.attrs.has_str_positional("appendix") {
+      if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
+        self.push([&appendix_caption, " "]);
+        let letter = (self.appendix_caption_num + b'A') as char;
+        self.push_ch(letter);
+        self.appendix_caption_num += 1;
+        self.push_str(": ");
+      }
     }
     if self.should_number_section(section) {
       let prefix = section::number_prefix(section.level, &mut self.section_nums);
@@ -1707,7 +1712,6 @@ pub enum EphemeralState {
   VisitingSimpleTermDescription,
   IsSourceBlock,
   InBibliographySection,
-  // InBookPart,
 }
 
 const fn list_type_from_depth(depth: u8) -> &'static str {
