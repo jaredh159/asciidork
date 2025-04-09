@@ -29,6 +29,7 @@ pub mod prelude {
   pub use bumpalo::Bump;
 }
 
+pub use crate::tasks::attr_refs::AttrRefObserver;
 pub use diagnostic::{Diagnostic, DiagnosticColor};
 pub use parser::Parser;
 
@@ -45,6 +46,8 @@ mod internal {
   pub use crate::parser::*;
   pub use crate::regx;
   pub use crate::substitutions::*;
+  #[cfg(feature = "attr_ref_observation")]
+  pub use crate::tasks::attr_refs::AttrRefObserver;
   pub use crate::tasks::collect_text::*;
   pub use crate::tasks::customize_subs;
   pub use crate::tasks::directives::includes::*;
