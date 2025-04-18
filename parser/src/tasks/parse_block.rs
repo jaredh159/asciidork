@@ -23,7 +23,11 @@ impl<'arena> Parser<'arena> {
     }
 
     match self.section_start_level(&lines, &meta) {
-      Some(0) => {} // skip document titles
+      // skip doc title and top-level sections
+      Some(0 | 1) => {
+        self.restore_peeked(lines, meta);
+        return Ok(None);
+      }
       Some(level) => {
         self.restore_peeked(lines, meta);
         if level <= self.ctx.section_level {

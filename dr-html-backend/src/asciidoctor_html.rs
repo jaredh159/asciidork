@@ -31,6 +31,7 @@ pub struct AsciidoctorHtml {
   pub(crate) table_caption_num: usize,
   pub(crate) example_caption_num: usize,
   pub(crate) listing_caption_num: usize,
+  pub(crate) appendix_caption_num: u8,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -224,13 +225,67 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_preamble(&mut self, _blocks: &[Block]) {
-    self.push_str(r#"<div id="preamble"><div class="sectionbody">"#);
+  fn enter_book_part(&mut self, _part: &Part) {}
+
+  #[instrument(skip_all)]
+  fn exit_book_part(&mut self, _part: &Part) {}
+
+  #[instrument(skip_all)]
+  fn enter_book_part_title(&mut self, title: &PartTitle) {
+    self.push_str("<h1");
+    if let Some(id) = &title.id {
+      self.push([r#" id=""#, id, "\""]);
+    }
+    self.push_str(r#" class="sect0"#);
+    for role in title.meta.attrs.roles() {
+      self.push([" ", role]);
+    }
+    self.push_str("\">");
   }
 
   #[instrument(skip_all)]
-  fn exit_preamble(&mut self, _blocks: &[Block]) {
-    self.push_str("</div></div>");
+  fn exit_book_part_title(&mut self, _title: &PartTitle) {
+    self.push_str("</h1>");
+  }
+
+  #[instrument(skip_all)]
+  fn enter_book_part_intro(&mut self, part: &Part) {
+    self.push_str(r#"<div class="openblock partintro">"#);
+    if part.title.meta.title.is_some() {
+      self.push_str(r#"<div class="title">"#);
+    }
+  }
+
+  #[instrument(skip_all)]
+  fn exit_book_part_intro(&mut self, _part: &Part) {
+    self.push_str("</div>");
+  }
+
+  #[instrument(skip_all)]
+  fn enter_book_part_intro_content(&mut self, part: &Part) {
+    if part.title.meta.title.is_some() {
+      self.push_str("</div>");
+    }
+    self.push_str(r#"<div class="content">"#);
+  }
+
+  #[instrument(skip_all)]
+  fn exit_book_part_intro_content(&mut self, _part: &Part) {
+    self.push_str("</div>");
+  }
+
+  #[instrument(skip_all)]
+  fn enter_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
+    if doc_has_title {
+      self.push_str(r#"<div id="preamble"><div class="sectionbody">"#);
+    }
+  }
+
+  #[instrument(skip_all)]
+  fn exit_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
+    if doc_has_title {
+      self.push_str("</div></div>");
+    }
   }
 
   #[instrument(skip_all)]
@@ -260,6 +315,15 @@ impl Backend for AsciidoctorHtml {
     } else {
       self.push(["<h", &level_str, ">"]);
     }
+    if section.meta.attrs.has_str_positional("appendix") {
+      if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
+        self.push([&appendix_caption, " "]);
+        let letter = (self.appendix_caption_num + b'A') as char;
+        self.push_ch(letter);
+        self.appendix_caption_num += 1;
+        self.push_str(": ");
+      }
+    }
     if self.should_number_section(section) {
       let prefix = section::number_prefix(section.level, &mut self.section_nums);
       self.push_str(&prefix);
@@ -276,12 +340,12 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_block_title(&mut self, _title: &[InlineNode], _block: &Block) {
+  fn enter_meta_title(&mut self, _title: &[InlineNode]) {
     self.start_buffering();
   }
 
   #[instrument(skip_all)]
-  fn exit_block_title(&mut self, _title: &[InlineNode], _block: &Block) {
+  fn exit_meta_title(&mut self, _title: &[InlineNode]) {
     self.stop_buffering();
   }
 
@@ -435,13 +499,24 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_open_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.open_element("div", &["openblock"], &block.meta.attrs);
-    self.push_str(r#"<div class="content">"#);
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.open_element("div", &["quoteblock abstract"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str(r#"<blockquote>"#);
+    } else {
+      self.open_element("div", &["openblock"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str(r#"<div class="content">"#);
+    }
   }
 
   #[instrument(skip_all)]
-  fn exit_open_block(&mut self, _block: &Block, _content: &BlockContent) {
-    self.push_str("</div></div>");
+  fn exit_open_block(&mut self, block: &Block, _content: &BlockContent) {
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.push_str("</blockquote></div>");
+    } else {
+      self.push_str("</div></div>");
+    }
   }
 
   #[instrument(skip_all)]
@@ -647,24 +722,26 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_paragraph_block(&mut self, block: &Block) {
-    if self.doc_meta.get_doctype() != DocType::Inline {
-      if !self.state.contains(&VisitingSimpleTermDescription) {
-        self.open_element("div", &["paragraph"], &block.meta.attrs);
-        self.render_buffered_block_title(block);
-      }
-      self.push_str("<p>");
+    if self.doc_meta.get_doctype() == DocType::Inline {
+      return;
     }
+    if !self.state.contains(&VisitingSimpleTermDescription) {
+      self.open_block_wrap(block);
+      self.render_buffered_block_title(block);
+    }
+    self.open_block_content(block);
   }
 
   #[instrument(skip_all)]
-  fn exit_paragraph_block(&mut self, _block: &Block) {
-    if self.doc_meta.get_doctype() != DocType::Inline {
-      self.push_str("</p>");
-      if !self.state.contains(&VisitingSimpleTermDescription) {
-        self.push_str("</div>");
-      }
-      self.state.remove(&VisitingSimpleTermDescription);
+  fn exit_paragraph_block(&mut self, block: &Block) {
+    if self.doc_meta.get_doctype() == DocType::Inline {
+      return;
     }
+    self.close_block_content(block);
+    if !self.state.contains(&VisitingSimpleTermDescription) {
+      self.push_str("</div>");
+    }
+    self.state.remove(&VisitingSimpleTermDescription);
   }
 
   #[instrument(skip_all)]
@@ -1430,6 +1507,30 @@ impl AsciidoctorHtml {
     let mut open_tag = OpenTag::new(element, attrs);
     classes.iter().for_each(|c| open_tag.push_class(c));
     self.push_open_tag(open_tag);
+  }
+
+  pub fn open_block_wrap(&mut self, block: &Block) {
+    let mut classes: &[&str] = &["paragraph"];
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      classes = &["quoteblock", "abstract"]
+    };
+    self.open_element("div", classes, &block.meta.attrs);
+  }
+
+  pub fn open_block_content(&mut self, block: &Block) {
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.push_str("<blockquote>");
+    } else {
+      self.push_str("<p>");
+    }
+  }
+
+  pub fn close_block_content(&mut self, block: &Block) {
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.push_str("</blockquote>");
+    } else {
+      self.push_str("</p>");
+    }
   }
 
   fn render_footnotes(&mut self) {

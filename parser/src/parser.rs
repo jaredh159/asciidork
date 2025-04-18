@@ -223,14 +223,14 @@ impl<'arena> Parser<'arena> {
       self.lexer.truncate();
     }
 
-    while let Some(chunk) = self.parse_chunk()? {
-      match chunk {
-        Chunk::Block(block) => self.document.content.push_block(block, self.bump),
-        Chunk::Section(section) => self.document.content.push_section(section, self.bump),
-      }
+    if let Some(book_content) = self.parse_book()? {
+      self.document.content = book_content;
+    } else {
+      let sectioned = self.parse_sectioned()?;
+      self.document.content = sectioned.into_doc_content(self.bump);
     }
 
-    // clear the doc attrs so the backend can see them replayed in decl order
+    // so the backend can see them replayed in decl order
     self.document.meta.clear_doc_attrs();
 
     self.diagnose_document()?;
@@ -241,11 +241,17 @@ impl<'arena> Parser<'arena> {
     })
   }
 
-  fn parse_chunk(&mut self) -> Result<Option<Chunk<'arena>>> {
-    match self.parse_section()? {
-      Some(section) => Ok(Some(Chunk::Section(section))),
-      None => Ok(self.parse_block()?.map(Chunk::Block)),
+  pub(crate) fn parse_sectioned(&mut self) -> Result<Sectioned<'arena>> {
+    let mut blocks = bvec![in self.bump];
+    while let Some(block) = self.parse_block()? {
+      blocks.push(block);
     }
+    let preamble = if blocks.is_empty() { None } else { Some(blocks) };
+    let mut sections = bvec![in self.bump];
+    while let Some(section) = self.parse_section()? {
+      sections.push(section);
+    }
+    Ok(Sectioned { preamble, sections })
   }
 
   pub(crate) fn parse_chunk_meta(
@@ -310,12 +316,6 @@ impl<'arena> HasArena<'arena> for Parser<'arena> {
   fn bump(&self) -> &'arena Bump {
     self.bump
   }
-}
-
-#[derive(Debug)]
-pub enum Chunk<'arena> {
-  Block(Block<'arena>),
-  Section(Section<'arena>),
 }
 
 pub enum DirectiveAction<'arena> {

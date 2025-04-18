@@ -61,9 +61,10 @@ impl From<JobSettings> for DocumentMeta {
       mut job_attrs, doctype, safe_mode, ..
     } = settings;
     if let Some(doctype) = doctype {
-      // if they set the doctype at the job level, setting it as a job_attr
-      // ensures it can never be overwritten
+      // if they set the doctype at the job level, it can't be changed
       job_attrs.insert_unchecked("doctype", JobAttr::readonly(doctype.to_str()));
+    } else {
+      job_attrs.insert_unchecked("doctype", JobAttr::modifiable("article"));
     }
     let mut meta = DocumentMeta::new(safe_mode, job_attrs);
     meta.embedded = settings.embedded;

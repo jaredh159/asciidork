@@ -51,6 +51,7 @@ mod internal {
   pub use crate::tasks::collect_text::*;
   pub use crate::tasks::customize_subs;
   pub use crate::tasks::directives::includes::*;
+  pub use crate::tasks::parse_section::PeekedSection;
   pub use crate::token::*;
   pub use crate::utils::bump::*;
   pub use asciidork_core::file;

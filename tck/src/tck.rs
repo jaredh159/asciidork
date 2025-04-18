@@ -49,10 +49,11 @@ impl<'arena> Tck<'arena> {
           doc.set_val("blocks", Value::Array(blocks));
         }
       }
-      DocContent::Sectioned { sections, .. } => {
+      DocContent::Sections(Sectioned { sections, .. }) => {
         let sections = sections.iter().map(|s| self.gen_section(s)).collect();
         doc.set_val("blocks", Value::Array(sections));
       }
+      _ => todo!("unhandled doc content: {:?}", self.doc.content),
     }
     let loc_span = LocSpan::new(
       Loc::new(1, 1),

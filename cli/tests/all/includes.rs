@@ -200,6 +200,12 @@ fn test_cli_runs_on_windows() {
   );
 }
 
+#[test]
+fn test_cli_doctype() {
+  let stdout = run_expecting_success(&[], "tests/all/fixtures/book.adoc");
+  assert!(stdout.contains("doctype: book"));
+}
+
 fn run_expecting_success(args: &[&str], input: &str) -> String {
   let child = cmd(args, input);
   let output = child.wait_with_output().unwrap();

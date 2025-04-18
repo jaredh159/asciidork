@@ -13,6 +13,10 @@ impl<'arena> MultiAttrList<'arena> {
   pub fn push(&mut self, attr: AttrList<'arena>) {
     self.0.push(attr);
   }
+
+  pub fn special_sect(&self) -> Option<SpecialSection> {
+    self.str_positional_at(0).and_then(|pos| pos.parse().ok())
+  }
 }
 
 impl AttrData for MultiAttrList<'_> {

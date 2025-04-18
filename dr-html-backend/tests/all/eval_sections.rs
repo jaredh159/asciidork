@@ -1,4 +1,3 @@
-use asciidork_core::JobSettings;
 use test_utils::{adoc, html};
 
 assert_html!(
@@ -23,6 +22,8 @@ assert_html!(
 assert_html!(
   preamble_then_section,
   adoc! {r#"
+    = Doc Title
+
     Preamble
 
     == Section 1
@@ -36,6 +37,30 @@ assert_html!(
           <p>Preamble</p>
         </div>
       </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_section_1">Section 1</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Section Content.</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  preamble_then_section_no_title,
+  adoc! {r#"
+    Preamble
+
+    == Section 1
+
+    Section Content.
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Preamble</p>
     </div>
     <div class="sect1">
       <h2 id="_section_1">Section 1</h2>
@@ -96,8 +121,32 @@ assert_html!(
 );
 
 assert_html!(
+  appendix,
+  adoc! {r#"
+    == Sect 1
+
+    Sect 1 Content
+
+    [appendix]
+    == Appendix Title
+
+    Appendix Content
+  "#},
+  contains: &html! {r#"
+    <div class="sect1">
+      <h2 id="_appendix_title">Appendix A: Appendix Title</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>Appendix Content</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   bad_sequence,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     == Section 1
 

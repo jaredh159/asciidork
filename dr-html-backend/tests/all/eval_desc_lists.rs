@@ -1,4 +1,3 @@
-use asciidork_core::JobSettings;
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -394,7 +393,7 @@ assert_html!(
 
 assert_html!(
   trailing_continuation_desc,
-  |job_settings: &mut JobSettings| { job_settings.strict = false },
+  strict: false,
   adoc! {r#"
     // literal block inside description list with trailing line continuation
     term::

@@ -1,4 +1,3 @@
-use asciidork_core::JobSettings;
 use test_utils::*;
 
 // NB: most of these tests are ported directly from the asciidoctor test suite
@@ -6,7 +5,7 @@ use test_utils::*;
 
 assert_html!(
   asciidoctor_interdoc_xrefs_tests1,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     // xref using angled bracket syntax with path sans extension
     <<tigers#>>
@@ -62,7 +61,7 @@ assert_html!(
 
 assert_html!(
   asciidoctor_interdoc_xrefs_tests2,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     // inter-document xref should only remove the file extension
     // part if the path contains a period elsewhere
@@ -111,7 +110,7 @@ assert_html!(
 
 assert_html!(
   asciidoctor_interdoc_xrefs_tests3,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     // xref using angled bracket syntax with path and extension
     <<tigers.adoc>>
@@ -350,7 +349,7 @@ assert_html!(
 // @see https://github.com/asciidoctor/asciidoctor/issues/3231
 assert_html!(
   asciidoctor_interdoc_xrefs_edge_cases_from_gh_issues,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     - <<a#>>
     - <<b.adoc#>>

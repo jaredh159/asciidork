@@ -1,0 +1,9 @@
+= Book Title
+:doctype: book
+
+= Part 1
+
+== Chapter A
+
+doctype: {doctype}
+

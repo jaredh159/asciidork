@@ -1,4 +1,3 @@
-use asciidork_core::JobSettings;
 use test_utils::*;
 
 assert_html!(
@@ -614,7 +613,7 @@ assert_html!(
 
 assert_html!(
   drops_cell_w_too_many_cols,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     [cols=2*]
     |===

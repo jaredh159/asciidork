@@ -5,6 +5,9 @@ macro_rules! assert_html {
   ($name:ident, $input:expr, $expected:expr) => {
     assert_html!($name, |_| {}, $input, $expected);
   };
+  ($name:ident, strict: false, $input:expr, $expected:expr) => {
+    assert_html!($name, |s: &mut asciidork_core::JobSettings| {s.strict = false}, $input, $expected);
+  };
   ($name:ident, $mod_settings:expr, $input:expr, $expected:expr) => {
     #[test]
     fn $name() {
