@@ -29,8 +29,8 @@ pub trait Backend {
   fn enter_footer(&mut self);
   fn exit_footer(&mut self);
   fn visit_document_attribute_decl(&mut self, name: &str, value: &AttrValue);
-  fn enter_preamble(&mut self, blocks: &[Block]);
-  fn exit_preamble(&mut self, blocks: &[Block]);
+  fn enter_preamble(&mut self, doc_has_title: bool, blocks: &[Block]);
+  fn exit_preamble(&mut self, doc_has_title: bool, blocks: &[Block]);
   fn enter_document_title(&mut self, nodes: &[InlineNode]);
   fn exit_document_title(&mut self, nodes: &[InlineNode]);
 
@@ -49,6 +49,16 @@ pub trait Backend {
   fn exit_section(&mut self, section: &Section);
   fn enter_section_heading(&mut self, section: &Section);
   fn exit_section_heading(&mut self, section: &Section);
+
+  // books
+  fn enter_book_part(&mut self, part: &Part);
+  fn exit_book_part(&mut self, part: &Part);
+  fn enter_book_part_title(&mut self, title: &PartTitle);
+  fn exit_book_part_title(&mut self, title: &PartTitle);
+  fn enter_book_part_intro(&mut self, part: &Part);
+  fn exit_book_part_intro(&mut self, part: &Part);
+  fn enter_book_part_intro_content(&mut self, part: &Part);
+  fn exit_book_part_intro_content(&mut self, part: &Part);
 
   // blocks contexts
   fn enter_paragraph_block(&mut self, block: &Block);
@@ -115,8 +125,8 @@ pub trait Backend {
   fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self);
 
   // block content
-  fn enter_block_title(&mut self, title: &[InlineNode], block: &Block);
-  fn exit_block_title(&mut self, title: &[InlineNode], block: &Block);
+  fn enter_meta_title(&mut self, title: &[InlineNode]);
+  fn exit_meta_title(&mut self, title: &[InlineNode]);
   fn enter_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
   fn exit_simple_block_content(&mut self, children: &[InlineNode], block: &Block);
   fn enter_compound_block_content(&mut self, children: &[Block], block: &Block);

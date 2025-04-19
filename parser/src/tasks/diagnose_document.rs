@@ -76,7 +76,7 @@ impl Parser<'_> {
         )?;
       }
       Some(TocPosition::Preamble) => match &self.document.content {
-        DocContent::Blocks(_) | DocContent::Sectioned { preamble: None, .. } => {
+        DocContent::Blocks(_) | DocContent::Sections(Sectioned { preamble: None, .. }) => {
           self.err_doc_attr(
             ":toc:",
             "Table of Contents set to `preamble` but no preamble found",

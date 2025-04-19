@@ -6,7 +6,7 @@ use test_utils::*;
 
 assert_html!(
   xrefs,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     == Tigers
 
@@ -182,7 +182,7 @@ assert_html!(
 );
 
 assert_html!(
-  xref_escraped_bracket_in_linktext,
+  xref_escaped_bracket_in_linktext,
   adoc! {r#"
     xref:tigers[[tigers\] are cats]
 
@@ -190,12 +190,8 @@ assert_html!(
     == Tigers
   "#},
   html! {r##"
-    <div id="preamble">
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p><a href="#tigers">[tigers] are cats</a></p>
-        </div>
-      </div>
+    <div class="paragraph">
+      <p><a href="#tigers">[tigers] are cats</a></p>
     </div>
     <div class="sect1">
       <h2 id="tigers">Tigers</h2>
@@ -347,7 +343,7 @@ assert_html!(
 
 assert_html!(
   asciidoctor_xrefs_test_rb2,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     :label-tigers: Tigers
 
@@ -394,7 +390,7 @@ assert_html!(
 
 assert_html!(
   asciidoctor_xrefs_test_rb3,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     // xref with target that begins with attribute reference in title (1/2)
     :lessonsdir: lessons
@@ -452,7 +448,7 @@ assert_html!(
 
 assert_html!(
   asciidoctor_xrefs_test_rb4,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     // multiple xref macros with implicit text in single line
     This document has two sections, xref:sect-a[] and xref:sect-b[].
@@ -568,7 +564,7 @@ assert_html!(
 // NB: we generate the id for section 2 different from asciidoctor
 assert_html!(
   resolves_broken_xref_in_title,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     [#s1]
     == <<DNE>>

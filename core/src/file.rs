@@ -29,7 +29,7 @@ pub fn remove_ext(input: &str) -> &str {
 }
 
 pub fn basename(input: &str) -> &str {
-  input.split(&['/', '\\']).last().unwrap_or(input)
+  input.split(&['/', '\\']).next_back().unwrap_or(input)
 }
 
 pub fn stem(input: &str) -> &str {

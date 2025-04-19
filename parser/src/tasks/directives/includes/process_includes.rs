@@ -259,7 +259,7 @@ fn _set_indentation<'arena>(indent: usize, buf: &mut BumpVec<'arena, u8>, bump: 
     buf.split(|&c| c == b'\n').for_each(|line| {
       let line_indent = line.iter().take_while(|&&c| c == b' ').count();
       if line_indent >= min_indent {
-        dest.extend(std::iter::repeat(b' ').take(line_indent - min_indent + indent));
+        dest.extend(std::iter::repeat_n(b' ', line_indent - min_indent + indent));
         dest.extend(line.iter().skip(line_indent));
         dest.push(b'\n');
       }

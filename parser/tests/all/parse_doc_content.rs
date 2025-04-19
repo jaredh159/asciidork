@@ -28,7 +28,7 @@ fn unattached_meta_skipped() {
 
       foobar
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![Section {
         meta: chunk_meta!(0),
@@ -38,7 +38,7 @@ fn unattached_meta_skipped() {
         blocks: vecb![simple_text_block!("foobar", 33..39)],
         loc: (0..39).into()
       }]
-    }
+    })
   );
 }
 
@@ -105,7 +105,7 @@ fn test_sectioned_w_preamble() {
 
       Para 1
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: Some(vecb![simple_text_block!("Preamble", 0..8)]),
       sections: vecb![Section {
         meta: chunk_meta!(10),
@@ -115,7 +115,7 @@ fn test_sectioned_w_preamble() {
         blocks: vecb![simple_text_block!("Para 1", 21..27)],
         loc: (10..27).into()
       }]
-    }
+    })
   );
 }
 
@@ -129,7 +129,7 @@ fn comment_only_preamble_discarded() {
 
       Para 1
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![Section {
         meta: chunk_meta!(10),
@@ -139,7 +139,7 @@ fn comment_only_preamble_discarded() {
         blocks: vecb![simple_text_block!("Para 1", 21..27)],
         loc: (10..27).into()
       }]
-    }
+    })
   );
 }
 
@@ -151,7 +151,7 @@ fn test_sectioned_no_preamble() {
 
       Para 1
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![Section {
         meta: chunk_meta!(0),
@@ -161,9 +161,65 @@ fn test_sectioned_no_preamble() {
         blocks: vecb![simple_text_block!("Para 1", 11..17)],
         loc: (0..17).into()
       }]
-    }
+    })
   );
 }
+
+#[test]
+fn simple_book_part() {
+  assert_doc_content!(
+    adoc! {"
+     = Book Title
+     :doctype: book
+
+     = Part 1
+
+     == Chapter A
+
+     content
+    "},
+    DocContent::Parts(MultiPartBook {
+      preamble: None,
+      opening_special_sects: vecb![],
+      parts: vecb![Part {
+        title: PartTitle {
+          id: Some(bstr!("_part_1")),
+          meta: chunk_meta!(29),
+          text: just!("Part 1", 31..37)
+        },
+        intro: None,
+        sections: vecb![Section {
+          meta: chunk_meta!(39),
+          level: 1,
+          id: Some(bstr!("_chapter_a")),
+          heading: just!("Chapter A", 42..51),
+          blocks: vecb![simple_text_block!("content", 53..60)],
+          loc: (39..60).into()
+        }]
+      }],
+      closing_special_sects: vecb![],
+    })
+  );
+}
+
+assert_error!(
+  book_part_with_no_sections_error,
+  adoc! {"
+    = Book
+    :doctype: book
+
+    = Part 1
+
+    [partintro]
+    intro
+  "},
+  error! {"
+     --> test.adoc:4:1
+      |
+    4 | = Part 1
+      | ^^^^^^^^ Invalid empty book part, must have at least one section
+  "}
+);
 
 #[test]
 fn test_section_offset() {
@@ -175,7 +231,7 @@ fn test_section_offset() {
 
       = Sect 2
     "},
-    DocContent::Sectioned {
+    DocContent::Sections(Sectioned {
       preamble: None,
       sections: vecb![
         Section {
@@ -202,7 +258,7 @@ fn test_section_offset() {
           loc: (28..36).into()
         }
       ]
-    }
+    })
   );
 }
 

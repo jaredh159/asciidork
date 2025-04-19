@@ -16,9 +16,8 @@ pub struct Args {
   pub format: Output,
 
   #[arg(value_parser = DocType::from_str)]
-  #[clap(short, long, default_value = "article")]
-  #[clap(help = "Document type to use when converting")]
-  pub doctype: DocType,
+  #[clap(short, long, help = "Document type to use when converting")]
+  pub doctype: Option<DocType>,
 
   #[arg(value_parser = parse_attr)]
   #[clap(short, long = "attribute")]
@@ -116,7 +115,7 @@ impl TryFrom<Args> for JobSettings {
   fn try_from(args: Args) -> Result<Self, Self::Error> {
     let mut j = JobSettings {
       safe_mode: args.safe_mode,
-      doctype: Some(args.doctype),
+      doctype: args.doctype,
       embedded: args.embedded,
       strict: args.strict,
       job_attrs: JobAttrs::empty(),

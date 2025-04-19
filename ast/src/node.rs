@@ -12,16 +12,6 @@ pub struct Anchor<'arena> {
   pub is_biblio: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Section<'arena> {
-  pub meta: ChunkMeta<'arena>,
-  pub level: u8,
-  pub id: Option<BumpString<'arena>>,
-  pub heading: InlineNodes<'arena>,
-  pub blocks: BumpVec<'arena, Block<'arena>>,
-  pub loc: MultiSourceLocation,
-}
-
 #[derive(Default, Clone, Copy, Eq, PartialEq)]
 pub struct Callout {
   /// list index, e.g. `0` maps to `1` in dr id: `CO1-3`

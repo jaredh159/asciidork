@@ -29,12 +29,8 @@
       `customize_subs.rs`
 - [ ] i don't run substitutions in an _order_. i need to search out some test cases of why
       (if?) this is naive/problematic, and fix (see inferred_doc_title_attr test)
-- [ ] resolving the {email} attr is example of "multiple passes", as it gets turned into
-      an autolink in asciidoctor html5, test `{email}` vs `[subs=-macros]\n{email}`
 - [ ] section (and elsewhere?) auxiliary ids:
       https://docs.asciidoctor.org/asciidoc/latest/sections/custom-ids/#assign-auxiliary-ids
-- [ ] work through this (and similar) lists, carefully adding/removing substutitions, with
-      tests
 - [ ] asciidoctor html backend _stylesheets,_ @see
       https://docs.asciidoctor.org/asciidoctor/latest/html-backend/stylesheet-modes/ and
       `html5.rb`
@@ -45,7 +41,6 @@
 - [ ] h1 subtitle
 - [ ] `tabsize`, see
       https://docs.asciidoctor.org/asciidoc/latest/directives/include-with-indent/#the-indent-attribute
-- [ ] doctype=book, special rules
 - [ ] asciidoctor seems to resolve attr refs case-insensitive, grep `ifdef::showScript[]`
       (is it only for ifdef?) - not sure i want to replicate this, seems undocumented...
 
@@ -60,7 +55,7 @@
   sometimes will attach the metadata, and sometimes will not, but with `--strict` will
   always emit an error.
 - asciidoctor permits attr decls to be joined to a paragraph, and the attr will be
-  resolved. eg: `:a: b\n{a}` will product `b`. this is despite the fact that the docs say
+  resolved. eg: `:a: b\n{a}` will produce `b`. this is despite the fact that the docs say
   that attr decls in the body should be declared "between blocks". currently we store the
   attr decl correctly, but don't resolve it in the joined paragraph, only in subsequent
   blocks, which likely won't be a problem in real world usage.

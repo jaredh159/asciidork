@@ -2,9 +2,31 @@ use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_section(&mut self) -> Result<Option<Section<'arena>>> {
+    let Some(peeked) = self.peek_section()? else {
+      return Ok(None);
+    };
+
+    if peeked.level == 0 && self.document.meta.get_doctype() != DocType::Book {
+      self.err_line(
+        "Level 0 section allowed only in doctype=book",
+        peeked.lines.current().unwrap(),
+      )?;
+    } else if peeked.level == 0 {
+      self.restore_peeked_section(peeked);
+      return Ok(None);
+    }
+    Ok(Some(self.parse_peeked_section(peeked)?))
+  }
+
+  pub(crate) fn peek_section(&mut self) -> Result<Option<PeekedSection<'arena>>> {
     let Some(mut lines) = self.read_lines()? else {
       return Ok(None);
     };
+
+    lines.discard_leading_comment_lines();
+    if lines.is_empty() {
+      return self.peek_section();
+    }
 
     let meta = self.parse_chunk_meta(&mut lines)?;
 
@@ -21,15 +43,14 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    if level == 0 && self.document.meta.get_doctype() != DocType::Book {
-      self.err_line("Level 0 section allowed only in doctype=book", line)?;
-    }
+    Ok(Some(PeekedSection { meta, lines, level }))
+  }
 
-    if meta.attrs.has_str_positional("discrete") || meta.attrs.has_str_positional("float") {
-      self.restore_peeked(lines, meta);
-      return Ok(None);
-    }
-
+  pub(crate) fn parse_peeked_section(
+    &mut self,
+    peeked: PeekedSection<'arena>,
+  ) -> Result<Section<'arena>> {
+    let PeekedSection { meta, mut lines, level } = peeked;
     let last_level = self.ctx.section_level;
     self.ctx.section_level = level;
     let mut heading_line = lines.consume_current().unwrap();
@@ -86,14 +107,18 @@ impl<'arena> Parser<'arena> {
 
     self.ctx.bibliography_ctx = BiblioContext::None;
     self.ctx.section_level = last_level;
-    Ok(Some(Section {
+    Ok(Section {
       meta,
       level,
       id,
       heading,
       blocks,
       loc,
-    }))
+    })
+  }
+
+  pub(crate) fn restore_peeked_section(&mut self, peeked: PeekedSection<'arena>) {
+    self.restore_peeked(peeked.lines, peeked.meta);
   }
 
   pub fn push_toc_node(
@@ -121,6 +146,19 @@ impl<'arena> Parser<'arena> {
       id: as_ref.cloned(),
       children: BumpVec::new_in(self.bump),
     });
+  }
+}
+
+#[derive(Debug)]
+pub struct PeekedSection<'arena> {
+  pub meta: ChunkMeta<'arena>,
+  pub lines: ContiguousLines<'arena>,
+  pub level: u8,
+}
+
+impl PeekedSection<'_> {
+  pub fn is_special_sect(&self) -> bool {
+    self.meta.attrs.special_sect().is_some()
   }
 }
 

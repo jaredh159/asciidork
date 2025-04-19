@@ -5,6 +5,7 @@ pub mod file;
 mod job_attrs;
 mod job_settings;
 mod path;
+mod special_sect;
 mod types;
 mod validate;
 
@@ -18,6 +19,7 @@ mod internal {
     pub use crate::job_attrs::*;
     pub use crate::job_settings::*;
     pub use crate::path::*;
+    pub use crate::special_sect::*;
     pub use crate::types::*;
   }
   pub use types::*;
