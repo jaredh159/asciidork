@@ -32,7 +32,7 @@ impl<'arena> Parser<'arena> {
       self.document.meta.add_author(self.author_from(captures));
     }
 
-    let num_bytes = src.bytes().len();
+    let num_bytes = src.len();
     if first_start == usize::MAX {
       self.err_token("invalid author line", line.current_token())
     } else if first_start > 0 {
