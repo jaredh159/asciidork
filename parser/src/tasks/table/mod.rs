@@ -17,7 +17,7 @@ pub enum DataFormat {
 }
 
 impl DataFormat {
-  fn replace_separator(&mut self, sep: char) {
+  const fn replace_separator(&mut self, sep: char) {
     match self {
       DataFormat::Prefix(c) => *c = sep,
       DataFormat::Csv(c) => *c = sep,

@@ -49,7 +49,7 @@ impl MultiSourceLocation {
     }
   }
 
-  pub fn extend_end(&mut self, other: &MultiSourceLocation) {
+  pub const fn extend_end(&mut self, other: &MultiSourceLocation) {
     self.end_pos = other.end_pos;
     self.end_depth = other.end_depth;
   }

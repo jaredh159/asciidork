@@ -25,6 +25,7 @@ impl<'arena> CollectText<'arena> {
     self.loc.end += s.len() as u32;
   }
 
+  #[expect(clippy::missing_const_for_fn, reason = "false positive")]
   pub fn str(&self) -> &str {
     self.string.as_ref().unwrap()
   }

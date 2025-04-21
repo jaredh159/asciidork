@@ -88,6 +88,7 @@ impl DocumentMeta {
     dm
   }
 
+  #[expect(clippy::missing_const_for_fn, reason = "false positive")]
   pub fn authors(&self) -> &[Author] {
     &self.authors
   }

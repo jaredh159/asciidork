@@ -17,6 +17,7 @@ impl AttrValue {
     matches!(self, AttrValue::Bool(false))
   }
 
+  #[expect(clippy::missing_const_for_fn, reason = "false positive")]
   pub fn str(&self) -> Option<&str> {
     match self {
       AttrValue::String(s) => Some(s),

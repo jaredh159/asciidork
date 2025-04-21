@@ -370,7 +370,7 @@ impl<'arena> SourceLexer<'arena> {
     }
   }
 
-  fn reverse_by(&mut self, n: u32) {
+  const fn reverse_by(&mut self, n: u32) {
     self.pos -= n;
   }
 
@@ -391,7 +391,7 @@ impl<'arena> SourceLexer<'arena> {
     )
   }
 
-  fn advance(&mut self) {
+  const fn advance(&mut self) {
     self.pos += 1;
   }
 

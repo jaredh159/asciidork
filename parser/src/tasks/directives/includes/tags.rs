@@ -298,6 +298,7 @@ impl TagStack {
     self.0.last().map(|(t, _)| t == tag).unwrap_or(false)
   }
 
+  #[expect(clippy::missing_const_for_fn, reason = "false positive")]
   fn last(&self) -> Option<&(String, usize)> {
     self.0.last()
   }
