@@ -26,6 +26,11 @@ impl<'arena> Parser<'arena> {
         parts,
         closing_special_sects,
       })))
+    } else if !opening_special_sects.is_empty() {
+      let mut sectioned = self.parse_sectioned()?;
+      opening_special_sects.extend(sectioned.sections);
+      sectioned.sections = opening_special_sects;
+      return Ok(Some(DocContent::Sections(sectioned)));
     } else {
       let mut blocks = bvec![in self.bump];
       while let Some(block) = self.parse_block()? {
@@ -63,15 +68,17 @@ impl<'arena> Parser<'arena> {
   }
 
   fn parse_special_sect(&mut self) -> Result<Option<Section<'arena>>> {
-    let Some(peeked) = self.peek_section()? else {
+    let Some(mut peeked) = self.peek_section()? else {
       return Ok(None);
     };
     if !peeked.is_special_sect() {
       self.restore_peeked_section(peeked);
       return Ok(None);
     }
-    let mut section = self.parse_peeked_section(peeked)?;
-    section.level = 1; // written as level 0, but are level 1 semantically
+
+    peeked.level = 1; // written as level 0, but are level 1 semantically
+    let section = self.parse_peeked_section(peeked)?;
+
     Ok(Some(section))
   }
 }

@@ -627,6 +627,24 @@ macro_rules! parse {
 }
 
 #[macro_export]
+macro_rules! parse_loose {
+  ($input:expr) => {{
+    let mut settings = ::asciidork_core::JobSettings::embedded();
+    settings.strict = false;
+    let mut parser = test_parser!($input);
+    parser.apply_job_settings(settings);
+    parser.parse()
+  }};
+}
+
+#[macro_export]
+macro_rules! parse_warnings {
+  ($input:expr) => {{
+    parse_loose!($input).unwrap().warnings
+  }};
+}
+
+#[macro_export]
 macro_rules! parse_doc {
   ($input:expr) => {{
     let parser = test_parser!($input);

@@ -50,6 +50,7 @@ impl<'arena> Parser<'arena> {
     &mut self,
     peeked: PeekedSection<'arena>,
   ) -> Result<Section<'arena>> {
+    let special_sect = peeked.special_sect();
     let PeekedSection { meta, mut lines, level } = peeked;
     let last_level = self.ctx.section_level;
     self.ctx.section_level = level;
@@ -103,6 +104,22 @@ impl<'arena> Parser<'arena> {
     while let Some(inner) = self.parse_block()? {
       loc.extend_end(&inner.loc);
       blocks.push(inner);
+    }
+
+    if let Some(special_sect) = special_sect {
+      if !special_sect.supports_subsections() {
+        for block in &blocks {
+          if let BlockContent::Section(subsection) = &block.content {
+            self.err_line_starting(
+              format!(
+                "{} sections do not support nested sections",
+                special_sect.to_str()
+              ),
+              subsection.heading.first_loc().unwrap(),
+            )?;
+          }
+        }
+      }
     }
 
     self.ctx.bibliography_ctx = BiblioContext::None;
@@ -159,6 +176,10 @@ pub struct PeekedSection<'arena> {
 impl PeekedSection<'_> {
   pub fn is_special_sect(&self) -> bool {
     self.meta.attrs.special_sect().is_some()
+  }
+
+  pub fn special_sect(&self) -> Option<SpecialSection> {
+    self.meta.attrs.special_sect()
   }
 }
 

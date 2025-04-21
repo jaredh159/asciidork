@@ -16,6 +16,7 @@ pub struct Parser<'arena> {
   pub(super) attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
 }
 
+#[derive(Debug)]
 pub struct ParseResult<'arena> {
   pub document: Document<'arena>,
   pub warnings: Vec<Diagnostic>,
@@ -241,7 +242,7 @@ impl<'arena> Parser<'arena> {
 
     Ok(ParseResult {
       document: self.document,
-      warnings: vec![],
+      warnings: self.errors.into_inner(),
     })
   }
 

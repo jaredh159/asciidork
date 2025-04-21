@@ -24,6 +24,34 @@ assert_html!(
 );
 
 assert_html!(
+  book_only_dedication,
+  adoc! {r#"
+    = Book Title
+    :doctype: book
+
+    [dedication]
+    == Dedication
+
+    For S.S.T.--
+
+    thank you for the plague of archetypes.
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_dedication">Dedication</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>For S.S.T.--</p>
+        </div>
+        <div class="paragraph">
+          <p>thank you for the plague of archetypes.</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   simple_book_w_part_intro,
   adoc! {r#"
     = Book Title

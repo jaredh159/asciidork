@@ -1,5 +1,6 @@
 use asciidork_ast::{prelude::*, AttrValue};
 use asciidork_parser::prelude::*;
+use pretty_assertions::assert_eq;
 use test_utils::*;
 
 #[test]
@@ -220,6 +221,145 @@ assert_error!(
       | ^^^^^^^^ Invalid empty book part, must have at least one section
   "}
 );
+
+#[test]
+fn test_invalid_subsections() {
+  let book_input = adoc! {"
+    = Document Title
+    :doctype: book
+
+    [preface]
+    = Preface
+
+    === Subsection of Preface
+
+    allowed
+
+    [colophon]
+    = Colophon
+
+    === Subsection of Colophon
+
+    not allowed
+
+    [dedication]
+    = Dedication
+
+    === Subsection of Dedication
+
+    not allowed
+
+    = Part 1
+
+    [abstract]
+    == Abstract
+
+    === Subsection of Abstract
+
+    allowed
+
+    == Chapter 1
+
+    === Subsection of Chapter
+
+    allowed
+
+    [appendix]
+    = Appendix
+
+    === Subsection of Appendix
+
+    allowed
+
+    [glossary]
+    = Glossary
+
+    === Subsection of Glossary
+
+    not allowed
+
+    [bibliography]
+    = Bibliography
+
+    === Subsection of Bibliography
+
+    not allowed
+  "};
+  let warnings = parse_warnings!(book_input)
+    .iter()
+    .map(|diag| (diag.line.clone(), diag.message.clone()))
+    .collect::<Vec<_>>();
+  assert_eq!(
+    warnings,
+    [
+      (
+        "=== Subsection of Colophon".to_string(),
+        "colophon sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Dedication".to_string(),
+        "dedication sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Glossary".to_string(),
+        "glossary sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Bibliography".to_string(),
+        "bibliography sections do not support nested sections".to_string(),
+      ),
+    ]
+  );
+
+  let article_input = adoc! {"
+      = Document Title
+      :doctype: article
+
+      == Section
+
+      === Subsection of Section
+
+      allowed
+
+      [appendix]
+      == Appendix
+
+      === Subsection of Appendix
+
+      allowed
+
+      [glossary]
+      == Glossary
+
+      === Subsection of Glossary
+
+      not allowed
+
+      [bibliography]
+      == Bibliography
+
+      === Subsection of Bibliography
+
+      not allowed
+  "};
+  let warnings = parse_warnings!(article_input)
+    .iter()
+    .map(|diag| (diag.line.clone(), diag.message.clone()))
+    .collect::<Vec<_>>();
+  assert_eq!(
+    warnings,
+    [
+      (
+        "=== Subsection of Glossary".to_string(),
+        "glossary sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Bibliography".to_string(),
+        "bibliography sections do not support nested sections".to_string(),
+      ),
+    ]
+  )
+}
 
 #[test]
 fn test_section_offset() {
