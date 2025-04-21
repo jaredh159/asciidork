@@ -16,7 +16,6 @@ members = [
 resolver = "2"
 
 [workspace.lints.clippy]
-# https://users.rust-lang.org/t/invalid-clippy-missing-const-for-fn/128550
-missing-const-for-fn = "allow"
+missing-const-for-fn = "warn"
 option-map-unit-fn = "allow"
 if-same-then-else = "allow"

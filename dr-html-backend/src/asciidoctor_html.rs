@@ -1626,11 +1626,11 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn start_buffering(&mut self) {
+  const fn start_buffering(&mut self) {
     mem::swap(&mut self.html, &mut self.alt_html);
   }
 
-  fn stop_buffering(&mut self) {
+  const fn stop_buffering(&mut self) {
     mem::swap(&mut self.html, &mut self.alt_html);
   }
 
@@ -1812,7 +1812,7 @@ macro_rules! num_str {
   };
 }
 
-fn incr(num: &mut usize) -> usize {
+const fn incr(num: &mut usize) -> usize {
   *num += 1;
   *num
 }

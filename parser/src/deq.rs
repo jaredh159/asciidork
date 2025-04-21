@@ -104,7 +104,7 @@ impl<'arena, T> Deq<'arena, T> {
     self.buf.reserve(additional + self.pos);
   }
 
-  pub fn remove_first(&mut self) {
+  pub const fn remove_first(&mut self) {
     self.pos += 1;
   }
 

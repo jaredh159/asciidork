@@ -30,7 +30,34 @@ jobs:
         run: |
           npm install -g wasm-pack@0.12.1
           cd dr-html-wasm && wasm-pack build --target web
-  accept:
+
+  tck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: |
+          cd tck
+          cargo build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '23'
+      - name: checkout-tck
+        run:
+          git clone --depth 1
+          https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck
+      - name: build-tck
+        run: |
+          cd asciidoc-tck
+          npm ci
+          npm run dist
+      - name: run-tck
+        run: |
+          cd asciidoc-tck
+          node ./harness/bin/asciidoc-tck.js cli \
+            --adapter-command "$GITHUB_WORKSPACE/target/debug/asciidork-tck"
+
+  acceptance:
     runs-on: ubuntu-latest
     steps:
       - name: install pnpm
@@ -43,7 +70,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: 'jaredh159/asciidork-rx-html-acceptance'
-          path: 'acceptance'
+          path: acceptance
       - name: install
         run: cd acceptance && pnpm install
       - name: accept
