@@ -37,6 +37,22 @@ assert_html!(
 );
 
 assert_html!(
+  glossary_dlist,
+  adoc! {r#"
+    [glossary]
+    mud:: wet, cold dirt
+  "#},
+  html! {r#"
+    <div class="dlist glossary">
+      <dl>
+        <dt>mud</dt>
+        <dd><p>wet, cold dirt</p></dd>
+      </dl>
+    </div>
+  "#}
+);
+
+assert_html!(
   simple_nested_desc_list,
   adoc! {r#"
     term1:: def1

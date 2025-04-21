@@ -591,19 +591,29 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
-    self.open_element("div", &["dlist"], &block.meta.attrs);
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
+      self.state.insert(InGlossaryList);
+      self.open_element("div", &["dlist", "glossary"], &block.meta.attrs);
+    } else {
+      self.open_element("div", &["dlist"], &block.meta.attrs);
+    }
     self.render_buffered_block_title(block);
     self.push_str("<dl>");
   }
 
   #[instrument(skip_all)]
   fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
+    self.state.remove(&InGlossaryList);
     self.push_str("</dl></div>");
   }
 
   #[instrument(skip_all)]
   fn enter_description_list_term(&mut self, _term: &[InlineNode], _item: &ListItem) {
-    self.push_str(r#"<dt class="hdlist1">"#);
+    if self.state.contains(&InGlossaryList) {
+      self.push_str(r#"<dt>"#);
+    } else {
+      self.push_str(r#"<dt class="hdlist1">"#);
+    }
   }
 
   #[instrument(skip_all)]
@@ -1769,6 +1779,7 @@ pub enum EphemeralState {
   VisitingSimpleTermDescription,
   IsSourceBlock,
   InBibliographySection,
+  InGlossaryList,
 }
 
 const fn list_type_from_depth(depth: u8) -> &'static str {

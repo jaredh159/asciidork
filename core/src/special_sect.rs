@@ -28,7 +28,7 @@ impl SpecialSection {
     }
   }
 
-  pub fn supports_subsections(&self) -> bool {
+  pub const fn supports_subsections(&self) -> bool {
     match self {
       Self::Abstract => true,
       Self::Colophon => false,

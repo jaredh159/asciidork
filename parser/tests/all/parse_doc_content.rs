@@ -416,3 +416,21 @@ assert_error!(
       | ^^^^ Section title out of sequence: expected level 2 `===`
   "}
 );
+
+assert_error!(
+  book_chapter_out_of_sequence,
+  adoc! {"
+    = Document Title
+    :doctype: book
+
+    === Not a Chapter
+
+    content
+  "},
+  error! {"
+     --> test.adoc:4:1
+      |
+    4 | === Not a Chapter
+      | ^^^ Section title out of sequence: expected level 1 `==`
+  "}
+);
