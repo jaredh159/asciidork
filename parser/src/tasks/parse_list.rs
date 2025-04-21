@@ -102,7 +102,9 @@ impl<'arena> Parser<'arena> {
     }
 
     let mut item_lines = Deq::with_capacity(1, self.bump);
-    item_lines.push(line);
+    if !line.is_empty() {
+      item_lines.push(line);
+    }
     while lines
       .current()
       .map(|line| line.continues_list_item_principle())

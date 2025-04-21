@@ -41,9 +41,13 @@ impl<'arena> Parser<'arena> {
           acc.inlines.discard_trailing_newline();
         }
         let token = line.consume_current().unwrap();
-        let comment = line.consume_to_string(self.bump);
-        let loc = SourceLocation::new(token.loc.start, comment.loc.end + 1);
-        acc.push_node(LineComment(comment.src), loc);
+        if line.is_empty() {
+          acc.push_node(LineComment(BumpString::new_in(self.bump)), token.loc);
+        } else {
+          let comment = line.consume_to_string(self.bump);
+          let loc = SourceLocation::new(token.loc.start, comment.loc.end + 1);
+          acc.push_node(LineComment(comment.src), loc);
+        }
         continue;
       }
 
@@ -519,12 +523,13 @@ impl<'arena> Parser<'arena> {
           Backtick
             if subs.inline_formatting()
               && line.starts_with_seq(&[Kind(Plus), Not(Plus)])
+              && !line.starts_with_seq(&[Kind(Plus), Kind(Backtick)])
               && contains_seq(&[Len(1, Plus), Kind(Backtick)], &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_node(
-              extract_lit_mono,
+              |inner| extract_lit_mono(inner, self.bump),
               [Len(1, Plus), Kind(Backtick)],
               &token,
               &mut acc,

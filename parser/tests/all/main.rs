@@ -1,4 +1,5 @@
 mod attrs;
+mod fuzz_cases;
 mod parse_blocks;
 mod parse_breaks;
 mod parse_callout_lists;

@@ -106,7 +106,9 @@ impl<'arena> Parser<'arena> {
         passthru_line.push_nonpass(token);
         num_tokens -= 1;
       } else {
-        passthru.push(passthru_line);
+        if !passthru_line.is_empty() {
+          passthru.push(passthru_line);
+        }
         // NB: we know there is a next line because we found the end further on
         let mut next_line = source.consume_current().unwrap();
         std::mem::swap(line, &mut next_line);
@@ -183,10 +185,15 @@ fn terminates_plus(plus_count: usize, line: &Line, lines: &ContiguousLines) -> O
   }
 
   // search rest of paragraph
-  let mut n = line.num_tokens();
+  let orig_n = line.num_tokens();
+  let mut n = orig_n;
   for line in lines.iter() {
     if let Some(m) = line.index_of_seq(spec) {
-      return Some(n + m);
+      if m == 0 && n == orig_n {
+        return None; // empty multiline, e.g. "++\n++"
+      } else {
+        return Some(n + m);
+      }
     } else {
       n += line.num_tokens();
     }

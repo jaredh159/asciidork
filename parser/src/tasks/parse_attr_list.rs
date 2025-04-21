@@ -227,6 +227,10 @@ impl<'arena> Parser<'arena> {
           while !matches!(tokens.first().unwrap().kind, Hash | Percent | Dots) {
             pos_tokens.push(tokens.pop_front().unwrap());
           }
+          if pos_tokens.is_empty() {
+            self.err_at("Invalid attr list", tokens.first().unwrap().loc)?;
+            return Ok(());
+          }
           attr_list
             .positional
             .push(self.parse_attr_nodes(pos_tokens)?);
@@ -267,14 +271,15 @@ impl<'arena> Parser<'arena> {
             break;
           };
           match token.kind {
+            _ if line.is_empty() => self.err_token_start("Invalid id attribute", &token)?,
             Dots if token.len() == 1 => attr_list
               .roles
               .push(line.consume_to_string_until_one_of(stop, self.bump)),
             Hash => {
-              let src = line.consume_to_string_until_one_of(stop, self.bump);
               if attr_list.id.is_some() {
                 self.err_token_start("More than one id attribute", &token)?
               } else {
+                let src = line.consume_to_string_until_one_of(stop, self.bump);
                 attr_list.id = Some(src);
               }
             }
@@ -1307,6 +1312,7 @@ mod tests {
     let cases: Vec<(&str, &[usize])> = vec![
       ("[]", &[]),
       ("[#a,b=c]", &[2]),
+      ("[#]", &[]),
       ("[foo,bar]", &[1]),
       ("[foo , ]", &[2]),
       ("[\"foo,bar\"]", &[]),

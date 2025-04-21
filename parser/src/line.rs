@@ -620,7 +620,7 @@ impl<'arena> Line<'arena> {
         let captures = regx::REPEAT_STAR_LI_START.captures(&src)?;
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
       }
-      CalloutNumber if token.lexeme.as_bytes()[1] != b'!' => {
+      CalloutNumber if second.kind(Whitespace) && token.lexeme.as_bytes()[1] != b'!' => {
         Some(ListMarker::Callout(token.parse_callout_num()))
       }
       Digits if second.kind(Dots) && third.kind(Whitespace) => {
@@ -934,6 +934,7 @@ mod tests {
       ("<.> foo", Some(Callout(None))),
       ("<!--3--> foo", None), // CalloutNumber token, but not a list marker
       ("<255> foo", Some(Callout(Some(255)))),
+      ("<.>", None),
     ];
     for (input, marker) in cases {
       let line = read_line!(input);

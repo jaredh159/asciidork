@@ -58,11 +58,22 @@ impl<'arena> Parser<'arena> {
   }
 }
 
-pub(crate) fn extract_lit_mono(mut nodes: InlineNodes) -> Inline {
+pub(crate) fn extract_lit_mono<'a>(mut nodes: InlineNodes<'a>, bump: &'a Bump) -> Inline<'a> {
   assert!(nodes.len() == 1, "invalid lit mono len");
   match nodes.pop().unwrap() {
     InlineNode { content: Inline::Text(lit_mono), loc } => {
       Inline::LitMono(SourceString::new(lit_mono, loc))
+    }
+    InlineNode {
+      content: Inline::SpecialChar(special_char),
+      loc,
+    } => {
+      let ch = match special_char {
+        SpecialCharKind::Ampersand => "&",
+        SpecialCharKind::LessThan => "<",
+        SpecialCharKind::GreaterThan => ">",
+      };
+      Inline::LitMono(SourceString::new(BumpString::from_str_in(ch, bump), loc))
     }
     InlineNode {
       content: Inline::InlinePassthru(mut pnodes),

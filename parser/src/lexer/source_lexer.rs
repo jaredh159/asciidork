@@ -58,7 +58,7 @@ impl<'arena> SourceLexer<'arena> {
     match byte {
       Some(b'=') => Some(self.repeating(b'=', EqualSigns)),
       Some(b'-') => Some(self.repeating(b'-', Dashes)),
-      Some(b' ' | b'\t') => Some(self.whitespace()),
+      Some(b' ' | b'\t' | b'\x0B') => Some(self.whitespace()),
       Some(b'&') => Some(self.maybe_entity()),
       Some(b'\n') => Some(self.single(Newline)),
       Some(b'<') => Some(self.maybe_callout_number()),
