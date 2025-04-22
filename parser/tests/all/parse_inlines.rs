@@ -450,23 +450,26 @@ fn test_lit_mono() {
   run(vec![
     (
       "`++a`b`++`",
-      nodes![node!(LitMono(src!("a`b`", 3..7)), 0..10)],
+      nodes![node!(
+        LitMono(nodes![node!(InlinePassthru(just!("a`b`", 3..7)), 2..8)]),
+        0..10
+      )],
     ),
     (
       "`+{name}+`\nbar",
       nodes![
-        node!(LitMono(src!("{name}", 2..8)), 0..10),
+        node!(LitMono(just!("{name}", 2..8)), 0..10),
         node!(Inline::Newline, 10..11),
         node!("bar"; 11..14),
       ],
     ),
     (
       "`+{name}+`",
-      nodes![node!(LitMono(src!("{name}", 2..8)), 0..10)],
+      nodes![node!(LitMono(just!("{name}", 2..8)), 0..10)],
     ),
     (
       "`+_foo_+`",
-      nodes![node!(LitMono(src!("_foo_", 2..7)), 0..9)],
+      nodes![node!(LitMono(just!("_foo_", 2..7)), 0..9)],
     ),
     (
       "`++f` bar +` baz", // <-- NOT lit mono

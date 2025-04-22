@@ -136,7 +136,6 @@ pub trait Backend {
 
   /// inlines
   fn visit_inline_text(&mut self, text: &str);
-  fn visit_inline_lit_mono(&mut self, text: &str);
   fn visit_joining_newline(&mut self);
   fn visit_curly_quote(&mut self, kind: CurlyKind);
   fn visit_multichar_whitespace(&mut self, whitespace: &str);
@@ -190,6 +189,8 @@ pub trait Backend {
   fn exit_inline_mono(&mut self, children: &[InlineNode]);
   fn enter_inline_bold(&mut self, children: &[InlineNode]);
   fn exit_inline_bold(&mut self, children: &[InlineNode]);
+  fn enter_inline_lit_mono(&mut self, children: &[InlineNode]);
+  fn exit_inline_lit_mono(&mut self, children: &[InlineNode]);
   fn visit_inline_specialchar(&mut self, char: &SpecialCharKind);
   fn enter_inline_passthrough(&mut self, children: &[InlineNode]);
   fn exit_inline_passthrough(&mut self, children: &[InlineNode]);

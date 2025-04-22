@@ -529,7 +529,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_node(
-              |inner| extract_lit_mono(inner, self.bump),
+              LitMono,
               [Len(1, Plus), Kind(Backtick)],
               &token,
               &mut acc,
