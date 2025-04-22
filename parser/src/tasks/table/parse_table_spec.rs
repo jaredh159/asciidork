@@ -186,10 +186,15 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) -> b
   if !token.kind(Word) {
     return false;
   }
-  let Some(style) = &token.lexeme[0..1].parse().ok() else {
+  let Some(style) = token
+    .lexeme
+    .chars()
+    .next()
+    .and_then(|c| c.to_string().parse::<CellContentStyle>().ok())
+  else {
     return false;
   };
-  spec.style = Some(*style);
+  spec.style = Some(style);
   if token.len() == 1 {
     *cursor += 1;
     false

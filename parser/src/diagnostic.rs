@@ -42,12 +42,25 @@ impl Parser<'_> {
     })
   }
 
+  pub(crate) fn err_line_of(&self, message: impl Into<String>, loc: SourceLocation) -> Result<()> {
+    let (line_num, _) = self.lexer.line_number_with_offset(loc);
+    let line = self.lexer.line_of(loc);
+    self.handle_err(Diagnostic {
+      line_num,
+      message: message.into(),
+      underline_start: 0,
+      underline_width: line.len() as u32,
+      line: String::from(line.as_str()),
+      source_file: self.lexer.source_file_at(loc.include_depth).clone(),
+    })
+  }
+
   pub(crate) fn err_doc_attr(
     &self,
     key: impl Into<String>,
     message: impl Into<String>,
   ) -> Result<()> {
-    let key = &key.into();
+    let key: &String = &key.into();
     for (idx, line) in self
       .lexer
       .raw_lines()

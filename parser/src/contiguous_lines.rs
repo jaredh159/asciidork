@@ -143,14 +143,14 @@ impl<'arena> ContiguousLines<'arena> {
       return false;
     }
     let last_line = self.last().unwrap();
-    if !last_line.starts_with_seq(&[TokenSpec::Kind(Dashes), TokenSpec::Kind(Whitespace)])
+    if !last_line.starts_with_seq(&[Kind(Dashes), Kind(Whitespace)])
       || last_line.num_tokens() < 3
-      || !last_line.current_is_len(Dashes, 2)
+      || !last_line.current_satisfies(Len(2, Dashes))
     {
       return false;
     }
     let first_line = self.current().unwrap();
-    if !first_line.starts(DoubleQuote) {
+    if !first_line.starts(DoubleQuote) || first_line.num_tokens() < 2 {
       return false;
     }
     let penult = self.nth(self.lines.len() - 2).unwrap();
@@ -252,7 +252,7 @@ impl<'arena> ContiguousLines<'arena> {
     if !self
       .lines
       .iter()
-      .all(|l| l.current_is_len(Whitespace, len) && l.num_tokens() > 1)
+      .all(|l| l.current_satisfies(Len(len as u8, Whitespace)) && l.num_tokens() > 1)
     {
       return false;
     }

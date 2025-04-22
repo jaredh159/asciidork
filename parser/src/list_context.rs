@@ -8,23 +8,6 @@ pub(crate) struct ListContext {
   pub(crate) parsing_continuations: bool,
 }
 
-impl ListContext {
-  pub fn parsing_simple_desc_def(&self) -> bool {
-    if self.parsing_continuations || self.stack.is_empty() {
-      return false;
-    }
-    self.parsing_description_list()
-  }
-
-  pub fn parsing_description_list_continuations(&self) -> bool {
-    self.parsing_description_list() && self.parsing_continuations
-  }
-
-  pub fn parsing_description_list(&self) -> bool {
-    self.stack.last().is_some_and(|last| last.is_description())
-  }
-}
-
 #[derive(Debug)]
 pub struct ListStack(Vec<ListMarker>);
 

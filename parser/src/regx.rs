@@ -33,7 +33,7 @@ lazy_static! {
 
 // line
 lazy_static! {
-  pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)\s+.+"#).unwrap();
+  pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)( |\t)+.+"#).unwrap();
 }
 
 // inlines

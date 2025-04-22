@@ -41,6 +41,7 @@ pub enum TokenKind {
   MacroName,
   MaybeEmail,
   Newline,
+  NoBreakSpace,
   OpenBrace,
   OpenBracket,
   OpenParens,
@@ -65,14 +66,18 @@ pub enum TokenSpec {
   Kind(TokenKind),
   Len(u8, TokenKind),
   Not(TokenKind),
+  OneOf(&'static [TokenKind]),
+  NotOneOf(&'static [TokenKind]),
 }
 
 impl TokenSpec {
-  pub const fn token_kind(&self) -> TokenKind {
+  pub const fn token_kind(&self) -> Option<TokenKind> {
     match self {
-      TokenSpec::Kind(kind) => *kind,
-      TokenSpec::Not(kind) => *kind,
-      TokenSpec::Len(_, kind) => *kind,
+      TokenSpec::Kind(kind) => Some(*kind),
+      TokenSpec::Not(_) => None,
+      TokenSpec::Len(_, kind) => Some(*kind),
+      TokenSpec::OneOf(_) => None,
+      TokenSpec::NotOneOf(_) => None,
     }
   }
 }
@@ -122,8 +127,9 @@ impl<'arena> Token<'arena> {
     } else {
       // SAFETY: we only have ascii digits, so this is fine
       let num_str = unsafe { std::str::from_utf8_unchecked(&ascii_digits) };
-      // maybe better warn than expect?
-      Some(num_str.parse::<u8>().expect("exceeded max 255 callouts"))
+      // TODO: would be better to emit an error on >255, but would require
+      // reworking how Line relies on this method and can't emit
+      num_str.parse::<u8>().ok()
     }
   }
 
@@ -208,6 +214,8 @@ impl TokenIs for Token<'_> {
       TokenSpec::Kind(kind) => self.kind == kind,
       TokenSpec::Not(kind) => self.kind != kind,
       TokenSpec::Len(len, kind) => self.kind == kind && self.len() == len as usize,
+      TokenSpec::OneOf(kinds) => kinds.contains(&self.kind),
+      TokenSpec::NotOneOf(kinds) => !kinds.contains(&self.kind),
     }
   }
 

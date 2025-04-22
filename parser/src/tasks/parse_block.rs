@@ -23,6 +23,7 @@ impl<'arena> Parser<'arena> {
     }
 
     match self.section_start_level(&lines, &meta) {
+      Some(0 | 1) if self.ctx.delimiter.is_some() => {}
       // skip doc title and top-level sections
       Some(0 | 1) => {
         self.restore_peeked(lines, meta);
@@ -60,7 +61,9 @@ impl<'arena> Parser<'arena> {
       .map(Some);
     } else if lines.starts_list() {
       return self.parse_list(lines, Some(meta)).map(Some);
-    } else if lines.current_satisfies(|line| line.is_heading()) {
+    } else if lines.current_satisfies(|l| l.is_heading())
+      && (meta.attrs.has_str_positional("discrete") || meta.attrs.has_str_positional("float"))
+    {
       return self.parse_discrete_heading(lines, meta).map(Some);
     }
 
@@ -213,10 +216,10 @@ impl<'arena> Parser<'arena> {
       if context == Context::Comment {
         let start_loc = lines.first_loc().unwrap_or(open_token.loc);
         let mut end_loc = lines.last_loc().unwrap_or(open_token.loc);
-        lines.discard_until(|l| l.starts_with(|token| token.lexeme == "////"));
+        lines.discard_until(|l| l.is_delimiter_kind(DelimiterKind::Comment));
         end_loc = lines.first_loc().unwrap_or(end_loc);
         self.restore_lines(lines);
-        let span_loc = SourceLocation::spanning(start_loc, end_loc.clamp_start());
+        let span_loc = SourceLocation::spanning(start_loc.clamp_start(), end_loc.clamp_start());
         let comment = self.lexer.src_string_from_loc(span_loc);
         Content::Empty(EmptyMetadata::Comment(comment))
       } else {
@@ -236,20 +239,25 @@ impl<'arena> Parser<'arena> {
     };
 
     self.ctx.subs = restore_subs;
-    let end_loc = if let Some(mut block) = self.read_lines()? {
-      let token = block.consume_current_token().unwrap();
-      debug_assert!(token.kind(DelimiterLine));
-      self.restore_lines(block);
-      token.loc
-    } else {
+    let mut end_loc = None;
+    if let Some(mut lines) = self.read_lines()? {
+      if lines.current_satisfies(|l| l.is_delimiter(self.ctx.delimiter.unwrap())) {
+        let token = lines.consume_current_token().unwrap();
+        self.restore_lines(lines);
+        end_loc = Some(token.loc);
+      }
+    }
+
+    if end_loc.is_none() {
       self.err_token_full("This delimiter was never closed", &open_token)?;
-      self.lexer.loc()
+      end_loc = Some(self.lexer.loc());
     };
+
     self.ctx.delimiter = prev;
     Ok(Some(Block {
       content,
       context,
-      loc: MultiSourceLocation::spanning(open_token.loc, end_loc),
+      loc: MultiSourceLocation::spanning(open_token.loc, end_loc.unwrap()),
       meta,
     }))
   }
@@ -278,7 +286,7 @@ impl<'arena> Parser<'arena> {
     mut lines: ContiguousLines<'arena>,
     meta: ChunkMeta<'arena>,
   ) -> Result<Option<Block<'arena>>> {
-    if self.ctx.list.parsing_simple_desc_def() {
+    if self.ctx.parsing_simple_desc_def() {
       lines.current_mut().map(|l| l.discard_leading_whitespace());
     }
     let context = meta.block_paragraph_context(&mut lines);

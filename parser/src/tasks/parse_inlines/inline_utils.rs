@@ -32,6 +32,10 @@ impl<'arena> Parser<'arena> {
     lines: &mut ContiguousLines,
   ) -> bool {
     debug_assert!(!stop_tokens.is_empty());
+    debug_assert!(
+      stop_tokens.iter().all(|t| t.token_kind().is_some()),
+      "all stop tokens must have a token kind"
+    );
     self.lexer.byte_before(token.loc).is_none_or(|c| {
       c.is_ascii_whitespace()
         || matches!(
@@ -39,7 +43,7 @@ impl<'arena> Parser<'arena> {
           b'`' | b'*' | b'_' | b'[' | b'#' | b'+' | b'|' | b'\'' | b'=' | b'"' | b','
         )
     }) && !line.starts(Whitespace)
-      && token.kind(stop_tokens.last().unwrap().token_kind())
+      && token.kind(stop_tokens.last().unwrap().token_kind().unwrap())
       && (line.terminates_constrained(stop_tokens, &self.ctx.inline_ctx)
         || lines.terminates_constrained(stop_tokens, &self.ctx.inline_ctx))
   }
@@ -52,8 +56,12 @@ impl<'arena> Parser<'arena> {
     lines: &ContiguousLines,
   ) -> bool {
     debug_assert!(!stop_tokens.is_empty());
-    token.kind(stop_tokens[0].token_kind())
-      && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind()))
+    debug_assert!(
+      stop_tokens.iter().all(|t| t.token_kind().is_some()),
+      "all stop tokens must have a token kind"
+    );
+    token.kind(stop_tokens[0].token_kind().unwrap())
+      && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind().unwrap()))
       && contains_seq(stop_tokens, line, lines)
   }
 }
