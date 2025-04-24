@@ -1,0 +1,22 @@
+[package]
+name = "asciidork-parser-fuzzer"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+asciidork-parser = { path = "..", version = "0.20.0" }
+bumpalo = { version = "3.15.4", features = ["collections"] }
+
+[[bin]]
+name = "fuzz_target_1"
+path = "fuzz_targets/fuzz_target_1.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

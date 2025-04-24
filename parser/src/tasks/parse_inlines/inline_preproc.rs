@@ -30,7 +30,7 @@ impl<'arena> Parser<'arena> {
         }
         Plus if could_be_plus_passthru(prev_kind, line) => {
           let count = line.iter().take_while(|t| t.kind(Plus)).count() + 1;
-          if let Some(n) = terminates_plus(count, line, lines) {
+          if let Some(n) = self.terminates_plus(count, line, lines) {
             let subs = Substitutions::from_pass_plus_len(count);
             let placeholder = self.pass_placeholder(&token, count, line, lines, n, subs)?;
             skip_tokens = count;
@@ -106,7 +106,9 @@ impl<'arena> Parser<'arena> {
         passthru_line.push_nonpass(token);
         num_tokens -= 1;
       } else {
-        passthru.push(passthru_line);
+        if !passthru_line.is_empty() {
+          passthru.push(passthru_line);
+        }
         // NB: we know there is a next line because we found the end further on
         let mut next_line = source.consume_current().unwrap();
         std::mem::swap(line, &mut next_line);
@@ -156,6 +158,64 @@ impl<'arena> Parser<'arena> {
 
     None
   }
+
+  fn terminates_plus(
+    &self,
+    plus_count: usize,
+    line: &Line,
+    lines: &ContiguousLines,
+  ) -> Option<usize> {
+    if plus_count == 1 {
+      return self.terminates_constrained_plus(line, lines);
+    }
+
+    let spec = &[TokenSpec::Kind(Plus); 3][..plus_count];
+
+    if let Some(n) = line.index_of_seq(spec) {
+      return Some(n);
+    }
+
+    // search rest of paragraph
+    let orig_n = line.num_tokens();
+    let mut n = orig_n;
+    for line in lines.iter() {
+      if self.ctx.delimiter.is_some_and(|d| line.is_delimiter(d)) {
+        return None; // can't span over pending delimiter
+      }
+      if let Some(m) = line.index_of_seq(spec) {
+        if m == 0 && n == orig_n {
+          return None; // empty multiline, e.g. "++\n++"
+        } else {
+          return Some(n + m);
+        }
+      } else {
+        n += line.num_tokens();
+      }
+    }
+    None
+  }
+
+  fn terminates_constrained_plus(&self, line: &Line, lines: &ContiguousLines) -> Option<usize> {
+    if line.current_is(Newline) {
+      return None;
+    }
+    let stop = &[TokenSpec::Len(1, Plus)];
+    if let Some(n) = line.terminates_constrained_in(stop, &InlineCtx::None) {
+      return Some(n);
+    }
+    let mut n = line.num_tokens();
+    for line in lines.iter() {
+      if self.ctx.delimiter.is_some_and(|d| line.is_delimiter(d)) {
+        return None; // can't span over pending delimiter
+      }
+      if let Some(m) = line.terminates_constrained_in(stop, &InlineCtx::None) {
+        return Some(n + m);
+      } else {
+        n += line.num_tokens();
+      }
+    }
+    None
+  }
 }
 
 fn pass_macro_subs<'arena>(
@@ -169,48 +229,6 @@ fn pass_macro_subs<'arena>(
   }
   line.discard_assert(OpenBracket);
   Substitutions::from_pass_macro_target(target)
-}
-
-fn terminates_plus(plus_count: usize, line: &Line, lines: &ContiguousLines) -> Option<usize> {
-  if plus_count == 1 {
-    return terminates_constrained_plus(line, lines);
-  }
-
-  let spec = &[TokenSpec::Kind(Plus); 3][..plus_count];
-
-  if let Some(n) = line.index_of_seq(spec) {
-    return Some(n);
-  }
-
-  // search rest of paragraph
-  let mut n = line.num_tokens();
-  for line in lines.iter() {
-    if let Some(m) = line.index_of_seq(spec) {
-      return Some(n + m);
-    } else {
-      n += line.num_tokens();
-    }
-  }
-  None
-}
-
-fn terminates_constrained_plus(line: &Line, lines: &ContiguousLines) -> Option<usize> {
-  if line.current_is(Newline) {
-    return None;
-  }
-  let stop = &[TokenSpec::Len(1, Plus)];
-  if let Some(n) = line.terminates_constrained_in(stop, &InlineCtx::None) {
-    return Some(n);
-  }
-  let mut n = line.num_tokens();
-  for line in lines.iter() {
-    if let Some(m) = line.terminates_constrained_in(stop, &InlineCtx::None) {
-      return Some(n + m);
-    } else {
-      n += line.num_tokens();
-    }
-  }
-  None
 }
 
 #[inline(always)]

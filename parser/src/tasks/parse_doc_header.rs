@@ -78,7 +78,6 @@ impl<'arena> Parser<'arena> {
       };
       if next_lines.discard_until(Line::is_comment_block_delimiter) {
         let end_delim = next_lines.consume_current().unwrap();
-        self.restore_lines(next_lines);
         return Ok(end_delim.first_loc());
       }
     }

@@ -29,7 +29,7 @@ pub enum Inline<'arena> {
   BiblioAnchor(BumpString<'arena>),
   LineBreak,
   LineComment(BumpString<'arena>),
-  LitMono(SourceString<'arena>),
+  LitMono(InlineNodes<'arena>),
   Mono(InlineNodes<'arena>),
   MultiCharWhitespace(BumpString<'arena>),
   Quote(QuoteKind, InlineNodes<'arena>),

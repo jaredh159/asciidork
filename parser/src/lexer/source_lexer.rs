@@ -58,7 +58,7 @@ impl<'arena> SourceLexer<'arena> {
     match byte {
       Some(b'=') => Some(self.repeating(b'=', EqualSigns)),
       Some(b'-') => Some(self.repeating(b'-', Dashes)),
-      Some(b' ' | b'\t') => Some(self.whitespace()),
+      Some(b' ' | b'\t' | b'\x0B' | b'\x0C') => Some(self.whitespace()),
       Some(b'&') => Some(self.maybe_entity()),
       Some(b'\n') => Some(self.single(Newline)),
       Some(b'<') => Some(self.maybe_callout_number()),
@@ -86,18 +86,15 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'|') => Some(self.single(Pipe)),
       Some(b'\'') => Some(self.single(SingleQuote)),
       Some(b'\\') => Some(self.single(Backslash)),
-      Some(b'\r') if self.peek_is(b'\n') => {
-        self.advance();
-        Some(self.token(Newline, self.pos - 2, self.pos))
-      }
+      Some(b'\r') if self.peek_is(b'\n') => Some(self.codepoint(2, Newline)),
       Some(b) if b.is_ascii_digit() => Some(self.digits()),
       Some(b) if b == b';' || b == b':' => Some(self.maybe_term_delimiter(b, at_line_start)),
-      Some(0xC2) if self.peek_is(0xA0) => Some(self.codepoint(2)), // no-break space
-      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\xAF") => Some(self.codepoint(3)), // narrow no-break space
-      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\x87") => Some(self.codepoint(3)), // figure space
-      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x81\xA0") => Some(self.codepoint(3)), // word joiner
-      Some(0xE3) if self.peek_bytes::<2>() == Some(b"\x80\x80") => Some(self.codepoint(3)), // ideographic space
-      Some(0xEF) if self.peek_bytes::<2>() == Some(b"\xBB\xBF") => Some(self.codepoint(3)), // zero-width no-break space
+      Some(0xC2) if self.peek_is(0xA0) => Some(self.codepoint(2, NoBreakSpace)), // non-breaking space
+      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\xAF") => Some(self.codepoint(3, Word)), // narrow no-break space
+      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\x87") => Some(self.codepoint(3, Word)), // figure space
+      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x81\xA0") => Some(self.codepoint(3, Word)), // word joiner
+      Some(0xE3) if self.peek_bytes::<2>() == Some(b"\x80\x80") => Some(self.codepoint(3, Word)), // ideographic space
+      Some(0xEF) if self.peek_bytes::<2>() == Some(b"\xBB\xBF") => Some(self.codepoint(3, Word)), // zero-width no-break space
       Some(_) => Some(self.word()),
       None => None,
     }
@@ -109,10 +106,10 @@ impl<'arena> SourceLexer<'arena> {
     std::str::from_utf8(&self.src[start..end]).unwrap()
   }
 
-  pub fn codepoint(&mut self, n: u32) -> Token<'arena> {
+  pub fn codepoint(&mut self, n: u32, kind: TokenKind) -> Token<'arena> {
     debug_assert!(n > 1);
     self.pos += n - 1;
-    self.token(Word, self.pos - n, self.pos)
+    self.token(kind, self.pos - n, self.pos)
   }
 
   pub fn peek(&self) -> Option<u8> {
@@ -280,7 +277,7 @@ impl<'arena> SourceLexer<'arena> {
 
   fn whitespace(&mut self) -> Token<'arena> {
     let start = self.pos - 1;
-    self.advance_while_one_of(b" \t");
+    self.advance_while_one_of(&[b' ', b'\t', 0x0B, 0x0C]);
     self.token(Whitespace, start, self.pos)
   }
 
@@ -456,9 +453,9 @@ impl<'arena> SourceLexer<'arena> {
       match self.peek() {
         Some(b'@') if with_at => break,
         Some(
-          b' ' | b'\t' | b'\n' | b'\r' | b':' | b';' | b'<' | b'>' | b',' | b'^' | b'_' | b'~'
-          | b'*' | b'!' | b'?' | b'`' | b'+' | b'.' | b'[' | b']' | b'{' | b'}' | b'(' | b')'
-          | b'=' | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&' | b'-',
+          b' ' | b'\t' | b'\n' | b'\r' | b'\x0B' | b'\x0C' | b':' | b';' | b'<' | b'>' | b','
+          | b'^' | b'_' | b'~' | b'*' | b'!' | b'?' | b'`' | b'+' | b'.' | b'[' | b']' | b'{'
+          | b'}' | b'(' | b')' | b'=' | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&' | b'-',
         ) => break,
         None => break,
         _ => {
@@ -672,16 +669,19 @@ impl<'a> Iterator for LinesIter<'a> {
   type Item = &'a str;
 
   fn next(&mut self) -> Option<Self::Item> {
+    if self.end >= self.src.len() {
+      return None;
+    }
     while self.end < self.src.len() {
       if self.src[self.end] == b'\n' {
-        let line = std::str::from_utf8(&self.src[self.start..self.end]).unwrap();
-        self.end += 1;
-        self.start = self.end;
-        return Some(line);
+        break;
       }
       self.end += 1;
     }
-    None
+    let line = std::str::from_utf8(&self.src[self.start..self.end]).unwrap();
+    self.end += 1;
+    self.start = self.end;
+    Some(line)
   }
 }
 

@@ -41,9 +41,13 @@ impl<'arena> Parser<'arena> {
           acc.inlines.discard_trailing_newline();
         }
         let token = line.consume_current().unwrap();
-        let comment = line.consume_to_string(self.bump);
-        let loc = SourceLocation::new(token.loc.start, comment.loc.end + 1);
-        acc.push_node(LineComment(comment.src), loc);
+        if line.is_empty() {
+          acc.push_node(LineComment(BumpString::new_in(self.bump)), token.loc);
+        } else {
+          let comment = line.consume_to_string(self.bump);
+          let loc = SourceLocation::new(token.loc.start, comment.loc.end + 1);
+          acc.push_node(LineComment(comment.src), loc);
+        }
         continue;
       }
 
@@ -108,11 +112,11 @@ impl<'arena> Parser<'arena> {
             line.discard(1);
             acc.push_node(Symbol(SymbolKind::DoubleRightArrow), token.loc.incr_end());
           }
-          LessThan if subs.char_replacement() && line.current_is_len(Dashes, 1) => {
+          LessThan if subs.char_replacement() && line.current_satisfies(Len(1, Dashes)) => {
             line.discard(1);
             acc.push_node(Symbol(SymbolKind::SingleLeftArrow), token.loc.incr_end());
           }
-          LessThan if subs.char_replacement() && line.current_is_len(EqualSigns, 1) => {
+          LessThan if subs.char_replacement() && line.current_satisfies(Len(1, EqualSigns)) => {
             line.discard(1);
             acc.push_node(Symbol(SymbolKind::DoubleLeftArrow), token.loc.incr_end());
           }
@@ -130,7 +134,7 @@ impl<'arena> Parser<'arena> {
                   macro_loc,
                 );
               }
-              "kbd:" => {
+              "kbd:" if line.current_is(OpenBracket) => {
                 line.discard_assert(OpenBracket);
                 let keys_src = line.consume_to_string_until(CloseBracket, self.bump);
                 line.discard_assert(CloseBracket);
@@ -252,7 +256,7 @@ impl<'arena> Parser<'arena> {
                 )?;
                 acc.push_node(InlineAnchor(id.src), id.loc);
               }
-              _ => todo!("unhandled macro type: `{}`", token.lexeme),
+              _ => acc.push_text_token(&token),
             }
           }
 
@@ -447,9 +451,7 @@ impl<'arena> Parser<'arena> {
             break;
           }
 
-          OpenBracket
-            if subs.inline_formatting() && line.contains_seq(&[Kind(CloseBracket), Kind(Hash)]) =>
-          {
+          OpenBracket if subs.inline_formatting() && line.continues_formatted_text_attr_list() => {
             let mut parse_token = token.clone();
             let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
             debug_assert!(line.current_is(Hash));
@@ -499,10 +501,7 @@ impl<'arena> Parser<'arena> {
             acc.push_text_token(&token);
           }
 
-          OpenBracket
-            if line.starts_with_seq(&[Kind(OpenBracket), Not(OpenBracket)])
-              && line.contains_seq(&[Kind(CloseBracket); 2]) =>
-          {
+          OpenBracket if line.continues_inline_anchor() => {
             let second_bracket = line.consume_current().unwrap();
             if let Some(anchor) = self.parse_inline_anchor(&mut line)? {
               self.insert_anchor(
@@ -519,12 +518,13 @@ impl<'arena> Parser<'arena> {
           Backtick
             if subs.inline_formatting()
               && line.starts_with_seq(&[Kind(Plus), Not(Plus)])
+              && !line.starts_with_seq(&[Kind(Plus), Kind(Backtick)])
               && contains_seq(&[Len(1, Plus), Kind(Backtick)], &line, lines) =>
           {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_node(
-              extract_lit_mono,
+              LitMono,
               [Len(1, Plus), Kind(Backtick)],
               &token,
               &mut acc,
@@ -809,7 +809,7 @@ impl<'arena> Parser<'arena> {
     let mut stop_len = start.len();
     stop_tokens.iter().take(N - 1).for_each(|spec| {
       let tok = line.consume_current().unwrap();
-      debug_assert!(tok.kind == spec.token_kind());
+      debug_assert!(tok.kind == spec.token_kind().unwrap());
       stop_len += tok.len();
     });
     lines.restore_if_nonempty(line);
@@ -826,12 +826,12 @@ impl<'arena> Parser<'arena> {
     (line.current_is(DelimiterLine) && self.ctx.can_nest_blocks)
 
     // new block from attr list-ish
-    || line.is_block_attr_list() || line.is_block_anchor()
+    || ((line.is_block_attr_list() || line.is_block_anchor()) && self.ctx.delimiter.is_none())
 
     // description list
     || (
-      self.ctx.list.parsing_description_list()
-      && line.starts_description_list_item() || line.is_list_continuation()
+      self.ctx.parsing_description_list()
+      && (line.starts_description_list_item() || line.is_list_continuation())
     )
 
     // list continuation

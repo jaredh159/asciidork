@@ -30,7 +30,7 @@ impl<'arena> InlineNodes<'arena> {
       Inline::LineBreak => {}
       Inline::LineComment(_) => {}
       Inline::CalloutNum(_) => {}
-      Inline::LitMono(string) => text.push(string),
+      Inline::LitMono(nodes) => text.extend(nodes.plain_text()),
       Inline::Mono(nodes) => text.extend(nodes.plain_text()),
       Inline::MultiCharWhitespace(_) => text.push(" "),
       Inline::Quote(_, nodes) => text.extend(nodes.plain_text()),

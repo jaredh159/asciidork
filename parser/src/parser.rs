@@ -172,6 +172,10 @@ impl<'arena> Parser<'arena> {
       additional_lines.push(self.read_line()?.unwrap());
     }
     lines.extend(additional_lines);
+
+    while lines.last().map(|l| l.is_empty()) == Some(true) {
+      lines.pop();
+    }
     Ok(Some(lines))
   }
 
@@ -282,9 +286,12 @@ impl<'arena> Parser<'arena> {
         }
         Some(line) if line.is_block_anchor() => {
           let mut line = lines.consume_current().unwrap();
+          let first = line.discard_assert(TokenKind::OpenBracket);
           line.discard_assert(TokenKind::OpenBracket);
-          line.discard_assert(TokenKind::OpenBracket);
-          let anchor = self.parse_block_anchor(&mut line)?.unwrap();
+          let Some(anchor) = self.parse_block_anchor(&mut line)? else {
+            self.err_line_starting("Invalid block anchor", first.loc)?;
+            return Ok(ChunkMeta::new(attrs, title, start_loc));
+          };
           let mut anchor_attrs = AttrList::new(anchor.loc, self.bump);
           anchor_attrs.id = Some(anchor.id);
           anchor_attrs.positional.push(anchor.reftext);

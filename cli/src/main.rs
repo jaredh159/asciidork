@@ -214,4 +214,4 @@ impl DiagnosticColor for Colorizer {
   }
 }
 
-// hack: force cli version publish - 64e7145f
+// hack: force cli version publish - e4ec8a69

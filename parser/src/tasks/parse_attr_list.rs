@@ -25,12 +25,13 @@ impl<'arena> Parser<'arena> {
     let current = line.current_token().unwrap();
     if matches!(
       current.kind,
-      SingleQuote | DoubleQuote | Whitespace | CloseBracket | Digits
+      SingleQuote | DoubleQuote | Whitespace | CloseBracket | Digits | Comma
     ) {
       return Ok(None);
     }
     let start = current.loc.start - 2;
     let id = line.consume_to_string_until_one_of(&[Kind(Comma), Kind(CloseBracket)], self.bump);
+    assert!(!id.is_empty());
     let mut anchor = AnchorSrc {
       loc: SourceLocation::new(start, id.loc.end),
       reftext: None,
@@ -62,8 +63,10 @@ impl<'arena> Parser<'arena> {
       anchor.loc.end = last.loc.end;
       reftext
     };
-    let reftext = self.parse_inlines(&mut reftext_line.into_lines())?;
-    anchor.reftext = Some(reftext);
+    if !reftext_line.is_empty() {
+      let reftext = self.parse_inlines(&mut reftext_line.into_lines())?;
+      anchor.reftext = Some(reftext);
+    }
     Ok(Some(anchor))
   }
 
@@ -180,9 +183,11 @@ impl<'arena> Parser<'arena> {
       tokens.push(line.consume_current().unwrap());
     }
 
-    self.parse_attr(tokens, formatted_text, &mut attrs)?;
+    if !formatted_text || tokens.iter().any(|t| t.kind == Word) {
+      self.parse_attr(tokens, formatted_text, &mut attrs)?;
+    }
 
-    let close_bracket = line.consume_current().expect("attr list close bracket");
+    let close_bracket = line.discard_assert(CloseBracket);
     attrs.loc.extend(close_bracket.loc);
 
     Ok(attrs)
@@ -200,10 +205,10 @@ impl<'arena> Parser<'arena> {
       return Ok(());
     }
     match self.attr_ir(tokens) {
-      AttrIr::Positional(tokens, _) | AttrIr::Id(tokens) if formatted_text => {
+      AttrIr::Positional(inner, _) | AttrIr::Id(inner) if formatted_text => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
-          SourceLocation::spanning(tokens.first().unwrap().loc, tokens.last().unwrap().loc),
+          SourceLocation::spanning(inner.first().unwrap().loc, inner.last().unwrap().loc),
         )?;
       }
       AttrIr::Options(groups) | AttrIr::Roles(groups) if formatted_text => {
@@ -218,7 +223,10 @@ impl<'arena> Parser<'arena> {
       AttrIr::Named(name, tokens) if formatted_text => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
-          SourceLocation::spanning(name.loc, tokens.last().unwrap().loc),
+          SourceLocation::spanning(
+            name.loc,
+            tokens.last().map(|t| t.loc).unwrap_or(name.loc.incr_end()),
+          ),
         )?;
       }
       AttrIr::Positional(mut tokens, with_shorthand) => {
@@ -226,6 +234,10 @@ impl<'arena> Parser<'arena> {
           let mut pos_tokens = Deq::new(self.bump);
           while !matches!(tokens.first().unwrap().kind, Hash | Percent | Dots) {
             pos_tokens.push(tokens.pop_front().unwrap());
+          }
+          if pos_tokens.is_empty() {
+            self.err_at("Invalid attr list", tokens.first().unwrap().loc)?;
+            return Ok(());
           }
           attr_list
             .positional
@@ -267,14 +279,15 @@ impl<'arena> Parser<'arena> {
             break;
           };
           match token.kind {
+            _ if line.is_empty() => self.err_token_start("Invalid id attribute", &token)?,
             Dots if token.len() == 1 => attr_list
               .roles
               .push(line.consume_to_string_until_one_of(stop, self.bump)),
             Hash => {
-              let src = line.consume_to_string_until_one_of(stop, self.bump);
               if attr_list.id.is_some() {
                 self.err_token_start("More than one id attribute", &token)?
               } else {
+                let src = line.consume_to_string_until_one_of(stop, self.bump);
                 attr_list.id = Some(src);
               }
             }
@@ -331,13 +344,17 @@ impl<'arena> Parser<'arena> {
           single_start_len = Some(delimiters.len());
         }
         (SingleQuote, _, Some(prev_len)) => {
-          delimiters.truncate(prev_len);
+          while delimiters.len() > prev_len {
+            num_tokens += delimiters.pop().unwrap(); // tokens before skipped comma
+            num_tokens += 1; // comma
+          }
           single_start_len = None;
         }
         (Comma, _, _) => {
           delimiters.push(num_tokens - 1);
           num_tokens = 0;
         }
+        (CloseBracket, _, _) => break,
         _ => {}
       }
     }
@@ -1307,6 +1324,7 @@ mod tests {
     let cases: Vec<(&str, &[usize])> = vec![
       ("[]", &[]),
       ("[#a,b=c]", &[2]),
+      ("[#]", &[]),
       ("[foo,bar]", &[1]),
       ("[foo , ]", &[2]),
       ("[\"foo,bar\"]", &[]),
@@ -1333,6 +1351,7 @@ mod tests {
       ("[\"foo,bar\",baz]", &[5]),
       ("[foo%bar]", &[]),
       ("['foo%bar']", &[]),
+      ("[',:',]", &[4]),
     ];
     for (input, expected) in cases {
       let mut parser = test_parser!(input);

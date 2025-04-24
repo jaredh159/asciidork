@@ -168,4 +168,24 @@ impl<'arena> ParseContext<'arena> {
   pub fn parsing_adoc_cell(&self) -> bool {
     self.table_cell_ctx == TableCellContext::AsciiDocCell
   }
+
+  pub fn parsing_simple_desc_def(&self) -> bool {
+    if self.list.parsing_continuations || self.list.stack.is_empty() {
+      return false;
+    }
+    self.parsing_description_list()
+  }
+
+  pub fn parsing_description_list_continuations(&self) -> bool {
+    self.parsing_description_list() && self.list.parsing_continuations
+  }
+
+  pub fn parsing_description_list(&self) -> bool {
+    self.delimiter.is_none()
+      && self
+        .list
+        .stack
+        .last()
+        .is_some_and(|last| last.is_description())
+  }
 }

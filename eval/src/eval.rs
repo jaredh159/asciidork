@@ -436,7 +436,11 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
       backend.exit_inline_quote(*kind, children);
     }
-    LitMono(text) => backend.visit_inline_lit_mono(text),
+    LitMono(text) => {
+      backend.enter_inline_lit_mono(text);
+      text.iter().for_each(|n| eval_inline(n, ctx, backend));
+      backend.exit_inline_lit_mono(text);
+    }
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws.as_str()),
     Macro(Footnote { id, text }) => {

@@ -1272,8 +1272,13 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn visit_inline_lit_mono(&mut self, text: &str) {
-    self.push(["<code>", text, "</code>"]);
+  fn enter_inline_lit_mono(&mut self, _children: &[InlineNode]) {
+    self.push_str("<code>");
+  }
+
+  #[instrument(skip_all)]
+  fn exit_inline_lit_mono(&mut self, _children: &[InlineNode]) {
+    self.push_str("</code>");
   }
 
   #[instrument(skip_all)]

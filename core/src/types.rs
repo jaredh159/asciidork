@@ -54,8 +54,8 @@ impl Author {
   pub fn initials(&self) -> String {
     let mut initials = String::with_capacity(3);
     initials.push(self.first_name.chars().next().unwrap());
-    if let Some(middle_name) = &self.middle_name {
-      initials.push(middle_name.chars().next().unwrap());
+    if let Some(middle_init) = &self.middle_name.as_ref().and_then(|m| m.chars().next()) {
+      initials.push(*middle_init);
     }
     initials.push(self.last_name.chars().next().unwrap());
     initials

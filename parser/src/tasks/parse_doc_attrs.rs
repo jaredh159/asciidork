@@ -15,13 +15,13 @@ impl<'arena> Parser<'arena> {
         if let AttrValue::String(s) = &value {
           match s.as_str().parse::<DocType>() {
             Ok(doc_type) => self.document.meta.set_doctype(doc_type),
-            Err(err) => self.err_doc_attr(":doctype:", err)?,
+            Err(err) => self.err_line_of(err, end.into())?,
           }
         } else {
-          self.err_doc_attr(":!doctype:", "".parse::<DocType>().err().unwrap())?;
+          self.err_line_of("".parse::<DocType>().err().unwrap(), end.into())?;
         }
       } else if let Err(err) = self.document.meta.insert_header_attr(&key, value) {
-        self.err_doc_attr(format!(":{}:", key), err)?;
+        self.err_line_of(err, end.into())?;
       }
       lines.discard_leading_comment_lines();
     }

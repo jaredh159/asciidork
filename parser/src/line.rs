@@ -145,8 +145,8 @@ impl<'arena> Line<'arena> {
     self.current_token().kind(kind)
   }
 
-  pub fn current_is_len(&self, kind: TokenKind, len: usize) -> bool {
-    self.current_token().is_kind_len(kind, len)
+  pub fn current_satisfies(&self, spec: TokenSpec) -> bool {
+    self.current_token().satisfies(spec)
   }
 
   pub fn unadjusted_heading_level(&self) -> Option<u8> {
@@ -193,11 +193,14 @@ impl<'arena> Line<'arena> {
       )
       && self.ends_with_nonescaped(CloseBracket)
       && self.nth_token(self.num_tokens() - 2).kind(CloseBracket)
+      && (self.len() > 5 || self.nth_token(2).kind(Word))
   }
 
   pub fn is_chunk_title(&self) -> bool {
-    // dot followed by at least one non-whitespace token
-    self.starts(Dots) && self.iter().len() > 1 && self.peek_token().unwrap().not_kind(Whitespace)
+    self.current_satisfies(Len(1, Dots))
+      && self.iter().len() > 1
+      && self.peek_token().satisfies(Not(Whitespace))
+      && self.is_fully_unconsumed()
   }
 
   pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
@@ -311,7 +314,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_comment(&self) -> bool {
-    self.is_fully_unconsumed() && self.current_is_len(ForwardSlashes, 2)
+    self.is_fully_unconsumed() && self.current_satisfies(Len(2, ForwardSlashes))
   }
 
   pub fn ends(&self, kind: TokenKind) -> bool {
@@ -595,7 +598,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn list_marker(&self) -> Option<ListMarker> {
-    if self.is_comment() {
+    if self.is_comment() || self.current_is(EqualSigns) {
       return None;
     }
 
@@ -620,11 +623,11 @@ impl<'arena> Line<'arena> {
         let captures = regx::REPEAT_STAR_LI_START.captures(&src)?;
         Some(ListMarker::Star(captures.get(1).unwrap().len() as u8))
       }
-      CalloutNumber if token.lexeme.as_bytes()[1] != b'!' => {
+      CalloutNumber if second.kind(Whitespace) && token.lexeme.as_bytes()[1] != b'!' => {
         Some(ListMarker::Callout(token.parse_callout_num()))
       }
       Digits if second.kind(Dots) && third.kind(Whitespace) => {
-        Some(ListMarker::Digits(token.lexeme.parse().unwrap()))
+        token.lexeme.parse::<u16>().ok().map(ListMarker::Digits)
       }
       TermDelimiter => None, // we need to see a non-whitespace token first
       _ if self.term_delim => {
@@ -732,6 +735,29 @@ impl<'arena> Line<'arena> {
 
   pub fn is_fully_unconsumed(&self) -> bool {
     self.tokens.len() == self.orig_len as usize
+  }
+
+  pub fn continues_formatted_text_attr_list(&self) -> bool {
+    if !self.current_satisfies(NotOneOf(&[OpenBracket, CloseBracket])) {
+      return false;
+    }
+    let Some(idx) = self.index_of_seq(&[Kind(CloseBracket), Kind(Hash)]) else {
+      return false;
+    };
+    idx != 0 && self.first_nonescaped(CloseBracket).map(|(_, i)| i) == Some(idx)
+  }
+
+  pub fn continues_inline_anchor(&self) -> bool {
+    if !self.starts_with_seq(&[Kind(OpenBracket), OneOf(&[Word, Colon])]) {
+      return false;
+    }
+    let Some(close_idx) = self.index_of_seq(&[Kind(CloseBracket); 2]) else {
+      return false;
+    };
+    let Some((_, prev_idx)) = self.first_nonescaped(CloseBracket) else {
+      return true;
+    };
+    prev_idx == close_idx
   }
 
   pub fn trim_for_cell(&mut self, style: CellContentStyle) {
@@ -921,6 +947,7 @@ mod tests {
       (".. ", None),
       ("... ", None),
       ("- ", None),
+      ("= :: bar", None),
       ("foo:: bar", Some(Colons(2))),
       ("foo::", Some(Colons(2))),
       ("image:: baz", Some(Colons(2))),
@@ -934,6 +961,7 @@ mod tests {
       ("<.> foo", Some(Callout(None))),
       ("<!--3--> foo", None), // CalloutNumber token, but not a list marker
       ("<255> foo", Some(Callout(Some(255)))),
+      ("<.>", None),
     ];
     for (input, marker) in cases {
       let line = read_line!(input);
