@@ -76,7 +76,7 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     }
 
-    peeked.level = 1; // written as level 0, but are level 1 semantically
+    peeked.semantic_level = 1; // written as level 0
     let section = self.parse_peeked_section(peeked)?;
 
     Ok(Some(section))

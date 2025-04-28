@@ -40,6 +40,58 @@ assert_html!(
 );
 
 assert_html!(
+  multipart_book_toc,
+  adoc! {"
+    = Multi-Part Book with Special Sections
+    :doctype: book
+    :toc:
+
+    [colophon]
+    = The Colophon
+
+    Colophon content
+
+    = The First Part
+
+    == The First Chapter
+
+    Chapter 1 content
+
+    [appendix]
+    = The Appendix
+
+    === Basics
+
+    Basics content
+
+    === Subsections
+
+    Subsection content
+  "},
+  contains: &html! {r##"
+    <div id="toc" class="toc">
+      <div id="toctitle">Table of Contents</div>
+      <ul class="sectlevel1">
+        <li><a href="#_the_colophon">The Colophon</a></li>
+        <li>
+          <a href="#_the_first_part">The First Part</a>
+          <ul class="sectlevel1">
+            <li><a href="#_the_first_chapter">The First Chapter</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#_the_appendix">Appendix A: The Appendix</a>
+          <ul class="sectlevel2">
+            <li><a href="#_basics">Basics</a></li>
+            <li><a href="#_subsections">Subsections</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  "##}
+);
+
+assert_html!(
   toc_preamble,
   adoc! {"
     = Doc Title
@@ -140,8 +192,7 @@ assert_html!(
 
     === sect 2.1
   "},
-  html! {r##"
-    <h1>Doc Title</h1>
+  contains: &html! {r##"
     <div id="toc" class="toc">
       <div id="toctitle">Ham Sandwich</div>
       <ul class="sectlevel1">
@@ -158,22 +209,6 @@ assert_html!(
           </ul>
         </li>
       </ul>
-    </div>
-    <div class="sect1">
-      <h2 id="_sect_1">sect 1</h2>
-      <div class="sectionbody">
-        <div class="sect2">
-          <h3 id="_sect_1_1">sect 1.1</h3>
-        </div>
-      </div>
-    </div>
-    <div class="sect1">
-      <h2 id="_sect_2">sect 2</h2>
-      <div class="sectionbody">
-        <div class="sect2">
-          <h3 id="_sect_2_1">sect 2.1</h3>
-        </div>
-      </div>
     </div>
   "##}
 );

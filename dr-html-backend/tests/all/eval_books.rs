@@ -300,6 +300,29 @@ assert_html!(
 );
 
 assert_html!(
+  appendix_prefix,
+  adoc! {r#"
+    = Multi-Part Book with Special Sections and TOC
+    :doctype: book
+    :toc:
+
+    = The First Part
+
+    == The First Chapter
+
+    Chapter content
+
+    [appendix]
+    = The Appendix
+
+    Appendix content
+  "#},
+  contains:
+    r##"<li><a href="#_the_appendix">Appendix A: The Appendix</a>"##,
+    r#"<h2 id="_the_appendix">Appendix A: The Appendix</h2>"#,
+);
+
+assert_html!(
   renders_invalid_book_best_effort,
   strict: false,
   adoc! {r#"

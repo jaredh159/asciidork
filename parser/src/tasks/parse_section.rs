@@ -6,12 +6,12 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    if peeked.level == 0 && self.document.meta.get_doctype() != DocType::Book {
+    if peeked.semantic_level == 0 && self.document.meta.get_doctype() != DocType::Book {
       self.err_line(
         "Level 0 section allowed only in doctype=book",
         peeked.lines.current().unwrap(),
       )?;
-    } else if peeked.level == 0 {
+    } else if peeked.semantic_level == 0 {
       self.restore_peeked_section(peeked);
       return Ok(None);
     }
@@ -43,7 +43,12 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    Ok(Some(PeekedSection { meta, lines, level }))
+    Ok(Some(PeekedSection {
+      meta,
+      lines,
+      semantic_level: level,
+      authored_level: level,
+    }))
   }
 
   pub(crate) fn parse_peeked_section(
@@ -51,16 +56,21 @@ impl<'arena> Parser<'arena> {
     peeked: PeekedSection<'arena>,
   ) -> Result<Section<'arena>> {
     let special_sect = peeked.special_sect();
-    let PeekedSection { meta, mut lines, level } = peeked;
+    let PeekedSection {
+      meta,
+      mut lines,
+      semantic_level,
+      authored_level,
+    } = peeked;
     let last_level = self.ctx.section_level;
-    self.ctx.section_level = level;
+    self.ctx.section_level = semantic_level;
     let mut heading_line = lines.consume_current().unwrap();
     let mut loc: MultiSourceLocation = heading_line.loc().unwrap().into();
     let equals = heading_line.consume_current().unwrap();
     heading_line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&heading_line, &meta.attrs);
 
-    let out_of_sequence = level > last_level && level - last_level > 1;
+    let out_of_sequence = semantic_level > last_level && semantic_level - last_level > 1;
     if out_of_sequence {
       self.err_token_full(
         format!(
@@ -74,7 +84,13 @@ impl<'arena> Parser<'arena> {
 
     let heading = self.parse_inlines(&mut heading_line.into_lines())?;
     if !out_of_sequence {
-      self.push_toc_node(level, &heading, id.as_ref());
+      self.push_toc_node(
+        authored_level,
+        semantic_level,
+        &heading,
+        id.as_ref(),
+        meta.attrs.special_sect(),
+      );
     }
 
     if let Some(id) = &id {
@@ -126,7 +142,7 @@ impl<'arena> Parser<'arena> {
     self.ctx.section_level = last_level;
     Ok(Section {
       meta,
-      level,
+      level: semantic_level,
       id,
       heading,
       blocks,
@@ -140,29 +156,48 @@ impl<'arena> Parser<'arena> {
 
   pub fn push_toc_node(
     &mut self,
-    level: u8,
+    authored_level: u8,
+    semantic_level: u8,
     heading: &InlineNodes<'arena>,
     as_ref: Option<&BumpString<'arena>>,
+    special_sect: Option<SpecialSection>,
   ) {
     let Some(toc) = self.document.toc.as_mut() else {
       return;
     };
-    if level > self.document.meta.u8_or("toclevels", 2) {
+    if authored_level > self.document.meta.u8_or("toclevels", 2) {
       return;
     }
-    let mut depth = level;
+    let node = TocNode {
+      level: authored_level,
+      title: heading.clone(),
+      id: as_ref.cloned(),
+      special_sect,
+      children: BumpVec::new_in(self.bump),
+    };
     let mut nodes: &mut BumpVec<'_, TocNode<'_>> = toc.nodes.as_mut();
-    while depth > 1 {
+    let Some(last_level) = nodes.last().map(|n| n.level) else {
+      nodes.push(node);
+      return;
+    };
+    if authored_level < last_level || authored_level == 0 {
+      nodes.push(node);
+      return;
+    }
+
+    let mut depth = semantic_level;
+
+    // special case: book special sections can go from 0 to 2
+    if last_level == 0 && semantic_level == 2 && !nodes.iter().any(|n| n.level == 1) {
+      depth = 1;
+    }
+
+    while depth > last_level {
       // we don't push out of sequence sections, shouldn't panic
       nodes = nodes.last_mut().unwrap().children.as_mut();
       depth -= 1;
     }
-    nodes.push(TocNode {
-      level,
-      title: heading.clone(),
-      id: as_ref.cloned(),
-      children: BumpVec::new_in(self.bump),
-    });
+    nodes.push(node);
   }
 }
 
@@ -170,7 +205,8 @@ impl<'arena> Parser<'arena> {
 pub struct PeekedSection<'arena> {
   pub meta: ChunkMeta<'arena>,
   pub lines: ContiguousLines<'arena>,
-  pub level: u8,
+  pub semantic_level: u8,
+  pub authored_level: u8,
 }
 
 impl PeekedSection<'_> {

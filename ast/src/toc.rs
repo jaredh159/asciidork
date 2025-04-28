@@ -12,6 +12,7 @@ pub struct TocNode<'arena> {
   pub level: u8,
   pub title: InlineNodes<'arena>,
   pub id: Option<BumpString<'arena>>,
+  pub special_sect: Option<SpecialSection>,
   pub children: BumpVec<'arena, TocNode<'arena>>,
 }
 

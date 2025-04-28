@@ -8,17 +8,29 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     };
 
-    if peeked.level != 0 || peeked.is_special_sect() {
+    if peeked.authored_level != 0 || peeked.is_special_sect() {
       self.restore_peeked_section(peeked);
       return Ok(None);
     }
 
-    let PeekedSection { meta, mut lines, .. } = peeked;
+    let PeekedSection {
+      meta,
+      mut lines,
+      authored_level,
+      semantic_level,
+    } = peeked;
     let mut heading_line = lines.consume_current().unwrap();
     let equals = heading_line.consume_current().unwrap();
     heading_line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&heading_line, &meta.attrs);
     let heading = self.parse_inlines(&mut heading_line.into_lines())?;
+    self.push_toc_node(
+      authored_level,
+      semantic_level,
+      &heading,
+      id.as_ref(),
+      meta.attrs.special_sect(),
+    );
 
     if let Some(id) = &id {
       self.document.anchors.borrow_mut().insert(

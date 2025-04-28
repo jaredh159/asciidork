@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::sync::Once;
@@ -193,11 +194,12 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_toc(&mut self, _toc: &TableOfContents) {
     self.push_str("</div>");
+    self.appendix_caption_num = 0;
   }
 
   #[instrument(skip_all)]
   fn enter_toc_level(&mut self, level: u8, _nodes: &[TocNode]) {
-    self.push(["<ul class=\"sectlevel", &num_str!(level), "\">"]);
+    self.push(["<ul class=\"sectlevel", &num_str!(max(level, 1)), "\">"]);
   }
 
   #[instrument(skip_all)]
@@ -211,7 +213,10 @@ impl Backend for AsciidoctorHtml {
     if let Some(id) = &node.id {
       self.push_str(id);
     }
-    self.push_str("\">")
+    self.push_str("\">");
+    if node.special_sect == Some(SpecialSection::Appendix) {
+      self.push_appendix_caption();
+    }
   }
 
   #[instrument(skip_all)]
@@ -316,13 +321,7 @@ impl Backend for AsciidoctorHtml {
       self.push(["<h", &level_str, ">"]);
     }
     if section.meta.attrs.has_str_positional("appendix") {
-      if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
-        self.push([&appendix_caption, " "]);
-        let letter = (self.appendix_caption_num + b'A') as char;
-        self.push_ch(letter);
-        self.appendix_caption_num += 1;
-        self.push_str(": ");
-      }
+      self.push_appendix_caption();
     }
     if self.should_number_section(section) {
       let prefix = section::number_prefix(section.level, &mut self.section_nums);
@@ -1450,6 +1449,16 @@ impl AsciidoctorHtml {
   pub(crate) fn push_buffered(&mut self) {
     let buffer = self.take_buffer();
     self.push_str(&buffer);
+  }
+
+  pub(crate) fn push_appendix_caption(&mut self) {
+    if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
+      self.push([&appendix_caption, " "]);
+      let letter = (self.appendix_caption_num + b'A') as char;
+      self.push_ch(letter);
+      self.appendix_caption_num += 1;
+      self.push_str(": ");
+    }
   }
 
   fn take_buffer(&mut self) -> String {
