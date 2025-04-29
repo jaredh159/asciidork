@@ -4,6 +4,7 @@ use std::fmt::Write;
 use std::sync::Once;
 use std::{cell::RefCell, rc::Rc};
 
+use roman_numerals_fn::to_roman_numeral;
 use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -29,6 +30,7 @@ pub struct AsciidoctorHtml {
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
   pub(crate) fig_caption_num: usize,
+  pub(crate) book_part_num: usize,
   pub(crate) table_caption_num: usize,
   pub(crate) example_caption_num: usize,
   pub(crate) listing_caption_num: usize,
@@ -246,6 +248,13 @@ impl Backend for AsciidoctorHtml {
       self.push([" ", role]);
     }
     self.push_str("\">");
+    if self.doc_meta.is_true("partnums") {
+      let part_num = incr(&mut self.book_part_num);
+      if part_num <= 3999 {
+        self.push_str(&to_roman_numeral(part_num as u16).unwrap());
+        self.push_str(": ");
+      }
+    }
   }
 
   #[instrument(skip_all)]

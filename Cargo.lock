@@ -120,6 +120,7 @@ dependencies = [
  "lazy_static",
  "pretty_assertions",
  "regex",
+ "roman_numerals_fn",
  "test-utils",
  "tracing",
  "tracing-subscriber",
@@ -461,6 +462,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "range_check"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d69b9d3e775b8f88eb220da1a4d8baae200d3ec499b8ef14b881362a5f8ad883"
+
+[[package]]
 name = "regex"
 version = "1.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -517,6 +524,15 @@ dependencies = [
  "spin",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "roman_numerals_fn"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4058a8f9566d31d828427ab40d510eadb8564619d0eea3ad4968c24e93e96a4b"
+dependencies = [
+ "range_check",
 ]
 
 [[package]]

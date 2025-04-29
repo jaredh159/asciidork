@@ -1,4 +1,3 @@
-use asciidork_core::JobSettings;
 use test_utils::*;
 
 // NB: many of these tests are ported directly from the asciidoctor test suite
@@ -539,7 +538,7 @@ assert_html!(
 
 assert_html!(
   xref_as_title_and_other_weird_places,
-  |s: &mut JobSettings| s.strict = false,
+  strict: false,
   adoc! {r#"
     == Intro
 

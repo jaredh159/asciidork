@@ -52,6 +52,9 @@ macro_rules! assert_html {
   ($name:ident, $input:expr, contains: $($expected:expr),+$(,)?) => {
     assert_html!($name, |_| {}, $input, contains: $($expected),+);
   };
+  ($name:ident, strict: false, $input:expr, contains: $($expected:expr),+$(,)?) => {
+    assert_html!($name, |s: &mut asciidork_core::JobSettings| {s.strict = false}, $input, contains: $($expected),+);
+  };
   ($name:ident, $mod_settings:expr, $input:expr, contains: $($expected:expr),+$(,)?) => {
     #[test]
     fn $name() {

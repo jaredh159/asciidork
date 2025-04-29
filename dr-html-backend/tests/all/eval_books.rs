@@ -300,6 +300,27 @@ assert_html!(
 );
 
 assert_html!(
+  book_partnums,
+  strict: false,
+  adoc! {r#"
+    = The Secret Manual
+    :doctype: book
+    :sectnums:
+    :partnums:
+
+    = Defensive Operations
+
+    == An Introduction to DefenseOps
+
+    = Managing Werewolves
+  "#},
+  contains:
+    "I: Defensive Operations",
+    "1. An Introduction to DefenseOps",
+    "II: Managing Werewolves",
+);
+
+assert_html!(
   appendix_prefix,
   adoc! {r#"
     = Multi-Part Book with Special Sections and TOC
