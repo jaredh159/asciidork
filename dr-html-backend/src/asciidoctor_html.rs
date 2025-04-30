@@ -1,4 +1,3 @@
-use std::cmp::max;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::sync::Once;
@@ -197,11 +196,13 @@ impl Backend for AsciidoctorHtml {
   fn exit_toc(&mut self, _toc: &TableOfContents) {
     self.push_str("</div>");
     self.appendix_caption_num = 0;
+    self.section_nums = [0; 5];
+    self.book_part_num = 0;
   }
 
   #[instrument(skip_all)]
   fn enter_toc_level(&mut self, level: u8, _nodes: &[TocNode]) {
-    self.push(["<ul class=\"sectlevel", &num_str!(max(level, 1)), "\">"]);
+    self.push(["<ul class=\"sectlevel", &num_str!(level), "\">"]);
   }
 
   #[instrument(skip_all)]
@@ -218,6 +219,11 @@ impl Backend for AsciidoctorHtml {
     self.push_str("\">");
     if node.special_sect == Some(SpecialSection::Appendix) {
       self.push_appendix_caption();
+    }
+    if node.level == 0 {
+      self.push_part_prefix();
+    } else {
+      self.push_section_heading_prefix(node.level, node.special_sect);
     }
   }
 
@@ -248,13 +254,7 @@ impl Backend for AsciidoctorHtml {
       self.push([" ", role]);
     }
     self.push_str("\">");
-    if self.doc_meta.is_true("partnums") {
-      let part_num = incr(&mut self.book_part_num);
-      if part_num <= 3999 {
-        self.push_str(&to_roman_numeral(part_num as u16).unwrap());
-        self.push_str(": ");
-      }
-    }
+    self.push_part_prefix();
   }
 
   #[instrument(skip_all)]
@@ -329,13 +329,10 @@ impl Backend for AsciidoctorHtml {
     } else {
       self.push(["<h", &level_str, ">"]);
     }
-    if section.meta.attrs.has_str_positional("appendix") {
+    if section.meta.attrs.special_sect() == Some(SpecialSection::Appendix) {
       self.push_appendix_caption();
     }
-    if self.should_number_section(section) {
-      let prefix = section::number_prefix(section.level, &mut self.section_nums);
-      self.push_str(&prefix);
-    }
+    self.push_section_heading_prefix(section.level, section.meta.attrs.special_sect());
   }
 
   #[instrument(skip_all)]
@@ -1781,6 +1778,19 @@ impl AsciidoctorHtml {
       self.push_named_attr("title", attrs);
     }
     self.push_ch('>');
+  }
+
+  fn push_part_prefix(&mut self) {
+    if self.doc_meta.is_true("partnums") {
+      let part_num = incr(&mut self.book_part_num);
+      if part_num <= 3999 {
+        if let Some(part_signifier) = self.doc_meta.string("part-signifier") {
+          self.push([&part_signifier, " "]);
+        }
+        self.push_str(&to_roman_numeral(part_num as u16).unwrap());
+        self.push_str(": ");
+      }
+    }
   }
 }
 

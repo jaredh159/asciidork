@@ -300,6 +300,56 @@ assert_html!(
 );
 
 assert_html!(
+  book_part_chapter_signifiers_toc,
+  strict: false,
+  adoc! {r#"
+    = The Secret Manual
+    :doctype: book
+    :sectnums:
+    :partnums:
+    :toc: macro
+    :part-signifier: Part
+    :chapter-signifier: Chapter
+
+    toc::[]
+
+    = Defensive Operations
+
+    == An Introduction to DefenseOps
+
+    = Managing Werewolves
+  "#},
+  html! {r##"
+    <div id="preamble">
+      <div class="sectionbody">
+        <div id="toc" class="toc">
+          <div id="toctitle" class="title">Table of Contents</div>
+          <ul class="sectlevel0">
+            <li>
+              <a href="#_defensive_operations">Part I: Defensive Operations</a>
+              <ul class="sectlevel1">
+                <li>
+                  <a href="#_an_introduction_to_defenseops">Chapter 1. An Introduction to DefenseOps</a>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <a href="#_managing_werewolves">Part II: Managing Werewolves</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <h1 id="_defensive_operations" class="sect0">Part I: Defensive Operations</h1>
+    <div class="sect1">
+      <h2 id="_an_introduction_to_defenseops">Chapter 1. An Introduction to DefenseOps</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <h1 id="_managing_werewolves" class="sect0">Part II: Managing Werewolves</h1>
+  "##}
+);
+
+assert_html!(
   book_partnums,
   strict: false,
   adoc! {r#"

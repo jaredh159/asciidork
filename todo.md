@@ -59,6 +59,9 @@
   that attr decls in the body should be declared "between blocks". currently we store the
   attr decl correctly, but don't resolve it in the joined paragraph, only in subsequent
   blocks, which likely won't be a problem in real world usage.
+- we handle correctly the toc section level of a multi-part book that starts with a level
+  0 special section, noted as FIXME in asciidoctor src:
+  https://github.com/asciidoctor/asciidoctor/blob/eb7bbda65ae1e13d345cdabf83ac1d0978a9a145/lib/asciidoctor/converter/html5.rb#L347
 - asciidork parses monos in both of the following lines, but asciidoc doesn't because of
   it's regex-based approach, but per the discussion on zulip, our approach is preferred:
 

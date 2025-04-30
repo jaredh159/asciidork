@@ -71,7 +71,7 @@ assert_html!(
   contains: &html! {r##"
     <div id="toc" class="toc">
       <div id="toctitle">Table of Contents</div>
-      <ul class="sectlevel1">
+      <ul class="sectlevel0">
         <li><a href="#_the_colophon">The Colophon</a></li>
         <li>
           <a href="#_the_first_part">The First Part</a>

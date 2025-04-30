@@ -34,21 +34,41 @@ pub fn class(section: &Section) -> &'static str {
 }
 
 impl AsciidoctorHtml {
-  pub(super) fn should_number_section(&self, section: &Section) -> bool {
+  pub(super) fn push_section_heading_prefix(
+    &mut self,
+    level: u8,
+    special_sect: Option<SpecialSection>,
+  ) {
+    if self.should_number_section(level, special_sect) {
+      if level == 1 && self.doc_meta.get_doctype() == DocType::Book {
+        if let Some(chapter_signifier) = self.doc_meta.string("chapter-signifier") {
+          self.push([&chapter_signifier, " "]);
+        }
+      }
+      let prefix = section::number_prefix(level, &mut self.section_nums);
+      self.push_str(&prefix);
+    }
+  }
+
+  pub(super) fn should_number_section(
+    &self,
+    level: u8,
+    special_sect: Option<SpecialSection>,
+  ) -> bool {
     let Some(sectnums) = self.doc_meta.get("sectnums") else {
       return false;
     };
-    if self.section_num_levels < section.level as isize {
+    if self.section_num_levels < level as isize {
       return false;
     }
     match sectnums {
       AttrValue::String(val) if val == "all" => true,
       AttrValue::Bool(true) => {
-        if let Some(special) = section.meta.attrs.str_positional_at(0) {
+        if let Some(special_sect) = special_sect {
           self
             .doc_meta
             .get_doctype()
-            .supports_special_section(special)
+            .supports_special_section(special_sect)
         } else {
           true
         }
