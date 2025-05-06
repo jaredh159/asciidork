@@ -350,6 +350,98 @@ assert_html!(
 );
 
 assert_html!(
+  book_gnarly_toc,
+  strict: false,
+  adoc! {r#"
+    = Article Title
+    :appendix-caption: Exhibit
+    :sectnums:
+    :toc:
+    :toclevels: 6
+
+    == Section
+
+    === Subsection
+
+    [appendix]
+    == First Appendix
+
+    === First Subsection
+
+    ==== First Subsubsection
+
+    ===== First Subsubsubsection
+
+    === Second Subsection
+
+    [appendix]
+    == Second Appendix
+  "#},
+  html! {r##"
+    <div id="toc" class="toc">
+      <div id="toctitle">Table of Contents</div>
+      <ul class="sectlevel1">
+        <li>
+          <a href="#_section">1. Section</a>
+          <ul class="sectlevel2">
+            <li><a href="#_subsection">1.1. Subsection</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#_first_appendix">Exhibit A: First Appendix</a>
+          <ul class="sectlevel2">
+            <li>
+              <a href="#_first_subsection">A.1. First Subsection</a>
+              <ul class="sectlevel3">
+                <li>
+                  <a href="#_first_subsubsection">A.1.1. First Subsubsection</a>
+                  <ul class="sectlevel4">
+                    <li>
+                      <a href="#_first_subsubsubsection">First Subsubsubsection</a>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li><a href="#_second_subsection">A.2. Second Subsection</a></li>
+          </ul>
+        </li>
+        <li><a href="#_second_appendix">Exhibit B: Second Appendix</a></li>
+      </ul>
+    </div>
+    <div class="sect1">
+      <h2 id="_section">1. Section</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_subsection">1.1. Subsection</h3>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_first_appendix">Exhibit A: First Appendix</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_first_subsection">A.1. First Subsection</h3>
+          <div class="sect3">
+            <h4 id="_first_subsubsection">A.1.1. First Subsubsection</h4>
+            <div class="sect4">
+              <h5 id="_first_subsubsubsection">First Subsubsubsection</h5>
+            </div>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_second_subsection">A.2. Second Subsection</h3>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_second_appendix">Exhibit B: Second Appendix</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "##}
+);
+
+assert_html!(
   book_partnums,
   strict: false,
   adoc! {r#"

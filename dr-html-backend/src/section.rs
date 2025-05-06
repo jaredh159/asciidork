@@ -1,18 +1,23 @@
 use crate::internal::*;
 
-pub fn number_prefix(level: u8, sect_nums: &mut [u16; 5]) -> String {
+pub fn number_prefix(level: u8, sect_nums: &mut [u16; 5], appendix: bool) -> String {
   debug_assert!(level > 0 && level < 6);
   let level_idx = (level - 1) as usize;
   sect_nums[level_idx] += 1;
   sect_nums
     .iter_mut()
-    .take(5)
     .skip(level_idx + 1)
     .for_each(|n| *n = 0);
   let mut out = String::with_capacity(10);
   let mut idx = 0;
   while idx <= level_idx {
-    out.push_str(&sect_nums[idx].to_string());
+    if appendix && idx == 0 {
+      out.push((b'A' + sect_nums[idx] as u8 - 1) as char);
+    } else if appendix && idx == 1 {
+      out.push_str(&(sect_nums[idx] - 1).to_string());
+    } else {
+      out.push_str(&sect_nums[idx].to_string());
+    }
     out.push('.');
     idx += 1;
   }
@@ -45,7 +50,11 @@ impl AsciidoctorHtml {
           self.push([&chapter_signifier, " "]);
         }
       }
-      let prefix = section::number_prefix(level, &mut self.section_nums);
+      let prefix = section::number_prefix(
+        level,
+        &mut self.section_nums,
+        self.state.contains(&EphemeralState::InAppendix),
+      );
       self.push_str(&prefix);
     }
   }
@@ -88,15 +97,20 @@ mod tests {
   #[test]
   fn test_number_prefix() {
     let cases = vec![
-      (1, [0, 0, 0, 0, 0], "1. ", [1, 0, 0, 0, 0]),
-      (1, [1, 0, 0, 0, 0], "2. ", [2, 0, 0, 0, 0]),
-      (2, [1, 0, 0, 0, 0], "1.1. ", [1, 1, 0, 0, 0]),
-      (2, [1, 1, 0, 0, 0], "1.2. ", [1, 2, 0, 0, 0]),
-      (1, [1, 1, 0, 0, 0], "2. ", [2, 0, 0, 0, 0]),
-      (3, [2, 4, 0, 0, 0], "2.4.1. ", [2, 4, 1, 0, 0]),
+      (1, [0, 0, 0, 0, 0], "1. ", [1, 0, 0, 0, 0], false),
+      (1, [1, 0, 0, 0, 0], "2. ", [2, 0, 0, 0, 0], false),
+      (2, [1, 0, 0, 0, 0], "1.1. ", [1, 1, 0, 0, 0], false),
+      (2, [1, 1, 0, 0, 0], "1.2. ", [1, 2, 0, 0, 0], false),
+      (1, [1, 1, 0, 0, 0], "2. ", [2, 0, 0, 0, 0], false),
+      (3, [2, 4, 0, 0, 0], "2.4.1. ", [2, 4, 1, 0, 0], false),
+      (2, [1, 1, 0, 0, 0], "A.1. ", [1, 2, 0, 0, 0], true),
+      (3, [1, 2, 0, 0, 0], "A.1.1. ", [1, 2, 1, 0, 0], true),
     ];
-    for (level, mut sect_nums, expected, after_mutation) in cases {
-      expect_eq!(number_prefix(level, &mut sect_nums), expected.to_string());
+    for (level, mut sect_nums, expected, after_mutation, apndx) in cases {
+      expect_eq!(
+        number_prefix(level, &mut sect_nums, apndx),
+        expected.to_string()
+      );
       expect_eq!(sect_nums, after_mutation);
     }
   }

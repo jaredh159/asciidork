@@ -218,9 +218,9 @@ impl Backend for AsciidoctorHtml {
     }
     self.push_str("\">");
     if node.special_sect == Some(SpecialSection::Appendix) {
+      self.state.insert(InAppendix);
       self.push_appendix_caption();
-    }
-    if node.level == 0 {
+    } else if node.level == 0 {
       self.push_part_prefix();
     } else {
       self.push_section_heading_prefix(node.level, node.special_sect);
@@ -228,7 +228,10 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_toc_node(&mut self, _node: &TocNode) {
+  fn exit_toc_node(&mut self, node: &TocNode) {
+    if node.special_sect == Some(SpecialSection::Appendix) {
+      self.state.remove(&InAppendix);
+    }
     self.push_str("</li>");
   }
 
@@ -307,9 +310,11 @@ impl Backend for AsciidoctorHtml {
     let mut section_tag = OpenTag::without_id("div", &section.meta.attrs);
     section_tag.push_class(section::class(section));
     self.push_open_tag(section_tag);
-    if section.meta.attrs.has_str_positional("bibliography") {
-      self.state.insert(InBibliographySection);
-    }
+    match section.meta.attrs.special_sect() {
+      Some(SpecialSection::Appendix) => self.state.insert(InAppendix),
+      Some(SpecialSection::Bibliography) => self.state.insert(InBibliography),
+      _ => true,
+    };
   }
 
   #[instrument(skip_all)]
@@ -318,7 +323,11 @@ impl Backend for AsciidoctorHtml {
       self.push_str("</div>");
     }
     self.push_str("</div>");
-    self.state.remove(&InBibliographySection);
+    match section.meta.attrs.special_sect() {
+      Some(SpecialSection::Appendix) => self.state.remove(&InAppendix),
+      Some(SpecialSection::Bibliography) => self.state.remove(&InBibliography),
+      _ => true,
+    };
   }
 
   #[instrument(skip_all)]
@@ -331,8 +340,9 @@ impl Backend for AsciidoctorHtml {
     }
     if section.meta.attrs.special_sect() == Some(SpecialSection::Appendix) {
       self.push_appendix_caption();
+    } else {
+      self.push_section_heading_prefix(section.level, section.meta.attrs.special_sect());
     }
-    self.push_section_heading_prefix(section.level, section.meta.attrs.special_sect());
   }
 
   #[instrument(skip_all)]
@@ -553,8 +563,8 @@ impl Backend for AsciidoctorHtml {
     let mut div = OpenTag::new("div", &block.meta.attrs);
     let mut ul = OpenTag::new("ul", &NoAttrs);
     div.push_class("ulist");
-    if self.state.contains(&InBibliographySection)
-      || block.meta.attrs.has_str_positional("bibliography")
+    if self.state.contains(&InBibliography)
+      || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
     {
       div.push_class("bibliography");
       ul.push_class("bibliography");
@@ -1806,8 +1816,9 @@ pub enum Newlines {
 pub enum EphemeralState {
   VisitingSimpleTermDescription,
   IsSourceBlock,
-  InBibliographySection,
+  InBibliography,
   InGlossaryList,
+  InAppendix,
 }
 
 const fn list_type_from_depth(depth: u8) -> &'static str {
