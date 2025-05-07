@@ -28,6 +28,18 @@ assert_html!(
 );
 
 assert_html!(
+  include_within_comment_skipped,
+  resolving: b"////\nNOT-INCLUDED\n////\n",
+  adoc! {r#"
+    x
+    ////
+    include::include.adoc[]
+    ////
+  "#},
+  r#"<div class="paragraph"><p>x</p></div>"#,
+);
+
+assert_html!(
   included_csv_2,
   resolving: b"A1,\nB1,B2",
   adoc! {r#"
