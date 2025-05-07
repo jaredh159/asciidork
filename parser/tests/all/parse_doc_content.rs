@@ -121,6 +121,18 @@ fn test_sectioned_w_preamble() {
 }
 
 #[test]
+fn test_no_stack_overflow_for_malformed_book() {
+  let input = adoc! {"
+    :doctype: book
+
+    == title
+
+    [preface]
+  "};
+  let _ = test_parser!(input).parse();
+}
+
+#[test]
 fn comment_only_preamble_discarded() {
   assert_doc_content!(
     adoc! {"
