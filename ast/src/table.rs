@@ -29,6 +29,20 @@ pub enum CellContent<'arena> {
   Strong(BumpVec<'arena, InlineNodes<'arena>>),
 }
 
+impl CellContent<'_> {
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    match self {
+      Self::AsciiDoc(doc) => doc.last_loc(),
+      Self::Literal(inlines) => inlines.last_loc(),
+      Self::Default(paras)
+      | Self::Emphasis(paras)
+      | Self::Header(paras)
+      | Self::Monospace(paras)
+      | Self::Strong(paras) => paras.last().and_then(|i| i.last_loc()),
+    }
+  }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum CellContentStyle {
   AsciiDoc,
@@ -62,6 +76,16 @@ pub struct Table<'arena> {
   pub header_row: Option<Row<'arena>>,
   pub rows: BumpVec<'arena, Row<'arena>>,
   pub footer_row: Option<Row<'arena>>,
+}
+
+impl Table<'_> {
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self
+      .footer_row
+      .as_ref()
+      .and_then(|row| row.last_loc())
+      .or_else(|| self.rows.last().and_then(|row| row.last_loc()))
+  }
 }
 
 impl Default for ColSpec {
@@ -110,6 +134,10 @@ impl<'arena> Cell<'arena> {
         .unwrap_or(col_spec.map_or(VerticalAlignment::Top, |cs| cs.v_align)),
     }
   }
+
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self.content.last_loc()
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -120,6 +148,10 @@ pub struct Row<'arena> {
 impl<'arena> Row<'arena> {
   pub const fn new(cells: BumpVec<'arena, Cell<'arena>>) -> Self {
     Self { cells }
+  }
+
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self.cells.last().and_then(|cell| cell.last_loc())
   }
 }
 
