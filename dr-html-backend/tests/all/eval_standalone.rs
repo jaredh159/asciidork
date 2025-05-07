@@ -174,7 +174,7 @@ test_non_embedded_contains!(
 
 assert_html!(
   level_0_heading_best_effort,
-  |job_settings: &mut JobSettings| { job_settings.strict = false },
+  strict: false,
   adoc! {r#"
     foo bar
 

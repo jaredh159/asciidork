@@ -7,7 +7,6 @@ pub enum SpecialSection {
   Dedication,
   Acknowledgments,
   Preface,
-  PartIntro,
   Appendix,
   Glossary,
   Bibliography,
@@ -22,11 +21,24 @@ impl SpecialSection {
       Self::Dedication => "dedication",
       Self::Acknowledgments => "acknowledgments",
       Self::Preface => "preface",
-      Self::PartIntro => "partintro",
       Self::Appendix => "appendix",
       Self::Glossary => "glossary",
       Self::Bibliography => "bibliography",
       Self::Index => "index",
+    }
+  }
+
+  pub const fn supports_subsections(&self) -> bool {
+    match self {
+      Self::Abstract => true,
+      Self::Colophon => false,
+      Self::Dedication => false,
+      Self::Acknowledgments => true,
+      Self::Preface => true,
+      Self::Appendix => true,
+      Self::Glossary => false,
+      Self::Bibliography => false,
+      Self::Index => true,
     }
   }
 }
@@ -40,7 +52,6 @@ impl FromStr for SpecialSection {
       "dedication" => Self::Dedication,
       "acknowledgments" => Self::Acknowledgments,
       "preface" => Self::Preface,
-      "partintro" => Self::PartIntro,
       "appendix" => Self::Appendix,
       "glossary" => Self::Glossary,
       "bibliography" => Self::Bibliography,

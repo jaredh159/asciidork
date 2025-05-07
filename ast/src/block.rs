@@ -18,8 +18,6 @@ impl Block<'_> {
 pub enum BlockContent<'arena> {
   Compound(BumpVec<'arena, Block<'arena>>),
   Simple(InlineNodes<'arena>),
-  Verbatim,
-  Raw,
   Empty(EmptyMetadata<'arena>),
   Table(Table<'arena>),
   Section(Section<'arena>),
@@ -99,10 +97,11 @@ impl BlockContent<'_> {
           heading.last_loc()
         }
       }
-      BlockContent::Verbatim => todo!(),
-      BlockContent::Raw => todo!(),
-      BlockContent::Empty(_) => None,
-      BlockContent::Table(_) => todo!(),
+      BlockContent::Empty(EmptyMetadata::Comment(src)) => Some(src.loc),
+      BlockContent::Empty(EmptyMetadata::DiscreteHeading { content, .. }) => content.last_loc(),
+      BlockContent::Empty(EmptyMetadata::Image { attrs, .. }) => Some(attrs.loc),
+      BlockContent::Empty(EmptyMetadata::None) => None,
+      BlockContent::Table(table) => table.last_loc(),
       BlockContent::DocumentAttribute(_, _) => None,
       BlockContent::QuotedParagraph { attr, cite, .. } => {
         cite.as_ref().map(|c| c.loc).or(Some(attr.loc))

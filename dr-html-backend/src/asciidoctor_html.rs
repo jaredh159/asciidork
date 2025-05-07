@@ -3,6 +3,7 @@ use std::fmt::Write;
 use std::sync::Once;
 use std::{cell::RefCell, rc::Rc};
 
+use roman_numerals_fn::to_roman_numeral;
 use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -28,6 +29,7 @@ pub struct AsciidoctorHtml {
   pub(crate) section_nums: [u16; 5],
   pub(crate) section_num_levels: isize,
   pub(crate) fig_caption_num: usize,
+  pub(crate) book_part_num: usize,
   pub(crate) table_caption_num: usize,
   pub(crate) example_caption_num: usize,
   pub(crate) listing_caption_num: usize,
@@ -193,6 +195,9 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_toc(&mut self, _toc: &TableOfContents) {
     self.push_str("</div>");
+    self.appendix_caption_num = 0;
+    self.section_nums = [0; 5];
+    self.book_part_num = 0;
   }
 
   #[instrument(skip_all)]
@@ -211,11 +216,22 @@ impl Backend for AsciidoctorHtml {
     if let Some(id) = &node.id {
       self.push_str(id);
     }
-    self.push_str("\">")
+    self.push_str("\">");
+    if node.special_sect == Some(SpecialSection::Appendix) {
+      self.state.insert(InAppendix);
+      self.push_appendix_caption();
+    } else if node.level == 0 {
+      self.push_part_prefix();
+    } else {
+      self.push_section_heading_prefix(node.level, node.special_sect);
+    }
   }
 
   #[instrument(skip_all)]
-  fn exit_toc_node(&mut self, _node: &TocNode) {
+  fn exit_toc_node(&mut self, node: &TocNode) {
+    if node.special_sect == Some(SpecialSection::Appendix) {
+      self.state.remove(&InAppendix);
+    }
     self.push_str("</li>");
   }
 
@@ -241,6 +257,7 @@ impl Backend for AsciidoctorHtml {
       self.push([" ", role]);
     }
     self.push_str("\">");
+    self.push_part_prefix();
   }
 
   #[instrument(skip_all)]
@@ -293,9 +310,11 @@ impl Backend for AsciidoctorHtml {
     let mut section_tag = OpenTag::without_id("div", &section.meta.attrs);
     section_tag.push_class(section::class(section));
     self.push_open_tag(section_tag);
-    if section.meta.attrs.has_str_positional("bibliography") {
-      self.state.insert(InBibliographySection);
-    }
+    match section.meta.attrs.special_sect() {
+      Some(SpecialSection::Appendix) => self.state.insert(InAppendix),
+      Some(SpecialSection::Bibliography) => self.state.insert(InBibliography),
+      _ => true,
+    };
   }
 
   #[instrument(skip_all)]
@@ -304,7 +323,11 @@ impl Backend for AsciidoctorHtml {
       self.push_str("</div>");
     }
     self.push_str("</div>");
-    self.state.remove(&InBibliographySection);
+    match section.meta.attrs.special_sect() {
+      Some(SpecialSection::Appendix) => self.state.remove(&InAppendix),
+      Some(SpecialSection::Bibliography) => self.state.remove(&InBibliography),
+      _ => true,
+    };
   }
 
   #[instrument(skip_all)]
@@ -315,18 +338,10 @@ impl Backend for AsciidoctorHtml {
     } else {
       self.push(["<h", &level_str, ">"]);
     }
-    if section.meta.attrs.has_str_positional("appendix") {
-      if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
-        self.push([&appendix_caption, " "]);
-        let letter = (self.appendix_caption_num + b'A') as char;
-        self.push_ch(letter);
-        self.appendix_caption_num += 1;
-        self.push_str(": ");
-      }
-    }
-    if self.should_number_section(section) {
-      let prefix = section::number_prefix(section.level, &mut self.section_nums);
-      self.push_str(&prefix);
+    if section.meta.attrs.special_sect() == Some(SpecialSection::Appendix) {
+      self.push_appendix_caption();
+    } else {
+      self.push_section_heading_prefix(section.level, section.meta.attrs.special_sect());
     }
   }
 
@@ -548,8 +563,8 @@ impl Backend for AsciidoctorHtml {
     let mut div = OpenTag::new("div", &block.meta.attrs);
     let mut ul = OpenTag::new("ul", &NoAttrs);
     div.push_class("ulist");
-    if self.state.contains(&InBibliographySection)
-      || block.meta.attrs.has_str_positional("bibliography")
+    if self.state.contains(&InBibliography)
+      || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
     {
       div.push_class("bibliography");
       ul.push_class("bibliography");
@@ -591,19 +606,29 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
-    self.open_element("div", &["dlist"], &block.meta.attrs);
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
+      self.state.insert(InGlossaryList);
+      self.open_element("div", &["dlist", "glossary"], &block.meta.attrs);
+    } else {
+      self.open_element("div", &["dlist"], &block.meta.attrs);
+    }
     self.render_buffered_block_title(block);
     self.push_str("<dl>");
   }
 
   #[instrument(skip_all)]
   fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
+    self.state.remove(&InGlossaryList);
     self.push_str("</dl></div>");
   }
 
   #[instrument(skip_all)]
   fn enter_description_list_term(&mut self, _term: &[InlineNode], _item: &ListItem) {
-    self.push_str(r#"<dt class="hdlist1">"#);
+    if self.state.contains(&InGlossaryList) {
+      self.push_str(r#"<dt>"#);
+    } else {
+      self.push_str(r#"<dt class="hdlist1">"#);
+    }
   }
 
   #[instrument(skip_all)]
@@ -1442,6 +1467,16 @@ impl AsciidoctorHtml {
     self.push_str(&buffer);
   }
 
+  pub(crate) fn push_appendix_caption(&mut self) {
+    if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
+      self.push([&appendix_caption, " "]);
+      let letter = (self.appendix_caption_num + b'A') as char;
+      self.push_ch(letter);
+      self.appendix_caption_num += 1;
+      self.push_str(": ");
+    }
+  }
+
   fn take_buffer(&mut self) -> String {
     mem::take(&mut self.alt_html)
   }
@@ -1754,6 +1789,19 @@ impl AsciidoctorHtml {
     }
     self.push_ch('>');
   }
+
+  fn push_part_prefix(&mut self) {
+    if self.doc_meta.is_true("partnums") {
+      let part_num = incr(&mut self.book_part_num);
+      if part_num <= 3999 {
+        if let Some(part_signifier) = self.doc_meta.string("part-signifier") {
+          self.push([&part_signifier, " "]);
+        }
+        self.push_str(&to_roman_numeral(part_num as u16).unwrap());
+        self.push_str(": ");
+      }
+    }
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1768,7 +1816,9 @@ pub enum Newlines {
 pub enum EphemeralState {
   VisitingSimpleTermDescription,
   IsSourceBlock,
-  InBibliographySection,
+  InBibliography,
+  InGlossaryList,
+  InAppendix,
 }
 
 const fn list_type_from_depth(depth: u8) -> &'static str {

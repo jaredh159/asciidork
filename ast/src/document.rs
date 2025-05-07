@@ -36,6 +36,14 @@ impl<'arena> Document<'arena> {
       .as_ref()
       .and_then(|header| header.title.as_ref())
   }
+
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    match &self.content {
+      DocContent::Parts(book) => book.last_loc(),
+      DocContent::Sections(sectioned) => sectioned.last_loc(),
+      DocContent::Blocks(blocks) => blocks.last().and_then(|b| b.content.last_loc()),
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Default)]

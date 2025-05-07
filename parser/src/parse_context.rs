@@ -22,6 +22,7 @@ pub struct ParseContext<'arena> {
   pub passthrus: BumpVec<'arena, Option<InlineNodes<'arena>>>,
   pub max_include_depth: u16,
   pub ifdef_stack: BumpVec<'arena, BumpString<'arena>>,
+  pub comment_delim_in_lines: bool,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
 }
 
@@ -75,6 +76,7 @@ impl<'arena> ParseContext<'arena> {
       passthrus: BumpVec::new_in(bump),
       inline_ctx: InlineCtx::None,
       max_include_depth: 64,
+      comment_delim_in_lines: false,
       ifdef_stack: BumpVec::new_in(bump),
     }
   }
@@ -97,6 +99,7 @@ impl<'arena> ParseContext<'arena> {
       passthrus: BumpVec::new_in(bump),
       inline_ctx: InlineCtx::None,
       max_include_depth: 64,
+      comment_delim_in_lines: false,
       ifdef_stack: BumpVec::new_in(bump),
     }
   }

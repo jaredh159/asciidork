@@ -25,6 +25,7 @@ mod internal {
   pub use lazy_static::lazy_static;
   pub use regex::Regex;
 
+  pub use crate::asciidoctor_html::EphemeralState;
   pub use crate::htmlbuf::*;
   pub use crate::open_tag::*;
   pub use crate::section;

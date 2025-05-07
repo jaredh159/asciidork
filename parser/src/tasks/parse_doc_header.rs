@@ -129,7 +129,10 @@ impl<'arena> Parser<'arena> {
     self
       .document
       .meta
-      .insert_header_attr("_derived_doctitle", header_line.reassemble_src().as_str())
+      .insert_header_attr(
+        "_asciidork_derived_doctitle",
+        header_line.reassemble_src().as_str(),
+      )
       .unwrap();
 
     header.loc.extend(header_line.last_loc().unwrap());

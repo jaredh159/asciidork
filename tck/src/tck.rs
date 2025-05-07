@@ -86,7 +86,7 @@ impl<'arena> Tck<'arena> {
       .meta
       .header_attrs()
       .iter()
-      .filter(|(key, _)| !key.starts_with("_derived_"))
+      .filter(|(key, _)| !key.starts_with("_asciidork_derived_"))
       .map(|(key, value)| (key.to_string(), value.str().unwrap_or("").to_string()))
       .collect();
     let mut attrs = Map::new();

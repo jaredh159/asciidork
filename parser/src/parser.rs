@@ -16,6 +16,7 @@ pub struct Parser<'arena> {
   pub(super) attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
 }
 
+#[derive(Debug)]
 pub struct ParseResult<'arena> {
   pub document: Document<'arena>,
   pub warnings: Vec<Diagnostic>,
@@ -111,7 +112,7 @@ impl<'arena> Parser<'arena> {
     if drop_line {
       return self.read_line();
     }
-    if line.starts(TokenKind::Directive) {
+    if line.starts(TokenKind::Directive) && !self.ctx.comment_delim_in_lines {
       match self.try_process_directive(&mut line)? {
         DirectiveAction::Passthrough => Ok(Some(line)),
         DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
@@ -124,6 +125,7 @@ impl<'arena> Parser<'arena> {
   }
 
   pub(crate) fn read_lines(&mut self) -> Result<Option<ContiguousLines<'arena>>> {
+    self.ctx.comment_delim_in_lines = false;
     if let Some(peeked) = self.peeked_lines.take() {
       return Ok(Some(peeked));
     }
@@ -143,6 +145,9 @@ impl<'arena> Parser<'arena> {
           // this case happens only when we DROP a line
           break;
         }
+      }
+      if line.is_delimiter_kind(DelimiterKind::Comment) {
+        self.ctx.comment_delim_in_lines = true;
       }
       lines.push(line);
       if self.lexer.at_newline() {
@@ -241,7 +246,7 @@ impl<'arena> Parser<'arena> {
 
     Ok(ParseResult {
       document: self.document,
-      warnings: vec![],
+      warnings: self.errors.into_inner(),
     })
   }
 

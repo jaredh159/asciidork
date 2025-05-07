@@ -53,6 +53,34 @@ impl<'arena> Sectioned<'arena> {
       DocContent::Sections(self)
     }
   }
+
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self
+      .sections
+      .last()
+      .and_then(|sect| sect.blocks.last().and_then(|b| b.content.last_loc()))
+  }
+}
+
+impl Section<'_> {
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self.blocks.last().and_then(|b| b.content.last_loc())
+  }
+}
+
+impl MultiPartBook<'_> {
+  pub fn last_loc(&self) -> Option<SourceLocation> {
+    self
+      .closing_special_sects
+      .last()
+      .and_then(|sect| sect.blocks.last().and_then(|b| b.content.last_loc()))
+      .or_else(|| {
+        self
+          .parts
+          .last()
+          .and_then(|part| part.sections.last().and_then(|sect| sect.last_loc()))
+      })
+  }
 }
 
 impl<'arena> DocContent<'arena> {

@@ -1,5 +1,6 @@
 use asciidork_ast::{prelude::*, AttrValue};
 use asciidork_parser::prelude::*;
+use pretty_assertions::assert_eq;
 use test_utils::*;
 
 #[test]
@@ -120,6 +121,18 @@ fn test_sectioned_w_preamble() {
 }
 
 #[test]
+fn test_no_stack_overflow_for_malformed_book() {
+  let input = adoc! {"
+    :doctype: book
+
+    == title
+
+    [preface]
+  "};
+  let _ = test_parser!(input).parse();
+}
+
+#[test]
 fn comment_only_preamble_discarded() {
   assert_doc_content!(
     adoc! {"
@@ -222,6 +235,145 @@ assert_error!(
 );
 
 #[test]
+fn test_invalid_subsections() {
+  let book_input = adoc! {"
+    = Document Title
+    :doctype: book
+
+    [preface]
+    = Preface
+
+    === Subsection of Preface
+
+    allowed
+
+    [colophon]
+    = Colophon
+
+    === Subsection of Colophon
+
+    not allowed
+
+    [dedication]
+    = Dedication
+
+    === Subsection of Dedication
+
+    not allowed
+
+    = Part 1
+
+    [abstract]
+    == Abstract
+
+    === Subsection of Abstract
+
+    allowed
+
+    == Chapter 1
+
+    === Subsection of Chapter
+
+    allowed
+
+    [appendix]
+    = Appendix
+
+    === Subsection of Appendix
+
+    allowed
+
+    [glossary]
+    = Glossary
+
+    === Subsection of Glossary
+
+    not allowed
+
+    [bibliography]
+    = Bibliography
+
+    === Subsection of Bibliography
+
+    not allowed
+  "};
+  let warnings = parse_warnings!(book_input)
+    .iter()
+    .map(|diag| (diag.line.clone(), diag.message.clone()))
+    .collect::<Vec<_>>();
+  assert_eq!(
+    warnings,
+    [
+      (
+        "=== Subsection of Colophon".to_string(),
+        "colophon sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Dedication".to_string(),
+        "dedication sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Glossary".to_string(),
+        "glossary sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Bibliography".to_string(),
+        "bibliography sections do not support nested sections".to_string(),
+      ),
+    ]
+  );
+
+  let article_input = adoc! {"
+      = Document Title
+      :doctype: article
+
+      == Section
+
+      === Subsection of Section
+
+      allowed
+
+      [appendix]
+      == Appendix
+
+      === Subsection of Appendix
+
+      allowed
+
+      [glossary]
+      == Glossary
+
+      === Subsection of Glossary
+
+      not allowed
+
+      [bibliography]
+      == Bibliography
+
+      === Subsection of Bibliography
+
+      not allowed
+  "};
+  let warnings = parse_warnings!(article_input)
+    .iter()
+    .map(|diag| (diag.line.clone(), diag.message.clone()))
+    .collect::<Vec<_>>();
+  assert_eq!(
+    warnings,
+    [
+      (
+        "=== Subsection of Glossary".to_string(),
+        "glossary sections do not support nested sections".to_string(),
+      ),
+      (
+        "=== Subsection of Bibliography".to_string(),
+        "bibliography sections do not support nested sections".to_string(),
+      ),
+    ]
+  )
+}
+
+#[test]
 fn test_section_offset() {
   assert_doc_content!(
     adoc! {"
@@ -274,5 +426,23 @@ assert_error!(
       |
     3 | ==== ch 2
       | ^^^^ Section title out of sequence: expected level 2 `===`
+  "}
+);
+
+assert_error!(
+  book_chapter_out_of_sequence,
+  adoc! {"
+    = Document Title
+    :doctype: book
+
+    === Not a Chapter
+
+    content
+  "},
+  error! {"
+     --> test.adoc:4:1
+      |
+    4 | === Not a Chapter
+      | ^^^ Section title out of sequence: expected level 1 `==`
   "}
 );

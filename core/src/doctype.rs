@@ -1,6 +1,8 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+use crate::internal::*;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 pub enum DocType {
   #[default]
@@ -42,24 +44,27 @@ impl FromStr for DocType {
 
 impl DocType {
   // https://docs.asciidoctor.org/asciidoc/latest/sections/styles/
-  pub fn supports_special_section(&self, name: &str) -> bool {
+  pub const fn supports_special_section(&self, special_sect: SpecialSection) -> bool {
     matches!(
-      (self, name),
+      (self, special_sect),
       (
         DocType::Article,
-        "abstract" | "appendix" | "glossary" | "bibliography" | "index"
+        SpecialSection::Abstract
+          | SpecialSection::Appendix
+          | SpecialSection::Glossary
+          | SpecialSection::Bibliography
+          | SpecialSection::Index
       ) | (
         DocType::Book,
-        "abstract"
-          | "colophon"
-          | "dedication"
-          | "acknowledgments"
-          | "preface"
-          | "partintro"
-          | "appendix"
-          | "glossary"
-          | "bibliography"
-          | "index",
+        SpecialSection::Abstract
+          | SpecialSection::Colophon
+          | SpecialSection::Dedication
+          | SpecialSection::Acknowledgments
+          | SpecialSection::Preface
+          | SpecialSection::Appendix
+          | SpecialSection::Glossary
+          | SpecialSection::Bibliography
+          | SpecialSection::Index
       )
     )
   }

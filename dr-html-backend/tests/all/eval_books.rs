@@ -24,6 +24,34 @@ assert_html!(
 );
 
 assert_html!(
+  book_only_dedication,
+  adoc! {r#"
+    = Book Title
+    :doctype: book
+
+    [dedication]
+    == Dedication
+
+    For S.S.T.--
+
+    thank you for the plague of archetypes.
+  "#},
+  html! {r#"
+    <div class="sect1">
+      <h2 id="_dedication">Dedication</h2>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>For S.S.T.--</p>
+        </div>
+        <div class="paragraph">
+          <p>thank you for the plague of archetypes.</p>
+        </div>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   simple_book_w_part_intro,
   adoc! {r#"
     = Book Title
@@ -269,6 +297,192 @@ assert_html!(
       </div>
     </div>
   "#}
+);
+
+assert_html!(
+  book_part_chapter_signifiers_toc,
+  strict: false,
+  adoc! {r#"
+    = The Secret Manual
+    :doctype: book
+    :sectnums:
+    :partnums:
+    :toc: macro
+    :part-signifier: Part
+    :chapter-signifier: Chapter
+
+    toc::[]
+
+    = Defensive Operations
+
+    == An Introduction to DefenseOps
+
+    = Managing Werewolves
+  "#},
+  html! {r##"
+    <div id="preamble">
+      <div class="sectionbody">
+        <div id="toc" class="toc">
+          <div id="toctitle" class="title">Table of Contents</div>
+          <ul class="sectlevel0">
+            <li>
+              <a href="#_defensive_operations">Part I: Defensive Operations</a>
+              <ul class="sectlevel1">
+                <li>
+                  <a href="#_an_introduction_to_defenseops">Chapter 1. An Introduction to DefenseOps</a>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <a href="#_managing_werewolves">Part II: Managing Werewolves</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <h1 id="_defensive_operations" class="sect0">Part I: Defensive Operations</h1>
+    <div class="sect1">
+      <h2 id="_an_introduction_to_defenseops">Chapter 1. An Introduction to DefenseOps</h2>
+      <div class="sectionbody"></div>
+    </div>
+    <h1 id="_managing_werewolves" class="sect0">Part II: Managing Werewolves</h1>
+  "##}
+);
+
+assert_html!(
+  book_gnarly_toc,
+  strict: false,
+  adoc! {r#"
+    = Article Title
+    :appendix-caption: Exhibit
+    :sectnums:
+    :toc:
+    :toclevels: 6
+
+    == Section
+
+    === Subsection
+
+    [appendix]
+    == First Appendix
+
+    === First Subsection
+
+    ==== First Subsubsection
+
+    ===== First Subsubsubsection
+
+    === Second Subsection
+
+    [appendix]
+    == Second Appendix
+  "#},
+  html! {r##"
+    <div id="toc" class="toc">
+      <div id="toctitle">Table of Contents</div>
+      <ul class="sectlevel1">
+        <li>
+          <a href="#_section">1. Section</a>
+          <ul class="sectlevel2">
+            <li><a href="#_subsection">1.1. Subsection</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#_first_appendix">Exhibit A: First Appendix</a>
+          <ul class="sectlevel2">
+            <li>
+              <a href="#_first_subsection">A.1. First Subsection</a>
+              <ul class="sectlevel3">
+                <li>
+                  <a href="#_first_subsubsection">A.1.1. First Subsubsection</a>
+                  <ul class="sectlevel4">
+                    <li>
+                      <a href="#_first_subsubsubsection">First Subsubsubsection</a>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li><a href="#_second_subsection">A.2. Second Subsection</a></li>
+          </ul>
+        </li>
+        <li><a href="#_second_appendix">Exhibit B: Second Appendix</a></li>
+      </ul>
+    </div>
+    <div class="sect1">
+      <h2 id="_section">1. Section</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_subsection">1.1. Subsection</h3>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_first_appendix">Exhibit A: First Appendix</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_first_subsection">A.1. First Subsection</h3>
+          <div class="sect3">
+            <h4 id="_first_subsubsection">A.1.1. First Subsubsection</h4>
+            <div class="sect4">
+              <h5 id="_first_subsubsubsection">First Subsubsubsection</h5>
+            </div>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_second_subsection">A.2. Second Subsection</h3>
+        </div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_second_appendix">Exhibit B: Second Appendix</h2>
+      <div class="sectionbody"></div>
+    </div>
+  "##}
+);
+
+assert_html!(
+  book_partnums,
+  strict: false,
+  adoc! {r#"
+    = The Secret Manual
+    :doctype: book
+    :sectnums:
+    :partnums:
+
+    = Defensive Operations
+
+    == An Introduction to DefenseOps
+
+    = Managing Werewolves
+  "#},
+  contains:
+    "I: Defensive Operations",
+    "1. An Introduction to DefenseOps",
+    "II: Managing Werewolves",
+);
+
+assert_html!(
+  appendix_prefix,
+  adoc! {r#"
+    = Multi-Part Book with Special Sections and TOC
+    :doctype: book
+    :toc:
+
+    = The First Part
+
+    == The First Chapter
+
+    Chapter content
+
+    [appendix]
+    = The Appendix
+
+    Appendix content
+  "#},
+  contains:
+    r##"<li><a href="#_the_appendix">Appendix A: The Appendix</a>"##,
+    r#"<h2 id="_the_appendix">Appendix A: The Appendix</h2>"#,
 );
 
 assert_html!(

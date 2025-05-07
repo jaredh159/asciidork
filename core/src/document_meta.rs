@@ -251,7 +251,7 @@ impl ReadAttr for DocumentMeta {
         Some(JobAttr { readonly: false, value }) => self.resolve_attr(key).or(Some(value)),
         _ if key == "doctitle" => self
           .resolve_attr("doctitle")
-          .or_else(|| self.resolve_attr("_derived_doctitle")),
+          .or_else(|| self.resolve_attr("_asciidork_derived_doctitle")),
         _ => self.resolve_attr(key),
       },
     }
