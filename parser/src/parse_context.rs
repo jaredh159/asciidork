@@ -191,4 +191,12 @@ impl<'arena> ParseContext<'arena> {
         .last()
         .is_some_and(|last| last.is_description())
   }
+
+  pub fn within_block_comment(&self) -> bool {
+    self.comment_delim_in_lines
+      || self
+        .delimiter
+        .as_ref()
+        .is_some_and(|d| d.kind == DelimiterKind::Comment)
+  }
 }
