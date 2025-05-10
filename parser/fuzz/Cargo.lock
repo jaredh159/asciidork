@@ -19,7 +19,7 @@ checksum = "dde20b3d026af13f561bdd0f15edf01fc734f0dafcedbaf42bba506a9517f223"
 
 [[package]]
 name = "asciidork-ast"
-version = "0.20.0"
+version = "0.20.2"
 dependencies = [
  "asciidork-core",
  "bumpalo",
@@ -28,14 +28,14 @@ dependencies = [
 
 [[package]]
 name = "asciidork-core"
-version = "0.20.0"
+version = "0.20.2"
 dependencies = [
  "lazy_static",
 ]
 
 [[package]]
 name = "asciidork-parser"
-version = "0.20.0"
+version = "0.20.2"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",

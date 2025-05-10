@@ -112,7 +112,7 @@ impl<'arena> Parser<'arena> {
     if drop_line {
       return self.read_line();
     }
-    if line.starts(TokenKind::Directive) && !self.ctx.comment_delim_in_lines {
+    if line.starts(TokenKind::Directive) && !self.ctx.within_block_comment() {
       match self.try_process_directive(&mut line)? {
         DirectiveAction::Passthrough => Ok(Some(line)),
         DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
