@@ -206,7 +206,8 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn loc(&self) -> SourceLocation {
-    SourceLocation::from(self.sources[self.idx as usize].pos)
+    let pos = self.sources[self.idx as usize].pos;
+    SourceLocation::new(pos, pos, self.idx)
   }
 
   pub fn at_delimiter_line(&self) -> Option<(u32, u8)> {
@@ -235,7 +236,7 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn reline_diagnostics(&self, offset: u32, diagnostics: &mut [Diagnostic]) {
-    let offset_loc = SourceLocation::new_depth(offset, offset, self.include_depth());
+    let offset_loc = SourceLocation::new(offset, offset, self.include_depth());
     let before_offset = self.line_number(offset_loc) - 1;
     diagnostics
       .iter_mut()
@@ -314,7 +315,7 @@ mod tests {
           let end = start + lexeme.len();
           let expected_token = Token {
             kind: token_type,
-            loc: SourceLocation::from(start..end),
+            loc: SourceLocation::new(start as u32, end as u32, 0),
             lexeme: bstr!(lexeme),
           };
           let actual = lexer.next_token();
@@ -771,7 +772,7 @@ mod tests {
       lexer.next_token(),
       Token {
         kind: TokenKind::Ampersand,
-        loc: SourceLocation::new(0, 1),
+        loc: SourceLocation::new(0, 1, 0),
         lexeme: bstr!("&"),
       }
     );
@@ -779,7 +780,7 @@ mod tests {
       lexer.next_token(),
       Token {
         kind: TokenKind::Caret,
-        loc: SourceLocation::new(1, 2),
+        loc: SourceLocation::new(1, 2, 0),
         lexeme: bstr!("^"),
       }
     );
@@ -787,7 +788,7 @@ mod tests {
       lexer.next_token(),
       Token {
         kind: TokenKind::Word,
-        loc: SourceLocation::new(2, 8),
+        loc: SourceLocation::new(2, 8, 0),
         lexeme: bstr!("foobar"),
       }
     );
@@ -795,7 +796,7 @@ mod tests {
       lexer.next_token(),
       Token {
         kind: TokenKind::OpenBracket,
-        loc: SourceLocation::new(8, 9),
+        loc: SourceLocation::new(8, 9, 0),
         lexeme: bstr!("["),
       }
     );
@@ -803,7 +804,7 @@ mod tests {
       lexer.next_token(),
       Token {
         kind: TokenKind::ForwardSlashes,
-        loc: SourceLocation::new(9, 11),
+        loc: SourceLocation::new(9, 11, 0),
         lexeme: bstr!("//"),
       }
     );
@@ -811,7 +812,7 @@ mod tests {
       lexer.next_token(),
       Token {
         kind: TokenKind::Eof,
-        loc: SourceLocation::new(12, 12),
+        loc: SourceLocation::new(12, 12, 0),
         lexeme: bstr!(""),
       }
     );
@@ -820,31 +821,31 @@ mod tests {
   #[test]
   fn test_line_of() {
     let lexer = test_lexer!("foo\nbar\n\nbaz\n");
-    assert_eq!(lexer.line_of(1.into()), "foo");
-    assert_eq!(lexer.line_of(2.into()), "foo");
-    assert_eq!(lexer.line_of(3.into()), "foo"); // newline
-    assert_eq!(lexer.line_of(4.into()), "bar");
-    assert_eq!(lexer.line_of(7.into()), "bar");
-    assert_eq!(lexer.line_of(8.into()), ""); // empty line
-    assert_eq!(lexer.line_of(9.into()), "baz");
+    assert_eq!(lexer.line_of(loc!(at: 1)), "foo");
+    assert_eq!(lexer.line_of(loc!(at: 2)), "foo");
+    assert_eq!(lexer.line_of(loc!(at: 3)), "foo"); // newline
+    assert_eq!(lexer.line_of(loc!(at: 4)), "bar");
+    assert_eq!(lexer.line_of(loc!(at: 7)), "bar");
+    assert_eq!(lexer.line_of(loc!(at: 8)), ""); // empty line
+    assert_eq!(lexer.line_of(loc!(at: 9)), "baz");
   }
 
   #[test]
   fn test_line_of_win_crlf() {
     let lexer = test_lexer!("foo\r\nbar\r\n\r\nbaz\r\n");
-    assert_eq!(lexer.line_of(0.into()), "foo");
-    assert_eq!(lexer.line_of(1.into()), "foo");
-    assert_eq!(lexer.line_of(2.into()), "foo");
-    assert_eq!(lexer.line_of(3.into()), "foo"); // newline '\r'
-    assert_eq!(lexer.line_of(4.into()), "foo"); // newline '\n'
-    assert_eq!(lexer.line_of(5.into()), "bar");
-    assert_eq!(lexer.line_of(6.into()), "bar");
-    assert_eq!(lexer.line_of(7.into()), "bar");
-    assert_eq!(lexer.line_of(8.into()), "bar"); // newline '\r'
-    assert_eq!(lexer.line_of(9.into()), "bar"); // newline '\n'
-    assert_eq!(lexer.line_of(10.into()), ""); // empty line
-    assert_eq!(lexer.line_of(11.into()), ""); // empty line
-    assert_eq!(lexer.line_of(12.into()), "baz");
+    assert_eq!(lexer.line_of(loc!(at: 0)), "foo");
+    assert_eq!(lexer.line_of(loc!(at: 1)), "foo");
+    assert_eq!(lexer.line_of(loc!(at: 2)), "foo");
+    assert_eq!(lexer.line_of(loc!(at: 3)), "foo"); // newline '\r'
+    assert_eq!(lexer.line_of(loc!(at: 4)), "foo"); // newline '\n'
+    assert_eq!(lexer.line_of(loc!(at: 5)), "bar");
+    assert_eq!(lexer.line_of(loc!(at: 6)), "bar");
+    assert_eq!(lexer.line_of(loc!(at: 7)), "bar");
+    assert_eq!(lexer.line_of(loc!(at: 8)), "bar"); // newline '\r'
+    assert_eq!(lexer.line_of(loc!(at: 9)), "bar"); // newline '\n'
+    assert_eq!(lexer.line_of(loc!(at: 10)), ""); // empty line
+    assert_eq!(lexer.line_of(loc!(at: 11)), ""); // empty line
+    assert_eq!(lexer.line_of(loc!(at: 12)), "baz");
   }
 
   #[test]
@@ -869,14 +870,14 @@ mod tests {
   fn test_line_num_win_crlf() {
     let input = "foo\r\nbar\r\n\r\nbaz\r\n";
     let lexer = test_lexer!(input);
-    assert_eq!(lexer.line_number(0.into()), 1);
-    assert_eq!(lexer.line_number(3.into()), 1); // newline '\r'
-    assert_eq!(lexer.line_number(4.into()), 1); // newline '\n'
-    assert_eq!(lexer.line_number(5.into()), 2); // 'b' of 'bar'
-    assert_eq!(lexer.line_number(9.into()), 2); // '\n' of 'bar\r\n'
-    assert_eq!(lexer.line_number(10.into()), 3); // empty line '\r'
-    assert_eq!(lexer.line_number(11.into()), 3); // empty line '\n'
-    assert_eq!(lexer.line_number(12.into()), 4); // 'b' of 'baz'
+    assert_eq!(lexer.line_number(loc!(at: 0)), 1);
+    assert_eq!(lexer.line_number(loc!(at: 3)), 1); // newline '\r'
+    assert_eq!(lexer.line_number(loc!(at: 4)), 1); // newline '\n'
+    assert_eq!(lexer.line_number(loc!(at: 5)), 2); // 'b' of 'bar'
+    assert_eq!(lexer.line_number(loc!(at: 9)), 2); // '\n' of 'bar\r\n'
+    assert_eq!(lexer.line_number(loc!(at: 10)), 3); // empty line '\r'
+    assert_eq!(lexer.line_number(loc!(at: 11)), 3); // empty line '\n'
+    assert_eq!(lexer.line_number(loc!(at: 12)), 4); // 'b' of 'baz'
   }
 
   fn assert_next_token_line(lexer: &mut RootLexer, line: u32, expected_kind: TokenKind) {

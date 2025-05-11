@@ -362,7 +362,7 @@ impl<'arena> SourceLexer<'arena> {
     };
     Token {
       kind,
-      loc: SourceLocation::new(start + self.offset, end + self.offset),
+      loc: SourceLocation::new(start + self.offset, end + self.offset, TMP_DEPTH),
       lexeme: BumpString::from_str_in(str, self.bump),
     }
   }
@@ -684,6 +684,9 @@ impl<'a> Iterator for LinesIter<'a> {
     Some(line)
   }
 }
+
+/// root lexer will set the actual depth
+const TMP_DEPTH: u16 = 0;
 
 #[cfg(test)]
 mod tests {

@@ -18,7 +18,7 @@ impl<'arena> SourceString<'arena> {
       Some((left, right)) => (
         Self::new(
           BumpString::from_str_in(left, bump),
-          SourceLocation::new_depth(
+          SourceLocation::new(
             self.loc.start,
             self.loc.start + left.len() as u32,
             self.loc.include_depth,
@@ -26,7 +26,7 @@ impl<'arena> SourceString<'arena> {
         ),
         Some(Self::new(
           BumpString::from_str_in(right, bump),
-          SourceLocation::new_depth(
+          SourceLocation::new(
             self.loc.start + left.len() as u32 + separator.len() as u32,
             self.loc.end,
             self.loc.include_depth,

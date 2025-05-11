@@ -85,9 +85,9 @@ impl<'arena> Parser<'arena> {
         return Ok(Some(self.parse_table(lines, meta)?));
       }
       Colon => {
-        if let Some((key, value, end)) = self.parse_doc_attr(&mut lines)? {
+        if let Some((key, value, end_loc)) = self.parse_doc_attr(&mut lines)? {
           self.restore_lines(lines);
-          let attr_loc = meta.start_loc.setting_end(end);
+          let attr_loc = meta.start_loc.setting_end(end_loc.end);
           if let Err(err) = self.document.meta.insert_doc_attr(&key, value.clone()) {
             self.err_at(err, attr_loc)?;
           }

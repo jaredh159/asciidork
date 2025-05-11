@@ -44,7 +44,7 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
           ..attr_list!(9..15)
         }],
         Some(just!("A Title", 1..8)),
-        0..1,
+        loc!(0..1),
       ),
       context: Context::QuotedParagraph,
       content: Content::QuotedParagraph {
@@ -78,7 +78,7 @@ fn test_simple_blockquote() {
         ..attr_list!(0..23)
       }]
       .into(),
-      ..chunk_meta!(0..1)
+      ..chunk_meta!(0, 1)
     },
     context: Context::BlockQuote,
     content: Content::Simple(nodes![node!("foo"; 24.. 27)]),
@@ -106,7 +106,7 @@ fn test_parse_delimited_blockquote() {
         ..attr_list!(0..23)
       }]
       .into(),
-      ..chunk_meta!(0..1)
+      ..chunk_meta!(0, 1)
     },
     context: Context::BlockQuote,
     content: Content::Compound(vecb![Block {
@@ -140,7 +140,7 @@ fn test_delimited_verse_block() {
           ..attr_list!(0..23)
         }]
         .into(),
-        ..chunk_meta!(0..1)
+        ..chunk_meta!(0, 1)
       },
       context: Context::Verse,
       content: Content::Simple(nodes![

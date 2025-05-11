@@ -33,7 +33,7 @@ impl<'arena> Parser<'arena> {
     let id = line.consume_to_string_until_one_of(&[Kind(Comma), Kind(CloseBracket)], self.bump);
     assert!(!id.is_empty());
     let mut anchor = AnchorSrc {
-      loc: SourceLocation::new(start, id.loc.end),
+      loc: SourceLocation::new(start, id.loc.end, id.loc.include_depth),
       reftext: None,
       id,
     };
@@ -1220,7 +1220,7 @@ mod tests {
         Some(AnchorSrc {
           id: src!("foo", 2..5),
           reftext: None,
-          loc: (0..7).into(),
+          loc: loc!(0..7),
         }),
       ),
       (
@@ -1228,7 +1228,7 @@ mod tests {
         Some(AnchorSrc {
           id: src!("f.o", 2..5),
           reftext: None,
-          loc: (0..7).into(),
+          loc: loc!(0..7),
         }),
       ),
       ("[[]]", None),
@@ -1239,7 +1239,7 @@ mod tests {
         Some(AnchorSrc {
           id: src!("foo", 2..5),
           reftext: Some(just!("bar", 6..9)),
-          loc: (0..11).into(),
+          loc: loc!(0..11),
         }),
       ),
       (
@@ -1250,7 +1250,7 @@ mod tests {
             node!("be "; 9..12),
             node!(Inline::Italic(just!("sure", 13..17)), 12..18),
           ]),
-          loc: (0..20).into(),
+          loc: loc!(0..20),
         }),
       ),
     ];
@@ -1271,7 +1271,7 @@ mod tests {
         Some(AnchorSrc {
           id: src!("foo", 2..5),
           reftext: None,
-          loc: (0..7).into(),
+          loc: loc!(0..7),
         }),
         "",
       ),
@@ -1280,7 +1280,7 @@ mod tests {
         Some(AnchorSrc {
           id: src!("foo", 2..5),
           reftext: None,
-          loc: (0..7).into(),
+          loc: loc!(0..7),
         }),
         "bar",
       ),
@@ -1292,7 +1292,7 @@ mod tests {
         Some(AnchorSrc {
           id: src!("foo", 2..5),
           reftext: Some(just!("bar", 6..9)),
-          loc: (0..11).into(),
+          loc: loc!(0..11),
         }),
         " baz",
       ),
@@ -1304,7 +1304,7 @@ mod tests {
             node!("be "; 9..12),
             node!(Inline::Italic(just!("sure", 13..17)), 12..18),
           ]),
-          loc: (0..20).into(),
+          loc: loc!(0..20),
         }),
         " foo",
       ),

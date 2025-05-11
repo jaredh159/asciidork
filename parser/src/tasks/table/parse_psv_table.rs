@@ -849,7 +849,7 @@ mod tests {
       Block {
         meta: ChunkMeta {
           title: Some(just!("Simple psv table", 1..17)),
-          ..chunk_meta!(0..1)
+          ..chunk_meta!(0, 1)
         },
         loc: (18..54).into(),
         content: BlockContent::Table(Table {

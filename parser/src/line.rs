@@ -877,7 +877,7 @@ mod tests {
       let mut line = read_line!(input);
       line.set_indentation(indent);
       expect_eq!(line.reassemble_src(), expected, from: input);
-      expect_eq!(line.current_token().unwrap().loc, range.into(), from: input);
+      expect_eq!(line.current_token().unwrap().loc, loc!(range), from: input);
     }
   }
 

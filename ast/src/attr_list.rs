@@ -94,7 +94,7 @@ impl AttrData for AttrList<'_> {
       } else {
         let first = nodes.first().unwrap();
         let last = nodes.last().unwrap();
-        let loc = SourceLocation::new(first.loc.start, last.loc.end);
+        let loc = SourceLocation::spanning(first.loc, last.loc);
         nodes.single_text().map(|t| (t, loc))
       }
     })

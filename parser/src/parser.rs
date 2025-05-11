@@ -434,18 +434,18 @@ mod tests {
     expect_eq!(
       &tokens,
       &[
-        Token::new(TokenKind::Word, 0..5, bstr!("hello")),
-        Token::new(TokenKind::Whitespace, 5..6, bstr!(" ")),
-        Token::new(TokenKind::AttrRef, 6..11, bstr!("{foo}")),
+        Token::new(TokenKind::Word, loc!(0..5), bstr!("hello")),
+        Token::new(TokenKind::Whitespace, loc!(5..6), bstr!(" ")),
+        Token::new(TokenKind::AttrRef, loc!(6..11), bstr!("{foo}")),
         // these are inserted as an inline preprocessing step
         // NB: we will use the source loc of the attr ref token to know how
         // to skip over the resolve attribute in no-attr-ref subs contexts
-        Token::new(TokenKind::Underscore, 6..11, bstr!("_")),
-        Token::new(TokenKind::Word, 6..11, bstr!("bar")),
-        Token::new(TokenKind::Underscore, 6..11, bstr!("_")),
+        Token::new(TokenKind::Underscore, loc!(6..11), bstr!("_")),
+        Token::new(TokenKind::Word, loc!(6..11), bstr!("bar")),
+        Token::new(TokenKind::Underscore, loc!(6..11), bstr!("_")),
         // end inserted.
-        Token::new(TokenKind::Whitespace, 11..12, bstr!(" ")),
-        Token::new(TokenKind::Word, 12..17, bstr!("world")),
+        Token::new(TokenKind::Whitespace, loc!(11..12), bstr!(" ")),
+        Token::new(TokenKind::Word, loc!(12..17), bstr!("world")),
       ]
     );
   }
@@ -491,7 +491,7 @@ mod tests {
     let mut line = parser.read_line().unwrap().unwrap();
     expect_eq!(
       line.consume_current().unwrap(),
-      Token::new(TokenKind::Word, 0..3, bstr!("foo"))
+      Token::new(TokenKind::Word, loc!(0..3), bstr!("foo"))
     );
     assert!(line.consume_current().is_none());
 
@@ -504,21 +504,21 @@ mod tests {
       [
         // we "drop" positions 4-7, the `inc` of `include::`
         // which becomes `••••link:`, keeping rest of token positions
-        Token::new(TokenKind::MacroName, 8..13, bstr!("link:")),
-        Token::new(TokenKind::Word, 13..20, bstr!("include")),
-        Token::new(TokenKind::Dashes, 20..21, bstr!("-")),
-        Token::new(TokenKind::Word, 21..25, bstr!("file")),
-        Token::new(TokenKind::Dots, 25..26, bstr!(".")),
-        Token::new(TokenKind::Word, 26..30, bstr!("adoc")),
-        Token::new(TokenKind::OpenBracket, 30..31, bstr!("[")),
+        Token::new(TokenKind::MacroName, loc!(8..13), bstr!("link:")),
+        Token::new(TokenKind::Word, loc!(13..20), bstr!("include")),
+        Token::new(TokenKind::Dashes, loc!(20..21), bstr!("-")),
+        Token::new(TokenKind::Word, loc!(21..25), bstr!("file")),
+        Token::new(TokenKind::Dots, loc!(25..26), bstr!(".")),
+        Token::new(TokenKind::Word, loc!(26..30), bstr!("adoc")),
+        Token::new(TokenKind::OpenBracket, loc!(30..31), bstr!("[")),
         // these tokens are inserted, they have no true source so we
         // represent their position as empty at the insertion point
-        Token::new(TokenKind::Word, 31..31, bstr!("role")),
-        Token::new(TokenKind::EqualSigns, 31..31, bstr!("=")),
-        Token::new(TokenKind::Word, 31..31, bstr!("include")),
-        Token::new(TokenKind::Comma, 31..31, bstr!(",")),
+        Token::new(TokenKind::Word, loc!(31..31), bstr!("role")),
+        Token::new(TokenKind::EqualSigns, loc!(31..31), bstr!("=")),
+        Token::new(TokenKind::Word, loc!(31..31), bstr!("include")),
+        Token::new(TokenKind::Comma, loc!(31..31), bstr!(",")),
         // /end `role=include` inserted tokens
-        Token::new(TokenKind::CloseBracket, 31..32, bstr!("]")),
+        Token::new(TokenKind::CloseBracket, loc!(31..32), bstr!("]")),
       ]
     );
     assert!(line.consume_current().is_none());

@@ -263,11 +263,11 @@ mod tests {
     assert_eq!(
       std::array::from_fn(|_| replaced.consume_current().unwrap()),
       [
-        Token::new(Word, 0..3, bstr!("foo")),
-        Token::new(Whitespace, 3..4, bstr!(" ")),
-        Token::new(PreprocPassthru, 4..9, bstr!("^00000")),
-        Token::new(Whitespace, 9..10, bstr!(" ")),
-        Token::new(Word, 10..13, bstr!("baz")),
+        Token::new(Word, loc!(0..3), bstr!("foo")),
+        Token::new(Whitespace, loc!(3..4), bstr!(" ")),
+        Token::new(PreprocPassthru, loc!(4..9), bstr!("^00000")),
+        Token::new(Whitespace, loc!(9..10), bstr!(" ")),
+        Token::new(Word, loc!(10..13), bstr!("baz")),
       ]
     );
   }

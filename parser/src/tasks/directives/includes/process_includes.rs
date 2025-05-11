@@ -209,7 +209,7 @@ impl<'arena> Parser<'arena> {
   ) -> Result<()> {
     self.err_at(
       msg,
-      SourceLocation::new_depth(
+      SourceLocation::new(
         directive.first_token.loc.end,
         directive.first_token.loc.end + directive.target.len() as u32,
         directive.first_token.loc.include_depth,

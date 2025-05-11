@@ -771,12 +771,7 @@ mod test {
       let mut parser = test_parser!("");
       assert_eq!(parse_selection(unparsed), selection);
       parser
-        ._select_tagged_lines(
-          selection,
-          &mut file,
-          &Path::new(""),
-          SourceLocation::new(0, 1),
-        )
+        ._select_tagged_lines(selection, &mut file, &Path::new(""), loc!(0..1))
         .unwrap();
       let expected = unindent::unindent(expected);
       assert_eq!(std::str::from_utf8(&file).unwrap(), expected);
