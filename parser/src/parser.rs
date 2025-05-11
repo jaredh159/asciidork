@@ -315,6 +315,29 @@ impl<'arena> Parser<'arena> {
   pub(crate) fn string(&self, s: &str) -> BumpString<'arena> {
     BumpString::from_str_in(s, self.bump)
   }
+
+  pub fn calculate_file_location(&self, loc: SourceLocation) -> SourceFileLocation {
+    let (line_num, col) = self.lexer.line_number_with_offset(loc);
+    SourceFileLocation {
+      line_num,
+      col,
+      source_file: self.lexer.source_file_at(loc.include_depth).clone(),
+    }
+  }
+
+  pub fn calculate_file_locations(&self, locs: &[SourceLocation]) -> Vec<SourceFileLocation> {
+    // TODO: make optimised version of this that does only one scan per source_file
+    locs
+      .iter()
+      .map(|loc| self.calculate_file_location(*loc))
+      .collect()
+  }
+}
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct SourceFileLocation {
+  pub line_num: u32,
+  pub col: u32,
+  pub source_file: SourceFile,
 }
 
 pub trait HasArena<'arena> {
