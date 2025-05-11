@@ -6,22 +6,22 @@ impl<'arena> Parser<'arena> {
   pub(super) fn parse_doc_attrs(
     &mut self,
     lines: &mut ContiguousLines<'arena>,
-  ) -> Result<Option<u32>> {
+  ) -> Result<Option<SourceLocation>> {
     lines.discard_leading_comment_lines();
-    let mut last_end: Option<u32> = None;
+    let mut last_end: Option<SourceLocation> = None;
     while let Some((key, value, end)) = self.parse_doc_attr(lines)? {
       last_end = Some(end);
       if key == "doctype" {
         if let AttrValue::String(s) = &value {
           match s.as_str().parse::<DocType>() {
             Ok(doc_type) => self.document.meta.set_doctype(doc_type),
-            Err(err) => self.err_line_of(err, end.into())?,
+            Err(err) => self.err_line_of(err, end)?,
           }
         } else {
-          self.err_line_of("".parse::<DocType>().err().unwrap(), end.into())?;
+          self.err_line_of("".parse::<DocType>().err().unwrap(), end)?;
         }
       } else if let Err(err) = self.document.meta.insert_header_attr(&key, value) {
-        self.err_line_of(err, end.into())?;
+        self.err_line_of(err, end)?;
       }
       lines.discard_leading_comment_lines();
     }
@@ -31,7 +31,7 @@ impl<'arena> Parser<'arena> {
   pub(super) fn parse_doc_attr(
     &mut self,
     lines: &mut ContiguousLines<'arena>,
-  ) -> Result<Option<(String, AttrValue, u32)>> {
+  ) -> Result<Option<(String, AttrValue, SourceLocation)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
     };
@@ -74,7 +74,7 @@ impl<'arena> Parser<'arena> {
       Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &attr);
     }
 
-    Ok(Some((key.to_string(), attr, line.last_loc().unwrap().end)))
+    Ok(Some((key.to_string(), attr, line.last_loc().unwrap())))
   }
 
   pub(crate) fn replace_attr_vals<'h>(&self, haystack: &'h str) -> Cow<'h, str> {

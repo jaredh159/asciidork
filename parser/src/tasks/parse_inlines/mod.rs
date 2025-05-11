@@ -45,7 +45,11 @@ impl<'arena> Parser<'arena> {
           acc.push_node(LineComment(BumpString::new_in(self.bump)), token.loc);
         } else {
           let comment = line.consume_to_string(self.bump);
-          let loc = SourceLocation::new(token.loc.start, comment.loc.end + 1);
+          let loc = SourceLocation::new(
+            token.loc.start,
+            comment.loc.end + 1,
+            token.loc.include_depth,
+          );
           acc.push_node(LineComment(comment.src), loc);
         }
         continue;
@@ -232,7 +236,11 @@ impl<'arena> Parser<'arena> {
                   if !trimmed.is_empty() {
                     items.push(SourceString::new(
                       self.string(trimmed),
-                      SourceLocation::new(pos as u32, (pos + trimmed.len()) as u32),
+                      SourceLocation::new(
+                        pos as u32,
+                        (pos + trimmed.len()) as u32,
+                        rest.loc.include_depth,
+                      ),
                     ));
                   }
                   pos += substr.len() + 1;
@@ -328,7 +336,7 @@ impl<'arena> Parser<'arena> {
           CalloutNumber if subs.callouts() && line.continues_valid_callout_nums() => {
             self.recover_custom_line_comment(&mut acc);
             acc.text.trim_end();
-            let loc = SourceLocation::new(acc.text.loc.end, token.loc.end);
+            let loc = SourceLocation::new(acc.text.loc.end, token.loc.end, token.loc.include_depth);
             let number = token.parse_callout_num();
             acc.push_node(CalloutNum(self.ctx.push_callout(number)), loc);
           }
@@ -859,7 +867,11 @@ impl<'arena> Parser<'arena> {
     if line_txt.ends_with(comment_bytes) {
       let tuck = self.string(state.text.str().split_at(line_len - back as usize).1);
       state.text.drop_last(back);
-      let tuck_loc = SourceLocation::new(state.text.loc.end, state.text.loc.end + back);
+      let tuck_loc = SourceLocation::new(
+        state.text.loc.end,
+        state.text.loc.end + back,
+        state.text.loc.include_depth,
+      );
       state.push_node(CalloutTuck(tuck), tuck_loc);
     }
   }

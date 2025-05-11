@@ -50,7 +50,7 @@ fn test_parse_section_w_reftext() {
           ]),
           ..attr_list!(0..18)
         }].into(),
-        ..chunk_meta!(0..1)
+        ..chunk_meta!(0, 1)
       },
       level: 1,
       id: Some(bstr!("_foo")),

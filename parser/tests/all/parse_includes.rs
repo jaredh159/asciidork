@@ -556,6 +556,18 @@ fn include_resolution_para_newlines_edge_case() {
   expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
 }
 
+#[test]
+fn issue_68() {
+  let input = "include::include1.adoc[]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(NestedResolver(vec![
+    "include::include2.adoc[tags=x]\n",
+    "", // <-- empty file
+  ])));
+  _ = parser.parse(); // no panic
+}
+
 // test resolvers
 
 struct AssertResolver {

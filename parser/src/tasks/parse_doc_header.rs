@@ -181,8 +181,8 @@ impl<'arena> Parser<'arena> {
     lines: &mut ContiguousLines<'arena>,
     header: &mut DocHeader,
   ) -> Result<()> {
-    if let Some(end) = self.parse_doc_attrs(lines)? {
-      header.loc.end = end;
+    if let Some(loc) = self.parse_doc_attrs(lines)? {
+      header.loc.end = loc.end;
     }
     Ok(())
   }
@@ -197,14 +197,14 @@ mod tests {
   fn header_existence_and_loc() {
     let cases: Vec<(&str, Option<SourceLocation>)> = vec![
       ("foobar\n\n", None),
-      ("= Title\n\n", Some((0..7).into())),
-      ("// rofl\n\n", Some((0..7).into())),
+      ("= Title\n\n", Some(loc!(0..7))),
+      ("// rofl\n\n", Some(loc!(0..7))),
       (
         adoc! {"
           = Title
           :a: b
         "},
-        Some((0..13).into()),
+        Some(loc!(0..13)),
       ),
       (
         adoc! {"
@@ -214,20 +214,20 @@ mod tests {
 
           foobar
         "},
-        Some((0..23).into()),
+        Some(loc!(0..23)),
       ),
       (
         adoc! {"
           = Title
           Bob Law
         "},
-        Some((0..15).into()),
+        Some(loc!(0..15)),
       ),
       (
         adoc! {"
           = Document Title
         "},
-        Some((0..16).into()),
+        Some(loc!(0..16)),
       ),
       (
         adoc! {"
@@ -235,7 +235,7 @@ mod tests {
           Bob Law
           v1.2334
         "},
-        Some((0..23).into()),
+        Some(loc!(0..23)),
       ),
       (
         adoc! {"
@@ -252,7 +252,7 @@ mod tests {
 
           foobar
         "},
-        Some((0..62).into()),
+        Some(loc!(0..62)),
       ),
     ];
     for (input, expected) in cases {

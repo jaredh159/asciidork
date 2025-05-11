@@ -40,6 +40,20 @@ assert_html!(
 );
 
 assert_html!(
+  no_panic_include_comment,
+  resolving: b"////\n////\n",
+  adoc! {r#"
+    x
+    ////
+    x
+
+    include::include.adoc[]
+    ////
+  "#},
+  r#"<div class="paragraph"><p>x</p></div>"#,
+);
+
+assert_html!(
   included_csv_2,
   resolving: b"A1,\nB1,B2",
   adoc! {r#"

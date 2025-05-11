@@ -359,7 +359,7 @@ impl<'arena> Parser<'arena> {
       }
       line.drain_into(&mut tokens);
       if !lines.is_empty() {
-        tokens.push(newline_token(end, self.bump));
+        tokens.push(newline_token(end, delim_loc.include_depth, self.bump));
         end += 1;
       }
     }
@@ -368,7 +368,7 @@ impl<'arena> Parser<'arena> {
         continue;
       }
       if !tokens.is_empty() {
-        tokens.push(newline_token(end, self.bump));
+        tokens.push(newline_token(end, delim_loc.include_depth, self.bump));
         end += 1;
       }
       // TODO(perf): src_eq is O(n), see if we can refactor
@@ -385,11 +385,11 @@ impl<'arena> Parser<'arena> {
   }
 }
 
-fn newline_token(start: u32, bump: &Bump) -> Token {
+fn newline_token(start: u32, depth: u16, bump: &Bump) -> Token {
   Token {
     kind: TokenKind::Newline,
     lexeme: BumpString::from_str_in("\n", bump),
-    loc: SourceLocation::new(start, start + 1),
+    loc: SourceLocation::new(start, start + 1, depth),
   }
 }
 

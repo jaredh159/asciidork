@@ -12,6 +12,16 @@ pub fn leaked_bump() -> &'static Bump {
 }
 
 #[macro_export]
+macro_rules! loc {
+  (at: $start:expr) => {
+    SourceLocation::new($start, $start, 0)
+  };
+  ($range:expr) => {
+    SourceLocation::new($range.start, $range.end, 0)
+  };
+}
+
+#[macro_export]
 macro_rules! read_line {
   ($input:expr) => {{
     let mut parser = test_parser!($input);
@@ -186,12 +196,12 @@ macro_rules! node {
     node!($node, $range, depth: 0)
   };
   ($node:expr, $range:expr, depth: $depth:expr$(,)?) => {
-    InlineNode::new($node, SourceLocation::new_depth($range.start, $range.end, $depth))
+    InlineNode::new($node, SourceLocation::new($range.start, $range.end, $depth))
   };
   ($text:expr; $range:expr, depth: $depth:expr) => {
     InlineNode::new(
       Inline::Text(bstr!($text)),
-      SourceLocation::new_depth($range.start, $range.end, $depth),
+      SourceLocation::new($range.start, $range.end, $depth),
     )
   };
   ($text:expr; $range:expr) => {
@@ -253,7 +263,7 @@ macro_rules! cell {
 macro_rules! empty_block {
   ($start:expr) => {
     Block {
-      meta: ChunkMeta::empty($start.into(), leaked_bump()),
+      meta: ChunkMeta::empty(loc!(at: $start), leaked_bump()),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
       loc: $start.into(),
@@ -261,7 +271,7 @@ macro_rules! empty_block {
   };
   ($start:expr, $end:expr) => {
     Block {
-      meta: ChunkMeta::empty($start.into(), leaked_bump()),
+      meta: ChunkMeta::empty(loc!(at: $start), leaked_bump()),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![]),
       loc: ($start..$end).into(),
@@ -272,7 +282,10 @@ macro_rules! empty_block {
 #[macro_export]
 macro_rules! chunk_meta {
   ($start:expr) => {
-    ChunkMeta::empty($start.into(), leaked_bump())
+    ChunkMeta::empty(loc!(at: $start), leaked_bump())
+  };
+  ($start:expr, $end:expr) => {
+    ChunkMeta::empty(SourceLocation::new($start, $end, 0), leaked_bump())
   };
 }
 
@@ -308,7 +321,7 @@ macro_rules! assert_list {
 macro_rules! attr_list {
   ($range:expr) => {
     asciidork_ast::AttrList::new(
-      asciidork_ast::SourceLocation::new($range.start, $range.end),
+      asciidork_ast::SourceLocation::new($range.start, $range.end, 0),
       leaked_bump(),
     )
   };
@@ -331,7 +344,7 @@ macro_rules! src {
   ($text:expr, $range:expr$(,)?) => {
     SourceString::new(
       bumpalo::collections::String::from_str_in($text, leaked_bump()),
-      SourceLocation::new($range.start, $range.end),
+      SourceLocation::new($range.start, $range.end, 0),
     )
   };
 }
