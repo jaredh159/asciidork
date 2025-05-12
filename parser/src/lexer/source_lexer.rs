@@ -101,8 +101,8 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   pub fn str_from_loc(&self, loc: SourceLocation) -> &str {
-    let start = loc.start as usize;
-    let end = loc.end as usize;
+    let start = (loc.start - self.offset) as usize;
+    let end = (loc.end - self.offset) as usize;
     std::str::from_utf8(&self.src[start..end]).unwrap()
   }
 

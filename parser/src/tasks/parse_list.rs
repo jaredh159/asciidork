@@ -135,7 +135,9 @@ impl<'arena> Parser<'arena> {
   ) -> Result<BumpVec<'arena, Block<'arena>>> {
     if lines.starts_nested_list(&self.ctx.list.stack, true) {
       self.restore_lines(lines);
-      blocks.push(self.parse_block()?.unwrap());
+      if let Some(block) = self.parse_block()? {
+        blocks.push(block);
+      }
       return Ok(blocks);
     }
 

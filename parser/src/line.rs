@@ -90,7 +90,7 @@ impl<'arena> Line<'arena> {
   pub fn into_bytes(self) -> BumpVec<'arena, u8> {
     let mut bytes = BumpVec::new_in(self.tokens.bump);
     if let (Some(first), Some(last)) = (self.tokens.first(), self.tokens.last()) {
-      bytes.reserve((last.loc.end - first.loc.start) as usize);
+      bytes.reserve((last.loc.end.saturating_sub(first.loc.start)) as usize);
     }
     for token in self.tokens.iter() {
       bytes.extend_from_slice(token.lexeme.as_bytes());
@@ -687,8 +687,8 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn drop_leading_bytes(&mut self, n: u32) {
-    debug_assert!(n as usize <= self.current_token().unwrap().lexeme.len());
     if n > 0 {
+      debug_assert!(n as usize <= self.current_token().unwrap().lexeme.len());
       self.tokens.get_mut(0).unwrap().drop_leading_bytes(n);
     }
   }

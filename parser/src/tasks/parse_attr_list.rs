@@ -210,6 +210,7 @@ impl<'arena> Parser<'arena> {
           ONLY_SHORTHAND_ERR,
           SourceLocation::spanning(inner.first().unwrap().loc, inner.last().unwrap().loc),
         )?;
+        return Ok(());
       }
       AttrIr::Options(groups) | AttrIr::Roles(groups) if formatted_text => {
         self.err_at(
@@ -219,6 +220,7 @@ impl<'arena> Parser<'arena> {
             groups.last().unwrap().last().unwrap().loc,
           ),
         )?;
+        return Ok(());
       }
       AttrIr::Named(name, tokens) if formatted_text => {
         self.err_at(
@@ -228,6 +230,7 @@ impl<'arena> Parser<'arena> {
             tokens.last().map(|t| t.loc).unwrap_or(name.loc.incr_end()),
           ),
         )?;
+        return Ok(());
       }
       AttrIr::Positional(mut tokens, with_shorthand) => {
         if with_shorthand {
@@ -262,10 +265,15 @@ impl<'arena> Parser<'arena> {
       AttrIr::Options(groups) => self.push_attr_groups(groups, &mut attr_list.options),
       AttrIr::Roles(groups) => self.push_attr_groups(groups, &mut attr_list.roles),
       AttrIr::Id(tokens) => {
+        if tokens.is_empty() {
+          self.err_at("Invalid empty id attribute", attr_list.loc)?;
+          return Ok(());
+        }
         let mut line = Line::new(tokens);
         let src = line.consume_to_string(self.bump);
         if attr_list.id.is_some() {
           self.err_at("More than one id attribute", src.loc)?;
+          return Ok(());
         } else {
           attr_list.id = Some(src);
         }
@@ -279,13 +287,17 @@ impl<'arena> Parser<'arena> {
             break;
           };
           match token.kind {
-            _ if line.is_empty() => self.err_token_start("Invalid id attribute", &token)?,
+            _ if line.is_empty() => {
+              self.err_token_start("Invalid id attribute", &token)?;
+              return Ok(());
+            }
             Dots if token.len() == 1 => attr_list
               .roles
               .push(line.consume_to_string_until_one_of(stop, self.bump)),
             Hash => {
               if attr_list.id.is_some() {
-                self.err_token_start("More than one id attribute", &token)?
+                self.err_token_start("More than one id attribute", &token)?;
+                return Ok(());
               } else {
                 let src = line.consume_to_string_until_one_of(stop, self.bump);
                 attr_list.id = Some(src);

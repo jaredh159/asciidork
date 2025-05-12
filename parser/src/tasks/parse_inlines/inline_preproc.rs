@@ -122,6 +122,9 @@ impl<'arena> Parser<'arena> {
     line: &mut Line<'arena>,
     lines: &mut ContiguousLines<'arena>,
   ) -> Option<(usize, Substitutions)> {
+    if line.is_empty() {
+      return None;
+    }
     let mut num_target_tokens = 0;
     while num_target_tokens < line.num_tokens() {
       let token = line.nth_token(num_target_tokens).unwrap();
