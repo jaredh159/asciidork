@@ -335,6 +335,14 @@ impl<'arena> Parser<'arena> {
   pub(crate) fn string(&self, s: &str) -> BumpString<'arena> {
     BumpString::from_str_in(s, self.bump)
   }
+
+  pub fn line_number_with_offset(&self, loc: SourceLocation) -> (u32, u32) {
+    self.lexer.line_number_with_offset(loc)
+  }
+
+  pub fn source_file_at(&self, idx: u16) -> &SourceFile {
+    self.lexer.source_file_at(idx)
+  }
 }
 
 pub trait HasArena<'arena> {
