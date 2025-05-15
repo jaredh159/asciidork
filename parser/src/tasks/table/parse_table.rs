@@ -217,11 +217,22 @@ impl<'arena> Parser<'arena> {
       cell_tokens.remove_resolved_attr_refs();
       let cell_parser = self.cell_parser(cell_tokens.into_bytes(), loc.start);
       return match cell_parser.parse() {
-        Ok(ParseResult { document, mut warnings }) => {
+        Ok(ParseResult {
+          document,
+          mut warnings,
+          #[cfg(feature = "attr_ref_observation")]
+          attr_ref_observer,
+        }) => {
           if !warnings.is_empty() {
             self.lexer.reline_diagnostics(loc.start, &mut warnings);
             self.errors.borrow_mut().extend(warnings);
           }
+
+          #[cfg(feature = "attr_ref_observation")]
+          {
+            self.attr_ref_observer = attr_ref_observer;
+          }
+
           let content = CellContent::AsciiDoc(document);
           let cell = Cell::new(content, cell_spec, col_spec.cloned());
           Ok(Some((cell, repeat)))
