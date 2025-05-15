@@ -101,8 +101,8 @@ impl<'arena> SourceLexer<'arena> {
   }
 
   pub fn str_from_loc(&self, loc: SourceLocation) -> &str {
-    let start = loc.start as usize;
-    let end = loc.end as usize;
+    let start = (loc.start - self.offset) as usize;
+    let end = (loc.end - self.offset) as usize;
     std::str::from_utf8(&self.src[start..end]).unwrap()
   }
 
@@ -310,12 +310,14 @@ impl<'arena> SourceLexer<'arena> {
     match self.peek() {
       // directives
       Some(b':')
-        if matches!(
-          lexeme,
-          b"include" | b"ifdef" | b"ifndef" | b"endif" | b"ifeval"
-        ) && self.remaining_len() > 4 =>
+        if self.peek_n(1) == Some(b':')
+          && matches!(
+            lexeme,
+            b"include" | b"ifdef" | b"ifndef" | b"endif" | b"ifeval" | b"asciidorkinclude"
+          )
+          && self.remaining_len() > 4 =>
       {
-        if self.peek_n(1) == Some(b':') && !self.peek_n(2).unwrap().is_ascii_whitespace() {
+        if !self.peek_n(2).unwrap().is_ascii_whitespace() {
           self.advance();
           self.advance();
           return self.token(Directive, start, end + 2);

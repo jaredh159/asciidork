@@ -568,6 +568,49 @@ fn issue_68() {
   _ = parser.parse(); // no panic
 }
 
+#[test]
+fn issue_70_tag_removal_diagnostic_pos() {
+  let input = "include::file.adoc[tag=x]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(NestedResolver(vec![adoc! {"
+      // tag::y[]
+      // end::y[]
+      // tag::x[]
+
+      [.unattached]
+
+      // end::x[]
+    "}])));
+  let expected = error! {"
+     --> file.adoc:5:1
+      |
+    5 | [.unattached]
+      | ^^^^^^^^^^^^^ Unattached block metadata
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+
+  let input = "include::file.adoc[lines=4..6]\n";
+  let mut parser = test_parser!(input);
+  parser.apply_job_settings(JobSettings::r#unsafe());
+  parser.set_resolver(Box::new(NestedResolver(vec![adoc! {"
+      line 1
+      line 2
+      line 3
+
+      [.unattached]
+
+      line 7
+    "}])));
+  let expected = error! {"
+     --> file.adoc:5:1
+      |
+    5 | [.unattached]
+      | ^^^^^^^^^^^^^ Unattached block metadata
+  "};
+  expect_eq!(parser.parse().err().unwrap()[0].plain_text(), expected, from: input);
+}
+
 // test resolvers
 
 struct AssertResolver {

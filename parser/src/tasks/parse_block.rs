@@ -219,9 +219,13 @@ impl<'arena> Parser<'arena> {
         lines.discard_until(|l| l.is_delimiter_kind(DelimiterKind::Comment));
         end_loc = lines.first_loc().unwrap_or(end_loc);
         self.restore_lines(lines);
-        let span_loc = SourceLocation::spanning(start_loc.clamp_start(), end_loc.clamp_start());
-        let comment = self.lexer.src_string_from_loc(span_loc);
-        Content::Empty(EmptyMetadata::Comment(comment))
+        if start_loc.include_depth != end_loc.include_depth {
+          Content::Empty(EmptyMetadata::None)
+        } else {
+          let span_loc = SourceLocation::spanning(start_loc.clamp_start(), end_loc.clamp_start());
+          let comment = self.lexer.src_string_from_loc(span_loc);
+          Content::Empty(EmptyMetadata::Comment(comment))
+        }
       } else {
         self.ctx.can_nest_blocks = false;
         let simple = Content::Simple(self.parse_inlines(&mut lines)?);

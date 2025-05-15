@@ -695,6 +695,15 @@ mod tests {
   fn test_directives() {
     assert_token_cases!([
       (
+        "asciidorkinclude::[false]",
+        vec![
+          (Directive, "asciidorkinclude::"),
+          (OpenBracket, "["),
+          (Word, "false"),
+          (CloseBracket, "]")
+        ],
+      ),
+      (
         "include::foo",
         vec![(Directive, "include::"), (Word, "foo")],
       ),

@@ -15,6 +15,7 @@ impl<'arena> Parser<'arena> {
       "ifndef::" => self.try_process_ifdef_directive(false, line),
       "endif::" => self.try_process_endif_directive(line),
       "ifeval::" => self.try_process_ifeval_directive(line),
+      "asciidorkinclude::" => Ok(DirectiveAction::IgnoreNotIncluded),
       _ => unreachable!("Parser::try_process_directive"),
     }
   }

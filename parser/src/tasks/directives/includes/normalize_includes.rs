@@ -61,6 +61,8 @@ impl<'arena> Parser<'arena> {
       if ranges.iter().any(|range| range.contains(&(i + 1))) {
         selected.extend(line);
         selected.push(b'\n');
+      } else {
+        selected.extend_from_slice(b"asciidorkinclude::[false]\n");
       }
     }
     std::mem::swap(bytes, &mut selected);

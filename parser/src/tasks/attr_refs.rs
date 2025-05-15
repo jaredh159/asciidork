@@ -1,8 +1,10 @@
+use std::any::Any;
+
 use crate::internal::*;
 
-pub trait AttrRefObserver {
-  fn attr_ref_replaced(&self, attr_name: &str, loc: SourceLocation);
-  fn attr_ref_missing(&self, attr_name: &str, loc: SourceLocation);
+pub trait AttrRefObserver: Any {
+  fn attr_ref_replaced(&mut self, attr_name: &str, loc: SourceLocation);
+  fn attr_ref_missing(&mut self, attr_name: &str, loc: SourceLocation);
 }
 
 impl<'arena> Parser<'arena> {
@@ -41,7 +43,7 @@ impl<'arena> Parser<'arena> {
       match self.document.meta.get(token.attr_name()) {
         Some(AttrValue::String(attr_val)) => {
           #[cfg(feature = "attr_ref_observation")]
-          if let Some(observer) = &self.attr_ref_observer {
+          if let Some(ref mut observer) = self.attr_ref_observer.as_mut() {
             observer.attr_ref_replaced(token.attr_name(), token.loc);
           }
           if !attr_val.is_empty() {
@@ -51,7 +53,7 @@ impl<'arena> Parser<'arena> {
         }
         _ => {
           #[cfg(feature = "attr_ref_observation")]
-          if let Some(observer) = &self.attr_ref_observer {
+          if let Some(ref mut observer) = self.attr_ref_observer.as_mut() {
             observer.attr_ref_missing(token.attr_name(), token.loc);
           }
           match self.document.meta.str("attribute-missing") {
