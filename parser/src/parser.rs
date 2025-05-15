@@ -97,6 +97,10 @@ impl<'arena> Parser<'arena> {
   }
 
   pub(crate) fn read_line(&mut self) -> Result<Option<Line<'arena>>> {
+    Ok(self._read_line(false)?.map(|(line, _)| line))
+  }
+
+  fn _read_line(&mut self, ignored_last: bool) -> Result<Option<(Line<'arena>, bool)>> {
     assert!(self.peeked_lines.is_none());
     if self.lexer.is_eof() {
       return Ok(None);
@@ -110,17 +114,22 @@ impl<'arena> Parser<'arena> {
     }
     self.lexer.skip_newline();
     if drop_line {
-      return self.read_line();
+      return self._read_line(false);
     }
     if line.starts(TokenKind::Directive) && !self.ctx.within_block_comment() {
       match self.try_process_directive(&mut line)? {
-        DirectiveAction::Passthrough => Ok(Some(line)),
-        DirectiveAction::SubstituteLine(line) => Ok(Some(line)),
-        DirectiveAction::ReadNextLine => self.read_line(),
-        DirectiveAction::SkipLinesUntilEndIf => self.skip_lines_until_endif(&line),
+        DirectiveAction::Passthrough => Ok(Some((line, ignored_last))),
+        DirectiveAction::SubstituteLine(line) => Ok(Some((line, ignored_last))),
+        DirectiveAction::IgnoreNotIncluded => self._read_line(true),
+        DirectiveAction::ReadNextLine => self._read_line(false),
+        DirectiveAction::SkipLinesUntilEndIf => Ok(
+          self
+            .skip_lines_until_endif(&line)?
+            .map(|l| (l, ignored_last)),
+        ),
       }
     } else {
-      Ok(Some(line))
+      Ok(Some((line, ignored_last)))
     }
   }
 
@@ -134,14 +143,15 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     }
     let mut lines = Deq::new(self.bump);
-    while let Some(line) = self.read_line()? {
+    while let Some((line, ignored_removed_include_line)) = self._read_line(false)? {
       if line.is_emptyish() {
         if lines.is_empty() {
           // this case can happen if our first non-empty line was an include directive
           // that then resolved to an initial empty line, otherwise consume_empty_lines
           // would have skipped over it, so we keep going
           continue;
-        } else {
+        } else if !ignored_removed_include_line {
+          // this case can happen if our first non-empty line was an include directive
           // this case happens only when we DROP a line
           break;
         }
@@ -333,6 +343,7 @@ impl<'arena> HasArena<'arena> for Parser<'arena> {
 pub enum DirectiveAction<'arena> {
   Passthrough,
   ReadNextLine,
+  IgnoreNotIncluded,
   SkipLinesUntilEndIf,
   SubstituteLine(Line<'arena>),
 }

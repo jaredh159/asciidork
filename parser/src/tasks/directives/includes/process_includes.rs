@@ -245,6 +245,9 @@ fn _set_indentation<'arena>(indent: usize, buf: &mut BumpVec<'arena, u8>, bump: 
   let Some(min_indent) = trimmed
     .split(|&c| c == b'\n')
     .fold(Option::<usize>::None, |acc, line| {
+      if line == b"asciidorkinclude::[false]" {
+        return acc;
+      }
       let line_indent = line.iter().take_while(|&&c| c == b' ').count();
       match acc {
         Some(current) => Some(current.min(line_indent)),

@@ -198,10 +198,12 @@ impl<'arena> Parser<'arena> {
     for (idx, line) in lines.enumerate() {
       match tag_directive(line) {
         Some(TagDirective::Start(tag)) => {
+          dest.extend_from_slice(b"asciidorkinclude::[false]\n");
           expected_tags.remove(&tag);
           tag_stack.push(tag, idx);
         }
         Some(TagDirective::End(tag)) => {
+          dest.extend_from_slice(b"asciidorkinclude::[false]\n");
           if tag_stack.last_is(&tag) {
             tag_stack.pop();
           } else if selection.expected_tags().contains(&tag) {
@@ -346,7 +348,9 @@ mod test {
         TagSpecs(vec![AllNonTagDirectiveLines]),
         "
           outside
+          asciidorkinclude::[false]
           inside foo
+          asciidorkinclude::[false]
           outside
         ",
       ),
@@ -356,6 +360,8 @@ mod test {
         TagSpecs(vec![AllUntaggedRegions]),
         "
           outside
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           outside
         ",
       ),
@@ -363,30 +369,66 @@ mod test {
         simple_file(),
         "*",
         TagSpecs(vec![AllTaggedRegions]),
-        "inside foo\n",
+        "
+          asciidorkinclude::[false]
+          inside foo
+          asciidorkinclude::[false]
+        ",
       ),
-      (simple_file(), "!**", TagSpecs(vec![NoLines]), ""),
+      (
+        simple_file(),
+        "!**",
+        TagSpecs(vec![NoLines]),
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+        ",
+      ),
       (
         simple_file(),
         "foo",
         TagSpecs(vec![Tag("foo".to_string())]),
-        "inside foo\n",
+        "
+          asciidorkinclude::[false]
+          inside foo
+          asciidorkinclude::[false]
+        ",
       ),
       (
         ruby_file_wrapped(),
         "init",
         TagSpecs(vec![Tag("init".to_string())]),
         "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
         ",
       ),
       (
         snippet_file(),
         "snippetA",
         TagSpecs(vec![Tag("snippetA".to_string())]),
-        "snippetA content\n",
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          snippetA content
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+        ",
       ),
       (
         snippet_file(),
@@ -395,7 +437,16 @@ mod test {
           Tag("snippetA".to_string()),
           Tag("snippetB".to_string()),
         ]),
-        "snippetA content\nsnippetB content\n",
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          snippetA content
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          snippetB content
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // asciidoctor circumfix comments 1
@@ -408,7 +459,11 @@ mod test {
         "}),
         "snippet",
         TagSpecs(vec![Tag("snippet".to_string())]),
-        "  <snippet>content</snippet>\n",
+        "
+          asciidorkinclude::[false]
+            <snippet>content</snippet>
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // asciidoctor circumfix comments 2
@@ -419,7 +474,11 @@ mod test {
         "}),
         "snippet",
         TagSpecs(vec![Tag("snippet".to_string())]),
-        "let s = SS.empty;;\n",
+        "
+          asciidorkinclude::[false]
+          let s = SS.empty;;
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // asciidoctor circumfix comments 3
@@ -435,7 +494,11 @@ mod test {
         "}),
         "snippet",
         TagSpecs(vec![Tag("snippet".to_string())]),
-        "    <p>Welcome to the club.</p>\n",
+        "
+          asciidorkinclude::[false]
+              <p>Welcome to the club.</p>
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // asciidoctor CLRF test
@@ -448,38 +511,64 @@ mod test {
         "}),
         "include-me",
         TagSpecs(vec![Tag("include-me".to_string())]),
-        "included line\r\n",
+        "
+          asciidorkinclude::[false]
+          included line\r
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // asciidoctor no trailing newline test
         file_from("not included\ntag::include-me[]\nincluded\nend::include-me[]"),
         "include-me",
         TagSpecs(vec![Tag("include-me".to_string())]),
-        "included\n",
+        "
+          asciidorkinclude::[false]
+          included
+          asciidorkinclude::[false]
+        ",
       ),
       (
         snippet_file(),
         "snippet",
         TagSpecs(vec![Tag("snippet".to_string())]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           snippetA content
+          asciidorkinclude::[false]
 
           snippet content
 
+          asciidorkinclude::[false]
           snippetB content
-        "},
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+        ",
       ),
       (
         ruby_file_wrapped(),
         "all;!bark",
         TagSpecs(vec![TagExclNested("all".to_string(), "bark".to_string())]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         ruby_file_wrapped(),
@@ -488,13 +577,25 @@ mod test {
           AllNonTagDirectiveLines,
           AllLinesExcl("bark".to_string()),
         ]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         ruby_file_wrapped(),
@@ -503,81 +604,127 @@ mod test {
           AllNonTagDirectiveLines,
           AllLinesExcl("init".to_string()),
         ]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
           class Dog
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
 
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           else
           'woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         simple_file(),
         "**;!*",
         TagSpecs(vec![AllNonTagDirectiveLines, AllUntaggedRegions]),
-        indoc! {"
+        "
           outside
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           outside
-        "},
+        ",
       ),
       (
         simple_file(),
         "!*",
         TagSpecs(vec![AllUntaggedRegions]),
-        indoc! {"
+        "
           outside
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           outside
-        "},
+        ",
       ),
       (
         ruby_file(),
         "**;bark-beagle;bark-all",
         TagSpecs(vec![AllNonTagDirectiveLines]),
-        indoc! {"
+        "
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           else
           'woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+        ",
       ),
       (
         ruby_file(),
         "!**;!init",
         TagSpecs(vec![AllTaggedExcl("init".to_string())]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           else
           'woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         ruby_file(),
         "!bark",
         TagSpecs(vec![AllLinesExcl("bark".to_string())]),
-        indoc! {"
+        "
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
-        "},
+        ",
       ),
       (
         ruby_file(),
@@ -586,10 +733,20 @@ mod test {
           AllLinesExcl("bark".to_string()),
           AllLinesExcl("init".to_string()),
         ]),
-        indoc! {"
+        "
           class Dog
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
-        "},
+        ",
       ),
       (
         ruby_file(),
@@ -598,18 +755,28 @@ mod test {
           AllNonTagDirectiveLines,
           AllLinesExcl("bark-other".to_string()),
         ]),
-        indoc! {"
+        "
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+        ",
       ),
       (
         // "selects lines between tags when tags is wildcard"
@@ -624,30 +791,46 @@ mod test {
         "}),
         "*",
         TagSpecs(vec![AllTaggedRegions]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
           a content
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           b content
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         ruby_file_wrapped(),
         "*",
         TagSpecs(vec![AllTaggedRegions]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
 
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           else
           'woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // include directive selects lines inside all tags except tag which is
@@ -655,18 +838,30 @@ mod test {
         ruby_file_wrapped(),
         "*;!init",
         TagSpecs(vec![AllTaggedExcl("init".to_string())]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
           class Dog
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
 
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           else
           'woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // include directive skips all tagged regions except ones re-enabled
@@ -674,13 +869,23 @@ mod test {
         ruby_file(),
         "!*;init",
         TagSpecs(vec![AllUntaggedIncl("init".to_string())]),
-        indoc! {"
+        "
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
-        "},
+        ",
       ),
       (
         // include directive skips all tagged regions except ones re-enabled
@@ -691,13 +896,23 @@ mod test {
           AllNonTagDirectiveLines,
           AllUntaggedIncl("init".to_string()),
         ]),
-        indoc! {"
+        "
           class Dog
+          asciidorkinclude::[false]
           def initialize breed
           @breed = breed
           end
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
-        "},
+        ",
       ),
       (
         // include directive includes lines inside tag except for lines
@@ -705,7 +920,20 @@ mod test {
         ruby_file(),
         "bark;!*",
         TagSpecs(vec![TagExclAllNested("bark".to_string())]),
-        "def bark\nend\n",
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          def bark
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          end
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // include directive includes lines inside tag except for lines
@@ -713,7 +941,20 @@ mod test {
         ruby_file(),
         "!**;bark;!*",
         TagSpecs(vec![NoLines, TagExclAllNested("bark".to_string())]),
-        "def bark\nend\n",
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          def bark
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          end
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // include directive selects lines inside tag except for lines inside
@@ -722,7 +963,20 @@ mod test {
         ruby_file(),
         "!**;!*;bark",
         TagSpecs(vec![NoLines, TagExclAllNested("bark".to_string())]),
-        "def bark\nend\n",
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          def bark
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          end
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // include directive does not select lines inside tag that
@@ -730,7 +984,20 @@ mod test {
         ruby_file(),
         "!*;init;!init",
         TagSpecs(vec![AllUntaggedRegions]),
-        "class Dog\nend\n",
+        "
+          class Dog
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          end
+        ",
       ),
       (
         // include directive only selects lines inside specified tag,
@@ -738,15 +1005,25 @@ mod test {
         ruby_file(),
         "!**;bark",
         TagSpecs(vec![NoLines, Tag("bark".to_string())]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           else
           'woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
       (
         // include directive selects lines inside specified tag
@@ -757,13 +1034,23 @@ mod test {
           "bark".to_string(),
           "bark-other".to_string(),
         )]),
-        indoc! {"
+        "
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           def bark
+          asciidorkinclude::[false]
           if @breed == 'beagle'
           'woof woof woof woof woof'
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
+          asciidorkinclude::[false]
           end
+          asciidorkinclude::[false]
           end
-        "},
+          asciidorkinclude::[false]
+        ",
       ),
     ];
 
