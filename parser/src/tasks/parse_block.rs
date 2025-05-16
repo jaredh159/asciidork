@@ -158,6 +158,7 @@ impl<'arena> Parser<'arena> {
       if let Some(final_loc) = lines.discard_leading_comment_lines() {
         end_loc = final_loc;
       }
+      lines.discard_leading_empty_lines();
       if lines.is_empty() {
         return Some(Block {
           meta: ChunkMeta::empty(start_loc, self.bump),

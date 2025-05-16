@@ -456,3 +456,21 @@ class Dog
 end
 #end::all[]
 ";
+
+assert_html!(
+  issue_75,
+  resolving: bytes! {"
+    // tag::body[]
+    // <-- this followed by empty line 2 below caused panic
+    // tag::boilerplate[]
+
+    // end::boilerplate[]
+    // end::body[]
+  "},
+  adoc! {r#"
+    foo
+
+    include::some_file.adoc[tags=body]
+  "#},
+   r#"<div class="paragraph"><p>foo</p></div>"#
+);
