@@ -22,6 +22,7 @@ pub struct ParseResult<'arena> {
   pub warnings: Vec<Diagnostic>,
   #[cfg(feature = "attr_ref_observation")]
   pub attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
+  pub(super) lexer: Lexer<'arena>,
 }
 
 impl<'arena> Parser<'arena> {
@@ -267,6 +268,7 @@ impl<'arena> Parser<'arena> {
       warnings: self.errors.into_inner(),
       #[cfg(feature = "attr_ref_observation")]
       attr_ref_observer: self.attr_ref_observer,
+      lexer: self.lexer
     })
   }
 
@@ -418,6 +420,15 @@ impl Debug for ParseResult<'_> {
       .field("document", &self.document)
       .field("warnings", &self.warnings)
       .finish()
+  }
+}
+
+impl<'arena> ParseResult<'arena> {
+  pub fn line_number_with_offset(&self,  loc: SourceLocation) -> (u32, u32) {
+    self.lexer.line_number_with_offset(loc)
+  }
+  pub fn source_file_at(&self, idx: u16) -> &SourceFile {
+    self.lexer.source_file_at(idx)
   }
 }
 
