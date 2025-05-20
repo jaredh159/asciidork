@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::fmt::{Debug, Formatter};
 use std::{cell::RefCell, rc::Rc};
 
@@ -268,7 +269,7 @@ impl<'arena> Parser<'arena> {
       warnings: self.errors.into_inner(),
       #[cfg(feature = "attr_ref_observation")]
       attr_ref_observer: self.attr_ref_observer,
-      lexer: self.lexer
+      lexer: self.lexer,
     })
   }
 
@@ -424,11 +425,18 @@ impl Debug for ParseResult<'_> {
 }
 
 impl<'arena> ParseResult<'arena> {
-  pub fn line_number_with_offset(&self,  loc: SourceLocation) -> (u32, u32) {
+  pub fn line_number_with_offset(&self, loc: SourceLocation) -> (u32, u32) {
     self.lexer.line_number_with_offset(loc)
   }
+
   pub fn source_file_at(&self, idx: u16) -> &SourceFile {
     self.lexer.source_file_at(idx)
+  }
+
+  pub fn take_attr_ref_observer<T: 'static>(&mut self) -> Option<T> {
+    let observer = self.attr_ref_observer.take()?;
+    let observer = observer as Box<dyn Any>;
+    Some(*observer.downcast::<T>().unwrap())
   }
 }
 
