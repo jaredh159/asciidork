@@ -57,7 +57,7 @@ fn test_line_followed_by_comment_is_trimmed() {
 }
 
 #[test]
-fn test_parse_comment_style_block() {
+fn test_parse_comment_style_open_block() {
   assert_block!(
     adoc! {"
       [comment]
