@@ -1,4 +1,4 @@
-  #[cfg(feature = "attr_ref_observation")]
+#[cfg(feature = "attr_ref_observation")]
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 use std::{cell::RefCell, rc::Rc};
