@@ -222,7 +222,7 @@ impl<'arena> Parser<'arena> {
           mut warnings,
           #[cfg(feature = "attr_ref_observation")]
           attr_ref_observer,
-          lexer: _
+          ..
         }) => {
           if !warnings.is_empty() {
             self.lexer.reline_diagnostics(loc.start, &mut warnings);

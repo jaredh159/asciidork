@@ -1,3 +1,4 @@
+  #[cfg(feature = "attr_ref_observation")]
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 use std::{cell::RefCell, rc::Rc};
@@ -23,7 +24,7 @@ pub struct ParseResult<'arena> {
   pub warnings: Vec<Diagnostic>,
   #[cfg(feature = "attr_ref_observation")]
   pub attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
-  pub(super) lexer: Lexer<'arena>,
+  lexer: Lexer<'arena>,
 }
 
 impl<'arena> Parser<'arena> {
@@ -433,6 +434,7 @@ impl<'arena> ParseResult<'arena> {
     self.lexer.source_file_at(idx)
   }
 
+  #[cfg(feature = "attr_ref_observation")]
   pub fn take_attr_ref_observer<T: 'static>(&mut self) -> Option<T> {
     let observer = self.attr_ref_observer.take()?;
     let observer = observer as Box<dyn Any>;
