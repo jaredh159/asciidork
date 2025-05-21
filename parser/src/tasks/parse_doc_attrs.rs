@@ -42,13 +42,15 @@ impl<'arena> Parser<'arena> {
     };
 
     let line = lines.consume_current().unwrap();
+    let mut _name_loc = line.first_loc().unwrap().incr_start();
 
-    let mut key = captures.get(1).unwrap().as_str();
-    let is_negated = if key.starts_with('!') {
-      key = &key[1..];
+    let mut name = captures.get(1).unwrap().as_str();
+    let is_negated = if name.starts_with('!') {
+      _name_loc = _name_loc.incr();
+      name = &name[1..];
       true
-    } else if key.ends_with('!') {
-      key = &key[..key.len() - 1];
+    } else if name.ends_with('!') {
+      name = &name[..name.len() - 1];
       true
     } else {
       false
@@ -56,11 +58,7 @@ impl<'arena> Parser<'arena> {
 
     let attr = if let Some(re_match) = captures.get(2) {
       if is_negated {
-        let loc = line.first_loc().unwrap();
-        self.err_at(
-          "Cannot unset attr with `!` AND provide value",
-          loc.incr_start().adding_to_end(re_match.end() as u32),
-        )?;
+        self.err_line("Cannot unset attr with `!` AND provide value", &line)?;
       }
 
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
@@ -70,11 +68,16 @@ impl<'arena> Parser<'arena> {
       AttrValue::Bool(!is_negated)
     };
 
-    if key == "leveloffset" {
+    if name == "leveloffset" {
       Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &attr);
     }
 
-    Ok(Some((key.to_string(), attr, line.last_loc().unwrap())))
+    #[cfg(feature = "attr_ref_observation")]
+    if let Some(ref mut observer) = self.attr_ref_observer.as_mut() {
+      observer.attr_defined(name, &attr, _name_loc.adding_to_end(name.len() as u32));
+    }
+
+    Ok(Some((name.to_string(), attr, line.last_loc().unwrap())))
   }
 
   pub(crate) fn replace_attr_vals<'h>(&self, haystack: &'h str) -> Cow<'h, str> {
