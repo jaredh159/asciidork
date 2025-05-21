@@ -12,7 +12,7 @@ impl Parser<'_> {
       return Ok(());
     }
     for (ref_target, ref_loc) in self.ctx.xrefs.borrow().iter() {
-      let Some((idx, id)) = self.target_data(ref_target) else {
+      let Some((idx, id)) = self.target_data(ref_target, ref_loc.include_depth) else {
         // couldn't find source idx
         self.invalid_xref(ref_target, *ref_loc)?;
         continue;
@@ -41,11 +41,11 @@ impl Parser<'_> {
     )
   }
 
-  fn target_data<'a>(&self, target: &'a str) -> Option<(u16, &'a str)> {
+  fn target_data<'a>(&self, target: &'a str, loc_depth: u16) -> Option<(u16, &'a str)> {
     if target == "#" {
-      Some((0, "__self__"))
+      Some((loc_depth, "__self__"))
     } else if target.starts_with('#') {
-      Some((0, target))
+      Some((loc_depth, target))
     } else if let Some(idx) = target.find('#') {
       let id = &target[idx + 1..];
       let prefix = &target[..idx];
@@ -55,14 +55,14 @@ impl Parser<'_> {
           .source_idx_of_xref_target(prefix)
           .map(|src_idx| (src_idx, id))
       } else {
-        Some((0, id))
+        Some((loc_depth, id))
       }
     } else if file::has_adoc_ext(target)
       && self.lexer.source_file_at(0).file_name().ends_with(target)
     {
       Some((0, "__self__"))
     } else {
-      Some((0, target))
+      Some((loc_depth, target))
     }
   }
 

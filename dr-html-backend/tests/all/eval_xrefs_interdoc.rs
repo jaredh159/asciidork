@@ -195,6 +195,21 @@ assert_html!(
 );
 
 assert_html!(
+  issue_72_self_xrefs_from_included_files,
+  resolving: bytes! {"
+    == Section Baz
+
+    See <<_section_baz, The Section about baz>>
+  "},
+  adoc! {r#"
+    = Title
+
+    include::include.adoc[]
+  "#},
+  contains: r##"See <a href="#_section_baz">The Section about baz</a></p>"##
+);
+
+assert_html!(
   asciidoctor_interdoc_xrefs_tests_include_2,
   resolving: b"info [#about]#tigers#.",
   adoc! {r#"

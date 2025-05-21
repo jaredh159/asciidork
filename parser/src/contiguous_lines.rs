@@ -234,6 +234,12 @@ impl<'arena> ContiguousLines<'arena> {
     }
   }
 
+  pub fn discard_leading_empty_lines(&mut self) {
+    while self.current().is_some_and(|l| l.is_empty()) {
+      self.consume_current();
+    }
+  }
+
   pub fn discard_until(&mut self, predicate: impl Fn(&Line<'arena>) -> bool) -> bool {
     while let Some(line) = self.first() {
       if predicate(line) {

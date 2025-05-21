@@ -158,6 +158,7 @@ impl<'arena> Parser<'arena> {
       if let Some(final_loc) = lines.discard_leading_comment_lines() {
         end_loc = final_loc;
       }
+      lines.discard_leading_empty_lines();
       if lines.is_empty() {
         return Some(Block {
           meta: ChunkMeta::empty(start_loc, self.bump),
@@ -216,7 +217,7 @@ impl<'arena> Parser<'arena> {
       if context == Context::Comment {
         let start_loc = lines.first_loc().unwrap_or(open_token.loc);
         let mut end_loc = lines.last_loc().unwrap_or(open_token.loc);
-        lines.discard_until(|l| l.is_delimiter_kind(DelimiterKind::Comment));
+        lines.discard_until(|l| l.is_delimiter(delimiter));
         end_loc = lines.first_loc().unwrap_or(end_loc);
         self.restore_lines(lines);
         if start_loc.include_depth != end_loc.include_depth {
