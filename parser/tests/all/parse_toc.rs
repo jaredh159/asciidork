@@ -232,6 +232,22 @@ assert_error!(
 );
 
 assert_error!(
+  err_no_macro_include_issue_83,
+  resolving: b":toc: macro\n",
+  adoc! {"
+    include::attrs.adoc[]
+
+    == sect 1
+  "},
+  error! {"
+     --> attrs.adoc:1:1
+      |
+    1 | :toc: macro
+      | ^^^^^^^^^^^ Table of Contents set to `macro` but macro (`toc::[]`) not found
+  "}
+);
+
+assert_error!(
   err_macro_no_toc,
   adoc! {"
     :!toc:

@@ -6,10 +6,11 @@ impl<'arena> Parser<'arena> {
   pub(super) fn parse_doc_attrs(
     &mut self,
     lines: &mut ContiguousLines<'arena>,
+    in_header: bool,
   ) -> Result<Option<SourceLocation>> {
     lines.discard_leading_comment_lines();
     let mut last_end: Option<SourceLocation> = None;
-    while let Some((key, value, end)) = self.parse_doc_attr(lines)? {
+    while let Some((key, value, end)) = self.parse_doc_attr(lines, in_header)? {
       last_end = Some(end);
       if key == "doctype" {
         if let AttrValue::String(s) = &value {
@@ -31,6 +32,7 @@ impl<'arena> Parser<'arena> {
   pub(super) fn parse_doc_attr(
     &mut self,
     lines: &mut ContiguousLines<'arena>,
+    in_header: bool,
   ) -> Result<Option<(String, AttrValue, SourceLocation)>> {
     let Some(line) = lines.current() else {
       return Ok(None);
@@ -42,11 +44,11 @@ impl<'arena> Parser<'arena> {
     };
 
     let line = lines.consume_current().unwrap();
-    let mut _name_loc = line.first_loc().unwrap().incr_start();
+    let mut name_loc = line.first_loc().unwrap().incr_start();
 
     let mut name = captures.get(1).unwrap().as_str();
     let is_negated = if name.starts_with('!') {
-      _name_loc = _name_loc.incr();
+      name_loc = name_loc.incr();
       name = &name[1..];
       true
     } else if name.ends_with('!') {
@@ -74,9 +76,10 @@ impl<'arena> Parser<'arena> {
 
     #[cfg(feature = "attr_ref_observation")]
     if let Some(ref mut observer) = self.attr_ref_observer.as_mut() {
-      observer.attr_defined(name, &attr, _name_loc.adding_to_end(name.len() as u32));
+      observer.attr_defined(name, &attr, name_loc.adding_to_end(name.len() as u32));
     }
 
+    self.attr_locs.push((name_loc, in_header));
     Ok(Some((name.to_string(), attr, line.last_loc().unwrap())))
   }
 
@@ -177,7 +180,7 @@ mod tests {
         .unwrap();
       parser.document.meta.insert_doc_attr("baz", "qux").unwrap();
       let mut block = parser.read_lines().unwrap().unwrap();
-      let (key, value, _) = parser.parse_doc_attr(&mut block).unwrap().unwrap();
+      let (key, value, _) = parser.parse_doc_attr(&mut block, false).unwrap().unwrap();
       assert_eq!(&key, expected_key);
       assert_eq!(value, expected_val);
     }

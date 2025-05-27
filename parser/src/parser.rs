@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::internal::*;
@@ -12,17 +12,10 @@ pub struct Parser<'arena> {
   pub(super) ctx: ParseContext<'arena>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) strict: bool, // todo: naming...
+  pub(super) attr_locs: Vec<(SourceLocation, bool)>,
   pub(super) include_resolver: Option<Box<dyn IncludeResolver>>,
   #[cfg(feature = "attr_ref_observation")]
   pub(super) attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
-}
-
-pub struct ParseResult<'arena> {
-  pub document: Document<'arena>,
-  pub warnings: Vec<Diagnostic>,
-  #[cfg(feature = "attr_ref_observation")]
-  pub attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
-  lexer: Lexer<'arena>,
 }
 
 impl<'arena> Parser<'arena> {
@@ -45,6 +38,7 @@ impl<'arena> Parser<'arena> {
       strict: true,
       include_resolver: None,
       lexer,
+      attr_locs: Vec::with_capacity(16),
       #[cfg(feature = "attr_ref_observation")]
       attr_ref_observer: None,
     };
@@ -260,16 +254,8 @@ impl<'arena> Parser<'arena> {
 
     // so the backend can see them replayed in decl order
     self.document.meta.clear_doc_attrs();
-
     self.diagnose_document()?;
-
-    Ok(ParseResult {
-      document: self.document,
-      warnings: self.errors.into_inner(),
-      #[cfg(feature = "attr_ref_observation")]
-      attr_ref_observer: self.attr_ref_observer,
-      lexer: self.lexer,
-    })
+    Ok(self.into())
   }
 
   pub(crate) fn parse_sectioned(&mut self) -> Result<Sectioned<'arena>> {
@@ -403,32 +389,6 @@ impl SourceFile {
 impl From<Diagnostic> for Vec<Diagnostic> {
   fn from(diagnostic: Diagnostic) -> Self {
     vec![diagnostic]
-  }
-}
-
-impl Debug for ParseResult<'_> {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("ParseResult")
-      .field("document", &self.document)
-      .field("warnings", &self.warnings)
-      .finish()
-  }
-}
-
-impl ParseResult<'_> {
-  pub fn line_number_with_offset(&self, loc: SourceLocation) -> (u32, u32) {
-    self.lexer.line_number_with_offset(loc)
-  }
-
-  pub fn source_file_at(&self, idx: u16) -> &SourceFile {
-    self.lexer.source_file_at(idx)
-  }
-
-  #[cfg(feature = "attr_ref_observation")]
-  pub fn take_attr_ref_observer<T: 'static>(&mut self) -> Option<T> {
-    let observer = self.attr_ref_observer.take()?;
-    let observer = observer as Box<dyn std::any::Any>;
-    Some(*observer.downcast::<T>().unwrap())
   }
 }
 
