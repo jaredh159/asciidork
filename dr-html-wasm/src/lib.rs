@@ -3,7 +3,7 @@ mod utils;
 use asciidork_core::JobSettings;
 use asciidork_dr_html_backend as backend;
 use asciidork_dr_html_backend::{AsciidoctorHtml, Backend};
-use asciidork_parser::{parser::ParseResult, prelude::*};
+use asciidork_parser::prelude::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

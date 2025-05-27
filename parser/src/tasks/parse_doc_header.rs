@@ -181,7 +181,7 @@ impl<'arena> Parser<'arena> {
     lines: &mut ContiguousLines<'arena>,
     header: &mut DocHeader,
   ) -> Result<()> {
-    if let Some(loc) = self.parse_doc_attrs(lines)? {
+    if let Some(loc) = self.parse_doc_attrs(lines, true)? {
       header.loc.end = loc.end;
     }
     Ok(())

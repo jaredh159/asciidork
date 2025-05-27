@@ -9,6 +9,7 @@ mod lexer;
 mod line;
 mod list_context;
 mod parse_context;
+mod parse_result;
 pub mod parser;
 pub mod regx;
 mod substitutions;
@@ -24,6 +25,7 @@ pub mod includes {
 
 pub mod prelude {
   pub use crate::diagnostic::{Diagnostic, DiagnosticColor};
+  pub use crate::parse_result::ParseResult;
   pub use crate::parser::{Parser, SourceFile};
   pub use asciidork_core::Path;
   pub use bumpalo::Bump;
@@ -43,6 +45,7 @@ mod internal {
   pub use crate::line::*;
   pub use crate::list_context::*;
   pub use crate::parse_context::*;
+  pub use crate::parse_result::*;
   pub use crate::parser::*;
   pub use crate::regx;
   pub use crate::substitutions::*;

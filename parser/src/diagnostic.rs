@@ -61,28 +61,19 @@ impl Parser<'_> {
     message: impl Into<String>,
   ) -> Result<()> {
     let key: &String = &key.into();
-    for (idx, line) in self
-      .lexer
-      .raw_lines()
-      .enumerate()
-      .skip_while(|(_, l)| l.is_empty())
-    {
-      if line.is_empty() {
-        break; // must have left doc header
-      }
-      if line.starts_with(key) {
-        return self.handle_err(Diagnostic {
-          line_num: idx as u32 + 1,
-          line: line.to_string(),
-          message: message.into(),
-          underline_start: 0,
-          underline_width: line.len() as u32,
-          source_file: self.lexer.source_file().clone(),
-        });
-      }
-    }
-    debug_assert!(false, "doc attr not found");
-    Ok(())
+    let loc = self
+      .attr_locs
+      .iter()
+      .filter_map(|(loc, header)| if *header { Some(*loc) } else { None })
+      .map(|loc| (loc, self.lexer.line_of(loc)))
+      .find(|(_, line)| line.starts_with(key))
+      .map(|(loc, _)| loc);
+
+    let Some(loc) = loc else {
+      debug_assert!(false, "doc attr not found");
+      return Ok(());
+    };
+    self.err_line_of(message, loc)
   }
 
   pub(crate) fn err_at_pattern(
