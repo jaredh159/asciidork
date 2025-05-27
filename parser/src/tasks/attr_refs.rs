@@ -3,6 +3,7 @@ use std::any::Any;
 use crate::internal::*;
 
 pub trait AttrRefObserver: Any {
+  fn attr_defined(&mut self, name: &str, value: &AttrValue, name_loc: SourceLocation);
   fn attr_ref_replaced(&mut self, attr_name: &str, loc: SourceLocation);
   fn attr_ref_missing(&mut self, attr_name: &str, loc: SourceLocation);
 }
