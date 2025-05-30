@@ -11,6 +11,7 @@ pub struct ListItem<'arena> {
   pub blocks: BumpVec<'arena, Block<'arena>>,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ListItemTypeMeta<'arena> {
   Checklist(bool, SourceString<'arena>),

@@ -162,7 +162,6 @@ impl Path {
     path
   }
 
-  #[expect(clippy::missing_const_for_fn, reason = "false positive")]
   pub fn is_uri(&self) -> bool {
     matches!(self.components.first(), Some(Component::UriScheme(_)))
   }

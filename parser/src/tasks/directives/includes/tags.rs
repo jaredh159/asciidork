@@ -292,7 +292,7 @@ impl TagStack {
     self.0.pop();
   }
 
-  fn is_empty(&self) -> bool {
+  const fn is_empty(&self) -> bool {
     self.0.is_empty()
   }
 
@@ -300,7 +300,6 @@ impl TagStack {
     self.0.last().map(|(t, _)| t == tag).unwrap_or(false)
   }
 
-  #[expect(clippy::missing_const_for_fn, reason = "false positive")]
   fn last(&self) -> Option<&(String, usize)> {
     self.0.last()
   }
