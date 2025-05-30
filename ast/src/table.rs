@@ -18,6 +18,7 @@ pub enum VerticalAlignment {
   Bottom,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CellContent<'arena> {
   AsciiDoc(Document<'arena>),

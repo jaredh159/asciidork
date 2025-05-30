@@ -65,7 +65,7 @@ impl<'arena> Parser<'arena> {
 
       let joined = self.join_wrapped_value(re_match.as_str(), lines);
       let value = self.replace_attr_vals(&joined);
-      AttrValue::String(value.to_string())
+      AttrValue::String(value.trim().to_string())
     } else {
       AttrValue::Bool(!is_negated)
     };
@@ -155,6 +155,9 @@ mod tests {
   fn test_parse_doc_attr() {
     let cases = vec![
       (":foo: bar", ("foo", "bar".into())),
+      (":foo:  bar", ("foo", "bar".into())),
+      (":foo: bar ", ("foo", "bar".into())),
+      (":foo:  bar ", ("foo", "bar".into())),
       (":foo:", ("foo", true.into())),
       (":!foo:", ("foo", false.into())),
       (":foo!:", ("foo", false.into())),
