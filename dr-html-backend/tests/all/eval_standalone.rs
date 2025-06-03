@@ -146,6 +146,35 @@ assert_standalone_body!(
   "#}
 );
 
+assert_standalone_body!(
+  max_width_honored,
+  adoc! {r#"
+    = Document Title
+    :max-width: 3 furlongs
+
+    hifootnote:[bye]
+  "#},
+  html! {r##"
+    <body class="article">
+      <div id="header" style="max-width: 3 furlongs;">
+        <h1>Document Title</h1>
+      </div>
+      <div id="content" style="max-width: 3 furlongs;">
+        <div class="paragraph">
+          <p>hi<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup></p>
+        </div>
+      </div>
+      <div id="footnotes" style="max-width: 3 furlongs;">
+        <hr>
+        <div class="footnote" id="_footnotedef_1">
+          <a href="#_footnoteref_1">1</a>. bye
+        </div>
+      </div>
+      <div id="footer" style="max-width: 3 furlongs;"></div>
+    </body>
+  "##}
+);
+
 test_non_embedded_contains!(
   webfonts_css_default,
   adoc! {"
