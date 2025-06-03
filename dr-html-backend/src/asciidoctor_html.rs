@@ -91,10 +91,11 @@ impl Backend for AsciidoctorHtml {
     self.render_title(document, &document.meta);
     self.render_styles(&document.meta);
 
-    self.push([
-      r#"</head><body class=""#,
-      document.meta.get_doctype().to_str(),
-    ]);
+    self.push_str("</head><body");
+    if let Some(custom_id) = document.meta.str("css-signature") {
+      self.push([r#" id=""#, custom_id, "\""]);
+    }
+    self.push([r#" class=""#, document.meta.get_doctype().to_str()]);
     match document.toc.as_ref().map(|toc| &toc.position) {
       Some(TocPosition::Left) => self.push_str(" toc2 toc-left"),
       Some(TocPosition::Right) => self.push_str(" toc2 toc-right"),

@@ -129,6 +129,23 @@ assert_standalone_body!(
   "#}
 );
 
+assert_standalone_body!(
+  css_signature_honored,
+  adoc! {r#"
+    = Document Title
+    :css-signature: custom-id
+    :nofooter:
+  "#},
+  html! {r#"
+    <body id="custom-id" class="article">
+      <div id="header">
+        <h1>Document Title</h1>
+      </div>
+      <div id="content"></div>
+    </body>
+  "#}
+);
+
 test_non_embedded_contains!(
   webfonts_css_default,
   adoc! {"
