@@ -89,7 +89,10 @@ impl Backend for AsciidoctorHtml {
     self.render_favicon(&document.meta);
     self.render_authors(document.meta.authors());
     self.render_title(document, &document.meta);
-    // TODO: stylesheets
+
+    self.push_str(r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700" />"#);
+    self.push(["<style>", crate::css::DEFAULT, "</style>"]);
+
     self.push([
       r#"</head><body class=""#,
       document.meta.get_doctype().to_str(),
