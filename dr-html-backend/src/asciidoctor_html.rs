@@ -89,9 +89,7 @@ impl Backend for AsciidoctorHtml {
     self.render_favicon(&document.meta);
     self.render_authors(document.meta.authors());
     self.render_title(document, &document.meta);
-
-    self.push_str(r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700" />"#);
-    self.push(["<style>", crate::css::DEFAULT, "</style>"]);
+    self.render_styles(&document.meta);
 
     self.push([
       r#"</head><body class=""#,
@@ -1630,6 +1628,26 @@ impl AsciidoctorHtml {
       self.push_str("Untitled");
     }
     self.push_str(r#"</title>"#);
+  }
+
+  fn render_styles(&mut self, meta: &DocumentMeta) {
+    if meta.str("stylesheet") == Some("") {
+      let family = match meta.str("webfonts") {
+        None | Some("") => "Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700",
+        Some(custom) => custom,
+      };
+      self.push([
+        r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family="#,
+        family,
+        "\" />",
+      ]);
+    }
+
+    if meta.str("stylesheet") == Some("") {
+      self.push(["<style>", crate::css::DEFAULT, "</style>"]);
+    } else if let Some(css) = meta.string("_asciidork_asciidoctor_resolved_css") {
+      self.push(["<style>", &css, "</style>"]);
+    }
   }
 
   fn exit_attributed(

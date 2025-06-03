@@ -130,6 +130,26 @@ assert_standalone_body!(
 );
 
 test_non_embedded_contains!(
+  webfonts_css_default,
+  adoc! {"
+    hello world
+  "},
+  [
+    r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700" />"#
+  ]
+);
+
+test_non_embedded_contains!(
+  webfonts_css_override,
+  adoc! {"
+    :webfonts: custom
+
+    hello world
+  "},
+  [r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=custom" />"#]
+);
+
+test_non_embedded_contains!(
   exceptions_before_doc_title,
   adoc! {"
     :toc: left

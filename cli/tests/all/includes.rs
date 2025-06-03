@@ -1,11 +1,10 @@
-use std::process::{Child, Command, Stdio};
-
+use crate::helpers::*;
 use test_utils::*;
 
 #[cfg(unix)]
 #[test]
 fn test_cli_app_single_include() {
-  let stdout = run_expecting_success(
+  let stdout = run_file(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/a.adoc",
   );
@@ -64,7 +63,7 @@ fn test_cli_include_case_fail_strict() {
 #[cfg(unix)]
 #[test]
 fn test_relative_includes() {
-  let stdout = run_expecting_success(
+  let stdout = run_file(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/parent-include.adoc",
   );
@@ -81,10 +80,11 @@ fn test_relative_includes() {
   );
 }
 
-#[cfg(unix)]
+// run on linux (CI) only for speed in local dev
+#[cfg(target_os = "linux")]
 #[test]
 fn test_remote_relative_includes() {
-  let stdout = run_expecting_success(
+  let stdout = run_file(
     &[
       "--embedded",
       "--strict",
@@ -111,7 +111,7 @@ fn test_remote_relative_includes() {
 #[cfg(unix)]
 #[test]
 fn test_relative_nested_includes() {
-  let stdout = run_expecting_success(
+  let stdout = run_file(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/relative-include.adoc",
   );
@@ -127,10 +127,11 @@ fn test_relative_nested_includes() {
   );
 }
 
-#[cfg(unix)]
+// run on linux (CI) only for speed in local dev
+#[cfg(target_os = "linux")]
 #[test]
 fn test_url_includes() {
-  let stdout = run_expecting_success(
+  let stdout = run_file(
     &[
       "--embedded",
       "--strict",
@@ -153,7 +154,7 @@ fn test_url_includes() {
 #[cfg(unix)]
 #[test]
 fn test_cli_app_doc_attrs() {
-  let stdout = run_expecting_success(
+  let stdout = run_file(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/attrs.adoc",
   );
@@ -182,7 +183,7 @@ fn test_cli_app_doc_attrs() {
 
 #[test]
 fn test_cli_runs_on_windows() {
-  let stdout = run_expecting_success(
+  let stdout = run_file(
     &["--embedded", "--strict", "--safe-mode", "unsafe"],
     "tests/all/fixtures/gen/gchild-include.adoc",
   );
@@ -202,54 +203,6 @@ fn test_cli_runs_on_windows() {
 
 #[test]
 fn test_cli_doctype() {
-  let stdout = run_expecting_success(&[], "tests/all/fixtures/book.adoc");
+  let stdout = run_file(&[], "tests/all/fixtures/book.adoc");
   assert!(stdout.contains("doctype: book"));
-}
-
-fn run_expecting_success(args: &[&str], input: &str) -> String {
-  let child = cmd(args, input);
-  let output = child.wait_with_output().unwrap();
-  let stdout = String::from_utf8_lossy(&output.stdout);
-
-  if !output.status.success() {
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    println!("{stderr}");
-    panic!("\nCommand failed: {:?}", output.status);
-  }
-
-  stdout.to_string()
-}
-
-fn run_expecting_err(args: &[&str], input: &str) -> String {
-  let child = cmd(args, input);
-  let output = child.wait_with_output().unwrap();
-  let stderr = String::from_utf8_lossy(&output.stderr);
-
-  if output.status.success() {
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    println!("{stdout}");
-    panic!("\nExpected error, but got none");
-  }
-
-  stderr.to_string()
-}
-
-fn cmd(args: &[&str], input: &str) -> Child {
-  Command::new("cargo")
-    .arg("run")
-    .args(["--quiet", "--"])
-    .args(["--input", input])
-    .args(args)
-    .stdin(Stdio::piped())
-    .stderr(Stdio::piped())
-    .stdout(Stdio::piped())
-    .spawn()
-    .unwrap()
-}
-
-fn cwd() -> String {
-  std::env::current_dir()
-    .unwrap()
-    .to_string_lossy()
-    .to_string()
 }

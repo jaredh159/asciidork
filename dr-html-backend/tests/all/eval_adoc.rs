@@ -795,7 +795,7 @@ fn test_head_opts() {
 }
 
 #[test]
-fn test_non_embedded() {
+fn test_full_doc() {
   let input = adoc! {r#"
     = *Document* _title_
     Beyonce Smith; J Z <jz@you.com>
