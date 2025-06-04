@@ -41,7 +41,7 @@ impl<'arena> Parser<'arena> {
     drop_line: &mut bool,
   ) -> Result<()> {
     if token.kind(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
-      match self.document.meta.get(token.attr_name()) {
+      match self.document.meta.get(&token.lowercase_attr_name()) {
         Some(AttrValue::String(attr_val)) => {
           #[cfg(feature = "attr_ref_observation")]
           if let Some(ref mut observer) = self.attr_ref_observer.as_mut() {

@@ -673,6 +673,8 @@ assert_html!(
   attr_ref_behavior,
   adoc! {r#"
     :attribute-missing: drop-line
+    :foo: bar
+    :Baz: qux
 
     foo bar
     whoops {missing}
@@ -683,6 +685,8 @@ assert_html!(
     foo bar
     whoops {missing}
     baz
+
+    {foo} {Foo} {Baz} {baz}
   "#},
   html! {r#"
     <div class="paragraph">
@@ -690,6 +694,9 @@ assert_html!(
     </div>
     <div class="paragraph">
       <p>foo bar whoops {missing} baz</p>
+    </div>
+    <div class="paragraph">
+      <p>bar bar qux qux</p>
     </div>
   "#}
 );

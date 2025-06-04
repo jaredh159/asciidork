@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 
 use crate::internal::*;
@@ -160,6 +161,15 @@ impl<'arena> Token<'arena> {
   pub fn attr_name(&self) -> &str {
     assert_eq!(self.kind, TokenKind::AttrRef);
     &self.lexeme[1..self.lexeme.len() - 1]
+  }
+
+  pub fn lowercase_attr_name(&self) -> Cow<str> {
+    let attr_name = self.attr_name();
+    if attr_name.chars().any(|c| c.is_uppercase()) {
+      Cow::Owned(attr_name.to_lowercase())
+    } else {
+      Cow::Borrowed(attr_name)
+    }
   }
 }
 

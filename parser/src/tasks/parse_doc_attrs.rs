@@ -80,7 +80,7 @@ impl<'arena> Parser<'arena> {
     }
 
     self.attr_locs.push((name_loc, in_header));
-    Ok(Some((name.to_string(), attr, line.last_loc().unwrap())))
+    Ok(Some((name.to_lowercase(), attr, line.last_loc().unwrap())))
   }
 
   pub(crate) fn replace_attr_vals<'h>(&self, haystack: &'h str) -> Cow<'h, str> {
