@@ -188,8 +188,17 @@ impl DocumentMeta {
     self.job_attrs.insert(key.into(), job_attr)
   }
 
-  pub fn clear_doc_attrs(&mut self) {
-    self.doc_attrs = Attrs::empty();
+  pub fn clear_declared_doc_attrs(&mut self) {
+    self.doc_attrs.retain(|k| [
+      "docyear",
+      "docdate",
+      "doctime",
+      "docdatetime",
+      "localyear",
+      "localdate",
+      "localtime",
+      "localdatetime",
+    ].contains(&k.as_str()));
   }
 
   pub fn set_doctype(&mut self, doctype: DocType) {

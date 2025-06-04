@@ -209,6 +209,21 @@ impl RemoveAttr for Attrs {
   }
 }
 
+pub(crate) trait RetainAttrs {
+  fn retain<F>(&mut self, f: F)
+  where
+    F: Fn(&String) -> bool;
+}
+
+impl RetainAttrs for Attrs {
+  fn retain<F>(&mut self, f: F)
+  where
+    F: Fn(&String) -> bool,
+  {
+    self.0.retain(|k, _v| f(k));
+  }
+}
+
 impl From<&str> for AttrValue {
   fn from(s: &str) -> Self {
     AttrValue::String(s.to_owned())

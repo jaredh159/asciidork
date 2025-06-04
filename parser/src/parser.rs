@@ -253,7 +253,7 @@ impl<'arena> Parser<'arena> {
     }
 
     // so the backend can see them replayed in decl order
-    self.document.meta.clear_doc_attrs();
+    self.document.meta.clear_declared_doc_attrs();
     self.diagnose_document()?;
     Ok(self.into())
   }
