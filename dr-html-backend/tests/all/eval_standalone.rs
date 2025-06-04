@@ -129,6 +129,72 @@ assert_standalone_body!(
   "#}
 );
 
+assert_standalone_body!(
+  css_signature_honored,
+  adoc! {r#"
+    = Document Title
+    :css-signature: custom-id
+    :nofooter:
+  "#},
+  html! {r#"
+    <body id="custom-id" class="article">
+      <div id="header">
+        <h1>Document Title</h1>
+      </div>
+      <div id="content"></div>
+    </body>
+  "#}
+);
+
+assert_standalone_body!(
+  max_width_honored,
+  adoc! {r#"
+    = Document Title
+    :max-width: 3 furlongs
+
+    hifootnote:[bye]
+  "#},
+  html! {r##"
+    <body class="article">
+      <div id="header" style="max-width: 3 furlongs;">
+        <h1>Document Title</h1>
+      </div>
+      <div id="content" style="max-width: 3 furlongs;">
+        <div class="paragraph">
+          <p>hi<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup></p>
+        </div>
+      </div>
+      <div id="footnotes" style="max-width: 3 furlongs;">
+        <hr>
+        <div class="footnote" id="_footnotedef_1">
+          <a href="#_footnoteref_1">1</a>. bye
+        </div>
+      </div>
+      <div id="footer" style="max-width: 3 furlongs;"></div>
+    </body>
+  "##}
+);
+
+test_non_embedded_contains!(
+  webfonts_css_default,
+  adoc! {"
+    hello world
+  "},
+  [
+    r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700" />"#
+  ]
+);
+
+test_non_embedded_contains!(
+  webfonts_css_override,
+  adoc! {"
+    :webfonts: custom
+
+    hello world
+  "},
+  [r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=custom" />"#]
+);
+
 test_non_embedded_contains!(
   exceptions_before_doc_title,
   adoc! {"

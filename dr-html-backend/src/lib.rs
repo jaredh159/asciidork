@@ -5,6 +5,7 @@ extern crate asciidork_backend as backend;
 extern crate asciidork_eval as eval;
 
 mod asciidoctor_html;
+pub mod css;
 mod htmlbuf;
 mod open_tag;
 pub mod section;

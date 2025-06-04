@@ -176,6 +176,10 @@ impl Attrs {
         ("two-semicolons", ";;"),
         ("cpp", "C++"),
         ("pp", "&#43;&#43;"),
+        ("copycss", ""),
+        ("stylesdir", "."),
+        ("stylesheet", ""),
+        ("webfonts", ""),
       ]
       .iter()
       .map(|(k, v)| (k.to_string(), (*v).into())),

@@ -303,6 +303,13 @@ lazy_static::lazy_static! {
       "revnumber",
       "revremark",
       "title",
+      "copycss",
+      "css-signature",
+      "linkcss",
+      "stylesdir",
+      "stylesheet",
+      "toc-class",
+      "webfonts",
     ])
   };
 }

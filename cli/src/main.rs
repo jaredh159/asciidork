@@ -14,6 +14,7 @@ use asciidork_dr_html_backend::*;
 use asciidork_parser::prelude::*;
 
 mod args;
+mod css;
 mod error;
 mod resolver;
 
@@ -84,9 +85,15 @@ fn run(
   let parse_time = parse_start.elapsed();
 
   match result {
-    Ok(parse_result) => match &args.format {
+    Ok(mut parse_result) => match &args.format {
       Output::DrHtml | Output::DrHtmlPrettier => {
         let convert_start = Instant::now();
+        if let Err(css_err) = css::resolve(&mut parse_result.document) {
+          writeln!(stderr, "ERROR: {}", css_err)?;
+          if args.strict {
+            std::process::exit(1);
+          }
+        }
         let mut html = convert(parse_result.document)?;
         let convert_time = convert_start.elapsed();
         let prettify = args.format == Output::DrHtmlPrettier;
@@ -214,4 +221,4 @@ impl DiagnosticColor for Colorizer {
   }
 }
 
-// hack: force cli version publish - 9feff5a0
+// hack: force cli version publish - 8b74f203

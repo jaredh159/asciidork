@@ -116,7 +116,11 @@ macro_rules! test_non_embedded_contains {
     #[test]
     fn $name() {
       let bump = &::asciidork_parser::prelude::Bump::new();
-      let parser = ::asciidork_parser::Parser::from_str($input, ::asciidork_parser::prelude::SourceFile::Tmp, bump);
+      let parser = ::asciidork_parser::Parser::from_str(
+        $input,
+        ::asciidork_parser::prelude::SourceFile::Tmp,
+        bump
+      );
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         &document,

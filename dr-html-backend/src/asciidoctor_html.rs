@@ -89,11 +89,13 @@ impl Backend for AsciidoctorHtml {
     self.render_favicon(&document.meta);
     self.render_authors(document.meta.authors());
     self.render_title(document, &document.meta);
-    // TODO: stylesheets
-    self.push([
-      r#"</head><body class=""#,
-      document.meta.get_doctype().to_str(),
-    ]);
+    self.render_styles(&document.meta);
+
+    self.push_str("</head><body");
+    if let Some(custom_id) = document.meta.str("css-signature") {
+      self.push([r#" id=""#, custom_id, "\""]);
+    }
+    self.push([r#" class=""#, document.meta.get_doctype().to_str()]);
     match document.toc.as_ref().map(|toc| &toc.position) {
       Some(TocPosition::Left) => self.push_str(" toc2 toc-left"),
       Some(TocPosition::Right) => self.push_str(" toc2 toc-right"),
@@ -104,9 +106,6 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_document(&mut self, _document: &Document) {
-    if !self.footnotes.borrow().is_empty() && !self.in_asciidoc_table_cell {
-      self.render_footnotes();
-    }
     if self.standalone() {
       self.push_str("</body></html>");
     }
@@ -115,7 +114,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_header(&mut self) {
     if !self.doc_meta.embedded && !self.doc_meta.is_true("noheader") {
-      self.push_str(r#"<div id="header">"#)
+      self.render_division_start("header");
     }
   }
 
@@ -129,7 +128,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_content(&mut self) {
     if !self.doc_meta.embedded {
-      self.push_str(r#"<div id="content">"#)
+      self.render_division_start("content");
     }
   }
 
@@ -142,8 +141,11 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_footer(&mut self) {
+    if !self.footnotes.borrow().is_empty() && !self.in_asciidoc_table_cell {
+      self.render_footnotes();
+    }
     if !self.doc_meta.embedded && !self.doc_meta.is_true("nofooter") {
-      self.push_str(r#"<div id="footer">"#)
+      self.render_division_start("footer");
     }
   }
 
@@ -1574,7 +1576,8 @@ impl AsciidoctorHtml {
   }
 
   fn render_footnotes(&mut self) {
-    self.push_str(r#"<div id="footnotes"><hr>"#);
+    self.render_division_start("footnotes");
+    self.push_str("<hr>");
     let footnotes = mem::take(&mut self.footnotes);
     for (i, (_, footnote)) in footnotes.borrow().iter().enumerate() {
       let num = (i + 1).to_string();
@@ -1627,6 +1630,26 @@ impl AsciidoctorHtml {
       self.push_str("Untitled");
     }
     self.push_str(r#"</title>"#);
+  }
+
+  fn render_styles(&mut self, meta: &DocumentMeta) {
+    if meta.str("stylesheet") == Some("") {
+      let family = match meta.str("webfonts") {
+        None | Some("") => "Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700",
+        Some(custom) => custom,
+      };
+      self.push([
+        r#"<link rel="stylesheet" href="https://fonts.googleapis.com/css?family="#,
+        family,
+        "\" />",
+      ]);
+    }
+
+    if meta.str("stylesheet") == Some("") {
+      self.push(["<style>", crate::css::DEFAULT, "</style>"]);
+    } else if let Some(css) = meta.string("_asciidork_asciidoctor_resolved_css") {
+      self.push(["<style>", &css, "</style>"]);
+    }
   }
 
   fn exit_attributed(
@@ -1741,6 +1764,15 @@ impl AsciidoctorHtml {
 
   fn render_doc_title(&self) -> bool {
     !self.doc_meta.is_true("noheader") && self.doc_meta.show_doc_title()
+  }
+
+  fn render_division_start(&mut self, id: &str) {
+    self.push([r#"<div id=""#, id, "\""]);
+    if let Some(max_width) = self.doc_meta.string("max-width") {
+      self.push([r#" style="max-width: "#, &max_width, r#";">"#]);
+    } else {
+      self.push_str(">");
+    }
   }
 
   fn render_interactive_svg(&mut self, target: &str, attrs: &AttrList) {

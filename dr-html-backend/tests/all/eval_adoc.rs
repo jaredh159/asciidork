@@ -1,4 +1,4 @@
-use asciidork_dr_html_backend::AsciidoctorHtml;
+use asciidork_dr_html_backend::{css, AsciidoctorHtml};
 use asciidork_eval::eval;
 use asciidork_parser::prelude::*;
 use test_utils::*;
@@ -795,7 +795,7 @@ fn test_head_opts() {
 }
 
 #[test]
-fn test_non_embedded() {
+fn test_full_doc() {
   let input = adoc! {r#"
     = *Document* _title_
     Beyonce Smith; J Z <jz@you.com>
@@ -812,6 +812,8 @@ fn test_non_embedded() {
         <meta name="generator" content="Asciidork">
         <meta name="author" content="Beyonce Smith, J Z">
         <title>Document title</title>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700" />
+        <style>{CSS}</style>
       </head>
       <body class="article">
         <div id="header">
@@ -833,6 +835,7 @@ fn test_non_embedded() {
   "#};
   let re = Regex::new(r"(?m)\n\s*").unwrap();
   let expected = re.replace_all(expected, "");
+  let expected = expected.replace("{CSS}", css::DEFAULT);
   let parser = test_parser!(input);
   let doc = parser.parse().unwrap().document;
   expect_eq!(
