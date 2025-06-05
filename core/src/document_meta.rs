@@ -180,25 +180,20 @@ impl DocumentMeta {
     self.doc_attrs.insert(key, value.into())
   }
 
+  pub fn doc_attrs_snapshot(&self) -> DocAttrsSnapshot {
+    DocAttrsSnapshot(self.doc_attrs.clone())
+  }
+
+  pub fn restore_doc_attrs(&mut self, snapshot: DocAttrsSnapshot) {
+    self.doc_attrs = snapshot.0;
+  }
+
   pub fn insert_job_attr(
     &mut self,
     key: impl Into<String>,
     job_attr: JobAttr,
   ) -> Result<(), String> {
     self.job_attrs.insert(key.into(), job_attr)
-  }
-
-  pub fn clear_declared_doc_attrs(&mut self) {
-    self.doc_attrs.retain(|k| [
-      "docyear",
-      "docdate",
-      "doctime",
-      "docdatetime",
-      "localyear",
-      "localdate",
-      "localtime",
-      "localdatetime",
-    ].contains(&k.as_str()));
   }
 
   pub fn set_doctype(&mut self, doctype: DocType) {
@@ -245,6 +240,8 @@ impl DocumentMeta {
       || (self.embedded && (!self.is_true("showtitle") && !self.is_false("notitle"))))
   }
 }
+
+pub struct DocAttrsSnapshot(Attrs);
 
 impl ReadAttr for DocumentMeta {
   fn get(&self, key: &str) -> Option<&AttrValue> {

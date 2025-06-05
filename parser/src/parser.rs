@@ -232,6 +232,7 @@ impl<'arena> Parser<'arena> {
   }
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'arena>, Vec<Diagnostic>> {
+    let doc_attrs = self.document.meta.doc_attrs_snapshot();
     self.parse_document_header()?;
     self.prepare_toc();
 
@@ -253,7 +254,7 @@ impl<'arena> Parser<'arena> {
     }
 
     // so the backend can see them replayed in decl order
-    self.document.meta.clear_declared_doc_attrs();
+    self.document.meta.restore_doc_attrs(doc_attrs);
     self.diagnose_document()?;
     Ok(self.into())
   }
