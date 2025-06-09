@@ -21,20 +21,20 @@ impl Parser<'_> {
     let docdate_s = docdate.strftime("%Y-%m-%d").to_string();
     let doctime_s = doctime.strftime("%H:%M:%S%z").to_string();
     let docdatetime_s = format!("{} {}", docdate_s, doctime_s);
-    self.insert_doc_attr("docyear", docyear_s).unwrap();
-    self.insert_doc_attr("docdate", docdate_s).unwrap();
-    self.insert_doc_attr("doctime", doctime_s).unwrap();
-    self.insert_doc_attr("docdatetime", docdatetime_s).unwrap();
+    self.insert_job_attr("docyear", docyear_s);
+    self.insert_job_attr("docdate", docdate_s);
+    self.insert_job_attr("doctime", doctime_s);
+    self.insert_job_attr("docdatetime", docdatetime_s);
 
     let nowdatetime = to_zoned(now_ts);
     let nowyear = nowdatetime.year().to_string();
     let nowdate = nowdatetime.strftime("%Y-%m-%d").to_string();
     let nowtime = nowdatetime.strftime("%H:%M:%S%z").to_string();
     let nowdatetime = nowdatetime.strftime("%Y-%m-%d %H:%M:%S%z").to_string();
-    self.insert_doc_attr("localyear", nowyear).unwrap();
-    self.insert_doc_attr("localdate", nowdate).unwrap();
-    self.insert_doc_attr("localtime", nowtime).unwrap();
-    self.insert_doc_attr("localdatetime", nowdatetime).unwrap();
+    self.insert_job_attr("localyear", nowyear);
+    self.insert_job_attr("localdate", nowdate);
+    self.insert_job_attr("localtime", nowtime);
+    self.insert_job_attr("localdatetime", nowdatetime);
   }
 }
 

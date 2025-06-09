@@ -16,17 +16,17 @@ impl<'arena> Parser<'arena> {
       SourceFile::Path(path) => {
         let file_stem = path.file_stem();
         let ext = path.extension();
-        self.insert_file_attr("docfilesuffix", ext.to_string());
-        self.insert_file_attr("docname", file_stem.to_string());
-        self.insert_file_attr("asciidork-docfilename", format!("{}{}", file_stem, ext));
+        self.insert_job_attr("docfilesuffix", ext.to_string());
+        self.insert_job_attr("docname", file_stem.to_string());
+        self.insert_job_attr("asciidork-docfilename", format!("{}{}", file_stem, ext));
         match self.document.meta.safe_mode {
           SafeMode::Server | SafeMode::Secure => {
-            self.insert_file_attr("docdir", "");
-            self.insert_file_attr("docfile", "");
+            self.insert_job_attr("docdir", "");
+            self.insert_job_attr("docfile", "");
           }
           SafeMode::Safe | SafeMode::Unsafe => {
-            self.insert_file_attr("docfile", path.to_string());
-            self.insert_file_attr("docdir", path.dirname().to_string());
+            self.insert_job_attr("docfile", path.to_string());
+            self.insert_job_attr("docdir", path.dirname().to_string());
           }
         }
       }
@@ -76,7 +76,7 @@ impl<'arena> Parser<'arena> {
     Ok(())
   }
 
-  fn insert_file_attr(&mut self, key: &str, value: impl Into<AttrValue>) {
+  pub(crate) fn insert_job_attr(&mut self, key: &str, value: impl Into<AttrValue>) {
     self
       .document
       .meta
