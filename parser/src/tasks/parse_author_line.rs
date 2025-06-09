@@ -22,7 +22,8 @@ impl<'arena> Parser<'arena> {
     let mut first_start = usize::MAX;
     let mut last_end = 0;
     let src = line.reassemble_src();
-    for captures in re.captures_iter(&src) {
+    let src = src.trim_end();
+    for captures in re.captures_iter(src) {
       if let Some(m) = captures.get(0) {
         if m.start() < first_start {
           first_start = m.start();
@@ -73,6 +74,7 @@ mod tests {
     let cases: Vec<(&str, Vec<(&str, Option<&str>, &str, Option<&str>)>)> = vec![
       ("Bob L. Foo", vec![("Bob", Some("L."), "Foo", None)]),
       ("Bob Foo", vec![("Bob", None, "Foo", None)]),
+      ("Bob Foo ", vec![("Bob", None, "Foo", None)]), // trailing whitespace
       (
         "Bob L. Foo <bob@foo.com>",
         vec![("Bob", Some("L."), "Foo", Some("bob@foo.com"))],
