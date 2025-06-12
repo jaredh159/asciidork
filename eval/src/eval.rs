@@ -498,6 +498,8 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       ctx.resolving_xref.replace(false);
       backend.exit_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
     }
+    Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
+    Macro(Plugin(plugin_macro)) => backend.visit_plugin_macro(plugin_macro),
     InlineAnchor(id) => backend.visit_inline_anchor(id),
     BiblioAnchor(id) => {
       backend.visit_biblio_anchor(
@@ -519,7 +521,6 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_text_span(attrs, nodes);
     }
     Symbol(kind) => backend.visit_symbol(*kind),
-    Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
     LineComment(_) | Discarded => {}
   }
 }

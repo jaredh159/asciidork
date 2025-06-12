@@ -56,6 +56,10 @@ impl<'arena> Parser<'arena> {
     self.set_source_file_attrs();
   }
 
+  pub fn register_plugin_macros(&mut self, names: &[impl AsRef<str>]) {
+    self.lexer.register_plugin_macros(names);
+  }
+
   pub fn provide_timestamps(
     &mut self,
     now: u64,

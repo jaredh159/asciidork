@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter, Result};
+use std::rc::Rc;
 
 use crate::internal::*;
 use crate::variants::token::*;
@@ -10,6 +11,7 @@ pub struct SourceLexer<'arena> {
   pub offset: u32,
   pub file: SourceFile,
   pub leveloffset: i8,
+  pub plugin_macros: Rc<BumpVec<'arena, BumpString<'arena>>>,
   pub max_include_depth: Option<u16>,
 }
 
@@ -19,6 +21,7 @@ impl<'arena> SourceLexer<'arena> {
     file: SourceFile,
     leveloffset: i8,
     max_include_depth: Option<u16>,
+    plugin_macros: Rc<BumpVec<'arena, BumpString<'arena>>>,
     bump: &'arena Bump,
   ) -> Self {
     Self {
@@ -29,6 +32,7 @@ impl<'arena> SourceLexer<'arena> {
       leveloffset,
       file,
       max_include_depth,
+      plugin_macros,
     }
   }
 
@@ -45,6 +49,7 @@ impl<'arena> SourceLexer<'arena> {
       leveloffset: 0,
       file,
       max_include_depth: None,
+      plugin_macros: Rc::new(bvec![in bump]),
     }
   }
 
@@ -373,21 +378,12 @@ impl<'arena> SourceLexer<'arena> {
     self.pos -= n;
   }
 
-  const fn is_macro_name(&self, lexeme: &[u8]) -> bool {
-    matches!(
-      lexeme,
-      b"footnote"
-        | b"image"
-        | b"anchor"
-        | b"icon"
-        | b"kbd"
-        | b"link"
-        | b"pass"
-        | b"btn"
-        | b"menu"
-        | b"toc"
-        | b"xref"
-    )
+  fn is_macro_name(&self, lexeme: &[u8]) -> bool {
+    Lexer::is_builtin_macro_name(lexeme)
+      || self
+        .plugin_macros
+        .iter()
+        .any(|name| name.as_bytes() == lexeme)
   }
 
   const fn advance(&mut self) {

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::source_lexer::SourceLexer;
 use crate::internal::*;
 
@@ -8,6 +10,7 @@ pub struct RootLexer<'arena> {
   next_idx: Option<u16>,
   source_stack: Vec<u16>,
   sources: BumpVec<'arena, SourceLexer<'arena>>,
+  plugin_macros: Rc<BumpVec<'arena, BumpString<'arena>>>,
   tmp_buf: Option<(SourceLexer<'arena>, BufLoc)>,
 }
 
@@ -24,7 +27,8 @@ impl<'arena> RootLexer<'arena> {
       idx: 0,
       next_idx: None,
       source_stack: Vec::new(),
-      sources: bvec![in bump; SourceLexer::new(src, file, 0, None, bump)],
+      plugin_macros: Rc::new(BumpVec::new_in(bump)),
+      sources: bvec![in bump; SourceLexer::new(src, file, 0, None, Rc::new(bvec![in bump]), bump)],
       tmp_buf: None,
     }
   }
@@ -34,6 +38,7 @@ impl<'arena> RootLexer<'arena> {
       bump,
       idx: 0,
       next_idx: None,
+      plugin_macros: Rc::new(BumpVec::new_in(bump)),
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_str(src, file, bump)],
       tmp_buf: None,
@@ -45,10 +50,28 @@ impl<'arena> RootLexer<'arena> {
       bump,
       idx: 0,
       next_idx: None,
+      plugin_macros: Rc::new(BumpVec::new_in(bump)),
       source_stack: Vec::new(),
       sources: bvec![in bump; SourceLexer::from_byte_slice(bytes, file, bump)],
       tmp_buf: None,
     }
+  }
+
+  pub const fn is_builtin_macro_name(lexeme: &[u8]) -> bool {
+    matches!(
+      lexeme,
+      b"footnote"
+        | b"image"
+        | b"anchor"
+        | b"icon"
+        | b"kbd"
+        | b"link"
+        | b"pass"
+        | b"btn"
+        | b"menu"
+        | b"toc"
+        | b"xref"
+    )
   }
 
   pub fn push_source(
@@ -69,6 +92,7 @@ impl<'arena> RootLexer<'arena> {
       src_file,
       leveloffset,
       max_include_depth,
+      Rc::clone(&self.plugin_macros),
       self.bump,
     ));
     let next_idx = self.sources.len() as u16 - 1;
@@ -288,6 +312,17 @@ impl<'arena> RootLexer<'arena> {
       .fold(None, |current, (i, src)| {
         src.max_include_depth.map(|d| (d, i as u16)).or(current)
       })
+  }
+
+  pub fn register_plugin_macros(&mut self, names: &[impl AsRef<str>]) {
+    let mut macros = BumpVec::with_capacity_in(names.len(), self.bump);
+    for name in names {
+      macros.push(BumpString::from_str_in(name.as_ref(), self.bump));
+    }
+    self.plugin_macros = Rc::new(macros);
+    for lexer in self.sources.iter_mut() {
+      lexer.plugin_macros = Rc::clone(&self.plugin_macros);
+    }
   }
 }
 

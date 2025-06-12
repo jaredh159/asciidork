@@ -32,6 +32,16 @@ pub enum MacroNode<'arena> {
     linktext: Option<InlineNodes<'arena>>,
     kind: XrefKind,
   },
+  Plugin(PluginMacro<'arena>),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct PluginMacro<'arena> {
+  pub name: BumpString<'arena>,
+  pub target: Option<SourceString<'arena>>,
+  pub flow: Flow,
+  pub attrs: AttrList<'arena>,
+  pub source: SourceString<'arena>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

@@ -1,7 +1,7 @@
 use crate::attrs;
 use asciidork_ast::prelude::*;
 use asciidork_ast::variants::{inline::*, r#macro::*};
-use asciidork_ast::Flow;
+use asciidork_ast::{Flow, PluginMacro};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -268,3 +268,80 @@ assert_error!(
       |       ^^^^^^^^^^^^^^^^ Invalid cross reference, no anchor found for `test.adoc#foobaz`
   "}
 );
+
+macro_rules! plugin_macro_test {
+  ($input:expr, $macro_name:expr) => {{
+    let mut parser = test_parser!($input);
+    parser.register_plugin_macros(&[$macro_name]);
+    let document = parser.parse().unwrap().document;
+    let mut blocks = document.content.blocks().unwrap().clone();
+    assert_eq!(blocks.len(), 1);
+    blocks.pop().unwrap()
+  }};
+}
+
+#[test]
+fn plugin_inline_macro() {
+  let parsed = plugin_macro_test!("bob:[mustard]\n", "bob");
+  expect_eq!(
+    parsed,
+    Block {
+      meta: chunk_meta!(0),
+      context: BlockContext::Paragraph,
+      content: BlockContent::Simple(nodes![node!(
+        Macro(Plugin(PluginMacro {
+          name: bstr!("bob"),
+          target: None,
+          flow: Flow::Inline,
+          attrs: attrs::pos("mustard", 5..12),
+          source: src!("bob:[mustard]", 0..13)
+        })),
+        0..13
+      )]),
+      loc: (0..13).into(),
+    }
+  );
+}
+
+#[test]
+fn plugin_block_macro() {
+  let parsed = plugin_macro_test!("bob::[mustard]\n", "bob");
+  expect_eq!(
+    parsed,
+    Block {
+      meta: chunk_meta!(0),
+      context: BlockContext::Paragraph,
+      content: BlockContent::Simple(nodes![node!(
+        Macro(Plugin(PluginMacro {
+          name: bstr!("bob"),
+          target: None,
+          flow: Flow::Block,
+          attrs: attrs::pos("mustard", 6..13),
+          source: src!("bob::[mustard]", 0..14)
+        })),
+        0..14
+      )]),
+      loc: (0..14).into(),
+    }
+  );
+
+  let parsed = plugin_macro_test!("bob::baz[]\n", "bob");
+  expect_eq!(
+    parsed,
+    Block {
+      meta: chunk_meta!(0),
+      context: BlockContext::Paragraph,
+      content: BlockContent::Simple(nodes![node!(
+        Macro(Plugin(PluginMacro {
+          name: bstr!("bob"),
+          target: Some(src!("baz", 5..8)),
+          flow: Flow::Block,
+          attrs: attr_list!(8..10),
+          source: src!("bob::baz[]", 0..10)
+        })),
+        0..10
+      )]),
+      loc: (0..10).into(),
+    }
+  );
+}

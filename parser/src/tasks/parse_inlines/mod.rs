@@ -264,7 +264,31 @@ impl<'arena> Parser<'arena> {
                 )?;
                 acc.push_node(InlineAnchor(id.src), id.loc);
               }
-              _ => acc.push_text_token(&token),
+              _ => {
+                let mut name = token.lexeme;
+                let mut source = name.clone();
+                let rest = line.reassemble_src();
+                source.push_str(&rest);
+                name.pop(); // trailing colon
+                let target = if !line.current_is(OpenBracket) {
+                  Some(line.consume_macro_target(self.bump))
+                } else {
+                  line.discard_assert(OpenBracket);
+                  None
+                };
+                let attrs = self.parse_block_attr_list(&mut line)?;
+                let loc = SourceLocation::spanning(token.loc, attrs.loc);
+                acc.push_node(
+                  Macro(Plugin(PluginMacro {
+                    name,
+                    target,
+                    flow: Flow::Inline,
+                    attrs,
+                    source: SourceString::new(source, loc),
+                  })),
+                  loc,
+                );
+              }
             }
           }
 
