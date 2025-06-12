@@ -12,9 +12,9 @@ pub fn number_prefix(level: u8, sect_nums: &mut [u16; 5], appendix: bool) -> Str
   let mut idx = 0;
   while idx <= level_idx {
     if appendix && idx == 0 {
-      out.push((b'A' + sect_nums[idx] as u8 - 1) as char);
+      out.push((b'A' + sect_nums[idx] as u8) as char);
     } else if appendix && idx == 1 {
-      out.push_str(&(sect_nums[idx] - 1).to_string());
+      out.push_str(&(sect_nums[idx]).to_string());
     } else {
       out.push_str(&sect_nums[idx].to_string());
     }
@@ -103,8 +103,8 @@ mod tests {
       (2, [1, 1, 0, 0, 0], "1.2. ", [1, 2, 0, 0, 0], false),
       (1, [1, 1, 0, 0, 0], "2. ", [2, 0, 0, 0, 0], false),
       (3, [2, 4, 0, 0, 0], "2.4.1. ", [2, 4, 1, 0, 0], false),
-      (2, [1, 1, 0, 0, 0], "A.1. ", [1, 2, 0, 0, 0], true),
-      (3, [1, 2, 0, 0, 0], "A.1.1. ", [1, 2, 1, 0, 0], true),
+      (2, [1, 1, 0, 0, 0], "B.2. ", [1, 2, 0, 0, 0], true),
+      (3, [1, 2, 0, 0, 0], "B.2.1. ", [1, 2, 1, 0, 0], true),
     ];
     for (level, mut sect_nums, expected, after_mutation, apndx) in cases {
       expect_eq!(
