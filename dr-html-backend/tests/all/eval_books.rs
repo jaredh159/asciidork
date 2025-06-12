@@ -300,6 +300,40 @@ assert_html!(
 );
 
 assert_html!(
+  multipart_book_toc,
+  adoc! {r#"
+    = Book Title
+    :doctype: book
+    :sectnums:
+    :toc:
+
+    = First Part
+
+    == Chapter
+
+    === Subsection
+  "#},
+  contains: &html! {r##"
+    <div id="toc" class="toc">
+      <div id="toctitle">Table of Contents</div>
+      <ul class="sectlevel0">
+        <li>
+          <a href="#_first_part">First Part</a>
+          <ul class="sectlevel1">
+            <li>
+              <a href="#_chapter">1. Chapter</a>
+              <ul class="sectlevel2">
+                <li><a href="#_subsection">1.1. Subsection</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  "##}
+);
+
+assert_html!(
   book_part_chapter_signifiers_toc,
   strict: false,
   adoc! {r#"
@@ -350,7 +384,7 @@ assert_html!(
 );
 
 assert_html!(
-  book_gnarly_toc,
+  article_gnarly_toc,
   strict: false,
   adoc! {r#"
     = Article Title

@@ -188,7 +188,10 @@ impl<'arena> Parser<'arena> {
     let mut depth = semantic_level;
 
     // special case: book special sections can go from 0 to 2
-    if last_level == 0 && semantic_level == 2 && !nodes.iter().any(|n| n.level == 1) {
+    if last_level == 0
+      && semantic_level == 2
+      && !nodes.last().unwrap().children.iter().any(|n| n.level == 1)
+    {
       depth = 1;
     }
 
