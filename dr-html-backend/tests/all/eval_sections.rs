@@ -145,6 +145,22 @@ assert_html!(
 );
 
 assert_html!(
+  appendix_caption_unset,
+  adoc! {r#"
+    == Sect 1
+    :appendix-caption!:
+
+    Sect 1 Content
+
+    [appendix]
+    == Appendix Title
+
+    Appendix Content
+  "#},
+  contains: r#"<h2 id="_appendix_title">A. Appendix Title</h2>"#
+);
+
+assert_html!(
   bad_sequence,
   strict: false,
   adoc! {r#"

@@ -220,6 +220,7 @@ impl Backend for AsciidoctorHtml {
     }
     self.push_str("\">");
     if node.special_sect == Some(SpecialSection::Appendix) {
+      self.section_nums = [0; 5];
       self.state.insert(InAppendix);
       self.push_appendix_caption();
     } else if node.level == 0 {
@@ -232,6 +233,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_toc_node(&mut self, node: &TocNode) {
     if node.special_sect == Some(SpecialSection::Appendix) {
+      self.section_nums = [0; 5];
       self.state.remove(&InAppendix);
     }
     self.push_str("</li>");
@@ -313,7 +315,10 @@ impl Backend for AsciidoctorHtml {
     section_tag.push_class(section::class(section));
     self.push_open_tag(section_tag);
     match section.meta.attrs.special_sect() {
-      Some(SpecialSection::Appendix) => self.state.insert(InAppendix),
+      Some(SpecialSection::Appendix) => {
+        self.section_nums = [0; 5];
+        self.state.insert(InAppendix)
+      }
       Some(SpecialSection::Bibliography) => self.state.insert(InBibliography),
       _ => true,
     };
@@ -326,7 +331,10 @@ impl Backend for AsciidoctorHtml {
     }
     self.push_str("</div>");
     match section.meta.attrs.special_sect() {
-      Some(SpecialSection::Appendix) => self.state.remove(&InAppendix),
+      Some(SpecialSection::Appendix) => {
+        self.section_nums = [0; 5];
+        self.state.remove(&InAppendix)
+      }
       Some(SpecialSection::Bibliography) => self.state.remove(&InBibliography),
       _ => true,
     };
@@ -1472,9 +1480,15 @@ impl AsciidoctorHtml {
   pub(crate) fn push_appendix_caption(&mut self) {
     if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
       self.push([&appendix_caption, " "]);
-      let letter = (self.appendix_caption_num + b'A') as char;
-      self.push_ch(letter);
-      self.appendix_caption_num += 1;
+    }
+
+    let letter = (self.appendix_caption_num + b'A') as char;
+    self.push_ch(letter);
+    self.appendix_caption_num += 1;
+
+    if self.doc_meta.is_false("appendix-caption") {
+      self.push_str(". ");
+    } else {
       self.push_str(": ");
     }
   }
