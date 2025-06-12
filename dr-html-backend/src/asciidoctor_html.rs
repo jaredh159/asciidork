@@ -1480,9 +1480,15 @@ impl AsciidoctorHtml {
   pub(crate) fn push_appendix_caption(&mut self) {
     if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
       self.push([&appendix_caption, " "]);
-      let letter = (self.appendix_caption_num + b'A') as char;
-      self.push_ch(letter);
-      self.appendix_caption_num += 1;
+    }
+
+    let letter = (self.appendix_caption_num + b'A') as char;
+    self.push_ch(letter);
+    self.appendix_caption_num += 1;
+
+    if self.doc_meta.is_false("appendix-caption") {
+      self.push_str(". ");
+    } else {
       self.push_str(": ");
     }
   }
