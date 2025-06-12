@@ -144,6 +144,11 @@ pub trait Backend {
   fn visit_image_macro(&mut self, target: &str, attrs: &AttrList);
   fn visit_icon_macro(&mut self, target: &str, attrs: &AttrList);
 
+  fn visit_plugin_macro(&mut self, plugin_macro: &PluginMacro) {
+    _ = plugin_macro;
+    warn_unimplemented!(visit_plugin_macro);
+  }
+
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
     _ = keys;
     warn_unimplemented!(visit_keyboard_macro);
