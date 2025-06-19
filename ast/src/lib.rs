@@ -33,7 +33,7 @@ mod internal {
     pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
     pub use crate::multi_source_location::MultiSourceLocation;
     pub use crate::node::{Anchor, Callout};
-    pub use crate::r#macro::{Flow, MacroNode, UrlScheme, XrefKind};
+    pub use crate::r#macro::{Flow, MacroNode, PluginMacro, UrlScheme, XrefKind};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
     pub use crate::table::*;
@@ -63,7 +63,7 @@ pub mod prelude {
   pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
   pub use crate::multi_source_location::MultiSourceLocation;
   pub use crate::node::{Anchor, Callout};
-  pub use crate::r#macro::{UrlScheme, XrefKind};
+  pub use crate::r#macro::{PluginMacro, UrlScheme, XrefKind};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
   pub use crate::table::*;

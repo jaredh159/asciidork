@@ -56,7 +56,7 @@ impl<'arena> Parser<'arena> {
       return match first_token.lexeme.as_str() {
         "image:" => self.parse_image_block(lines, meta),
         "toc:" => self.parse_toc_macro(lines, meta),
-        _ => todo!("unhandled block macro type: `{:?}`", first_token.lexeme),
+        _ => self.parse_plugin_block_macro(lines, meta),
       }
       .map(Some);
     } else if lines.starts_list() {
@@ -385,6 +385,43 @@ impl<'arena> Parser<'arena> {
       context: Context::TableOfContents,
       content: Content::Empty(EmptyMetadata::None),
       loc: line.loc().unwrap().into(),
+    })
+  }
+
+  fn parse_plugin_block_macro(
+    &mut self,
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Block<'arena>> {
+    let mut line = lines.consume_current().unwrap();
+    let line_loc = line.loc().unwrap();
+    let source = line.reassemble_src();
+    let mut name = line.discard_assert(MacroName).lexeme;
+    name.pop(); // remove trailing colon
+    line.discard_assert(Colon);
+    let target = if !line.current_is(OpenBracket) {
+      Some(line.consume_macro_target(self.bump))
+    } else {
+      line.discard_assert(OpenBracket);
+      None
+    };
+    let attrs = self.parse_block_attr_list(&mut line)?;
+    let mut nodes = InlineNodes::new(self.bump);
+    nodes.push(InlineNode {
+      content: Inline::Macro(MacroNode::Plugin(PluginMacro {
+        name,
+        target,
+        flow: Flow::Block,
+        attrs,
+        source: SourceString::new(source, line_loc),
+      })),
+      loc: line_loc,
+    });
+    Ok(Block {
+      meta,
+      context: Context::Paragraph,
+      content: Content::Simple(nodes),
+      loc: line_loc.into(),
     })
   }
 }

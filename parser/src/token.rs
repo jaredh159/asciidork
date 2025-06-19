@@ -180,8 +180,6 @@ pub trait TokenIs {
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool;
   fn satisfies(&self, spec: TokenSpec) -> bool;
   fn can_start_block_macro(&self) -> bool;
-  /// A `dual` macro is one that has a block *and* inline form
-  fn can_start_dual_macro(&self) -> bool;
   fn not_kind(&self, kind: TokenKind) -> bool {
     !self.kind(kind)
   }
@@ -193,6 +191,9 @@ pub trait TokenIs {
   }
   fn satisfies_any(&self, specs: &[TokenSpec]) -> bool {
     specs.iter().any(|spec| self.satisfies(*spec))
+  }
+  fn is_macro(&self) -> bool {
+    self.kind(TokenKind::MacroName)
   }
 }
 
@@ -234,12 +235,17 @@ impl TokenIs for Token<'_> {
   }
 
   fn can_start_block_macro(&self) -> bool {
+    if !self.is_macro() {
+      return false;
+    }
     // TODO: there are more block macros than just these two
-    self.kind == TokenKind::MacroName && matches!(self.lexeme.as_str(), "image:" | "toc:")
-  }
+    if matches!(self.lexeme.as_str(), "image:" | "toc:") {
+      return true;
+    }
 
-  fn can_start_dual_macro(&self) -> bool {
-    self.kind == TokenKind::MacroName && matches!(self.lexeme.as_str(), "image:")
+    let bytes = self.lexeme.as_bytes();
+    let bytes = &bytes[..bytes.len() - 1];
+    !Lexer::is_builtin_macro_name(bytes)
   }
 }
 
@@ -266,10 +272,6 @@ impl TokenIs for Option<&Token<'_>> {
 
   fn can_start_block_macro(&self) -> bool {
     self.is_some_and(|t| t.can_start_block_macro())
-  }
-
-  fn can_start_dual_macro(&self) -> bool {
-    self.is_some_and(|t| t.can_start_dual_macro())
   }
 }
 
