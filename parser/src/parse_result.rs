@@ -6,6 +6,7 @@ pub struct ParseResult<'arena> {
   pub document: Document<'arena>,
   pub warnings: Vec<Diagnostic>,
   pub(crate) attr_locs: Vec<(SourceLocation, bool)>,
+  pub include_resolver: Option<Box<dyn IncludeResolver>>,
   #[cfg(feature = "attr_ref_observation")]
   pub attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
   lexer: Lexer<'arena>,
@@ -20,11 +21,17 @@ impl ParseResult<'_> {
     self.lexer.source_file_at(idx)
   }
 
+  pub fn take_include_resolver_as<T: 'static>(&mut self) -> Option<T> {
+    let resolver = self.include_resolver.take()?;
+    let any_resolver = resolver as Box<dyn std::any::Any>;
+    Some(*any_resolver.downcast::<T>().unwrap())
+  }
+
   #[cfg(feature = "attr_ref_observation")]
-  pub fn take_attr_ref_observer<T: 'static>(&mut self) -> Option<T> {
+  pub fn take_attr_ref_observer_as<T: 'static>(&mut self) -> Option<T> {
     let observer = self.attr_ref_observer.take()?;
-    let observer = observer as Box<dyn std::any::Any>;
-    Some(*observer.downcast::<T>().unwrap())
+    let any_observer = observer as Box<dyn std::any::Any>;
+    Some(*any_observer.downcast::<T>().unwrap())
   }
 }
 
@@ -34,6 +41,7 @@ impl<'arena> From<Parser<'arena>> for ParseResult<'arena> {
       document: parser.document,
       warnings: parser.errors.into_inner(),
       attr_locs: parser.attr_locs,
+      include_resolver: parser.include_resolver,
       #[cfg(feature = "attr_ref_observation")]
       attr_ref_observer: parser.attr_ref_observer,
       lexer: parser.lexer,
