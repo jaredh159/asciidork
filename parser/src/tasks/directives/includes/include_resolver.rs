@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{any::Any, fmt};
 
 use crate::internal::*;
 
@@ -35,7 +35,7 @@ impl From<Path> for IncludeTarget {
   }
 }
 
-pub trait IncludeResolver {
+pub trait IncludeResolver: Any {
   fn resolve(
     &mut self,
     target: IncludeTarget,
@@ -45,7 +45,6 @@ pub trait IncludeResolver {
   fn get_base_dir(&self) -> Option<String> {
     None
   }
-
   fn clone_box(&self) -> Box<dyn IncludeResolver>;
 }
 
