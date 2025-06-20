@@ -79,12 +79,22 @@ pub trait Backend {
   fn exit_literal_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_passthrough_block(&mut self, block: &Block, content: &BlockContent);
   fn exit_passthrough_block(&mut self, block: &Block, content: &BlockContent);
-  fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block);
-  fn exit_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block);
+  fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block);
+  fn exit_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block);
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
-  fn enter_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
-  fn exit_quoted_paragraph(&mut self, block: &Block, attr: &str, cite: Option<&str>);
+  fn enter_quoted_paragraph(
+    &mut self,
+    block: &Block,
+    attr: &SourceString,
+    cite: Option<&SourceString>,
+  );
+  fn exit_quoted_paragraph(
+    &mut self,
+    block: &Block,
+    attr: &SourceString,
+    cite: Option<&SourceString>,
+  );
   fn enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block);
   fn exit_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block);
 
@@ -139,10 +149,10 @@ pub trait Backend {
   fn visit_joining_newline(&mut self);
   fn visit_curly_quote(&mut self, kind: CurlyKind);
   fn visit_multichar_whitespace(&mut self, whitespace: &str);
-  fn visit_button_macro(&mut self, text: &str);
-  fn visit_menu_macro(&mut self, items: &[&str]);
-  fn visit_image_macro(&mut self, target: &str, attrs: &AttrList);
-  fn visit_icon_macro(&mut self, target: &str, attrs: &AttrList);
+  fn visit_button_macro(&mut self, text: &SourceString);
+  fn visit_menu_macro(&mut self, items: &[SourceString]);
+  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList);
+  fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList);
 
   fn visit_plugin_macro(&mut self, plugin_macro: &PluginMacro) {
     _ = plugin_macro;
@@ -156,7 +166,7 @@ pub trait Backend {
 
   fn enter_link_macro(
     &mut self,
-    target: &str,
+    target: &SourceString,
     attrs: Option<&AttrList>,
     scheme: Option<UrlScheme>,
     resolving_xref: bool,
@@ -176,7 +186,7 @@ pub trait Backend {
 
   fn exit_link_macro(
     &mut self,
-    target: &str,
+    target: &SourceString,
     attrs: Option<&AttrList>,
     scheme: Option<UrlScheme>,
     resolving_xref: bool,
@@ -207,13 +217,18 @@ pub trait Backend {
   fn exit_inline_superscript(&mut self, children: &[InlineNode]);
   fn enter_inline_quote(&mut self, kind: QuoteKind, children: &[InlineNode]);
   fn exit_inline_quote(&mut self, kind: QuoteKind, children: &[InlineNode]);
-  fn enter_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>);
-  fn exit_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>);
+  fn enter_footnote(&mut self, id: Option<&SourceString>, content: Option<&[InlineNode]>);
+  fn exit_footnote(&mut self, id: Option<&SourceString>, content: Option<&[InlineNode]>);
   fn enter_text_span(&mut self, attrs: &AttrList, children: &[InlineNode]);
   fn exit_text_span(&mut self, attrs: &AttrList, children: &[InlineNode]);
-  fn enter_xref(&mut self, target: &str, reftext: Option<&[InlineNode]>, kind: XrefKind);
-  fn exit_xref(&mut self, target: &str, reftext: Option<&[InlineNode]>, kind: XrefKind);
-  fn visit_missing_xref(&mut self, target: &str, kind: XrefKind, doc_title: Option<&DocTitle>);
+  fn enter_xref(&mut self, target: &SourceString, reftext: Option<&[InlineNode]>, kind: XrefKind);
+  fn exit_xref(&mut self, target: &SourceString, reftext: Option<&[InlineNode]>, kind: XrefKind);
+  fn visit_missing_xref(
+    &mut self,
+    target: &SourceString,
+    kind: XrefKind,
+    doc_title: Option<&DocTitle>,
+  );
   fn visit_inline_anchor(&mut self, id: &str);
   fn visit_biblio_anchor(&mut self, id: &str, reftext: Option<&str>);
   fn visit_symbol(&mut self, kind: SymbolKind);

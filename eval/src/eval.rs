@@ -190,9 +190,9 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_verse_block(block, &block.content);
     }
     (Context::QuotedParagraph, Content::QuotedParagraph { quote, attr, cite }) => {
-      backend.enter_quoted_paragraph(block, attr, cite.as_deref());
+      backend.enter_quoted_paragraph(block, attr, cite.as_ref());
       quote.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_quoted_paragraph(block, attr, cite.as_deref());
+      backend.exit_quoted_paragraph(block, attr, cite.as_ref());
     }
     (Context::Open, Content::Compound(blocks)) => {
       backend.enter_open_block(block, &block.content);
@@ -442,13 +442,13 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_inline_lit_mono(text);
     }
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
-    MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws.as_str()),
+    MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws),
     Macro(Footnote { id, text }) => {
-      backend.enter_footnote(id.as_deref(), text.as_ref().map(|t| t.as_slice()));
+      backend.enter_footnote(id.as_ref(), text.as_ref().map(|t| t.as_slice()));
       if let Some(text) = text {
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
       }
-      backend.exit_footnote(id.as_deref(), text.as_ref().map(|t| t.as_slice()));
+      backend.exit_footnote(id.as_ref(), text.as_ref().map(|t| t.as_slice()));
     }
     Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
     Macro(Button(text)) => backend.visit_button_macro(text),
@@ -466,9 +466,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     Macro(Keyboard { keys, .. }) => {
       backend.visit_keyboard_macro(&keys.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
     }
-    Macro(Menu(items)) => {
-      backend.visit_menu_macro(&items.iter().map(|s| s.src.as_str()).collect::<Vec<&str>>())
-    }
+    Macro(Menu(items)) => backend.visit_menu_macro(items.as_slice()),
     Macro(Xref { target, linktext, kind }) => {
       let anchors = ctx.doc.anchors.borrow();
       let anchor = anchors.get(utils::xref::get_id(&target.src));
