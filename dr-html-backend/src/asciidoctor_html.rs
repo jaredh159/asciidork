@@ -452,15 +452,29 @@ impl Backend for AsciidoctorHtml {
   fn exit_passthrough_block(&mut self, _block: &Block, _content: &BlockContent) {}
 
   #[instrument(skip_all)]
-  fn enter_quoted_paragraph(&mut self, block: &Block, _attr: &str, _cite: Option<&str>) {
+  fn enter_quoted_paragraph(
+    &mut self,
+    block: &Block,
+    _attr: &SourceString,
+    _cite: Option<&SourceString>,
+  ) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
     self.render_buffered_block_title(block);
     self.push_str("<blockquote>");
   }
 
   #[instrument(skip_all)]
-  fn exit_quoted_paragraph(&mut self, _block: &Block, attr: &str, cite: Option<&str>) {
-    self.exit_attributed(BlockContext::BlockQuote, Some(attr), cite);
+  fn exit_quoted_paragraph(
+    &mut self,
+    _block: &Block,
+    attr: &SourceString,
+    cite: Option<&SourceString>,
+  ) {
+    self.exit_attributed(
+      BlockContext::BlockQuote,
+      Some(attr),
+      cite.as_ref().map(|v| &***v),
+    );
   }
 
   #[instrument(skip_all)]
@@ -914,7 +928,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_xref(&mut self, target: &str, _reftext: Option<&[InlineNode]>, kind: XrefKind) {
+  fn enter_xref(&mut self, target: &SourceString, _reftext: Option<&[InlineNode]>, kind: XrefKind) {
     self.xref_depth += 1;
     if self.xref_depth == 1 {
       self.push([
@@ -926,7 +940,12 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_xref(&mut self, _target: &str, _reftext: Option<&[InlineNode]>, _kind: XrefKind) {
+  fn exit_xref(
+    &mut self,
+    _target: &SourceString,
+    _reftext: Option<&[InlineNode]>,
+    _kind: XrefKind,
+  ) {
     self.xref_depth -= 1;
     if self.xref_depth == 0 {
       self.push_str("</a>");
@@ -934,10 +953,15 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn visit_missing_xref(&mut self, target: &str, kind: XrefKind, doc_title: Option<&DocTitle>) {
+  fn visit_missing_xref(
+    &mut self,
+    target: &SourceString,
+    kind: XrefKind,
+    doc_title: Option<&DocTitle>,
+  ) {
     // TODO: consider whether all this logic could be moved into backend::utils::xref
     // it's possible that other backends would want to do the exact same things
-    if target == "#" || Some(target) == self.doc_meta.str("asciidork-docfilename") {
+    if target == "#" || Some(target.src.as_str()) == self.doc_meta.str("asciidork-docfilename") {
       let doctitle = doc_title
         .and_then(|t| t.attrs.named("reftext"))
         .unwrap_or_else(|| self.doc_meta.str("doctitle").unwrap_or("[^top]"))
@@ -1029,12 +1053,12 @@ impl Backend for AsciidoctorHtml {
   fn exit_inline_passthrough(&mut self, _children: &[InlineNode]) {}
 
   #[instrument(skip_all)]
-  fn visit_button_macro(&mut self, text: &str) {
+  fn visit_button_macro(&mut self, text: &SourceString) {
     self.push([r#"<b class="button">"#, text, "</b>"])
   }
 
   #[instrument(skip_all)]
-  fn visit_icon_macro(&mut self, target: &str, attrs: &AttrList) {
+  fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList) {
     self.push_str(r#"<span class="icon"#);
     attrs.roles.iter().for_each(|role| {
       self.push_str(" ");
@@ -1096,7 +1120,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn visit_image_macro(&mut self, target: &str, attrs: &AttrList) {
+  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList) {
     let mut open_tag = OpenTag::new("span", &NoAttrs);
     open_tag.push_class("image");
     open_tag.push_opt_class(attrs.named("float"));
@@ -1148,7 +1172,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_link_macro(
     &mut self,
-    target: &str,
+    target: &SourceString,
     attrs: Option<&AttrList>,
     scheme: Option<UrlScheme>,
     resolving_xref: bool,
@@ -1184,7 +1208,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_link_macro(
     &mut self,
-    target: &str,
+    target: &SourceString,
     _attrs: Option<&AttrList>,
     _scheme: Option<UrlScheme>,
     resolving_xref: bool,
@@ -1206,7 +1230,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn visit_menu_macro(&mut self, items: &[&str]) {
+  fn visit_menu_macro(&mut self, items: &[SourceString]) {
     let mut items = items.iter();
     self.push_str(r#"<span class="menuseq"><span class="menu">"#);
     self.push_str(items.next().unwrap());
@@ -1349,7 +1373,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_image_block(&mut self, img_target: &str, img_attrs: &AttrList, block: &Block) {
+  fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
     let mut open_tag = OpenTag::new("div", &block.meta.attrs);
     open_tag.push_class("imageblock");
     open_tag.push_opt_class(img_attrs.named("float"));
@@ -1375,7 +1399,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_image_block(&mut self, _target: &str, attrs: &AttrList, block: &Block) {
+  fn exit_image_block(&mut self, _target: &SourceString, attrs: &AttrList, block: &Block) {
     if let Some(title) = attrs.named("title") {
       self.render_block_title(title, block);
     } else if block.meta.title.is_some() {
@@ -1401,7 +1425,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>) {
+  fn enter_footnote(&mut self, id: Option<&SourceString>, content: Option<&[InlineNode]>) {
     if content.is_some() {
       self.start_buffering();
       return;
@@ -1411,7 +1435,9 @@ impl Backend for AsciidoctorHtml {
       .borrow()
       .iter()
       .enumerate()
-      .filter(|(_, (prev, _))| prev.is_some() && prev.as_ref().map(|s| s.as_str()) == id)
+      .filter(|(_, (prev, _))| {
+        prev.is_some() && prev.as_ref().map(|s| s.as_str()) == id.map(|s| &**s)
+      })
       .map(|(i, _)| (i + 1).to_string())
       .next();
     if let Some(prev_ref_num) = prev_ref_num {
@@ -1428,7 +1454,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_footnote(&mut self, id: Option<&str>, content: Option<&[InlineNode]>) {
+  fn exit_footnote(&mut self, id: Option<&SourceString>, content: Option<&[InlineNode]>) {
     if content.is_none() {
       return; // this means the footnore was referring to a previously defined fn by id
     }
