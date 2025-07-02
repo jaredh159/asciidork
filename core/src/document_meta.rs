@@ -111,16 +111,16 @@ impl DocumentMeta {
     }
 
     let n = self.authors.len() + 1;
-    self.insert_string_attr(&format!("author_{}", n), author.fullname());
+    self.insert_string_attr(&format!("author_{n}"), author.fullname());
     if let Some(email) = author.email.as_ref() {
-      self.insert_string_attr(&format!("email_{}", n), email.clone());
+      self.insert_string_attr(&format!("email_{n}"), email.clone());
     }
-    self.insert_string_attr(&format!("lastname_{}", n), author.last_name.clone());
+    self.insert_string_attr(&format!("lastname_{n}"), author.last_name.clone());
     if let Some(middle_name) = author.middle_name.as_ref() {
-      self.insert_string_attr(&format!("middlename_{}", n), middle_name.clone());
+      self.insert_string_attr(&format!("middlename_{n}"), middle_name.clone());
     }
-    self.insert_string_attr(&format!("firstname_{}", n), author.first_name.clone());
-    self.insert_string_attr(&format!("authorinitials_{}", n), author.initials());
+    self.insert_string_attr(&format!("firstname_{n}"), author.first_name.clone());
+    self.insert_string_attr(&format!("authorinitials_{n}"), author.initials());
 
     if let Some(AttrValue::String(authors)) = self.header_attrs.get("authors") {
       self.insert_string_attr("authors", format!("{}, {}", authors, author.fullname()));
@@ -138,8 +138,7 @@ impl DocumentMeta {
   ) -> Result<(), String> {
     if JOB_ONLY.contains(key) {
       return Err(format!(
-        "Attribute `{}` may only be set at the job level (CLI/API)",
-        key
+        "Attribute `{key}` may only be set at the job level (CLI/API)"
       ));
     }
     let value: AttrValue = value.into();
@@ -155,8 +154,7 @@ impl DocumentMeta {
         if self.doctype != DocType::Book =>
       {
         return Err(format!(
-          "Attribute `{}` may only be set when doctype is `book`",
-          key
+          "Attribute `{key}` may only be set when doctype is `book`"
         ));
       }
       _ => self.header_attrs.insert(key, value)?,
@@ -167,14 +165,12 @@ impl DocumentMeta {
   pub fn insert_doc_attr(&mut self, key: &str, value: impl Into<AttrValue>) -> Result<(), String> {
     if JOB_ONLY.contains(key) {
       return Err(format!(
-        "Attribute `{}` may only be set at the job level (CLI/API)",
-        key
+        "Attribute `{key}` may only be set at the job level (CLI/API)"
       ));
     }
     if HEADER_ONLY.contains(key) {
       return Err(format!(
-        "Attribute `{}` may only be set in the document header",
-        key
+        "Attribute `{key}` may only be set in the document header"
       ));
     }
     self.doc_attrs.insert(key, value.into())

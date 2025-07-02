@@ -74,7 +74,7 @@ impl<'arena> Parser<'arena> {
     self.ctx.passthrus.push(Some(nodes));
     let index = self.ctx.passthrus.len() - 1;
     let mut lexeme = BumpString::with_capacity_in(6, self.bump);
-    write!(lexeme, "^{:05}", index).unwrap();
+    write!(lexeme, "^{index:05}").unwrap();
     Ok(Token::new(PreprocPassthru, loc, lexeme))
   }
 

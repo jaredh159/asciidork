@@ -213,7 +213,7 @@ impl<'arena> Parser<'arena> {
               line_num: (idx as u32) + 1,
               line,
               message: tag_stack.last().map_or_else(
-                || format!("Unexpected end tag `{}`", tag),
+                || format!("Unexpected end tag `{tag}`"),
                 |t| format!("Mismatched end tag, expected `{}` but found `{}`", t.0, tag),
               ),
               underline_start,
@@ -242,7 +242,7 @@ impl<'arena> Parser<'arena> {
         self.err(Diagnostic {
           line_num: (*line_idx as u32) + 1,
           line,
-          message: format!("Tag `{}` was not closed", tag),
+          message: format!("Tag `{tag}` was not closed"),
           underline_start,
           underline_width: tag.len() as u32,
           source_file: SourceFile::Path(src_path.clone()),

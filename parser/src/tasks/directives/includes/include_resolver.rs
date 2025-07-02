@@ -89,9 +89,9 @@ impl fmt::Display for ResolveError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       ResolveError::NotFound => write!(f, "File not found"),
-      ResolveError::Io(e) => write!(f, "I/O error: {}", e),
+      ResolveError::Io(e) => write!(f, "I/O error: {e}"),
       ResolveError::UriReadNotSupported => write!(f, "URI read not supported"),
-      ResolveError::UriRead(e) => write!(f, "Error reading URI: {}", e),
+      ResolveError::UriRead(e) => write!(f, "Error reading URI: {e}"),
       ResolveError::CaseMismatch(Some(path)) => {
         write!(
           f,

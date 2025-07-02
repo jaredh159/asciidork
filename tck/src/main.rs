@@ -17,5 +17,5 @@ fn main() {
     tck::gen_asg_doc(contents)
   };
 
-  println!("{}", asg_json);
+  println!("{asg_json}");
 }

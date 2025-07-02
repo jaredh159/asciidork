@@ -45,7 +45,7 @@ impl<'arena> Parser<'arena> {
 
     if let Some(max_depth) = self.exceeded_max_include_depth() {
       self.err_line_starting(
-        format!("Maximum include depth of {} exceeded", max_depth),
+        format!("Maximum include depth of {max_depth} exceeded"),
         directive.first_token.loc,
       )?;
       return Ok(DirectiveAction::Passthrough);
@@ -68,7 +68,7 @@ impl<'arena> Parser<'arena> {
     ) {
       Ok(target) => target,
       Err(err) => {
-        self.target_err(format!("Error preparing target: {}", err), &directive)?;
+        self.target_err(format!("Error preparing target: {err}"), &directive)?;
         return Ok(DirectiveAction::SubstituteLine(
           self.substitute_link_for_include(&directive),
         ));
@@ -119,7 +119,7 @@ impl<'arena> Parser<'arena> {
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(err @ ResolveError::NotFound | err @ ResolveError::Io(..)) => {
-        self.target_err(format!("Include error: {}", err), &directive)?;
+        self.target_err(format!("Include error: {err}"), &directive)?;
         let mut msg = self.string("+++Unresolved directive in ");
         msg.push_str(self.lexer.source_file().file_name());
         msg.push_str(" - ");
@@ -130,7 +130,7 @@ impl<'arena> Parser<'arena> {
         Ok(DirectiveAction::ReadNextLine)
       }
       Err(error) => {
-        self.target_err(format!("Include error: {}", error), &directive)?;
+        self.target_err(format!("Include error: {error}"), &directive)?;
         Ok(DirectiveAction::Passthrough)
       }
     }

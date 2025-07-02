@@ -79,7 +79,7 @@ impl<'arena> Parser<'arena> {
       Some((spec, start)) => (spec, start),
       None => {
         let sep = ctx.format.separator();
-        self.err_token(format!("Expected cell separator `{}`", sep), tokens.nth(0))?;
+        self.err_token(format!("Expected cell separator `{sep}`"), tokens.nth(0))?;
         (CellSpec::default(), tokens.current().unwrap().loc.start)
       }
     };

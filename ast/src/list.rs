@@ -86,13 +86,13 @@ pub enum ListMarker {
 impl Debug for ListMarker {
   fn fmt(&self, f: &mut Formatter) -> Result {
     match self {
-      ListMarker::Dot(num) => write!(f, "Dot({})", num),
-      ListMarker::Digits(num) => write!(f, "Digits({})", num),
+      ListMarker::Dot(num) => write!(f, "Dot({num})"),
+      ListMarker::Digits(num) => write!(f, "Digits({num})"),
       ListMarker::Dash => write!(f, "Dash"),
-      ListMarker::Star(num) => write!(f, "Star({})", num),
-      ListMarker::Colons(num) => write!(f, "Colons({})", num),
+      ListMarker::Star(num) => write!(f, "Star({num})"),
+      ListMarker::Colons(num) => write!(f, "Colons({num})"),
       ListMarker::SemiColons => write!(f, "SemiColons"),
-      ListMarker::Callout(Some(num)) => write!(f, "Callout({})", num),
+      ListMarker::Callout(Some(num)) => write!(f, "Callout({num})"),
       ListMarker::Callout(None) => write!(f, "Callout(None)"),
     }
   }
