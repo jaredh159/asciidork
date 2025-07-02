@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.87.0
+      - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: rustfmt, clippy
       - name: version
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.87.0
+      - uses: dtolnay/rust-toolchain@1.88.0
       - name: build
         run: |
           cd tck
@@ -71,7 +71,7 @@ jobs:
         with:
           version: '9.4.0'
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.87.0
+      - uses: dtolnay/rust-toolchain@1.88.0
       - name: build
         run: cargo build
       - uses: actions/checkout@v4

@@ -804,9 +804,9 @@ impl Backend for AsciidoctorHtml {
       if !autowidth {
         if let DistributedColWidth::Percentage(width) = width {
           if width.fract() == 0.0 {
-            write!(self.html, r#" style="width: {}%;""#, width).unwrap();
+            write!(self.html, r#" style="width: {width}%;""#).unwrap();
           } else {
-            let width_s = format!("{:.4}", width);
+            let width_s = format!("{width:.4}");
             let width_s = width_s.trim_end_matches('0');
             write!(self.html, r#" style="width: {width_s}%;""#).unwrap();
           }

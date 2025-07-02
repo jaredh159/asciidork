@@ -109,7 +109,7 @@ impl std::fmt::Debug for CollectText<'_> {
       self
         .string
         .as_ref()
-        .map_or("None".to_string(), |s| format!("Some({:?})", s)),
+        .map_or("None".to_string(), |s| format!("Some({s:?})")),
       self.loc
     )
   }

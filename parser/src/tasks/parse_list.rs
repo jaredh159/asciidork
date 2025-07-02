@@ -93,7 +93,7 @@ impl<'arena> Parser<'arena> {
       let callouts = self.ctx.get_callouts(conum);
       if callouts.is_empty() {
         self.err_at(
-          format!("No callout found for number `{}`", conum),
+          format!("No callout found for number `{conum}`"),
           marker_src.loc,
         )?;
       }
@@ -322,7 +322,7 @@ mod tests {
             expect_eq!(block.context, *context, from: input);
           }
         }
-        _ => panic!("expected blocks, got {:?}", content),
+        _ => panic!("expected blocks, got {content:?}"),
       }
     }
   }

@@ -46,8 +46,7 @@ fn bool(key: impl Into<String>, value: &AttrValue) -> Result<(), String> {
   match value {
     AttrValue::Bool(_) => Ok(()),
     _ => Err(format!(
-      "Invalid value for attr `{}`, expected empty string",
-      key
+      "Invalid value for attr `{key}`, expected empty string"
     )),
   }
 }

@@ -201,7 +201,7 @@ impl std::fmt::Display for Path {
         path.push(self.separator);
       }
     }
-    write!(f, "{}", path)
+    write!(f, "{path}")
   }
 }
 

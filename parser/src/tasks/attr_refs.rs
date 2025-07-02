@@ -18,7 +18,7 @@ impl<'arena> Parser<'arena> {
         let ext = path.extension();
         self.insert_job_attr("docfilesuffix", ext.to_string());
         self.insert_job_attr("docname", file_stem.to_string());
-        self.insert_job_attr("asciidork-docfilename", format!("{}{}", file_stem, ext));
+        self.insert_job_attr("asciidork-docfilename", format!("{file_stem}{ext}"));
         match self.document.meta.safe_mode {
           SafeMode::Server | SafeMode::Secure => {
             self.insert_job_attr("docdir", "");

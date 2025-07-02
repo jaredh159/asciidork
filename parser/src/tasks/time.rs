@@ -20,7 +20,7 @@ impl Parser<'_> {
     let docyear_s = docdate.year().to_string();
     let docdate_s = docdate.strftime("%Y-%m-%d").to_string();
     let doctime_s = doctime.strftime("%H:%M:%S%z").to_string();
-    let docdatetime_s = format!("{} {}", docdate_s, doctime_s);
+    let docdatetime_s = format!("{docdate_s} {doctime_s}");
     self.insert_job_attr("docyear", docyear_s);
     self.insert_job_attr("docdate", docdate_s);
     self.insert_job_attr("doctime", doctime_s);

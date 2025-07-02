@@ -89,7 +89,7 @@ fn run(
       Output::DrHtml | Output::DrHtmlPrettier => {
         let convert_start = Instant::now();
         if let Err(css_err) = css::resolve(&mut parse_result.document) {
-          writeln!(stderr, "ERROR: {}", css_err)?;
+          writeln!(stderr, "ERROR: {css_err}")?;
           if args.strict {
             std::process::exit(1);
           }
@@ -150,7 +150,7 @@ fn print_timings(
     dest,
     " {} {} {}",
     "Input size:   ".white().dimmed(),
-    format!("{:.2?}", len).green().bold(),
+    format!("{len:.2?}").green().bold(),
     "bytes".white().dimmed()
   )
   .unwrap();
@@ -158,7 +158,7 @@ fn print_timings(
     dest,
     " {} {}",
     "Parse time:   ".white().dimmed(),
-    format!("{:.2?}", parse_time).green().bold()
+    format!("{parse_time:.2?}").green().bold()
   )
   .unwrap();
   if let Some(convert_time) = convert_time {
@@ -166,7 +166,7 @@ fn print_timings(
       dest,
       " {} {}",
       "Convert time: ".white().dimmed(),
-      format!("{:.2?}", convert_time).green().bold()
+      format!("{convert_time:.2?}").green().bold()
     )
     .unwrap();
     writeln!(
@@ -204,7 +204,7 @@ fn print_human_diagnostics(dest: &mut impl Write, diagnostics: Vec<Diagnostic>) 
 fn print_json_diagnostics(dest: &mut impl Write, diagnostics: Vec<Diagnostic>) {
   let errors: Vec<DiagnosticError> = diagnostics.into_iter().map(DiagnosticError::from).collect();
   let json = miniserde::json::to_string(&errors);
-  writeln!(dest, "{}", json).unwrap();
+  writeln!(dest, "{json}").unwrap();
 }
 
 struct Colorizer;

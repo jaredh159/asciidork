@@ -52,7 +52,7 @@ impl AsciidoctorHtml {
     );
 
     if let Some(width) = explicit_width {
-      tag.push_style(format!("width: {}%;", width));
+      tag.push_style(format!("width: {width}%;"));
     }
 
     self.push_open_tag(tag);

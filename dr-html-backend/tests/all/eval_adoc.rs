@@ -773,7 +773,7 @@ fn test_head_opts() {
   ];
 
   for (opts, expectation) in cases {
-    let input = format!("= Doc Header\n{}\n\nignore me\n\n", opts);
+    let input = format!("= Doc Header\n{opts}\n\nignore me\n\n");
     let parser = test_parser!(&input);
     let document = parser.parse().unwrap().document;
     let html = eval(&document, AsciidoctorHtml::new()).unwrap();
