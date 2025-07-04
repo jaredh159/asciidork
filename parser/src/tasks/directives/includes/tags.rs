@@ -195,6 +195,7 @@ impl<'arena> Parser<'arena> {
     let lines = src.split(|&c| c == b'\n');
     let strategy = selection.strategy();
     let mut expected_tags = selection.expected_tags();
+    let mut pushed_non_empty_line = false;
     for (idx, line) in lines.enumerate() {
       match tag_directive(line) {
         Some(TagDirective::Start(tag)) => {
@@ -228,6 +229,11 @@ impl<'arena> Parser<'arena> {
             || (strategy == Strategy::Any
               && selection.specs().any(|spec| spec.satisfied_by(&tag_stack)))
           {
+            if !pushed_non_empty_line
+              && (!line.is_empty() || line.iter().any(|&b| !b.is_ascii_whitespace()))
+            {
+              pushed_non_empty_line = true;
+            }
             dest.extend(line);
             dest.push(b'\n');
           }
@@ -261,6 +267,10 @@ impl<'arena> Parser<'arena> {
         ),
         attr_loc,
       )?;
+    }
+
+    if !pushed_non_empty_line {
+      dest.clear();
     }
 
     std::mem::swap(src, &mut dest);
@@ -374,15 +384,7 @@ mod test {
           asciidorkinclude::[false]
         ",
       ),
-      (
-        simple_file(),
-        "!**",
-        TagSpecs(vec![NoLines]),
-        "
-          asciidorkinclude::[false]
-          asciidorkinclude::[false]
-        ",
-      ),
+      (simple_file(), "!**", TagSpecs(vec![NoLines]), ""),
       (
         simple_file(),
         "foo",
