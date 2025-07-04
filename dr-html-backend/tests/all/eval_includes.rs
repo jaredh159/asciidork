@@ -54,7 +54,8 @@ assert_html!(
 );
 
 assert_html!(
-  no_panic_include_comment2,
+  // https://github.com/jaredh159/asciidork/issues/103
+  detects_delimiter_end_at_include_end,
   resolving: b"// x\n\nx\n",
   adoc! {r#"
     ----
@@ -64,6 +65,17 @@ assert_html!(
     foo bar
   "#},
   contains: "<pre>// x\n\nx</pre>",
+);
+
+assert_html!(
+  // https://github.com/jaredh159/asciidork/issues/95
+  handles_selection_resulting_in_only_empty_lines,
+  resolving: b"// tag::x[]\n\n// end::x[]\n",
+  adoc! {r#"
+    == x
+    include::include.adoc[tags=x]
+  "#},
+  contains: r#"<h2 id="_x">x</h2>"#,
 );
 
 assert_html!(
