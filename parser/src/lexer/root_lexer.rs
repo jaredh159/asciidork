@@ -235,7 +235,12 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn at_delimiter_line(&self) -> Option<(u32, u8)> {
-    self.sources[self.idx as usize].at_delimiter_line()
+    let cur_source = &self.sources[self.idx as usize];
+    if cur_source.is_eof() && !self.source_stack.is_empty() {
+      self.sources[*self.source_stack.last().unwrap() as usize].at_delimiter_line()
+    } else {
+      cur_source.at_delimiter_line()
+    }
   }
 
   pub fn is_eof(&self) -> bool {

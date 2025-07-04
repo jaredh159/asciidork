@@ -54,6 +54,19 @@ assert_html!(
 );
 
 assert_html!(
+  no_panic_include_comment2,
+  resolving: b"// x\n\nx\n",
+  adoc! {r#"
+    ----
+    include::include.adoc[]
+    ----
+
+    foo bar
+  "#},
+  contains: "<pre>// x\n\nx</pre>",
+);
+
+assert_html!(
   included_csv_2,
   resolving: b"A1,\nB1,B2",
   adoc! {r#"
