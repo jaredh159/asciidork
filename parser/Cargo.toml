@@ -1,6 +1,6 @@
 [package]
 name = "asciidork-parser"
-version = "0.21.0"
+version = "0.22.0"
 edition = "2021"
 description = "Asciidork parser"
 license = "MIT"
@@ -9,8 +9,8 @@ license = "MIT"
 attr_ref_observation = []
 
 [dependencies]
-asciidork-ast = { path = "../ast", version = "0.21.0" }
-asciidork-core = { path = "../core", version = "0.21.0" }
+asciidork-ast = { path = "../ast", version = "0.22.0" }
+asciidork-core = { path = "../core", version = "0.22.0" }
 bumpalo = { version = "3.15.4", features = ["collections"] }
 jiff = "0.1.15"
 lazy_static = "1.4.0"

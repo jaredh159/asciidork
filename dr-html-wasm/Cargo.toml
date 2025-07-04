@@ -10,10 +10,10 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 wasm-bindgen = "0.2.84"
-asciidork-parser = { path = "../parser", version = "0.21.0" }
-asciidork-eval = { path = "../eval", version = "0.21.0" }
-asciidork-core = { path = "../core", version = "0.21.0" }
-asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.21.0" }
+asciidork-parser = { path = "../parser", version = "0.22.0" }
+asciidork-eval = { path = "../eval", version = "0.22.0" }
+asciidork-core = { path = "../core", version = "0.22.0" }
+asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.22.0" }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

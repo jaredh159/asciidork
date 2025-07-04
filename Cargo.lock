@@ -61,7 +61,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-ast"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "asciidork-core",
  "bumpalo",
@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-backend"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-cli"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
@@ -102,14 +102,14 @@ dependencies = [
 
 [[package]]
 name = "asciidork-core"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "lazy_static",
 ]
 
 [[package]]
 name = "asciidork-dr-html-backend"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -128,7 +128,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-eval"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-parser"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
@@ -153,7 +153,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-tck"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-parser",

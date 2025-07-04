@@ -1,13 +1,13 @@
 [package]
 name = "asciidork-eval"
-version = "0.21.0"
+version = "0.22.0"
 edition = "2021"
 description = "Asciidork eval"
 license = "MIT"
 
 [dependencies]
-asciidork-ast = { path = "../ast", version = "0.21.0" }
-asciidork-backend = { path = "../backend", version = "0.21.0" }
+asciidork-ast = { path = "../ast", version = "0.22.0" }
+asciidork-backend = { path = "../backend", version = "0.22.0" }
 
 [lints]
 workspace = true
