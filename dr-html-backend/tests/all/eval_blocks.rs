@@ -52,3 +52,34 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  attr_w_hard_breaks,
+  adoc! {r#"
+    :w-breaks: foo, + \
+    bar
+
+    so {w-breaks}
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>so foo,<br> bar</p>
+    </div>
+  "#}
+);
+
+assert_html!(
+  attr_w_2_hard_breaks,
+  adoc! {r#"
+    :w-breaks: foo, + \
+    bar + \
+    baz
+
+    so {w-breaks}
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>so foo,<br> bar<br> baz</p>
+    </div>
+  "#}
+);
