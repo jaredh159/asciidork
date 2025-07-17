@@ -397,6 +397,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_sidebar_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["sidebarblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
+    self.render_buffered_block_title(block);
   }
 
   #[instrument(skip_all)]
@@ -436,6 +437,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_literal_block(&mut self, block: &Block, _content: &BlockContent) {
     self.open_element("div", &["literalblock"], &block.meta.attrs);
+    self.render_buffered_block_title(block);
     self.push_str(r#"<div class="content"><pre>"#);
     self.newlines = Newlines::Preserve;
   }
