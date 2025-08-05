@@ -1957,7 +1957,8 @@ static INIT: Once = Once::new();
 #[cfg(debug_assertions)]
 fn configure_test_tracing() {
   INIT.call_once(|| {
-    if std::env::var("RUST_LOG").is_ok() {
+    // usage: `ASCIIDORK_LOG=1 RUST_LOG=trace cargo test`
+    if std::env::var("ASCIIDORK_LOG").is_ok() {
       let subscriber = fmt::Subscriber::builder()
         .with_env_filter(EnvFilter::from_default_env())
         .with_test_writer()
