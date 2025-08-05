@@ -109,7 +109,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-dr-html-backend"
-version = "0.22.0"
+version = "0.22.1"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
