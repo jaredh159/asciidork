@@ -24,11 +24,11 @@ impl AttrData for MultiAttrList<'_> {
     self.0.is_empty() || self.0.iter().all(AttrList::is_empty)
   }
 
-  fn roles(&self) -> impl Iterator<Item = &SourceString> {
+  fn roles(&self) -> impl Iterator<Item = &SourceString<'_>> {
     self.0.iter().flat_map(AttrList::roles)
   }
 
-  fn id(&self) -> Option<&SourceString> {
+  fn id(&self) -> Option<&SourceString<'_>> {
     self.0.iter().find_map(AttrList::id)
   }
 
@@ -154,11 +154,11 @@ impl AttrData for NoAttrs {
     None
   }
 
-  fn id(&self) -> Option<&SourceString> {
+  fn id(&self) -> Option<&SourceString<'_>> {
     None
   }
 
-  fn roles(&self) -> impl Iterator<Item = &SourceString> {
+  fn roles(&self) -> impl Iterator<Item = &SourceString<'_>> {
     [].iter()
   }
 }

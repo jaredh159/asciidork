@@ -24,16 +24,16 @@ pub trait AttrData {
   fn ordered_list_custom_number_style(&self) -> Option<&'static str>;
   fn unordered_list_custom_marker_style(&self) -> Option<&'static str>;
   fn block_style(&self) -> Option<BlockContext>;
-  fn id(&self) -> Option<&SourceString>;
-  fn roles(&self) -> impl Iterator<Item = &SourceString>;
+  fn id(&self) -> Option<&SourceString<'_>>;
+  fn roles(&self) -> impl Iterator<Item = &SourceString<'_>>;
 }
 
 impl AttrData for AttrList<'_> {
-  fn roles(&self) -> impl Iterator<Item = &SourceString> {
+  fn roles(&self) -> impl Iterator<Item = &SourceString<'_>> {
     self.roles.iter().filter(|s| !s.is_empty())
   }
 
-  fn id(&self) -> Option<&SourceString> {
+  fn id(&self) -> Option<&SourceString<'_>> {
     self.id.as_ref()
   }
 
