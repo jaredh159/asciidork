@@ -163,7 +163,7 @@ impl<'arena> Token<'arena> {
     &self.lexeme[1..self.lexeme.len() - 1]
   }
 
-  pub fn lowercase_attr_name(&self) -> Cow<str> {
+  pub fn lowercase_attr_name(&self) -> Cow<'_, str> {
     let attr_name = self.attr_name();
     if attr_name.chars().any(|c| c.is_uppercase()) {
       Cow::Owned(attr_name.to_lowercase())

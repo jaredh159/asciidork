@@ -273,7 +273,7 @@ impl<'arena> Line<'arena> {
     self.tokens.into_iter()
   }
 
-  pub fn first_nonescaped(&self, kind: TokenKind) -> Option<(&Token, usize)> {
+  pub fn first_nonescaped(&self, kind: TokenKind) -> Option<(&Token<'_>, usize)> {
     let mut prev: Option<TokenKind> = None;
     for (i, token) in self.iter().enumerate() {
       if token.kind(kind) && prev != Some(Backslash) {
@@ -485,7 +485,7 @@ impl<'arena> Line<'arena> {
     SourceString::new(s, loc)
   }
 
-  pub fn consume_if_not(&mut self, kind: TokenKind) -> Option<Token> {
+  pub fn consume_if_not(&mut self, kind: TokenKind) -> Option<Token<'_>> {
     match self.current_token() {
       Some(token) if !token.kind(kind) => self.consume_current(),
       _ => None,

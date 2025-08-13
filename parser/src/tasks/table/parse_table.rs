@@ -399,7 +399,7 @@ impl<'arena> Parser<'arena> {
   }
 }
 
-fn newline_token(start: u32, depth: u16, bump: &Bump) -> Token {
+fn newline_token(start: u32, depth: u16, bump: &Bump) -> Token<'_> {
   Token {
     kind: TokenKind::Newline,
     lexeme: BumpString::from_str_in("\n", bump),
