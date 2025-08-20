@@ -434,7 +434,7 @@ impl<'arena> Parser<'arena> {
             }
           }
 
-          MaybeEmail if subs.macros() && regx::EMAIL_RE.is_match(&token.lexeme) => {
+          Email if subs.macros() => {
             let loc = token.loc;
             acc.push_node(
               Macro(Link {

@@ -62,6 +62,10 @@ impl<'arena, T> Deq<'arena, T> {
     self.buf.pop()
   }
 
+  pub fn truncate(&mut self, len: usize) {
+    self.buf.truncate(len);
+  }
+
   pub fn is_empty(&self) -> bool {
     self.buf.len() - self.pos == 0
   }

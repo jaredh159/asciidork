@@ -61,6 +61,7 @@ impl<'arena> Line<'arena> {
     match token.kind {
       MacroName if token.lexeme == "pass:" => self.pass_macro = true,
       TermDelimiter => self.term_delim = true,
+      MaybeEmail => return self.finalize_email(token),
       Plus if self.tokens.last().not_kind(Backtick) && token.len() < 4 => {
         self.pass_pluses = self.pass_pluses.saturating_add(1)
       }
@@ -68,6 +69,75 @@ impl<'arena> Line<'arena> {
     }
     self.tokens.push(token);
     self.orig_len += 1;
+  }
+
+  fn finalize_email(&mut self, mut token: Token<'arena>) {
+    if self.tokens.is_empty() {
+      if regx::EMAIL_RE.is_match(&token.lexeme) {
+        token.kind = Email;
+      } else {
+        token.kind = Word;
+      }
+      self.tokens.push(token);
+      self.orig_len += 1;
+      return;
+    }
+
+    let init_idx = self.tokens.len() - 1;
+    let mut idx = init_idx;
+    while idx > 0 {
+      let Some(prev_token) = self.tokens.get(idx) else {
+        break;
+      };
+      match prev_token.kind {
+        Dots if prev_token.len() > 1 => break,
+        Word | Digits | Dots | Underscore | Plus => {
+          idx -= 1;
+        }
+        _ => break,
+      }
+    }
+
+    if idx == init_idx {
+      if regx::EMAIL_RE.is_match(&token.lexeme) {
+        token.kind = Email;
+      } else {
+        token.kind = Word;
+      }
+      self.tokens.push(token);
+      self.orig_len += 1;
+      return;
+    }
+
+    let mut end_idx = idx;
+    if !matches!(
+      self.tokens.get(end_idx).unwrap().kind,
+      Word | Digits | Dots | Underscore | Plus
+    ) {
+      end_idx += 1;
+    }
+    let start = self.tokens.get(end_idx).unwrap().loc.start;
+    let mut maybe_email = String::with_capacity((token.loc.end - start) as usize);
+    for t in self.tokens.iter().skip(end_idx) {
+      maybe_email.push_str(&t.lexeme);
+    }
+    maybe_email.push_str(&token.lexeme);
+
+    if !regx::EMAIL_RE.is_match(&maybe_email) {
+      token.kind = Word;
+      self.tokens.push(token);
+      self.orig_len += 1;
+      return;
+    }
+
+    let start_token = self.tokens.get_mut(end_idx).unwrap();
+    start_token.lexeme.clear();
+    start_token.loc.end = token.loc.end;
+    start_token.lexeme.push_str(&maybe_email);
+    start_token.kind = Email;
+
+    self.tokens.truncate(end_idx + 1);
+    self.orig_len = (end_idx + 1) as u32;
   }
 
   pub fn push_nonpass(&mut self, token: Token<'arena>) {
@@ -1104,6 +1174,40 @@ mod tests {
     for (input, token_types, expected) in cases {
       let line = read_line!(input);
       expect_eq!(line.contains_seq(token_types), expected, from: input);
+    }
+  }
+
+  #[test]
+  fn test_size_of_line() {
+    assert!(std::mem::size_of::<Line>() <= 56);
+  }
+
+  #[test]
+  fn test_email_detection() {
+    let cases: Vec<(&str, &[TokenSpec], u32)> = vec![
+      ("bob@bob.com", &[Kind(Email)], 1),
+      ("bob@bob", &[Kind(Word)], 1),
+      ("bob.lob@bob.com", &[Kind(Email)], 1),
+      (
+        "foo bob.lob@bob.com",
+        &[Kind(Word), Kind(Whitespace), Kind(Email)],
+        3,
+      ),
+      (
+        "foo baz_bob.lob@bob.com",
+        &[Kind(Word), Kind(Whitespace), Kind(Email)],
+        3,
+      ),
+      (
+        "foo baz+bob.lob@bob.com",
+        &[Kind(Word), Kind(Whitespace), Kind(Email)],
+        3,
+      ),
+    ];
+    for (input, token_types, expected_len) in cases {
+      let line = read_line!(input);
+      expect_eq!(line.contains_seq(token_types), true, from: input);
+      expect_eq!(line.orig_len, expected_len, from: input);
     }
   }
 }
