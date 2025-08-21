@@ -31,6 +31,7 @@ pub enum TokenKind {
   Discard,
   DoubleQuote,
   Dots,
+  Email,
   Entity,
   EqualSigns,
   #[default]

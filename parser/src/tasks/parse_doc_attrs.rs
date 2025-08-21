@@ -113,7 +113,12 @@ impl<'arena> Parser<'arena> {
     }
 
     while !lines.is_empty() {
-      wrapped.push(' ');
+      if first_line_src.ends_with(" +") {
+        // https://docs.asciidoctor.org/asciidoc/latest/attributes/wrap-values/#hard
+        wrapped.push('\n')
+      } else {
+        wrapped.push(' ')
+      }
       let next_line = lines.consume_current().unwrap();
       let next_line_src = next_line.reassemble_src();
       if next_line_src.ends_with(" \\") {
