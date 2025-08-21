@@ -1,6 +1,6 @@
 [package]
 name = "asciidork-cli"
-version = "0.22.0"
+version = "0.22.2"
 edition = "2021"
 description = "Asciidork CLI"
 license = "MIT"
