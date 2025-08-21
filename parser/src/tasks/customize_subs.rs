@@ -31,14 +31,14 @@ pub fn from_meta(current: Substitutions, attrs: &MultiAttrList) -> Substitutions
       Strategy::Replace => match step_or_group {
         StepOrGroup::None => return Substitutions::none(),
         StepOrGroup::Normal => return Substitutions::normal(),
-        StepOrGroup::Verbatim => todo!(),
-        StepOrGroup::SpecialChars => todo!(),
-        StepOrGroup::Callouts => todo!(),
-        StepOrGroup::Quotes => todo!(),
-        StepOrGroup::Attributes => todo!(),
-        StepOrGroup::Replacements => todo!(),
-        StepOrGroup::Macros => todo!(),
-        StepOrGroup::PostReplacements => todo!(),
+        StepOrGroup::Verbatim => return Substitutions::only_special_chars(),
+        StepOrGroup::SpecialChars => next.insert(Subs::SpecialChars),
+        StepOrGroup::Callouts => next.insert(Subs::Callouts),
+        StepOrGroup::Quotes => next.insert(Subs::InlineFormatting),
+        StepOrGroup::Attributes => next.insert(Subs::AttrRefs),
+        StepOrGroup::Replacements => next.insert(Subs::CharReplacement),
+        StepOrGroup::Macros => next.insert(Subs::Macros),
+        StepOrGroup::PostReplacements => next.insert(Subs::PostReplacement),
       },
       Strategy::Append | Strategy::Prepend | Strategy::Remove => {
         let modify = match strategy {
