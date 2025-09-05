@@ -71,14 +71,14 @@ impl Parser<'_> {
     match toc_pos {
       Some(TocPosition::Macro) if !self.ctx.saw_toc_macro => {
         self.err_doc_attr(
-          ":toc:",
+          "toc",
           "Table of Contents set to `macro` but macro (`toc::[]`) not found",
         )?;
       }
       Some(TocPosition::Preamble) => match &self.document.content {
         DocContent::Blocks(_) | DocContent::Sections(Sectioned { preamble: None, .. }) => {
           self.err_doc_attr(
-            ":toc:",
+            "toc",
             "Table of Contents set to `preamble` but no preamble found",
           )?;
         }

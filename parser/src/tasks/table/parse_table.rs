@@ -220,12 +220,12 @@ impl<'arena> Parser<'arena> {
         Ok(ParseResult {
           document,
           mut warnings,
-          attr_locs,
+          attr_defs,
           #[cfg(feature = "attr_ref_observation")]
           attr_ref_observer,
           ..
         }) => {
-          self.attr_locs.extend(attr_locs);
+          self.ctx.attr_defs.extend(attr_defs);
           if !warnings.is_empty() {
             self.lexer.reline_diagnostics(loc.start, &mut warnings);
             self.errors.borrow_mut().extend(warnings);

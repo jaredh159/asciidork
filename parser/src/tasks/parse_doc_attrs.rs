@@ -3,84 +3,175 @@ use std::borrow::Cow;
 use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
-  pub(super) fn parse_doc_attrs(
-    &mut self,
-    lines: &mut ContiguousLines<'arena>,
-    in_header: bool,
-  ) -> Result<Option<SourceLocation>> {
-    lines.discard_leading_comment_lines();
-    let mut last_end: Option<SourceLocation> = None;
-    while let Some((key, value, end)) = self.parse_doc_attr(lines, in_header)? {
-      last_end = Some(end);
-      if key == "doctype" {
-        if let AttrValue::String(s) = &value {
-          match s.as_str().parse::<DocType>() {
-            Ok(doc_type) => self.document.meta.set_doctype(doc_type),
-            Err(err) => self.err_line_of(err, end)?,
-          }
-        } else {
-          self.err_line_of("".parse::<DocType>().err().unwrap(), end)?;
+  pub(crate) fn try_parse_attr_def(&mut self, token: &mut Token<'arena>) -> Result<()> {
+    let start_loc = token.loc.start;
+    let depth = token.loc.include_depth;
+
+    // we need at least 4 bytes to have a valid attr def: `:a:\n`
+    if self.lexer.byte_at(start_loc + 3, depth).is_none() {
+      return Ok(());
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum State {
+      InName,
+      TrailingBang,
+      AfterName,
+    }
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum Negation {
+      None,
+      Leading,
+      Trailing,
+    }
+
+    // test attr def start, and bail early
+    let mut pos = start_loc + 1;
+    let mut negated = Negation::None;
+    if self.lexer.byte_at(pos, depth) == Some(b'!') {
+      negated = Negation::Leading;
+      pos += 1;
+    };
+    let first_char = self.lexer.byte_at(pos, depth).unwrap();
+    if !first_char.is_ascii_alphanumeric() && first_char != b'_' {
+      return Ok(());
+    }
+
+    let name_start = pos;
+    let mut name_end = pos;
+    pos += 1;
+
+    let mut state = State::InName;
+    let mut has_lbrace = false;
+    loop {
+      match (state, self.lexer.byte_at(pos, depth)) {
+        (State::InName, Some(b)) if is_attr_word_char(b) => {}
+        (State::InName, Some(b'!')) => {
+          negated = Negation::Trailing;
+          state = State::TrailingBang;
+          name_end = pos;
         }
-      } else if let Err(err) = self.document.meta.insert_header_attr(&key, value) {
-        self.err_line_of(err, end)?;
+        (State::InName, Some(b':')) => {
+          state = State::AfterName;
+          name_end = pos;
+        }
+        (State::InName, _) => {
+          return Ok(());
+        }
+        (State::TrailingBang, Some(b':')) => {
+          state = State::AfterName;
+          name_end = pos - 1;
+        }
+        (State::TrailingBang, _) => {
+          return Ok(());
+        }
+        (State::AfterName, Some(b'\r')) if self.lexer.byte_at(pos + 1, depth) == Some(b'\n') => {
+          break
+        }
+        (State::AfterName, Some(b'\n') | None) => break,
+        (State::AfterName, Some(b'{')) => has_lbrace = true,
+        (State::AfterName, _) => {}
       }
-      lines.discard_leading_comment_lines();
+      pos += 1;
     }
-    Ok(last_end)
-  }
 
-  pub(super) fn parse_doc_attr(
-    &mut self,
-    lines: &mut ContiguousLines<'arena>,
-    in_header: bool,
-  ) -> Result<Option<(String, AttrValue, SourceLocation)>> {
-    let Some(line) = lines.current() else {
-      return Ok(None);
-    };
+    let mut val_string = self
+      .lexer
+      .src_string_from_loc(SourceLocation::new(start_loc, pos, depth))
+      .src;
+    let name_src = self
+      .lexer
+      .src_string_from_loc(SourceLocation::new(name_start, name_end, depth));
+    let name = &name_src.to_lowercase();
 
-    let src = line.reassemble_src();
-    let Some(captures) = regx::ATTR_DECL.captures(&src) else {
-      return Ok(None);
-    };
+    // gather line continuations
+    loop {
+      if val_string.ends_with(" \\") {
+        val_string.pop();
 
-    let line = lines.consume_current().unwrap();
-    let mut name_loc = line.first_loc().unwrap().incr_start();
+        // https://docs.asciidoctor.org/asciidoc/latest/attributes/wrap-values/#hard
+        if val_string.ends_with(" + ") {
+          val_string.pop();
+          val_string.push('\n');
+        }
 
-    let mut name = captures.get(1).unwrap().as_str();
-    let is_negated = if name.starts_with('!') {
-      name_loc = name_loc.incr();
-      name = &name[1..];
-      true
-    } else if name.ends_with('!') {
-      name = &name[..name.len() - 1];
-      true
-    } else {
-      false
-    };
+        if self.lexer.byte_at(pos + 1, depth) == Some(b'\r') {
+          pos += 2;
+        } else {
+          pos += 1;
+        }
 
-    let attr = if let Some(re_match) = captures.get(2) {
-      if is_negated {
-        self.err_line("Cannot unset attr with `!` AND provide value", &line)?;
+        let line_start = pos;
+        loop {
+          match self.lexer.byte_at(pos, depth) {
+            Some(b'\r') if self.lexer.byte_at(pos + 1, depth) == Some(b'\n') => {
+              break;
+            }
+            Some(b'\n') | None => break,
+            Some(b'{') => has_lbrace = true,
+            Some(_) => {}
+          }
+          pos += 1;
+        }
+        let next_line = self
+          .lexer
+          .str_from_loc(SourceLocation::new(line_start, pos, depth));
+        val_string.push_str(next_line);
+      } else {
+        break;
       }
-
-      let joined = self.join_wrapped_value(re_match.as_str(), lines);
-      let value = self.replace_attr_vals(&joined);
-      AttrValue::String(value.trim().to_string())
-    } else {
-      AttrValue::Bool(!is_negated)
-    };
-
-    if name == "leveloffset" {
-      Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &attr);
     }
+
+    let mut val_start = (name_end - start_loc) + 1;
+    if negated == Negation::Trailing {
+      val_start += 1;
+    }
+
+    let value_str = val_string.as_str()[(val_start as usize)..].trim();
+    let value = if value_str.is_empty() {
+      AttrValue::Bool(negated == Negation::None)
+    } else {
+      if negated != Negation::None {
+        self.err_line_starting("Cannot unset attr with `!` AND provide value", token.loc)?;
+      }
+      if has_lbrace && self.ctx.in_header {
+        AttrValue::String(self.replace_attr_vals(value_str).into_owned())
+      } else {
+        AttrValue::String(value_str.to_string())
+      }
+    };
 
     #[cfg(feature = "attr_ref_observation")]
     if let Some(ref mut observer) = self.attr_ref_observer.as_mut() {
-      observer.attr_defined(name, &attr, name_loc.adding_to_end(name.len() as u32));
+      observer.attr_defined(&name, &value, name_src.loc);
     }
 
-    self.attr_locs.push((name_loc, in_header));
-    Ok(Some((name.to_lowercase(), attr, line.last_loc().unwrap())))
+    let attr_def_loc = SourceLocation::new(start_loc, pos, depth);
+    self.ctx.attr_defs.push(AttrDef {
+      name: name.clone(),
+      loc: attr_def_loc,
+      value: value.clone(),
+      has_lbrace,
+      in_header: self.ctx.in_header,
+    });
+
+    if name == "leveloffset" {
+      Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &value);
+    }
+
+    if self.ctx.in_header {
+      if let Err(err) = self.document.meta.insert_header_attr(name, value) {
+        self.err_at(err, attr_def_loc)?;
+      }
+    }
+
+    // the token now represents the entire attr def
+    token.kind = TokenKind::AttrDef;
+    token.loc = attr_def_loc;
+    token.lexeme = self.string(self.lexer.str_from_loc(attr_def_loc));
+    self.lexer.advance_to(pos);
+
+    Ok(())
   }
 
   pub(crate) fn replace_attr_vals<'h>(&self, haystack: &'h str) -> Cow<'h, str> {
@@ -94,42 +185,11 @@ impl<'arena> Parser<'arena> {
       }
     })
   }
+}
 
-  fn join_wrapped_value(
-    &self,
-    mut first_line_src: &str,
-    lines: &mut ContiguousLines<'arena>,
-  ) -> BumpString<'arena> {
-    let has_continuation = if first_line_src.ends_with(" \\") {
-      first_line_src = &first_line_src[..first_line_src.len() - 2];
-      true
-    } else {
-      false
-    };
-
-    let mut wrapped = self.string(first_line_src);
-    if lines.is_empty() || !has_continuation {
-      return wrapped;
-    }
-
-    while !lines.is_empty() {
-      if first_line_src.ends_with(" +") {
-        // https://docs.asciidoctor.org/asciidoc/latest/attributes/wrap-values/#hard
-        wrapped.push('\n')
-      } else {
-        wrapped.push(' ')
-      }
-      let next_line = lines.consume_current().unwrap();
-      let next_line_src = next_line.reassemble_src();
-      if next_line_src.ends_with(" \\") {
-        wrapped.push_str(&next_line_src[..next_line_src.len() - 2]);
-      } else {
-        wrapped.push_str(&next_line_src);
-        break;
-      }
-    }
-    wrapped
-  }
+// https://docs.asciidoctor.org/asciidoc/latest/attributes/names-and-values/#user-defined
+const fn is_attr_word_char(c: u8) -> bool {
+  c.is_ascii_alphanumeric() || c == b'_' || c == b'-'
 }
 
 #[cfg(test)]
@@ -153,44 +213,6 @@ mod tests {
     for (mut initial, attr_value, expected) in cases {
       Parser::adjust_leveloffset(&mut initial, &attr_value);
       assert_eq!(initial, expected);
-    }
-  }
-
-  #[test]
-  fn test_parse_doc_attr() {
-    let cases = vec![
-      (":foo: bar", ("foo", "bar".into())),
-      (":foo:  bar", ("foo", "bar".into())),
-      (":foo: bar ", ("foo", "bar".into())),
-      (":foo:  bar ", ("foo", "bar".into())),
-      (":foo:", ("foo", true.into())),
-      (":!foo:", ("foo", false.into())),
-      (":foo!:", ("foo", false.into())),
-      (":foo: {custom}-bar", ("foo", "value-bar".into())),
-      (":foo: {custom}-bar-{baz}", ("foo", "value-bar-qux".into())),
-      (
-        ":foo-bar: baz, rofl, lol",
-        ("foo-bar", "baz, rofl, lol".into()),
-      ),
-      (":foo: bar \\\nand baz", ("foo", "bar and baz".into())),
-      (
-        ":foo: bar \\\nand baz \\\nand qux",
-        ("foo", "bar and baz and qux".into()),
-      ),
-      (":foo: bar \\\n", ("foo", "bar".into())),
-    ];
-    for (input, (expected_key, expected_val)) in cases {
-      let mut parser = test_parser!(input);
-      parser
-        .document
-        .meta
-        .insert_doc_attr("custom", "value")
-        .unwrap();
-      parser.document.meta.insert_doc_attr("baz", "qux").unwrap();
-      let mut block = parser.read_lines().unwrap().unwrap();
-      let (key, value, _) = parser.parse_doc_attr(&mut block, false).unwrap().unwrap();
-      assert_eq!(&key, expected_key);
-      assert_eq!(value, expected_val);
     }
   }
 

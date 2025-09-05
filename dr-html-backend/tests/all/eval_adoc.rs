@@ -1,3 +1,4 @@
+use asciidork_core::{JobAttr, JobSettings};
 use asciidork_dr_html_backend::{css, AsciidoctorHtml};
 use asciidork_eval::eval;
 use asciidork_parser::prelude::*;
@@ -46,6 +47,30 @@ assert_inline_html!(
   email_w_dot,
   "email a.b@c.com",
   r#"email <a href="mailto:a.b@c.com">a.b@c.com</a>"#
+);
+
+assert_inline_html!(
+  attr_def_right_before_para,
+  ":foo: bar\n{foo} baz",
+  "bar baz"
+);
+
+assert_inline_html!(
+  multiple_attr_def_right_before_para,
+  ":foo: bar\n:jim: jam\n{foo} baz {jim}",
+  "bar baz jam"
+);
+
+assert_inline_html!(
+  attr_def_right_before_para_after_comment,
+  "// comment\n:foo: bar\n{foo} baz",
+  "bar baz"
+);
+
+assert_inline_html!(
+  attr_def_within_para,
+  "line 1\n:foo: bar\nline 3",
+  "line 1 :foo: bar line 3"
 );
 
 assert_inline_html!(
@@ -780,7 +805,12 @@ fn test_head_opts() {
 
   for (opts, expectation) in cases {
     let input = format!("= Doc Header\n{opts}\n\nignore me\n\n");
-    let parser = test_parser!(&input);
+    let mut parser = test_parser!(&input);
+    let mut job_settings = JobSettings::default();
+    job_settings
+      .job_attrs
+      .insert_unchecked("stylesheet", JobAttr::readonly(false));
+    parser.apply_job_settings(job_settings);
     let document = parser.parse().unwrap().document;
     let html = eval(&document, AsciidoctorHtml::new()).unwrap();
     match expectation {

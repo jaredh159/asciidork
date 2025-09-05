@@ -3,6 +3,7 @@ use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
   pub(crate) fn parse_document_header(&mut self) -> Result<()> {
+    self.ctx.in_header = true;
     let mut header = DocHeader::default();
     let Some(mut block) = self.parse_prefixed_exception_blocks(&mut header)? else {
       self.finalize_doc_header(header);
@@ -15,9 +16,9 @@ impl<'arena> Parser<'arena> {
       return Ok(());
     }
 
-    self.parse_header_doc_attrs(&mut block, &mut header)?;
+    self.skip_header_doc_attrs(&mut block, &mut header)?;
     self.parse_doc_title_author_revision(&mut block, &mut header)?;
-    self.parse_header_doc_attrs(&mut block, &mut header)?;
+    self.skip_header_doc_attrs(&mut block, &mut header)?;
     self.finalize_doc_header(header);
     Ok(())
   }
@@ -39,7 +40,7 @@ impl<'arena> Parser<'arena> {
     }
 
     if lines.current_satisfies(|l| l.is_attr_decl()) {
-      self.parse_header_doc_attrs(&mut lines, header)?;
+      self.skip_header_doc_attrs(&mut lines, header)?;
       self.restore_lines(lines);
       return self.parse_prefixed_exception_blocks(header);
     }
@@ -174,15 +175,17 @@ impl<'arena> Parser<'arena> {
     if header.title.is_some() || !header.loc.is_empty() {
       self.document.header = Some(header);
     }
+    self.ctx.in_header = false;
   }
 
-  fn parse_header_doc_attrs(
+  fn skip_header_doc_attrs(
     &mut self,
     lines: &mut ContiguousLines<'arena>,
     header: &mut DocHeader,
   ) -> Result<()> {
-    if let Some(loc) = self.parse_doc_attrs(lines, true)? {
-      header.loc.end = loc.end;
+    while lines.current_token().kind(AttrDef) {
+      let line = lines.consume_current().unwrap();
+      header.loc.end = line.first_loc().unwrap().end;
     }
     Ok(())
   }

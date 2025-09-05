@@ -178,6 +178,7 @@ impl Attrs {
         ("pp", "&#43;&#43;"),
         ("copycss", ""),
         ("stylesdir", "."),
+        ("iconsdir", "./images/icons"),
         ("stylesheet", ""),
         ("webfonts", ""),
       ]

@@ -84,20 +84,36 @@ impl<'arena> Parser<'arena> {
       {
         return Ok(Some(self.parse_table(lines, meta)?));
       }
-      Colon => {
-        if let Some((key, value, end_loc)) = self.parse_doc_attr(&mut lines, false)? {
-          self.restore_lines(lines);
-          let attr_loc = meta.start_loc.setting_end(end_loc.end);
-          if let Err(err) = self.document.meta.insert_doc_attr(&key, value.clone()) {
-            self.err_at(err, attr_loc)?;
-          }
-          return Ok(Some(Block {
-            meta,
-            context: Context::DocumentAttributeDecl,
-            content: Content::DocumentAttribute(key, value),
-            loc: attr_loc.into(),
-          }));
+      AttrDef => {
+        let pos = self
+          .ctx
+          .attr_defs
+          .iter()
+          .position(|def| def.loc == first_token.loc)
+          .unwrap();
+        // this should be fast because it's usually the last one, or very close
+        let mut def = self.ctx.attr_defs.remove(pos);
+        if def.has_lbrace {
+          let str_val = def.value.str().unwrap(); // only str type could have lbrace
+          let replaced = self.replace_attr_vals(str_val);
+          def.value = AttrValue::String(replaced.into_owned());
         }
+        self.ctx.attr_defs.push(def.clone());
+        if let Err(err) = self
+          .document
+          .meta
+          .insert_doc_attr(def.name.as_str(), def.value.clone())
+        {
+          self.err_at(err, def.loc)?;
+        }
+        lines.consume_current(); // attr def token line
+        self.restore_lines(lines);
+        return Ok(Some(Block {
+          meta,
+          loc: def.loc.into(),
+          context: Context::DocumentAttributeDecl,
+          content: Content::DocumentAttribute(String::from(def.name.as_str()), def.value),
+        }));
       }
       SingleQuote
         if lines.current_satisfies(|line| {

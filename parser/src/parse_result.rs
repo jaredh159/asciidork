@@ -5,7 +5,7 @@ use crate::internal::*;
 pub struct ParseResult<'arena> {
   pub document: Document<'arena>,
   pub warnings: Vec<Diagnostic>,
-  pub(crate) attr_locs: Vec<(SourceLocation, bool)>,
+  pub(crate) attr_defs: BumpVec<'arena, AttrDef>,
   pub include_resolver: Option<Box<dyn IncludeResolver>>,
   #[cfg(feature = "attr_ref_observation")]
   pub attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
@@ -40,7 +40,7 @@ impl<'arena> From<Parser<'arena>> for ParseResult<'arena> {
     ParseResult {
       document: parser.document,
       warnings: parser.errors.into_inner(),
-      attr_locs: parser.attr_locs,
+      attr_defs: parser.ctx.attr_defs,
       include_resolver: parser.include_resolver,
       #[cfg(feature = "attr_ref_observation")]
       attr_ref_observer: parser.attr_ref_observer,

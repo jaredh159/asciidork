@@ -23,7 +23,18 @@ pub struct ParseContext<'arena> {
   pub max_include_depth: u16,
   pub ifdef_stack: BumpVec<'arena, BumpString<'arena>>,
   pub comment_delim_in_lines: bool,
+  pub in_header: bool,
+  pub attr_defs: BumpVec<'arena, AttrDef>,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AttrDef {
+  pub loc: SourceLocation,
+  pub name: String,
+  pub value: AttrValue,
+  pub has_lbrace: bool,
+  pub in_header: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -78,6 +89,8 @@ impl<'arena> ParseContext<'arena> {
       max_include_depth: 64,
       comment_delim_in_lines: false,
       ifdef_stack: BumpVec::new_in(bump),
+      attr_defs: BumpVec::new_in(bump),
+      in_header: false,
     }
   }
 
@@ -101,6 +114,8 @@ impl<'arena> ParseContext<'arena> {
       max_include_depth: 64,
       comment_delim_in_lines: false,
       ifdef_stack: BumpVec::new_in(bump),
+      attr_defs: BumpVec::new_in(bump),
+      in_header: false,
     }
   }
 

@@ -61,14 +61,13 @@ impl Parser<'_> {
     message: impl Into<String>,
   ) -> Result<()> {
     let key: &String = &key.into();
-    let loc = self
-      .attr_locs
-      .iter()
-      .filter_map(|(loc, header)| if *header { Some(*loc) } else { None })
-      .map(|loc| (loc, self.lexer.line_of(loc)))
-      .find(|(_, line)| line.starts_with(key))
-      .map(|(loc, _)| loc);
-
+    let loc = self.ctx.attr_defs.iter().find_map(|def| {
+      if def.in_header && def.name == *key {
+        Some(def.loc)
+      } else {
+        None
+      }
+    });
     let Some(loc) = loc else {
       debug_assert!(false, "doc attr not found");
       return Ok(());
