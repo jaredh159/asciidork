@@ -681,11 +681,17 @@ impl<'arena> Line<'arena> {
     let third = self.nth_token(offset + 2);
 
     match token.kind {
-      Star if second.kind(Whitespace) && third.is_some() => Some(ListMarker::Star(1)),
+      Star if second.kind(Whitespace) && third.is_some_and(|t| t.kind != Star) => {
+        Some(ListMarker::Star(1))
+      }
       Dots if second.kind(Whitespace) && third.is_some() => {
         Some(ListMarker::Dot(token.len() as u8))
       }
-      Dashes if second.kind(Whitespace) && token.len() == 1 && third.is_some() => {
+      Dashes
+        if second.kind(Whitespace)
+          && token.len() == 1
+          && third.is_some_and(|t| !t.is_kind_len(Dashes, 1)) =>
+      {
         Some(ListMarker::Dash)
       }
       Star if second.kind(Star) => {
@@ -1008,6 +1014,8 @@ mod tests {
       ("* ", None),
       ("** ", None),
       ("*** ", None),
+      ("- - -", None), // markdown break
+      ("* * *", None), // markdown break
       (" ", None),
       (". ", None),
       (".. ", None),
