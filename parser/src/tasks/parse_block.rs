@@ -117,8 +117,45 @@ impl<'arena> Parser<'arena> {
       }
       SingleQuote
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 3
-            && line.starts_with_seq(&[Kind(SingleQuote), Kind(SingleQuote), Kind(SingleQuote)])
+          line.num_tokens() == 3 && line.starts_with_seq(&[Kind(SingleQuote); 3])
+        }) =>
+      {
+        return self.parse_break(Context::ThematicBreak, lines, meta);
+      }
+      Star
+        if lines.current_satisfies(|line| {
+          line.num_tokens() == 3 && line.starts_with_seq(&[Kind(Star); 3])
+        }) =>
+      {
+        return self.parse_break(Context::ThematicBreak, lines, meta);
+      }
+      Dashes if first_token.len() == 3 && lines.current_satisfies(|l| l.len() == 1) => {
+        return self.parse_break(Context::ThematicBreak, lines, meta);
+      }
+      Dashes
+        if lines.current_satisfies(|line| {
+          line.num_tokens() == 5
+            && line.starts_with_seq(&[
+              Len(1, Dashes),
+              Len(1, Whitespace),
+              Len(1, Dashes),
+              Len(1, Whitespace),
+              Len(1, Dashes),
+            ])
+        }) =>
+      {
+        return self.parse_break(Context::ThematicBreak, lines, meta);
+      }
+      Star
+        if lines.current_satisfies(|line| {
+          line.num_tokens() == 5
+            && line.starts_with_seq(&[
+              Kind(Star),
+              Len(1, Whitespace),
+              Kind(Star),
+              Len(1, Whitespace),
+              Kind(Star),
+            ])
         }) =>
       {
         return self.parse_break(Context::ThematicBreak, lines, meta);
