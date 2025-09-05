@@ -899,11 +899,7 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn is_attr_decl(&self) -> bool {
-    if !self.current_is(TokenKind::Colon) || self.num_tokens() < 2 {
-      return false;
-    }
-    let src = self.reassemble_src();
-    regx::ATTR_DECL.is_match(&src)
+    self.starts(TokenKind::AttrDef)
   }
 
   pub fn is_directive_endif(&self) -> bool {

@@ -12,7 +12,6 @@ pub struct Parser<'arena> {
   pub(super) ctx: ParseContext<'arena>,
   pub(super) errors: RefCell<Vec<Diagnostic>>,
   pub(super) strict: bool, // todo: naming...
-  pub(super) attr_locs: Vec<(SourceLocation, bool)>,
   pub(super) include_resolver: Option<Box<dyn IncludeResolver>>,
   #[cfg(feature = "attr_ref_observation")]
   pub(super) attr_ref_observer: Option<Box<dyn AttrRefObserver>>,
@@ -38,7 +37,6 @@ impl<'arena> Parser<'arena> {
       strict: true,
       include_resolver: None,
       lexer,
-      attr_locs: Vec::with_capacity(16),
       #[cfg(feature = "attr_ref_observation")]
       attr_ref_observer: None,
     };
@@ -113,10 +111,25 @@ impl<'arena> Parser<'arena> {
       return Ok(None);
     }
 
+    use TokenKind::*;
     let mut drop_line = false;
     let mut line = Line::empty(self.bump);
     while !self.lexer.at_newline() && !self.lexer.is_eof() {
-      let token = self.lexer.next_token();
+      let mut token = self.lexer.next_token();
+      if line.is_empty() {
+        // if we encounter a line like `|===` in the very first paragraph,
+        // we know we're not in the header anymore, so any attrs refs can be set properly
+        if self.ctx.in_header
+          && !matches!(
+            token.kind,
+            Colon | EqualSigns | Word | ForwardSlashes | Directive | OpenBracket
+          )
+        {
+          self.ctx.in_header = false;
+        } else if token.kind == Colon && self.ctx.subs.attr_refs() {
+          self.try_parse_attr_def(&mut token)?;
+        }
+      }
       self.push_token_replacing_attr_ref(token, &mut line, &mut drop_line)?;
     }
     self.lexer.skip_newline();

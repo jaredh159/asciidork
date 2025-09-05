@@ -144,12 +144,16 @@ impl<'arena> RootLexer<'arena> {
       .map(|(i, _)| i as u16)
   }
 
-  pub fn byte_at(&self, loc: SourceLocation) -> Option<u8> {
-    self.sources[loc.include_depth as usize].byte_at(loc.start)
+  pub fn byte_at(&self, pos: u32, include_depth: u16) -> Option<u8> {
+    self.sources[include_depth as usize].byte_at(pos)
   }
 
   pub fn byte_before(&self, loc: SourceLocation) -> Option<u8> {
     self.sources[loc.include_depth as usize].byte_before(loc.start)
+  }
+
+  pub fn advance_to(&mut self, pos: u32) {
+    self.sources[self.idx as usize].pos = pos - self.sources[self.idx as usize].offset;
   }
 
   pub fn leveloffset(&self, idx: u16) -> i8 {

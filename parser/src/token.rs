@@ -13,6 +13,7 @@ pub struct Token<'arena> {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum TokenKind {
   Ampersand,
+  AttrDef,
   AttrRef,
   Backtick,
   Backslash,
