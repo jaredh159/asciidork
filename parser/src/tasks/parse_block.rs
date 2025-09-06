@@ -107,7 +107,10 @@ impl<'arena> Parser<'arena> {
           self.err_at(err, def.loc)?;
         }
         lines.consume_current(); // attr def token line
-        self.restore_lines(lines);
+        if !lines.is_empty() {
+          // re-parse adjoining chunk, to resolve attr def
+          self.lexer.set_pos(def.loc.end);
+        }
         return Ok(Some(Block {
           meta,
           loc: def.loc.into(),

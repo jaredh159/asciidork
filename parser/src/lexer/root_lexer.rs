@@ -152,7 +152,7 @@ impl<'arena> RootLexer<'arena> {
     self.sources[loc.include_depth as usize].byte_before(loc.start)
   }
 
-  pub fn advance_to(&mut self, pos: u32) {
+  pub fn set_pos(&mut self, pos: u32) {
     self.sources[self.idx as usize].pos = pos - self.sources[self.idx as usize].offset;
   }
 
