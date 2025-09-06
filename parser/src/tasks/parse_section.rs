@@ -66,19 +66,30 @@ impl<'arena> Parser<'arena> {
     self.ctx.section_level = semantic_level;
     let mut heading_line = lines.consume_current().unwrap();
     let mut loc: MultiSourceLocation = heading_line.loc().unwrap().into();
-    let equals = heading_line.consume_current().unwrap();
+    let (err_loc, ch) = {
+      let first_token = heading_line.consume_current().unwrap();
+      if first_token.kind == TokenKind::EqualSigns {
+        (first_token.loc, "=")
+      } else {
+        let mut loc = first_token.loc;
+        while heading_line.current_is(TokenKind::Hash) {
+          loc.extend(heading_line.consume_current().unwrap().loc);
+        }
+        (loc, "#")
+      }
+    };
     heading_line.discard_assert(TokenKind::Whitespace);
     let id = self.section_id(&heading_line, &meta.attrs);
 
     let out_of_sequence = semantic_level > last_level && semantic_level - last_level > 1;
     if out_of_sequence {
-      self.err_token_full(
+      self.err_at(
         format!(
           "Section title out of sequence: expected level {} `{}`",
           last_level + 1,
-          "=".repeat((last_level + 2) as usize)
+          ch.repeat((last_level + 2) as usize)
         ),
-        &equals,
+        err_loc,
       )?;
     }
 

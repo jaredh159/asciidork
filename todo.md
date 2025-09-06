@@ -53,17 +53,11 @@
 - asciidoctor allows unnattached block attr lines, like `[[foo]]\n\n`, and seems to attach
   it to the next block. the documentation says there should be no empty line. asciidork
   sometimes will attach the metadata, and sometimes will not, but with `--strict` will
-  always emit an error.
-- asciidoctor permits attr decls to be joined to a paragraph, and the attr will be
-  resolved. eg: `:a: b\n{a}` will produce `b`. this is despite the fact that the docs say
-  that attr decls in the body should be declared "between blocks". currently we store the
-  attr decl correctly, but don't resolve it in the joined paragraph, only in subsequent
-  blocks, which likely won't be a problem in real world usage.
-- we handle correctly the toc section level of a multi-part book that starts with a level
-  0 special section, noted as FIXME in asciidoctor src:
+  always emit an error. 0 special section, noted as FIXME in asciidoctor src:
   https://github.com/asciidoctor/asciidoctor/blob/eb7bbda65ae1e13d345cdabf83ac1d0978a9a145/lib/asciidoctor/converter/html5.rb#L347
 - asciidork parses monos in both of the following lines, but asciidoc doesn't because of
   it's regex-based approach, but per the discussion on zulip, our approach is preferred:
+- we don't strip the trailing hashes from markdown-style symmetric headers: `## title ##`
 
 ```adoc
 // @see https://asciidoc.zulipchat.com/#narrow/channel/335214-general

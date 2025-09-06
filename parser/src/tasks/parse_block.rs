@@ -106,7 +106,7 @@ impl<'arena> Parser<'arena> {
         {
           self.err_at(err, def.loc)?;
         }
-        lines.consume_current(); // attr def token line
+        lines.consume_current(); // attr def
         if !lines.is_empty() {
           // re-parse adjoining chunk, to resolve attr def
           self.lexer.set_pos(def.loc.end);

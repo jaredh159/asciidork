@@ -125,8 +125,16 @@ impl<'arena> Parser<'arena> {
     }
 
     let mut header_line = lines.consume_current().unwrap();
-    debug_assert!(header_line.starts_with_seq(&[Kind(EqualSigns), Kind(Whitespace)]));
-    header_line.discard(2); // equals, whitespace
+    if header_line.current_is(EqualSigns) {
+      debug_assert!(header_line.starts_with_seq(&[Kind(EqualSigns), Kind(Whitespace)]));
+      header_line.discard(2); // equals, whitespace
+    } else {
+      while header_line.current_is(Hash) {
+        header_line.discard(1);
+      }
+      header_line.discard_assert(Whitespace);
+    }
+
     self
       .document
       .meta
