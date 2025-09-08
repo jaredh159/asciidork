@@ -184,6 +184,25 @@ assert_html!(
 );
 
 assert_html!(
+  attr_before_para,
+  adoc! {r#"
+    para 1
+
+    :foo: bar
+    para 2 {foo}
+
+    :baz: foo \
+    bar
+    para 3 {baz}
+  "#},
+  html! {r#"
+    <div class="paragraph"><p>para 1</p></div>
+    <div class="paragraph"><p>para 2 bar</p></div>
+    <div class="paragraph"><p>para 3 foo bar</p></div>
+  "#}
+);
+
+assert_html!(
   menu_macro,
   "select menu:File[Save].",
   html! {r#"

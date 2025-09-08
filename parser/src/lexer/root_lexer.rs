@@ -152,7 +152,7 @@ impl<'arena> RootLexer<'arena> {
     self.sources[loc.include_depth as usize].byte_before(loc.start)
   }
 
-  pub fn advance_to(&mut self, pos: u32) {
+  pub fn set_pos(&mut self, pos: u32) {
     self.sources[self.idx as usize].pos = pos - self.sources[self.idx as usize].offset;
   }
 
@@ -642,6 +642,18 @@ mod tests {
       (
         "****\nfoo",
         vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],
+      ),
+      ("```", vec![(DelimiterLine, "```")]),
+      ("```ruby", vec![(DelimiterLine, "```"), (Word, "ruby")]),
+      (
+        "````ruby", // <-- not a delimiter
+        vec![
+          (Backtick, "`"),
+          (Backtick, "`"),
+          (Backtick, "`"),
+          (Backtick, "`"),
+          (Word, "ruby")
+        ]
       ),
     ]);
   }

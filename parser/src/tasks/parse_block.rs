@@ -106,8 +106,11 @@ impl<'arena> Parser<'arena> {
         {
           self.err_at(err, def.loc)?;
         }
-        lines.consume_current(); // attr def token line
-        self.restore_lines(lines);
+        lines.consume_current(); // attr def
+        if !lines.is_empty() {
+          // re-parse adjoining chunk, to resolve attr def
+          self.lexer.set_pos(def.loc.end);
+        }
         return Ok(Some(Block {
           meta,
           loc: def.loc.into(),
@@ -227,10 +230,30 @@ impl<'arena> Parser<'arena> {
   fn parse_delimited_block(
     &mut self,
     mut lines: ContiguousLines<'arena>,
-    meta: ChunkMeta<'arena>,
+    mut meta: ChunkMeta<'arena>,
   ) -> Result<Option<Block<'arena>>> {
-    let open_token = lines.consume_current_token().unwrap();
+    let mut delim_line = lines.consume_current().unwrap();
+    let open_token = delim_line.consume_current().unwrap();
     let delimiter = open_token.to_delimiter().unwrap();
+
+    // markdown fenced code block with language specifier
+    if !delim_line.is_empty() && delimiter.len == 3 && delimiter.kind == DelimiterKind::Listing {
+      while delim_line.current_is(Whitespace) {
+        delim_line.discard(1);
+      }
+      let lang =
+        delim_line.consume_to_string_until_one_of(&[Kind(Comma), Kind(Whitespace)], self.bump);
+      let mut attr_list = AttrList::new(lang.loc, self.bump);
+      let mut nodes = InlineNodes::new(self.bump);
+      nodes.push(InlineNode {
+        content: Inline::Text(lang.src),
+        loc: lang.loc,
+      });
+      attr_list.positional.push(None);
+      attr_list.positional.push(Some(nodes));
+      meta.attrs.push(attr_list);
+    }
+
     let prev = self.ctx.delimiter;
     self.ctx.delimiter = Some(delimiter);
     self.restore_lines(lines);

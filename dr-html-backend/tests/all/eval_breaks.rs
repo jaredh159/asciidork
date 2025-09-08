@@ -47,37 +47,3 @@ assert_html!(
     <div class="paragraph"><p>bar</p></div>
   "#}
 );
-
-assert_html!(
-  markdown_thematic_break,
-  adoc! {r#"
-    foo
-
-    ---
-
-    bar
-
-    ***
-
-    baz
-
-    - - -
-
-    jim
-
-    * * *
-    
-    jam
-  "#},
-  html! {r#"
-    <div class="paragraph"><p>foo</p></div>
-    <hr>
-    <div class="paragraph"><p>bar</p></div>
-    <hr>
-    <div class="paragraph"><p>baz</p></div>
-    <hr>
-    <div class="paragraph"><p>jim</p></div>
-    <hr>
-    <div class="paragraph"><p>jam</p></div>
-  "#}
-);

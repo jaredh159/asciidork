@@ -222,6 +222,16 @@ impl<'arena> Line<'arena> {
   pub fn unadjusted_heading_level(&self) -> Option<u8> {
     if self.starts_with_seq(&[Kind(EqualSigns), Kind(Whitespace)]) && self.num_tokens() > 2 {
       Some((self.current_token().unwrap().lexeme.len() - 1) as u8)
+    } else if self.starts(Hash)
+      && self.contains_seq(&[Kind(Hash), Kind(Whitespace)])
+      && self.num_tokens() > 2
+    {
+      let num_hashes = self.tokens.iter().take_while(|t| t.kind == Hash).count();
+      if self.num_tokens() > num_hashes + 1 && self.nth_token(num_hashes).kind(Whitespace) {
+        Some((num_hashes - 1) as u8)
+      } else {
+        None
+      }
     } else {
       None
     }

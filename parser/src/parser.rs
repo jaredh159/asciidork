@@ -222,7 +222,13 @@ impl<'arena> Parser<'arena> {
       }
       DelimiterKind::Open => self.lexer.at_delimiter_line() == Some((2, b'-')),
       DelimiterKind::Sidebar => self.lexer.at_delimiter_line() == Some((4, b'*')),
-      DelimiterKind::Listing => self.lexer.at_delimiter_line() == Some((4, b'-')),
+      DelimiterKind::Listing => {
+        if delimiter.len == 3 {
+          self.lexer.at_delimiter_line() == Some((3, b'`'))
+        } else {
+          self.lexer.at_delimiter_line() == Some((4, b'-'))
+        }
+      }
       DelimiterKind::Literal => self.lexer.at_delimiter_line() == Some((4, b'.')),
       DelimiterKind::Passthrough => self.lexer.at_delimiter_line() == Some((4, b'+')),
       DelimiterKind::Comment => self.lexer.at_delimiter_line() == Some((4, b'/')),

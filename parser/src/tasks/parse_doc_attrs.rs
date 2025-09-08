@@ -169,7 +169,7 @@ impl<'arena> Parser<'arena> {
     token.kind = TokenKind::AttrDef;
     token.loc = attr_def_loc;
     token.lexeme = self.string(self.lexer.str_from_loc(attr_def_loc));
-    self.lexer.advance_to(pos);
+    self.lexer.set_pos(pos);
 
     Ok(())
   }
