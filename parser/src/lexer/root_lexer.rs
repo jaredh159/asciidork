@@ -643,6 +643,18 @@ mod tests {
         "****\nfoo",
         vec![(DelimiterLine, "****"), (Newline, "\n"), (Word, "foo")],
       ),
+      ("```", vec![(DelimiterLine, "```")]),
+      ("```ruby", vec![(DelimiterLine, "```"), (Word, "ruby")]),
+      (
+        "````ruby", // <-- not a delimiter
+        vec![
+          (Backtick, "`"),
+          (Backtick, "`"),
+          (Backtick, "`"),
+          (Backtick, "`"),
+          (Word, "ruby")
+        ]
+      ),
     ]);
   }
 

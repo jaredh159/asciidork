@@ -149,7 +149,7 @@ impl<'arena> SourceLexer<'arena> {
       || self.is_eof()
       || !matches!(
         self.peek(),
-        Some(b'_' | b'-' | b'*' | b'=' | b'.' | b'+' | b'/')
+        Some(b'_' | b'-' | b'*' | b'=' | b'.' | b'+' | b'/' | b'`')
       )
     {
       return None;
@@ -162,6 +162,7 @@ impl<'arena> SourceLexer<'arena> {
       self.nth(4),
     ];
     match sequence {
+      [Some(b'`'), Some(b'`'), Some(b'`'), b, _] if b != Some(b'`') => Some((3, b'`')),
       [Some(b'-'), Some(b'-'), Some(b'\n' | b'\r') | None, _, _] => Some((2, b'-')),
       [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n' | b'\r') | None]
       | [Some(b'_'), Some(b'_'), Some(b'_'), Some(b'_'), Some(b'\n' | b'\r') | None]

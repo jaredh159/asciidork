@@ -60,7 +60,7 @@
 - we don't strip the trailing hashes from markdown-style symmetric headers: `## title ##`
 
 ```adoc
-// @see https://asciidoc.zulipchat.com/#narrow/channel/335214-general
+// @see https://asciidoc.zulipchat.com/#narrow/channel/335214-general/topic/.E2.9C.94.20question.20about.20constrained.20mono.20not.20recognized/with/501266389
 foo `bar`"
 "foo `bar`"
 ```

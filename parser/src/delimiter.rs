@@ -46,7 +46,7 @@ impl Token<'_> {
     match self.lexeme.as_str() {
       "****" => Some(DelimiterKind::Sidebar),
       "____" => Some(DelimiterKind::BlockQuote),
-      "----" => Some(DelimiterKind::Listing),
+      "----" | "```" => Some(DelimiterKind::Listing),
       "...." => Some(DelimiterKind::Literal),
       "++++" => Some(DelimiterKind::Passthrough),
       "////" => Some(DelimiterKind::Comment),

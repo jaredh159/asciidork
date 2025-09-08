@@ -37,6 +37,22 @@ assert_html!(
 );
 
 assert_html!(
+  markdown_fenced_code_block,
+  adoc! {r#"
+    ```ruby
+    require 'sinatra'
+    ```
+  "#},
+  html! {r#"
+    <div class="listingblock">
+      <div class="content">
+        <pre class="highlight"><code class="language-ruby" data-lang="ruby">require 'sinatra'</code></pre>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   markdown_thematic_break,
   adoc! {r#"
     foo
