@@ -769,11 +769,20 @@ impl Backend for AsciidoctorHtml {
     if self.doc_meta.get_doctype() == DocType::Inline {
       return;
     }
-    if !self.state.contains(&VisitingSimpleTermDescription) {
-      self.open_block_wrap(block);
-      self.render_buffered_block_title(block);
+    // For semantic HTML5, we skip the div wrapper and just output <p>
+    // Only handle special cases like Abstract or paragraphs with titles
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract)
+      || block.meta.title.is_some()
+    {
+      if !self.state.contains(&VisitingSimpleTermDescription) {
+        self.open_block_wrap(block);
+        self.render_buffered_block_title(block);
+      }
+      self.open_block_content(block);
+    } else {
+      // For regular paragraphs, just output <p>
+      self.push_str("<p>");
     }
-    self.open_block_content(block);
   }
 
   #[instrument(skip_all)]
@@ -781,9 +790,17 @@ impl Backend for AsciidoctorHtml {
     if self.doc_meta.get_doctype() == DocType::Inline {
       return;
     }
-    self.close_block_content(block);
-    if !self.state.contains(&VisitingSimpleTermDescription) {
-      self.push_str("</div>");
+    // Handle special cases like Abstract or paragraphs with titles
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract)
+      || block.meta.title.is_some()
+    {
+      self.close_block_content(block);
+      if !self.state.contains(&VisitingSimpleTermDescription) {
+        self.push_str("</div>");
+      }
+    } else {
+      // For regular paragraphs, just output </p>
+      self.push_str("</p>");
     }
     self.state.remove(&VisitingSimpleTermDescription);
   }
