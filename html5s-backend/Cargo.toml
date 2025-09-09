@@ -1,0 +1,31 @@
+[package]
+name = "asciidork-html5s-backend"
+version = "0.24.0"
+edition = "2021"
+description = "Asciidork HTML5 Semantic backend"
+license = "MIT"
+
+[dependencies]
+asciidork-ast = { path = "../ast", version = "0.23.0" }
+asciidork-backend = { path = "../backend", version = "0.23.0" }
+asciidork-eval = { path = "../eval", version = "0.23.0" }
+asciidork-core = { path = "../core", version = "0.23.0" }
+lazy_static = "1.4.0"
+regex = "1.10.2"
+tracing = { version = "0.1", features = ["release_max_level_off"] }
+tracing-subscriber = {version ="0.3", features = ["env-filter", "std"]}
+roman_numerals_fn = "1.0.0"
+
+[dev-dependencies]
+asciidork-parser = { path = "../parser" }
+asciidork-eval = { path = "../eval" }
+test-utils = { path = "../test-utils" }
+indoc = "2.0.4"
+regex = { version = "1.10.2", features = ["std", "use_std"] }
+pretty_assertions = "1.4.0"
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true

@@ -15,7 +15,7 @@ asciidork-eval = { path = "../eval", version = "0.23.0" }
 asciidork-ast = { path = "../ast", version = "0.23.0" }
 asciidork-core = { path = "../core", version = "0.23.0" }
 asciidork-parser = { path = "../parser", version = "0.24.0" }
-asciidork-dr-html-backend = { path = "../dr-html-backend", version = "0.24.0" }
+asciidork-html5s-backend = { path = "../html5s-backend", version = "0.24.0" }
 colored = "2.0.4"
 bumpalo = { version = "3.15.4", features = ["collections"] }
 clap = { version = "4.5.4", features = ["derive"] }

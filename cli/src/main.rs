@@ -10,7 +10,7 @@ use clap::Parser as ClapParser;
 use colored::*;
 
 use asciidork_core::{JobSettings, Path};
-use asciidork_dr_html_backend::*;
+use asciidork_html5s_backend::*;
 use asciidork_parser::prelude::*;
 
 mod args;

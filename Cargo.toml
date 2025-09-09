@@ -6,6 +6,7 @@ members = [
   "backend",
   "cli",
   "dr-html-backend",
+  "html5s-backend",
   "dr-html-wasm",
   "eval",
   "parser",

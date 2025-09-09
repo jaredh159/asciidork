@@ -84,8 +84,8 @@ version = "0.24.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
- "asciidork-dr-html-backend",
  "asciidork-eval",
+ "asciidork-html5s-backend",
  "asciidork-parser",
  "bumpalo",
  "clap",
@@ -132,6 +132,25 @@ version = "0.23.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
+]
+
+[[package]]
+name = "asciidork-html5s-backend"
+version = "0.24.0"
+dependencies = [
+ "asciidork-ast",
+ "asciidork-backend",
+ "asciidork-core",
+ "asciidork-eval",
+ "asciidork-parser",
+ "indoc",
+ "lazy_static",
+ "pretty_assertions",
+ "regex",
+ "roman_numerals_fn",
+ "test-utils",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
