@@ -1644,7 +1644,7 @@ impl AsciidoctorHtml {
   }
 
   fn render_footnotes(&mut self) {
-    self.render_division_start("footnotes");
+    self.push_str(r#"<section class="footnotes" aria-label="Footnotes" role="doc-endnotes">"#);
     self.push_str("<hr>");
     let footnotes = mem::take(&mut self.footnotes);
     for (i, (_, footnote)) in footnotes.borrow().iter().enumerate() {
@@ -1653,7 +1653,7 @@ impl AsciidoctorHtml {
       self.push([&num, r##""><a href="#_footnoteref_"##, &num, "\">"]);
       self.push([&num, "</a>. ", footnote, "</div>"]);
     }
-    self.push_str(r#"</div>"#);
+    self.push_str(r#"</section>"#);
     self.footnotes = footnotes;
   }
 
