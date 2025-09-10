@@ -1405,7 +1405,6 @@ impl Backend for AsciidoctorHtml {
     if has_link {
       self.push_str("</a>");
     }
-    self.push_str(r#"</div>"#);
   }
 
   #[instrument(skip_all)]
