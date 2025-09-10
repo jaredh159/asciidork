@@ -101,7 +101,7 @@ macro_rules! assert_standalone_body {
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         &document,
-        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+        ::asciidork_html5s_backend::AsciidoctorHtml::new()).unwrap();
       let mut body = actual.splitn(2, "<body").nth(1).unwrap();
       body = body.splitn(2, "</body>").nth(0).unwrap();
       let body = format!("<body{}</body>", body);
@@ -124,7 +124,7 @@ macro_rules! test_non_embedded_contains {
       let document = parser.parse().unwrap().document;
       let actual = ::asciidork_eval::eval(
         &document,
-        ::asciidork_dr_html_backend::AsciidoctorHtml::new()).unwrap();
+        ::asciidork_html5s_backend::AsciidoctorHtml::new()).unwrap();
       for needle in &$needles {
         ::test_utils::assert_html_contains!(actual, needle.to_string(), from: $input);
       }
@@ -152,7 +152,7 @@ macro_rules! _html {
     let document = parser.parse().unwrap().document;
     ::asciidork_eval::eval(
       &document,
-      ::asciidork_dr_html_backend::AsciidoctorHtml::new(),
+      ::asciidork_html5s_backend::AsciidoctorHtml::new(),
     )
     .unwrap()
   }};

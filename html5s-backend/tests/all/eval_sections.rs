@@ -8,14 +8,10 @@ assert_html!(
     Section Content.
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Section Content.</p>
-        </div>
-      </div>
-    </div>
+      <p>Section Content.</p>
+    </section>
   "#}
 );
 
@@ -33,19 +29,13 @@ assert_html!(
   html! {r#"
     <div id="preamble">
       <div class="sectionbody">
-        <div class="paragraph">
-          <p>Preamble</p>
-        </div>
+        <p>Preamble</p>
       </div>
     </div>
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Section Content.</p>
-        </div>
-      </div>
-    </div>
+      <p>Section Content.</p>
+    </section>
   "#}
 );
 
@@ -59,17 +49,11 @@ assert_html!(
     Section Content.
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>Preamble</p>
-    </div>
-    <div class="sect1">
+    <p>Preamble</p>
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Section Content.</p>
-        </div>
-      </div>
-    </div>
+      <p>Section Content.</p>
+    </section>
   "#}
 );
 
@@ -82,10 +66,9 @@ assert_html!(
     == Section 1
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="foo_section-1">Section 1</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -101,22 +84,14 @@ assert_html!(
     Content.
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Content.</p>
-        </div>
-      </div>
-    </div>
-    <div class="sect1">
+      <p>Content.</p>
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_section_2">Section 2</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Content.</p>
-        </div>
-      </div>
-    </div>
+      <p>Content.</p>
+    </section>
   "#}
 );
 
@@ -133,14 +108,10 @@ assert_html!(
     Appendix Content
   "#},
   contains: &html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_appendix_title">Appendix A: Appendix Title</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Appendix Content</p>
-        </div>
-      </div>
-    </div>
+      <p>Appendix Content</p>
+    </section>
   "#}
 );
 
@@ -173,13 +144,11 @@ assert_html!(
     Content.
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Content.</p>
+      <p>Content.</p>
         </div>
-        <div class="sect3">
+            <section class="doc-section level-3">
           <h4 id="_section_2">Section 2</h4>
           <div class="paragraph">
             <p>Content.</p>
@@ -203,18 +172,14 @@ assert_html!(
     Content.
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Content.</p>
+      <p>Content.</p>
         </div>
         <h4 id="_section_2" class="discrete">Section 2</h4>
         <div class="paragraph">
           <p>Content.</p>
-        </div>
-      </div>
-    </div>
+    </section>
   "#}
 );
 
@@ -231,18 +196,14 @@ assert_html!(
     Content.
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Content.</p>
+      <p>Content.</p>
         </div>
         <h4 id="cust_id" class="discrete cust-class">Section 2</h4>
         <div class="paragraph">
           <p>Content.</p>
-        </div>
-      </div>
-    </div>
+    </section>
   "#}
 );
 
@@ -257,14 +218,10 @@ assert_html!(
     Content.
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2>Section 1</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Content.</p>
-        </div>
-      </div>
-    </div>
+      <p>Content.</p>
+    </section>
   "#}
 );
 
@@ -280,18 +237,15 @@ assert_html!(
     == ID generation on again
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_id_generation_on">ID generation on</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2>ID generation off</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_id_generation_on_again">ID generation on again</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -308,18 +262,15 @@ assert_html!(
     == Chapter 3
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="tigers-subspecies">Subspecies of Tiger</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="longhand">Chapter 2</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="anchor-style">Chapter 3</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -335,14 +286,12 @@ assert_html!(
     == Tigers Subspecies
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="tigers-subspecies">Subspecies of Tiger</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="tigers-subspecies-2">Tigers Subspecies</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -356,10 +305,10 @@ assert_html!(
     foo
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">sect 1</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_sect_1_1">sect 1.1</h3>
           <div class="paragraph"><p>foo</p></div>
         </div>
@@ -378,10 +327,10 @@ assert_html!(
     === sect 1.1
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">1. sect 1</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_sect_1_1">1.1. sect 1.1</h3>
         </div>
       </div>
@@ -400,10 +349,10 @@ assert_html!(
     === sect 1.1
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">1. sect 1</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_sect_1_1">sect 1.1</h3>
         </div>
       </div>
@@ -422,10 +371,10 @@ assert_html!(
     === sect 1.1
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">sect 1</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_sect_1_1">sect 1.1</h3>
         </div>
       </div>
@@ -449,16 +398,16 @@ assert_html!(
     ====== sect 1.1.1.1.1
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">1. sect 1</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_sect_1_1">1.1. sect 1.1</h3>
-          <div class="sect3">
+              <section class="doc-section level-3">
             <h4 id="_sect_1_1_1">1.1.1. sect 1.1.1</h4>
-            <div class="sect4">
+                  <section class="doc-section level-4">
               <h5 id="_sect_1_1_1_1">sect 1.1.1.1</h5>
-              <div class="sect5">
+                      <section class="doc-section level-5">
                 <h6 id="_sect_1_1_1_1_1">sect 1.1.1.1.1</h6>
               </div>
             </div>
@@ -486,16 +435,16 @@ assert_html!(
     ====== sect 1.1.1.1.1
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">1. sect 1</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_sect_1_1">1.1. sect 1.1</h3>
-          <div class="sect3">
+              <section class="doc-section level-3">
             <h4 id="_sect_1_1_1">1.1.1. sect 1.1.1</h4>
-            <div class="sect4">
+                  <section class="doc-section level-4">
               <h5 id="_sect_1_1_1_1">sect 1.1.1.1</h5>
-              <div class="sect5">
+                      <section class="doc-section level-5">
                 <h6 id="_sect_1_1_1_1_1">sect 1.1.1.1.1</h6>
               </div>
             </div>
@@ -523,16 +472,16 @@ assert_html!(
     ====== sect 1.1.1.1.1
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">1. sect 1</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_sect_1_1">1.1. sect 1.1</h3>
-          <div class="sect3">
+              <section class="doc-section level-3">
             <h4 id="_sect_1_1_1">1.1.1. sect 1.1.1</h4>
-            <div class="sect4">
+                  <section class="doc-section level-4">
               <h5 id="_sect_1_1_1_1">1.1.1.1. sect 1.1.1.1</h5>
-              <div class="sect5">
+                      <section class="doc-section level-5">
                 <h6 id="_sect_1_1_1_1_1">1.1.1.1.1. sect 1.1.1.1.1</h6>
               </div>
             </div>
@@ -563,26 +512,23 @@ assert_html!(
     == Numbered Section
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_numbered_section">1. Numbered Section</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_unnumbered_section">Unnumbered Section</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_unnumbered_section_2">Unnumbered Section</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_unnumbered_section_3">Unnumbered Section</h3>
         </div>
       </div>
     </div>
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_numbered_section_2">2. Numbered Section</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -599,14 +545,12 @@ assert_html!(
     == abstract
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">1. sect 1</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_abstract">abstract</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -621,14 +565,12 @@ assert_html!(
     == abstract
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_sect_1">1. sect 1</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_abstract">2. abstract</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -639,10 +581,9 @@ assert_html!(
     == section
   "#},
   html! {r#"
-    <div class="sect1 custom-class">
+    <section class="doc-section level-1 custom-class">
       <h2 id="custom-id">section</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "#}
 );
 
@@ -664,18 +605,16 @@ assert_html!(
     = Section 4
   "#},
   html! {r#"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_section_1">Section 1</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_section_2">Section 2</h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_section_3">Section 3</h2>
       <div class="sectionbody">
-        <div class="sect2">
+          <section class="doc-section level-2">
           <h3 id="_section_4">Section 4</h3>
         </div>
       </div>

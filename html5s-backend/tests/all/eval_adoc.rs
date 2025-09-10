@@ -1,6 +1,6 @@
 use asciidork_core::{JobAttr, JobSettings};
-use asciidork_dr_html_backend::{css, AsciidoctorHtml};
 use asciidork_eval::eval;
+use asciidork_html5s_backend::{css, AsciidoctorHtml};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
@@ -163,18 +163,10 @@ assert_html!(
     ----
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>foo bar</p>
-    </div>
-    <div class="paragraph">
-      <p>foo bar</p>
-    </div>
-    <div class="paragraph">
-      <p>foo bar</p>
-    </div>
-    <div class="paragraph">
-      <p>foo // not a comment bar</p>
-    </div>
+    <p>foo bar</p>
+    <p>foo bar</p>
+    <p>foo bar</p>
+    <p>foo // not a comment bar</p>
     <div class="listingblock">
       <div class="content">
         <pre>// retained in verbatim</pre>
@@ -196,9 +188,9 @@ assert_html!(
     para 3 {baz}
   "#},
   html! {r#"
-    <div class="paragraph"><p>para 1</p></div>
-    <div class="paragraph"><p>para 2 bar</p></div>
-    <div class="paragraph"><p>para 3 foo bar</p></div>
+    <p>para 1</p>
+    <p>para 2 bar</p>
+    <p>para 3 foo bar</p>
   "#}
 );
 
@@ -206,9 +198,7 @@ assert_html!(
   menu_macro,
   "select menu:File[Save].",
   html! {r#"
-    <div class="paragraph">
-      <p>select <span class="menuseq"><span class="menu">File</span>&#160;&#9656;<span class="menuitem">Save</span></span>.</p>
-    </div>
+    <p>select <span class="menuseq"><span class="menu">File</span>&#160;&#9656;<span class="menuitem">Save</span></span>.</p>
   "#}
 );
 
@@ -216,15 +206,13 @@ assert_html!(
   menu_macro_2,
   "select menu:File[Save > Reset].",
   html! {r#"
-    <div class="paragraph">
-      <p>
-        select <span class="menuseq"
-          ><span class="menu">File</span>&#160;&#9656;
-          <span class="submenu">Save</span>&#160;&#9656;
-          <span class="menuitem">Reset</span></span
-        >.
-      </p>
-    </div>
+    <p>
+      select <span class="menuseq"
+        ><span class="menu">File</span>&#160;&#9656;
+        <span class="submenu">Save</span>&#160;&#9656;
+        <span class="menuitem">Reset</span></span
+      >.
+    </p>
   "#}
 );
 
@@ -257,10 +245,8 @@ assert_html!(
   title,
   ".Title\nfoo",
   html! {r#"
-    <div class="paragraph">
-      <div class="title">Title</div>
-      <p>foo</p>
-    </div>
+    <div class="title">Title</div>
+    <p>foo</p>
   "#}
 );
 
@@ -337,11 +323,7 @@ assert_html!(
   image_macro,
   "image::name.png[]",
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <img src="name.png" alt="name">
-      </div>
-    </div>
+    <figure class="image-block"><img src="name.png" alt="name"></figure>
   "#}
 );
 
@@ -353,12 +335,10 @@ assert_html!(
     image::cat.jpg[]
   "#},
   html! {r#"
-    <div id="lol" class="imageblock rofl">
-      <div class="content">
-        <img src="cat.jpg" alt="cat">
-      </div>
-      <div class="title">Figure 1. Title</div>
-    </div>
+    <figure id="lol" class="image-block rofl">
+      <img src="cat.jpg" alt="cat">
+      <figcaption>Figure 1. Title</figcaption>
+    </figure>
   "#}
 );
 
@@ -369,7 +349,7 @@ assert_html!(
     foo bar
   "#},
   html! {r#"
-    <div class="quoteblock">
+    <div class="quote-block">
       <blockquote>foo bar</blockquote>
       <div class="attribution">&#8212; cite</div>
     </div>
@@ -383,7 +363,7 @@ assert_html!(
     foo bar
   "#},
   html! {r#"
-    <div class="quoteblock">
+    <div class="quote-block">
       <blockquote>foo bar</blockquote>
       <div class="attribution">&#8212; source</div>
     </div>
@@ -397,7 +377,7 @@ assert_html!(
     foo bar
   "#},
   html! {r#"
-    <div class="quoteblock">
+    <div class="quote-block">
       <blockquote>foo bar</blockquote>
       <div class="attribution">
         &#8212; source<br>
@@ -415,7 +395,7 @@ assert_html!(
     Everybody remember where we parked.
   "#},
   html! {r#"
-    <div class="quoteblock">
+    <div class="quote-block">
       <div class="title">After landing the cloaked Klingon bird of prey in Golden Gate park:</div>
       <blockquote>
         Everybody remember where we parked.
@@ -436,7 +416,7 @@ assert_html!(
     -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
   "#},
   html! {r#"
-    <div class="quoteblock">
+    <div class="quote-block">
       <blockquote>
         I hold it that a little rebellion now and then is a good thing, and as necessary in the political world as storms in the physical.
       </blockquote>
@@ -458,18 +438,14 @@ assert_html!(
     image::dog.png[]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <img src="cat.png" alt="cat">
-      </div>
-      <div class="title">Figure 1. Cat</div>
-    </div>
-    <div class="imageblock">
-      <div class="content">
-        <img src="dog.png" alt="dog">
-      </div>
-      <div class="title">Figure 2. Dog</div>
-    </div>
+    <figure class="image-block">
+      <img src="cat.png" alt="cat">
+      <figcaption>Figure 1. Cat</figcaption>
+    </figure>
+    <figure class="image-block">
+      <img src="dog.png" alt="dog">
+      <figcaption>Figure 2. Dog</figcaption>
+    </figure>
   "#}
 );
 
@@ -486,18 +462,14 @@ assert_html!(
     image::dog.png[]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <img src="cat.png" alt="cat">
-      </div>
-      <div class="title">Cat</div>
-    </div>
-    <div class="imageblock">
-      <div class="content">
-        <img src="dog.png" alt="dog">
-      </div>
-      <div class="title">Dog</div>
-    </div>
+    <figure class="image-block">
+      <img src="cat.png" alt="cat">
+      <figcaption>Cat</figcaption>
+    </figure>
+    <figure class="image-block">
+      <img src="dog.png" alt="dog">
+      <figcaption>Dog</figcaption>
+    </figure>
   "#}
 );
 
@@ -509,14 +481,12 @@ assert_html!(
     image::sunset.jpg[Sunset,200,100]
   "#},
   html! {r#"
-    <div id="img-sunset" class="imageblock">
-      <div class="content">
-        <a class="image" href="https://www.flickr.com/photos/javh/5448336655">
-          <img src="sunset.jpg" alt="Sunset" width="200" height="100">
-        </a>
-      </div>
-      <div class="title">Figure 1. A mountain sunset</div>
-    </div>
+    <figure id="img-sunset" class="image-block">
+      <a class="image" href="https://www.flickr.com/photos/javh/5448336655">
+        <img src="sunset.jpg" alt="Sunset" width="200" height="100">
+      </a>
+      <figcaption>Figure 1. A mountain sunset</figcaption>
+    </figure>
   "#}
 );
 
@@ -532,18 +502,14 @@ assert_html!(
     image::bar.png[]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <img src="foo.png" alt="foo">
-      </div>
-      <div class="title">Figure 1. Title</div>
-    </div>
-    <div class="imageblock">
-      <div class="content">
-        <img src="bar.png" alt="bar">
-      </div>
-      <div class="title">Next</div>
-    </div>
+    <figure class="image-block">
+      <img src="foo.png" alt="foo">
+      <figcaption>Figure 1. Title</figcaption>
+    </figure>
+    <figure class="image-block">
+      <img src="bar.png" alt="bar">
+      <figcaption>Next</figcaption>
+    </figure>
   "#}
 );
 
@@ -555,9 +521,7 @@ assert_html!(
     baz
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>&#8220;foo bar&#8221; baz</p>
-    </div>
+    <p>&#8220;foo bar&#8221; baz</p>
   "#}
 );
 
@@ -585,21 +549,11 @@ assert_html!(
     baz
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>foo<br> bar</p>
-    </div>
-    <div class="paragraph">
-      <p>Ruby is red.<br> Java is beige.</p>
-    </div>
-    <div class="paragraph">
-      <p>normal breaks</p>
-    </div>
-    <div class="paragraph">
-      <p>foo<br> bar</p>
-    </div>
-    <div class="paragraph">
-      <p>bar baz</p>
-    </div>
+    <p>foo<br> bar</p>
+    <p>Ruby is red.<br> Java is beige.</p>
+    <p>normal breaks</p>
+    <p>foo<br> bar</p>
+    <p>bar baz</p>
   "#}
 );
 
@@ -627,14 +581,10 @@ assert_html!(
     ====
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>foobar</p>
-    </div>
+    <p>foobar</p>
     <div class="exampleblock">
       <div class="content">
-        <div class="paragraph">
-          <p>baz</p>
-        </div>
+        <p>baz</p>
       </div>
     </div>
   "#}
@@ -695,7 +645,7 @@ assert_html!(
         <tr>
           <td class="icon"><div class="title">Note</div></td>
           <td class="content">
-            <div class="paragraph"><p>This is a note!</p></div>
+            <p>This is a note!</p>
           </td>
         </tr>
       </table>
@@ -713,9 +663,9 @@ assert_html!(
     \\endif::[]
   "},
   html! {r#"
-    <div class="paragraph"><p>ifdef::yup[]</p></div>
-    <div class="paragraph"><p>Some line</p></div>
-    <div class="paragraph"><p>endif::[]</p></div>
+    <p>ifdef::yup[]</p>
+    <p>Some line</p>
+    <p>endif::[]</p>
   "#}
 );
 
@@ -739,15 +689,9 @@ assert_html!(
     {foo} {Foo} {Baz} {baz}
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>foo bar baz</p>
-    </div>
-    <div class="paragraph">
-      <p>foo bar whoops {missing} baz</p>
-    </div>
-    <div class="paragraph">
-      <p>bar bar qux qux</p>
-    </div>
+    <p>foo bar baz</p>
+    <p>foo bar whoops {missing} baz</p>
+    <p>bar bar qux qux</p>
   "#}
 );
 
@@ -889,7 +833,7 @@ fn test_full_doc() {
           </div>
         </div>
         <div id="content">
-          <div class="paragraph"><p>foo</p></div>
+          <p>foo</p>
         </div>
         <div id="footer"></div>
       </body>

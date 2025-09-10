@@ -17,21 +17,11 @@ assert_html!(
     image:x.png[foo{foo}bar]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>Click <span class="image"><img src="play.png" alt="play"></span> to play the video.</p>
-    </div>
-    <div class="paragraph">
-      <p>Foo <span class="image"><img src="a-b_c.png" alt="a b c"></span> bar.</p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image"><img src="t.svg" alt="Custom alt"></span></p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image"><img src="t.png" alt="a&#8217; &lt; b&quot;"></span></p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image"><img src="x.png" alt="foobarbar"></span></p>
-    </div>
+    <p>Click <span class="image"><img src="play.png" alt="play"></span> to play the video.</p>
+    <p>Foo <span class="image"><img src="a-b_c.png" alt="a b c"></span> bar.</p>
+    <p><span class="image"><img src="t.svg" alt="Custom alt"></span></p>
+    <p><span class="image"><img src="t.png" alt="a&#8217; &lt; b&quot;"></span></p>
+    <p><span class="image"><img src="x.png" alt="foobarbar"></span></p>
   "#}
 );
 
@@ -57,21 +47,11 @@ assert_html!(
     image:http://x.com/play.png[]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>Click <span class="image"><img src="path/to/play.png" alt="play"></span> to play the video.</p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image"><img src="https://example.com/play.png" alt="play"></span></p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image"><img src="./images/play.png" alt="play"></span></p>
-    </div>
-    <div class="paragraph">
-      <p>Beware of the <span class="image"><img src="/tiger.png" alt="tiger"></span>.</p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image"><img src="http://x.com/play.png" alt="play"></span></p>
-    </div>
+    <p>Click <span class="image"><img src="path/to/play.png" alt="play"></span> to play the video.</p>
+    <p><span class="image"><img src="https://example.com/play.png" alt="play"></span></p>
+    <p><span class="image"><img src="./images/play.png" alt="play"></span></p>
+    <p>Beware of the <span class="image"><img src="/tiger.png" alt="tiger"></span>.</p>
+    <p><span class="image"><img src="http://x.com/play.png" alt="play"></span></p>
   "#}
 );
 
@@ -91,25 +71,15 @@ assert_html!(
     image:logo.png[title=Image B,role="related thumb right"]
   "#},
   html! {r#"
-    <div class="imageblock right text-center">
-      <div class="content">
-        <img src="tiger.png" alt="Tiger" width="200" height="200">
-      </div>
-    </div>
-    <div class="paragraph">
-      <p>foo <span class="image right"><img src="linux.png" alt="Linux" width="150" height="150"></span> bar</p>
-    </div>
-    <div class="imageblock right text-center">
-      <div class="content">
-        <img src="tiger.png" alt="Tiger" width="200" height="200">
-      </div>
-    </div>
-    <div class="paragraph">
-      <p>foo <span class="image right"><img src="linux.png" alt="Linux" width="150" height="150"></span> bar</p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image related thumb right"><img src="logo.png" alt="logo" title="Image B"></span></p>
-    </div>
+    <figure class="image-block right text-center">
+      <img src="tiger.png" alt="Tiger" width="200" height="200">
+    </figure>
+    <p>foo <span class="image right"><img src="linux.png" alt="Linux" width="150" height="150"></span> bar</p>
+    <figure class="image-block right text-center">
+      <img src="tiger.png" alt="Tiger" width="200" height="200">
+    </figure>
+    <p>foo <span class="image right"><img src="linux.png" alt="Linux" width="150" height="150"></span> bar</p>
+    <p><span class="image related thumb right"><img src="logo.png" alt="logo" title="Image B"></span></p>
   "#}
 );
 
@@ -127,25 +97,19 @@ assert_html!(
     // image::logo.png[Logo,link=https://example.org,window=_blank,opts=nofollow]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <a class="image" href="https://example.org"><img src="logo.png" alt="Logo"></a>
-      </div>
-    </div>
-    <div class="imageblock">
-      <div class="content">
-        <a class="image" href="https://example.org"><img src="logo.png" alt="Logo"></a>
-      </div>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image">
-          <a class="image" href="https://apply.example.org">
-            <img src="apply.jpg" alt="Apply">
-          </a>
-        </span> today!
-      </p>
-    </div>
+    <figure class="image-block">
+      <a class="image" href="https://example.org"><img src="logo.png" alt="Logo"></a>
+    </figure>
+    <figure class="image-block">
+      <a class="image" href="https://example.org"><img src="logo.png" alt="Logo"></a>
+    </figure>
+    <p>
+      <span class="image">
+        <a class="image" href="https://apply.example.org">
+          <img src="apply.jpg" alt="Apply">
+        </a>
+      </span> today!
+    </p>
   "#}
 );
 
@@ -155,12 +119,10 @@ assert_html!(
     image::flower.jpg[title="So pretty"]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <img src="flower.jpg" alt="flower">
-      </div>
-      <div class="title">Figure 1. So pretty</div>
-    </div>
+    <figure class="image-block">
+      <img src="flower.jpg" alt="flower">
+      <figcaption>Figure 1. So pretty</figcaption>
+    </figure>
   "#}
 );
 
@@ -173,16 +135,12 @@ assert_html!(
     image::flower.jpg[alt=Flower,width=640,height=480]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <img src="flower.jpg" alt="Flower" width="640" height="480">
-      </div>
-    </div>
-    <div class="imageblock">
-      <div class="content">
-        <img src="flower.jpg" alt="Flower" width="640" height="480">
-      </div>
-    </div>
+    <figure class="image-block">
+      <img src="flower.jpg" alt="Flower" width="640" height="480">
+    </figure>
+    <figure class="image-block">
+      <img src="flower.jpg" alt="Flower" width="640" height="480">
+    </figure>
   "#}
 );
 
@@ -201,27 +159,21 @@ assert_html!(
     // image::sample.svg[Embedded,300,opts=inline]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <img src="sample.svg" alt="Static" width="300">
-      </div>
-    </div>
-    <div class="imageblock">
-      <div class="content">
-        <object type="image/svg+xml" data="sample.svg" width="300">
-          <span class="alt">Interactive</span>
+    <figure class="image-block">
+      <img src="sample.svg" alt="Static" width="300">
+    </figure>
+    <figure class="image-block">
+      <object type="image/svg+xml" data="sample.svg" width="300">
+        <span class="alt">Interactive</span>
+      </object>
+    </figure>
+    <p>
+      <span class="image">
+        <object type="image/svg+xml" data="images/tiger.svg">
+          <img src="images/tiger.png" alt="Tiger">
         </object>
-      </div>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image">
-          <object type="image/svg+xml" data="images/tiger.svg">
-            <img src="images/tiger.png" alt="Tiger">
-          </object>
-        </span>
-      </p>
-    </div>
+      </span>
+    </p>
   "#}
 );
 
@@ -236,9 +188,7 @@ assert_html!(
     image:tiger.svg[Tiger,opts=interactive]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p><span class="image"><img src="images/tiger.svg" alt="Tiger"></span></p>
-    </div>
+    <p><span class="image"><img src="images/tiger.svg" alt="Tiger"></span></p>
   "#}
 );
 
@@ -284,72 +234,51 @@ assert_html!(
     == image:{iconsdir}/dot.gif[dot] Title
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p><span class="image"><img src="tiger.png" alt="[Another] Tiger"></span></p>
-    </div>
-    <div class="paragraph">
-      <p><span class="image"><img src="tiger.png" alt="Tiger" width="200" height="100"></span></p>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image">
-          <a class="image" href="http://site.com/Tiger"><img src="tiger.png" alt="Tiger"></a>
-        </span>
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image">
-          <a class="image" href="img/tiger.png"><img src="img/tiger.png" alt="Tiger"></a>
-        </span>
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image">
-          <a class="image" href="http://site.com/Tiger" target="_blank" rel="noopener">
-            <img src="tiger.png" alt="Tiger">
-          </a>
-        </span>
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image">
-          <a class="image" href="http://site.com/Tiger" target="name" rel="noopener">
-            <img src="tiger.png" alt="Tiger">
-          </a>
-        </span>
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image">
-          <a class="image" href="http://site.com/Tiger" rel="nofollow">
-            <img src="tiger.png" alt="Tiger">
-          </a>
-        </span>
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>Beware of the <span class="image"><img src="http://example.com/images/tiger.png" alt="tiger"></span>.</p>
-    </div>
-    <div class="paragraph">
-      <p>
-        <span class="image right">
-          <img src="http://example.com/images/tiger.png" alt="tiger">
-        </span> Beware of the tigers!
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>Beware of the <span class="image"><img src="big%20cats.png" alt="big cats"></span> around here.</p>
-    </div>
-    <div class="sect1">
+    <p><span class="image"><img src="tiger.png" alt="[Another] Tiger"></span></p>
+    <p><span class="image"><img src="tiger.png" alt="Tiger" width="200" height="100"></span></p>
+    <p>
+      <span class="image">
+        <a class="image" href="http://site.com/Tiger"><img src="tiger.png" alt="Tiger"></a>
+      </span>
+    </p>
+    <p>
+      <span class="image">
+        <a class="image" href="img/tiger.png"><img src="img/tiger.png" alt="Tiger"></a>
+      </span>
+    </p>
+    <p>
+      <span class="image">
+        <a class="image" href="http://site.com/Tiger" target="_blank" rel="noopener">
+          <img src="tiger.png" alt="Tiger">
+        </a>
+      </span>
+    </p>
+    <p>
+      <span class="image">
+        <a class="image" href="http://site.com/Tiger" target="name" rel="noopener">
+          <img src="tiger.png" alt="Tiger">
+        </a>
+      </span>
+    </p>
+    <p>
+      <span class="image">
+        <a class="image" href="http://site.com/Tiger" rel="nofollow">
+          <img src="tiger.png" alt="Tiger">
+        </a>
+      </span>
+    </p>
+    <p>Beware of the <span class="image"><img src="http://example.com/images/tiger.png" alt="tiger"></span>.</p>
+    <p>
+      <span class="image right">
+        <img src="http://example.com/images/tiger.png" alt="tiger">
+      </span> Beware of the tigers!
+    </p>
+    <p>Beware of the <span class="image"><img src="big%20cats.png" alt="big cats"></span> around here.</p>
+    <section class="doc-section level-1">
       <h2 id="_imagefixturesdot_gifdot_title">
         <span class="image"><img src="fixtures/dot.gif" alt="dot"></span> Title
       </h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
  "#}
 );
 
@@ -367,15 +296,9 @@ assert_html!(
     Not an inline image macro image::tiger.png[].
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>image:big cats.png[]</p>
-    </div>
-    <div class="paragraph">
-      <p>image: big cats.png[]</p>
-    </div>
-    <div class="paragraph">
-      <p>Not an inline image macro image::tiger.png[].</p>
-    </div>
+    <p>image:big cats.png[]</p>
+    <p>image: big cats.png[]</p>
+    <p>Not an inline image macro image::tiger.png[].</p>
  "#}
 );
 
@@ -387,13 +310,11 @@ assert_html!(
     image::{foo}[link={foo}]
   "#},
   html! {r#"
-    <div class="imageblock">
-      <div class="content">
-        <a class="image" href="http://cats.com/cat.png">
-          <img src="http://cats.com/cat.png" alt="cat">
-        </a>
-      </div>
-    </div>
+    <figure class="image-block">
+      <a class="image" href="http://cats.com/cat.png">
+        <img src="http://cats.com/cat.png" alt="cat">
+      </a>
+    </figure>
   "#}
 );
 
@@ -402,8 +323,8 @@ assert_html!(
   "<<<\n   \nimage::image_003.png[]\n",
   html! {r#"
     <div style="page-break-after: always;"></div>
-    <div class="imageblock">
-      <div class="content"><img src="image_003.png" alt="image 003"></div>
-    </div>
+    <figure class="image-block">
+      <img src="image_003.png" alt="image 003">
+    </figure>
   "#}
 );

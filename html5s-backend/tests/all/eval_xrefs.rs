@@ -14,17 +14,11 @@ assert_html!(
     This <<_ligers>> xref is broken.
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_tigers">Tigers</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>See <a href="#_tigers">Tigers</a> for more information.</p>
-        </div>
-        <div class="paragraph">
-          <p>This <a href="#_ligers">[_ligers]</a> xref is broken.</p>
-        </div>
-      </div>
-    </div>
+      <p>See <a href="#_tigers">Tigers</a> for more information.</p>
+      <p>This <a href="#_ligers">[_ligers]</a> xref is broken.</p>
+    </section>
   "##}
 );
 
@@ -47,29 +41,15 @@ assert_html!(
     Hashed macro to xref:#custom[] works too.
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="custom">Tigers</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Link to <a href="#custom">Tigers</a>.</p>
-        </div>
-        <div class="paragraph">
-          <p>Reftext link to <a href="#custom">Big CATS</a> works too.</p>
-        </div>
-        <div class="paragraph">
-          <p>Hashed reftext link to <a href="#custom">Big CATS</a> works too.</p>
-        </div>
-        <div class="paragraph">
-          <p>Quoted reftext link to <a href="#custom">"Big CATS"</a> works too.</p>
-        </div>
-        <div class="paragraph">
-          <p>Empty reftext to <a href="#custom">Tigers</a> works too.</p>
-        </div>
-        <div class="paragraph">
-          <p>Hashed macro to <a href="#custom">Tigers</a> works too.</p>
-        </div>
-      </div>
-    </div>
+      <p>Link to <a href="#custom">Tigers</a>.</p>
+      <p>Reftext link to <a href="#custom">Big CATS</a> works too.</p>
+      <p>Hashed reftext link to <a href="#custom">Big CATS</a> works too.</p>
+      <p>Quoted reftext link to <a href="#custom">"Big CATS"</a> works too.</p>
+      <p>Empty reftext to <a href="#custom">Tigers</a> works too.</p>
+      <p>Hashed macro to <a href="#custom">Tigers</a> works too.</p>
+    </section>
   "##}
 );
 
@@ -82,14 +62,10 @@ assert_html!(
     Link to <<_tigers>>.
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_tigers">Tigers</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Link to <a href="#_tigers">Big <em>cats!</em></a>.</p>
-        </div>
-      </div>
-    </div>
+      <p>Link to <a href="#_tigers">Big <em>cats!</em></a>.</p>
+    </section>
   "##}
 );
 
@@ -101,14 +77,10 @@ assert_html!(
     Link to <<_tigers,>>.
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_tigers">Tigers</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Link to <a href="#_tigers">Tigers</a>.</p>
-        </div>
-      </div>
-    </div>
+      <p>Link to <a href="#_tigers">Tigers</a>.</p>
+    </section>
   "##}
 );
 
@@ -123,17 +95,11 @@ assert_html!(
     Link xref:tigers[with target].
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="tigers">Tigers</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Link to <a href="#tigers">Tigers</a>.</p>
-        </div>
-        <div class="paragraph">
-          <p>Link <a href="#tigers">with target</a>.</p>
-        </div>
-      </div>
-    </div>
+      <p>Link to <a href="#tigers">Tigers</a>.</p>
+      <p>Link <a href="#tigers">with target</a>.</p>
+    </section>
   "##}
 );
 
@@ -145,14 +111,10 @@ assert_html!(
     Link to <<_tigers,`+[tigers]+`>>.
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_tigers">Tigers</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Link to <a href="#_tigers"><code>[tigers]</code></a>.</p>
-        </div>
-      </div>
-    </div>
+      <p>Link to <a href="#_tigers"><code>[tigers]</code></a>.</p>
+    </section>
   "##}
 );
 
@@ -166,17 +128,11 @@ assert_html!(
     Link to xref:_tigers["Big Cats"].
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="_tigers">Tigers</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Link to <a href="#_tigers">"Big Cats"</a>.</p>
-        </div>
-        <div class="paragraph">
-          <p>Link to <a href="#_tigers">"Big Cats"</a>.</p>
-        </div>
-      </div>
-    </div>
+      <p>Link to <a href="#_tigers">"Big Cats"</a>.</p>
+      <p>Link to <a href="#_tigers">"Big Cats"</a>.</p>
+    </section>
   "##}
 );
 
@@ -189,13 +145,10 @@ assert_html!(
     == Tigers
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p><a href="#tigers">[tigers] are cats</a></p>
-    </div>
-    <div class="sect1">
+    <p><a href="#tigers">[tigers] are cats</a></p>
+    <section class="doc-section level-1">
       <h2 id="tigers">Tigers</h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "##}
 );
 
@@ -207,12 +160,8 @@ assert_html!(
     And a <<tigers>> link.
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p>Here is <span id="tigers">a text span</span>.</p>
-    </div>
-    <div class="paragraph">
-      <p>And a <a href="#tigers">a text span</a> link.</p>
-    </div>
+    <p>Here is <span id="tigers">a text span</span>.</p>
+    <p>And a <a href="#tigers">a text span</a> link.</p>
   "##}
 );
 
@@ -232,24 +181,12 @@ assert_html!(
     You're <<step-3>>!
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p><a id="step-1"></a>Download the software</p>
-    </div>
-    <div class="paragraph">
-      <p>Refer to <a href="#step-1">[step-1]</a>.</p>
-    </div>
-    <div class="paragraph">
-      <p><a id="step-2"></a>Lather, rinse, repeat</p>
-    </div>
-    <div class="paragraph">
-      <p>Also, <a href="#step-2">be sure to</a> do step 2.</p>
-    </div>
-    <div class="paragraph">
-      <p><a id="step-3"></a>Finished</p>
-    </div>
-    <div class="paragraph">
-      <p>You&#8217;re <a href="#step-3">Done</a>!</p>
-    </div>
+    <p><a id="step-1"></a>Download the software</p>
+    <p>Refer to <a href="#step-1">[step-1]</a>.</p>
+    <p><a id="step-2"></a>Lather, rinse, repeat</p>
+    <p>Also, <a href="#step-2">be sure to</a> do step 2.</p>
+    <p><a id="step-3"></a>Finished</p>
+    <p>You&#8217;re <a href="#step-3">Done</a>!</p>
   "##}
 );
 
@@ -269,9 +206,7 @@ assert_html!(
     |===
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p>The highest peak in the Front Range is <a href="#grays-peak">Grays Peak</a>, which tops <a href="#mount-evans">Mount Evans</a> by just a few feet.</p>
-    </div>
+    <p>The highest peak in the Front Range is <a href="#grays-peak">Grays Peak</a>, which tops <a href="#mount-evans">Mount Evans</a> by just a few feet.</p>
     <table class="tableblock frame-all grid-all stretch">
       <colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
       <tbody>
@@ -319,24 +254,12 @@ assert_html!(
     [[tigers3,Tigers]] anchor:tigers4[Tigers]
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p>Foo.<a id="tigers1"></a> bar.<a id="tigers2"></a></p>
-    </div>
-    <div class="paragraph">
-      <p>Foo.[[tigers1]] bar.anchor:tigers2[]</p>
-    </div>
-    <div class="paragraph">
-      <p><a id=":idname"></a> text</p>
-    </div>
-    <div class="paragraph">
-      <p>[[1-install]] text</p>
-    </div>
-    <div class="paragraph">
-      <p><a id="id-only"></a>text</p>
-    </div>
-    <div class="paragraph">
-      <p><a id="tigers3"></a> <a id="tigers4"></a></p>
-    </div>
+    <p>Foo.<a id="tigers1"></a> bar.<a id="tigers2"></a></p>
+    <p>Foo.[[tigers1]] bar.anchor:tigers2[]</p>
+    <p><a id=":idname"></a> text</p>
+    <p>[[1-install]] text</p>
+    <p><a id="id-only"></a>text</p>
+    <p><a id="tigers3"></a> <a id="tigers4"></a></p>
   "##}
 );
 
@@ -366,24 +289,12 @@ assert_html!(
     <<#not-found2>>
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p><a id="tigers4"></a> <a id="tigers5"></a> <a href="#tigers4">Tigers</a> <a href="#tigers5">Tigers</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a id="one"></a> <a id="two"></a> <a id="three"></a></p>
-    </div>
-    <div class="paragraph">
-      <p><a id="one"></a><a id="two"></a><a id="three"></a><a id="four"></a><a id="five"></a></p>
-    </div>
-    <div class="paragraph">
-      <p>see <a href="#foo">b[a]r</a> <a id="foo"></a>tex</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="#not-found">[not-found]</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="#not-found2">[not-found2]</a></p>
-    </div>
+    <p><a id="tigers4"></a> <a id="tigers5"></a> <a href="#tigers4">Tigers</a> <a href="#tigers5">Tigers</a></p>
+    <p><a id="one"></a> <a id="two"></a> <a id="three"></a></p>
+    <p><a id="one"></a><a id="two"></a><a id="three"></a><a id="four"></a><a id="five"></a></p>
+    <p>see <a href="#foo">b[a]r</a> <a id="foo"></a>tex</p>
+    <p><a href="#not-found">[not-found]</a></p>
+    <p><a href="#not-found2">[not-found2]</a></p>
   "##}
 );
 
@@ -415,33 +326,19 @@ assert_html!(
     See the <<tigers, `+[tigers]+`>> for more.
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="lesson-1-listing"><a href="lessons/lesson-1.html">Lesson 1</a></h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>A summary of the first lesson.</p>
-        </div>
-      </div>
-    </div>
-    <div class="sect1">
+      <p>A summary of the first lesson.</p>
+    </section>
+    <section class="doc-section level-1">
       <h2 id="lesson-2-listing"><a href="lessons/lesson-2.html">Lesson 2</a></h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>A summary of the second lesson.</p>
-        </div>
-      </div>
-    </div>
-    <div class="sect1">
+      <p>A summary of the second lesson.</p>
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_rest">rest</h2>
-      <div class="sectionbody">
-        <div class="paragraph">
-          <p>Want to learn <a href="#tigers">about tigers</a>?</p>
-        </div>
-        <div class="paragraph">
-          <p>See the <a href="#tigers"><code>[tigers]</code></a> for more.</p>
-        </div>
-      </div>
-    </div>
+      <p>Want to learn <a href="#tigers">about tigers</a>?</p>
+      <p>See the <a href="#tigers"><code>[tigers]</code></a> for more.</p>
+    </section>
   "##}
 );
 
@@ -474,16 +371,14 @@ assert_html!(
     xref:tigers
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p>This document has two sections, <a href="#sect-a">[sect-a]</a> and <a href="#sect-b">[sect-b]</a>.</p>
-    </div>
-    <div class="paragraph"><p><a href="#tigers">[tigers]</a></p></div>
-    <div class="paragraph"><p><a href="#tigers">About Tigers</a></p></div>
-    <div class="paragraph"><p>Want to learn <a href="#tigers">about tigers</a>?</p></div>
-    <div class="paragraph"><p><a href="#tigers">[foobar]</a></p></div>
-    <div class="paragraph"><p><a href="#tigers">[tigers] are cats</a></p></div>
-    <div class="paragraph"><p><a id="foo"></a>about</p></div>
-    <div class="paragraph"><p>xref:tigers</p></div>
+    <p>This document has two sections, <a href="#sect-a">[sect-a]</a> and <a href="#sect-b">[sect-b]</a>.</p>
+    <p><a href="#tigers">[tigers]</a></p>
+    <p><a href="#tigers">About Tigers</a></p>
+    <p>Want to learn <a href="#tigers">about tigers</a>?</p>
+    <p><a href="#tigers">[foobar]</a></p>
+    <p><a href="#tigers">[tigers] are cats</a></p>
+    <p><a id="foo"></a>about</p>
+    <p>xref:tigers</p>
   "##}
 );
 
@@ -572,14 +467,12 @@ assert_html!(
     == <<s1>>
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="s1"><a href="#DNE">[DNE]</a></h2>
-      <div class="sectionbody"></div>
-    </div>
-    <div class="sect1">
+    </section>
+    <section class="doc-section level-1">
       <h2 id="_s1"><a href="#s1">[DNE]</a></h2>
-      <div class="sectionbody"></div>
-    </div>
+    </section>
   "##}
 );
 

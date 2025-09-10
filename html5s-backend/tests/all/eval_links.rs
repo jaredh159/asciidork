@@ -25,38 +25,18 @@ assert_html!(
     link:post.html[My Post,opts=nofollow]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>Visit <a href="https://site.com" class="bare">https://site.com</a> for more.</p>
-    </div>
-    <div class="paragraph">
-      <p>Or click <a href="report.pdf">here <em>son</em></a>.</p>
-    </div>
-    <div class="paragraph">
-      <p>Brackets: <a href="http://example.com" class="bare">http://example.com</a> too.</p>
-    </div>
-    <div class="paragraph">
-      <p>Escaped is not link: http://nolink.com</p>
-    </div>
-    <div class="paragraph">
-      <p>Email me at <a href="mailto:me@example.com">me@example.com</a> as well.</p>
-    </div>
-    <div class="paragraph">
-      <p>
-        <a href="https://example.org/dist/info.adoc" class="bare include">https://example.org/dist/info.adoc</a>
-      </p>
-    </div>
-    <div class="paragraph">
-      <p>Not processed: https://site.com</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="https://chat.asciidoc.org" target="_blank" rel="noopener" class="resource">Discuss AsciiDoc</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="https://example.com" class="bare" target="_blank" rel="noopener nofollow">https://example.com</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="post.html" rel="nofollow">My Post</a></p>
-    </div>
+    <p>Visit <a href="https://site.com" class="bare">https://site.com</a> for more.</p>
+    <p>Or click <a href="report.pdf">here <em>son</em></a>.</p>
+    <p>Brackets: <a href="http://example.com" class="bare">http://example.com</a> too.</p>
+    <p>Escaped is not link: http://nolink.com</p>
+    <p>Email me at <a href="mailto:me@example.com">me@example.com</a> as well.</p>
+    <p>
+      <a href="https://example.org/dist/info.adoc" class="bare include">https://example.org/dist/info.adoc</a>
+    </p>
+    <p>Not processed: https://site.com</p>
+    <p><a href="https://chat.asciidoc.org" target="_blank" rel="noopener" class="resource">Discuss AsciiDoc</a></p>
+    <p><a href="https://example.com" class="bare" target="_blank" rel="noopener nofollow">https://example.com</a></p>
+    <p><a href="post.html" rel="nofollow">My Post</a></p>
   "#}
 );
 
@@ -70,15 +50,9 @@ assert_html!(
     https://example.org[Google, DuckDuckGo, Ecosia^]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>View html: <a href="view-source:asciidoctor.org" target="_blank" rel="noopener">Asciidoctor homepage</a>.</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="https://example.org" target="_blank" rel="noopener" class="btn">Google, DuckDuckGo, Ecosia</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="https://example.org" target="_blank" rel="noopener">Google, DuckDuckGo, Ecosia</a></p>
-    </div>
+    <p>View html: <a href="view-source:asciidoctor.org" target="_blank" rel="noopener">Asciidoctor homepage</a>.</p>
+    <p><a href="https://example.org" target="_blank" rel="noopener" class="btn">Google, DuckDuckGo, Ecosia</a></p>
+    <p><a href="https://example.org" target="_blank" rel="noopener">Google, DuckDuckGo, Ecosia</a></p>
   "#}
 );
 
@@ -133,51 +107,21 @@ assert_html!(
     <http://asciidoc.org> is the project page for AsciiDoc.
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>The AsciiDoc project is located at <a href="http://asciidoc.org" class="bare">http://asciidoc.org</a>.</p>
-    </div>
-    <div class="paragraph">
-      <p>The AsciiDoc project is located at <a href="http://asciidoc.org" class="bare project">http://asciidoc.org</a>.</p>
-    </div>
-    <div class="paragraph">
-      <p>The AsciiDoc project is located at <a href="http://asciidoc.org" class="bare">asciidoc.org</a>.</p>
-    </div>
-    <div class="paragraph">
-      <p>Edit the configuration file <a href="file:///etc/app.conf" class="bare">/etc/app.conf</a></p>
-    </div>
-    <div class="paragraph">
-      <p>foo <a href="https://" class="bare">https://</a> bar <a href="ssh://" class="bare">ssh://</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="file:///home/user/bookmarks.html">My Bookmarks</a></p>
-    </div>
-    <div class="paragraph">
-      <p>We&#8217;re parsing <a href="http://asciidoc.org">AsciiDoc</a> markup</p>
-    </div>
-    <div class="paragraph">
-      <p>We&#8217;re parsing <a href="http://asciidoc.org">[Ascii]Doc</a> markup</p>
-    </div>
-    <div class="paragraph">
-      <p>I advise you to <a href="https://google.com">Google for \</a></p>
-    </div>
-    <div class="paragraph">
-      <p>We&#8217;re parsing <a href="http://asciidoc.org">AsciiDoc</a> markup</p>
-    </div>
-    <div class="paragraph">
-      <p>We&#8217;re parsing <a href="http://asciidoc.org" class="bare project">http://asciidoc.org</a> markup</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://example.com">[bracket1]</a></p>
-    </div>
-    <div class="paragraph">
-      <p>Link to <a href="">this page</a>.</p>
-    </div>
-    <div class="paragraph">
-      <p>The link::<a href="http://example.org">example domain</a> is blah blah.</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://asciidoc.org" class="bare">http://asciidoc.org</a> is the project page for AsciiDoc.</p>
-    </div>
+    <p>The AsciiDoc project is located at <a href="http://asciidoc.org" class="bare">http://asciidoc.org</a>.</p>
+    <p>The AsciiDoc project is located at <a href="http://asciidoc.org" class="bare project">http://asciidoc.org</a>.</p>
+    <p>The AsciiDoc project is located at <a href="http://asciidoc.org" class="bare">asciidoc.org</a>.</p>
+    <p>Edit the configuration file <a href="file:///etc/app.conf" class="bare">/etc/app.conf</a></p>
+    <p>foo <a href="https://" class="bare">https://</a> bar <a href="ssh://" class="bare">ssh://</a></p>
+    <p><a href="file:///home/user/bookmarks.html">My Bookmarks</a></p>
+    <p>We&#8217;re parsing <a href="http://asciidoc.org">AsciiDoc</a> markup</p>
+    <p>We&#8217;re parsing <a href="http://asciidoc.org">[Ascii]Doc</a> markup</p>
+    <p>I advise you to <a href="https://google.com">Google for \</a></p>
+    <p>We&#8217;re parsing <a href="http://asciidoc.org">AsciiDoc</a> markup</p>
+    <p>We&#8217;re parsing <a href="http://asciidoc.org" class="bare project">http://asciidoc.org</a> markup</p>
+    <p><a href="http://example.com">[bracket1]</a></p>
+    <p>Link to <a href="">this page</a>.</p>
+    <p>The link::<a href="http://example.org">example domain</a> is blah blah.</p>
+    <p><a href="http://asciidoc.org" class="bare">http://asciidoc.org</a> is the project page for AsciiDoc.</p>
   "#}
 );
 
@@ -227,48 +171,20 @@ assert_html!(
     (from https://asciidoctor.org); where text gets parsed
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>(<a href="http://foo.com" class="bare">http://foo.com</a>) is bar.</p>
-    </div>
-    <div class="paragraph">
-      <p>The homepage for Asciidoctor is <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>.</p>
-    </div>
-    <div class="paragraph">
-      <p>Check out <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>!</p>
-    </div>
-    <div class="paragraph">
-      <p>Is the homepage for Asciidoctor <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>?</p>
-    </div>
-    <div class="paragraph">
-      <p>Asciidoctor is a Ruby-based AsciiDoc processor (see <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>)</p>
-    </div>
-    <div class="paragraph">
-      <p>(The homepage for Asciidoctor is <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>.)</p>
-    </div>
-    <div class="paragraph">
-      <p>(Check out <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>!)</p>
-    </div>
-    <div class="paragraph">
-      <p>(Is the homepage for Asciidoctor <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>?)</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>; where text gets parsed</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>: where text gets parsed</p>
-    </div>
-    <div class="paragraph">
-      <p>(<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>): where text gets parsed</p>
-    </div>
-    <div class="paragraph">
-      <p>(from <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>): where text gets parsed</p>
-    </div>
-    <div class="paragraph">
-      <p>(<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>); where text gets parsed</p>
-    </div>
-    <div class="paragraph">
-      <p>(from <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>); where text gets parsed</p>
-    </div>
+    <p>(<a href="http://foo.com" class="bare">http://foo.com</a>) is bar.</p>
+    <p>The homepage for Asciidoctor is <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>.</p>
+    <p>Check out <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>!</p>
+    <p>Is the homepage for Asciidoctor <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>?</p>
+    <p>Asciidoctor is a Ruby-based AsciiDoc processor (see <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>)</p>
+    <p>(The homepage for Asciidoctor is <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>.)</p>
+    <p>(Check out <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>!)</p>
+    <p>(Is the homepage for Asciidoctor <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>?)</p>
+    <p><a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>; where text gets parsed</p>
+    <p><a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>: where text gets parsed</p>
+    <p>(<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>): where text gets parsed</p>
+    <p>(from <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>): where text gets parsed</p>
+    <p>(<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>); where text gets parsed</p>
+    <p>(from <a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>); where text gets parsed</p>
   "#}
 );
 
@@ -312,42 +228,18 @@ assert_html!(
     http://a.com/b/dev@foo.com
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>(https://) http://; file://: &lt;ftp://&gt;</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://jruby.org/apidocs/org/jruby/Ruby.html#addModule(org.jruby.RubyModule)">addModule() adds a Ruby module</a></p>
-    </div>
-    <div class="paragraph">
-      <p>]<a href="http://asciidoc.org">AsciiDoc</a> project page.</p>
-    </div>
-    <div class="paragraph">
-      <p>)<a href="http://asciidoc.org">AsciiDoc</a> project page.</p>
-    </div>
-    <div class="paragraph">
-      <p>l&#8217;<a href="http://www.irit.fr">IRIT</a></p>
-    </div>
-    <div class="paragraph">
-      <p>"<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>"</p>
-    </div>
-    <div class="paragraph">
-      <p>'<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>'</p>
-    </div>
-    <div class="paragraph">
-      <p>Information about the <a href="https://symbols.example.org/.">.</a> character.</p>
-    </div>
-    <div class="paragraph">
-      <p>http://escaped.com is not a link</p>
-    </div>
-    <div class="paragraph">
-      <p>http://escaped.com[escaped.com] is not a link</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://a.com/b/dev@foo.com">subscribe</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://a.com/b/dev@foo.com" class="bare">http://a.com/b/dev@foo.com</a></p>
-    </div>
+    <p>(https://) http://; file://: &lt;ftp://&gt;</p>
+    <p><a href="http://jruby.org/apidocs/org/jruby/Ruby.html#addModule(org.jruby.RubyModule)">addModule() adds a Ruby module</a></p>
+    <p>]<a href="http://asciidoc.org">AsciiDoc</a> project page.</p>
+    <p>)<a href="http://asciidoc.org">AsciiDoc</a> project page.</p>
+    <p>l&#8217;<a href="http://www.irit.fr">IRIT</a></p>
+    <p>"<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>"</p>
+    <p>'<a href="https://asciidoctor.org" class="bare">https://asciidoctor.org</a>'</p>
+    <p>Information about the <a href="https://symbols.example.org/.">.</a> character.</p>
+    <p>http://escaped.com is not a link</p>
+    <p>http://escaped.com[escaped.com] is not a link</p>
+    <p><a href="http://a.com/b/dev@foo.com">subscribe</a></p>
+    <p><a href="http://a.com/b/dev@foo.com" class="bare">http://a.com/b/dev@foo.com</a></p>
   "#}
 );
 
@@ -381,30 +273,14 @@ assert_html!(
     http://foo.com[foo, bar, baz]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p>Code is at <a href="http://github.com/foo" class="bare">http://github.com/foo</a> which is a github organization.</p>
-    </div>
-    <div class="paragraph">
-      <p>link:http://foo.com</p>
-    </div>
-    <div class="paragraph">
-      <p>Foo link:https://example.com [] is bar.</p>
-    </div>
-    <div class="paragraph">
-      <p>Foo link:https://example.com?q=foo bar[] is bar.</p>
-    </div>
-    <div class="paragraph">
-      <p>Foo <a href="https://example.com?q=foo%20bar" class="bare">https://example.com?q=foo%20bar</a> is bar.</p>
-    </div>
-    <div class="paragraph">
-      <p>Foo: &lt;<strong><a href="https://foo.com/bar" class="bare">https://foo.com/bar</a></strong>&gt;</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://foo.com">foo, bar = baz</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://foo.com">foo, bar, baz</a></p>
-    </div>
+    <p>Code is at <a href="http://github.com/foo" class="bare">http://github.com/foo</a> which is a github organization.</p>
+    <p>link:http://foo.com</p>
+    <p>Foo link:https://example.com [] is bar.</p>
+    <p>Foo link:https://example.com?q=foo bar[] is bar.</p>
+    <p>Foo <a href="https://example.com?q=foo%20bar" class="bare">https://example.com?q=foo%20bar</a> is bar.</p>
+    <p>Foo: &lt;<strong><a href="https://foo.com/bar" class="bare">https://foo.com/bar</a></strong>&gt;</p>
+    <p><a href="http://foo.com">foo, bar = baz</a></p>
+    <p><a href="http://foo.com">foo, bar, baz</a></p>
   "#}
 );
 
@@ -442,36 +318,16 @@ assert_html!(
     http://google.com[Google,window=name,opts="nofollow,noopener"]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p><a href="https://example.com"><span class="role">Foo Bar</span></a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://google.com" target="_blank" rel="noopener" class="external">Google</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://a.com?b=c:1,2b," class="bare">http://a.com?b=c:1,2b,</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://a.com?b=c:1,2b," class="bare">http://a.com?b=c:1,2b,</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://a.com?b=c:1,2b,">Roboto,400</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a id="roboto-regular" href="http://example.com" class="bare font">http://example.com</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://google.com" target="_blank" rel="noopener">Google</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://google.com" target="name" rel="noopener">Google</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://google.com">Google</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://google.com" target="name" rel="noopener nofollow">Google</a></p>
-    </div>
+    <p><a href="https://example.com"><span class="role">Foo Bar</span></a></p>
+    <p><a href="http://google.com" target="_blank" rel="noopener" class="external">Google</a></p>
+    <p><a href="http://a.com?b=c:1,2b," class="bare">http://a.com?b=c:1,2b,</a></p>
+    <p><a href="http://a.com?b=c:1,2b," class="bare">http://a.com?b=c:1,2b,</a></p>
+    <p><a href="http://a.com?b=c:1,2b,">Roboto,400</a></p>
+    <p><a id="roboto-regular" href="http://example.com" class="bare font">http://example.com</a></p>
+    <p><a href="http://google.com" target="_blank" rel="noopener">Google</a></p>
+    <p><a href="http://google.com" target="name" rel="noopener">Google</a></p>
+    <p><a href="http://google.com">Google</a></p>
+    <p><a href="http://google.com" target="name" rel="noopener nofollow">Google</a></p>
   "#}
 );
 
@@ -491,18 +347,10 @@ assert_html!(
     irc://irc.freenode.net[Freenode IRC]
   "#},
   html! {r#"
-    <div class="paragraph">
-      <p><a id="link-1" href="http://google.com">Google</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="http://google.com" title="title-1">Google</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="irc://irc.freenode.net" class="bare">irc://irc.freenode.net</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="irc://irc.freenode.net">Freenode IRC</a></p>
-    </div>
+    <p><a id="link-1" href="http://google.com">Google</a></p>
+    <p><a href="http://google.com" title="title-1">Google</a></p>
+    <p><a href="irc://irc.freenode.net" class="bare">irc://irc.freenode.net</a></p>
+    <p><a href="irc://irc.freenode.net">Freenode IRC</a></p>
   "#}
 );
 

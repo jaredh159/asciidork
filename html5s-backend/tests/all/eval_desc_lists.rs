@@ -87,7 +87,7 @@ assert_html!(
     <div class="dlist">
       <dl>
         <dt class="hdlist1">term</dt>
-        <dd><div class="paragraph"><p>paragraph</p></div></dd>
+        <dd><p>paragraph</p></dd>
       </dl>
     </div>
   "#}
@@ -188,9 +188,7 @@ assert_html!(
         <dt class="hdlist1">foo</dt>
         <dd>
           <p>bar so baz</p>
-          <div class="paragraph">
-            <p>and more things</p>
-          </div>
+          <p>and more things</p>
         </dd>
       </dl>
     </div>
@@ -213,12 +211,8 @@ assert_html!(
         <dt class="hdlist1">foo</dt>
         <dd>
           <p>bar so baz</p>
-          <div class="paragraph">
-            <p>and more things</p>
-          </div>
-          <div class="paragraph">
-            <p>and even more things</p>
-          </div>
+          <p>and more things</p>
+          <p>and even more things</p>
         </dd>
       </dl>
     </div>
@@ -549,11 +543,11 @@ assert_html!(
     term;;; def
   "#},
   html! {r#"
-    <div class="paragraph"><p>::</p></div>
+    <p>::</p>
     <div class="literalblock">
       <div class="content"><pre>::</pre></div>
     </div>
-    <div class="paragraph"><p>term1::def1 term2::def2</p></div>
+    <p>term1::def1 term2::def2</p>
     <div class="dlist">
       <dl>
         <dt class="hdlist1"></dt>
@@ -751,9 +745,7 @@ assert_html!(
     [[grays-peak]]Grays Peak:: 14,278 feet
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p>Highest is <a href="#grays-peak">[grays-peak]</a>, which tops <a href="#mount-evans">Mount Evans</a>.</p>
-    </div>
+    <p>Highest is <a href="#grays-peak">[grays-peak]</a>, which tops <a href="#mount-evans">Mount Evans</a>.</p>
     <div class="dlist">
       <dl>
         <dt class="hdlist1"><a id="mount-evans"></a>Mount Evans</dt>

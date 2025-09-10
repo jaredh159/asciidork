@@ -30,32 +30,24 @@ assert_html!(
     - xref:sections.d/first[First Section]
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p><a href="tigers.html">tigers.html</a></p>
-    </div>
-    <div class="ulist">
-      <ul>
-        <li><p><a href="using-.net-web-services.html">Using .NET web services</a></p></li>
-        <li><p><a href="asciidoctor.1.html">Asciidoctor Manual</a></p></li>
-        <li><p><a href="path/to/document.html">Document Title</a></p></li>
-      </ul>
-    </div>
-    <div class="ulist">
-      <ul>
-        <li><p><a href="using-.net-web-services">Using .NET web services</a></p></li>
-        <li><p><a href="asciidoctor.1">Asciidoctor Manual</a></p></li>
-        <li><p><a href="document.html">Document Title</a></p></li>
-        <li><p><a href="path/to/document.html">Document Title</a></p></li>
-        <li><p><a href="include.d/document.html">Document Title</a></p></li>
-      </ul>
-    </div>
-    <div class="ulist">
-      <ul>
-        <li><p><a href="refcard.pdf">Refcard</a></p></li>
-        <li><p><a href="asciidoctor.1">Asciidoctor Manual</a></p></li>
-        <li><p><a href="#sections.d/first">First Section</a></p></li>
-      </ul>
-    </div>
+    <p><a href="tigers.html">tigers.html</a></p>
+    <ul>
+      <li><p><a href="using-.net-web-services.html">Using .NET web services</a></p></li>
+      <li><p><a href="asciidoctor.1.html">Asciidoctor Manual</a></p></li>
+      <li><p><a href="path/to/document.html">Document Title</a></p></li>
+    </ul>
+    <ul>
+      <li><p><a href="using-.net-web-services">Using .NET web services</a></p></li>
+      <li><p><a href="asciidoctor.1">Asciidoctor Manual</a></p></li>
+      <li><p><a href="document.html">Document Title</a></p></li>
+      <li><p><a href="path/to/document.html">Document Title</a></p></li>
+      <li><p><a href="include.d/document.html">Document Title</a></p></li>
+    </ul>
+    <ul>
+      <li><p><a href="refcard.pdf">Refcard</a></p></li>
+      <li><p><a href="asciidoctor.1">Asciidoctor Manual</a></p></li>
+      <li><p><a href="#sections.d/first">First Section</a></p></li>
+    </ul>
   "##}
 );
 
@@ -84,27 +76,15 @@ assert_html!(
     <</path/to/tigers#,tigers>>
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p><a href="using-.net-web-services.html">Using .NET web services</a></p>
-    </div>
-    <div class="ulist">
-      <ul>
-        <li><p><a href="using-.net-web-services">Using .NET web services</a></p></li>
-        <li><p><a href="#using-.net-web-services">Using .NET web services</a></p></li>
-      </ul>
-    </div>
-    <div class="paragraph">
-      <p><a href="doc__with_double__underscore.html">text</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="doc__with_double__underscore.html">text</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="../tigers.html">tigers</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="/path/to/tigers.html">tigers</a></p>
-    </div>
+    <p><a href="using-.net-web-services.html">Using .NET web services</a></p>
+    <ul>
+      <li><p><a href="using-.net-web-services">Using .NET web services</a></p></li>
+      <li><p><a href="#using-.net-web-services">Using .NET web services</a></p></li>
+    </ul>
+    <p><a href="doc__with_double__underscore.html">text</a></p>
+    <p><a href="doc__with_double__underscore.html">text</a></p>
+    <p><a href="../tigers.html">tigers</a></p>
+    <p><a href="/path/to/tigers.html">tigers</a></p>
   "##}
 );
 
@@ -142,30 +122,14 @@ assert_html!(
     <<tigers#about,About Tigers>>
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p><a href="#tigers.adoc">[tigers.adoc]</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="tigers.html">tigers.html</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="tigers.html#id">tigers.html</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="tigers.html">tigers.html</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="tigers.html#about">tigers.html</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="tigers.html#about">About Tigers</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="../tigers/#about">About Tigers</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="tigers/#about">About Tigers</a></p>
-    </div>
+    <p><a href="#tigers.adoc">[tigers.adoc]</a></p>
+    <p><a href="tigers.html">tigers.html</a></p>
+    <p><a href="tigers.html#id">tigers.html</a></p>
+    <p><a href="tigers.html">tigers.html</a></p>
+    <p><a href="tigers.html#about">tigers.html</a></p>
+    <p><a href="tigers.html#about">About Tigers</a></p>
+    <p><a href="../tigers/#about">About Tigers</a></p>
+    <p><a href="tigers/#about">About Tigers</a></p>
   "##}
 );
 
@@ -182,15 +146,9 @@ assert_html!(
     <<tigers.adoc#about,About Tigers>>
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p>info <span id="about">tigers</span>.</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="#about">About Tigers</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="#about">About Tigers</a></p>
-    </div>
+    <p>info <span id="about">tigers</span>.</p>
+    <p><a href="#about">About Tigers</a></p>
+    <p><a href="#about">About Tigers</a></p>
   "##}
 );
 
@@ -222,15 +180,9 @@ assert_html!(
     <<part1/tigers.adoc#about,About Tigers>>
   "#},
   html! {r##"
-    <div class="paragraph">
-      <p>info <span id="about">tigers</span>.</p>
-    </div>
-    <div class="paragraph">
-      <p><a href="#about">About Tigers</a></p>
-    </div>
-    <div class="paragraph">
-      <p><a href="#about">About Tigers</a></p>
-    </div>
+    <p>info <span id="about">tigers</span>.</p>
+    <p><a href="#about">About Tigers</a></p>
+    <p><a href="#about">About Tigers</a></p>
   "##}
 );
 
@@ -251,25 +203,19 @@ assert_html!(
     include::other-chapters.adoc[]
   "#},
   html! {r##"
-    <div class="sect1">
+    <section class="doc-section level-1">
       <h2 id="ch1">Chapter One</h2>
-      <div class="sectionbody">
-        <div class="paragraph"><p>So it begins.</p></div>
-        <div class="paragraph"><p>Read <a href="#ch2">Chapter 2</a>.</p></div>
-      </div>
-    </div>
-    <div class="sect1">
+      <p>So it begins.</p>
+      <p>Read <a href="#ch2">Chapter 2</a>.</p>
+    </section>
+    <section class="doc-section level-1">
       <h2 id="ch2">Chapter 2</h2>
-      <div class="sectionbody">
-        <div class="paragraph"><p>The plot thickens.</p></div>
-      </div>
-    </div>
-    <div class="sect1">
+      <p>The plot thickens.</p>
+    </section>
+    <section class="doc-section level-1">
       <h2 id="ch3">Chapter 3</h2>
-      <div class="sectionbody">
-        <div class="paragraph"><p>The plot runs its course, predictably.</p></div>
-      </div>
-    </div>
+      <p>The plot runs its course, predictably.</p>
+    </section>
   "##}
 );
 
@@ -383,24 +329,22 @@ assert_html!(
     - xref:#n-using-.net-services[]
   "#},
   html! {r##"
-    <div class="ulist">
-      <ul>
-        <li><p><a href="a.html">a.html</a></p></li>
-        <li><p><a href="b.html">b.html</a></p></li>
-        <li><p><a href="c.1.html">c.1.html</a></p></li>
-        <li><p><a href="d.1.html">d.1.html</a></p></li>
-        <li><p><a href="e.html">e.html</a></p></li>
-        <li><p><a href="#f">[f]</a></p></li>
-        <li><p><a href="g.html">g.html</a></p></li>
-        <li><p><a href="h.html">h.html</a></p></li>
-        <li><p><a href="i.1">i.1</a></p></li>
-        <li><p><a href="j.1">j.1</a></p></li>
-        <li><p><a href="k.pdf">k.pdf</a></p></li>
-        <li><p><a href="l.pdf">l.pdf</a></p></li>
-        <li><p><a href="m-using-.net-services">m-using-.net-services</a></p></li>
-        <li><p><a href="#n-using-.net-services">[n-using-.net-services]</a></p></li>
-      </ul>
-    </div>
+    <ul>
+      <li><p><a href="a.html">a.html</a></p></li>
+      <li><p><a href="b.html">b.html</a></p></li>
+      <li><p><a href="c.1.html">c.1.html</a></p></li>
+      <li><p><a href="d.1.html">d.1.html</a></p></li>
+      <li><p><a href="e.html">e.html</a></p></li>
+      <li><p><a href="#f">[f]</a></p></li>
+      <li><p><a href="g.html">g.html</a></p></li>
+      <li><p><a href="h.html">h.html</a></p></li>
+      <li><p><a href="i.1">i.1</a></p></li>
+      <li><p><a href="j.1">j.1</a></p></li>
+      <li><p><a href="k.pdf">k.pdf</a></p></li>
+      <li><p><a href="l.pdf">l.pdf</a></p></li>
+      <li><p><a href="m-using-.net-services">m-using-.net-services</a></p></li>
+      <li><p><a href="#n-using-.net-services">[n-using-.net-services]</a></p></li>
+    </ul>
   "##}
 );
 

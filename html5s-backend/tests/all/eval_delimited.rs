@@ -10,9 +10,7 @@ assert_html!(
   html! {r#"
     <div class="openblock">
       <div class="content">
-        <div class="paragraph">
-          <p>foo</p>
-        </div>
+        <p>foo</p>
       </div>
     </div>
   "#}
@@ -72,9 +70,7 @@ assert_html!(
     <div class="exampleblock">
       <div class="title">Example 1. My Title</div>
       <div class="content">
-        <div class="paragraph">
-          <p>foo</p>
-        </div>
+        <p>foo</p>
       </div>
     </div>
   "#}
@@ -94,7 +90,7 @@ assert_html!(
       <div class="content">
         <div class="exampleblock">
           <div class="content">
-            <div class="paragraph"><p>foo</p></div>
+            <p>foo</p>
           </div>
         </div>
       </div>
@@ -113,14 +109,10 @@ assert_html!(
     ____
   "#},
   html! {r#"
-    <div class="quoteblock">
+    <div class="quote-block">
       <blockquote>
-        <div class="paragraph">
-          <p>Dennis: Come and see the violence inherent in the system. Help! Help!</p>
-        </div>
-        <div class="paragraph">
-          <p>King Arthur: Bloody peasant!</p>
-        </div>
+        <p>Dennis: Come and see the violence inherent in the system. Help! Help!</p>
+        <p>King Arthur: Bloody peasant!</p>
       </blockquote>
       <div class="attribution">
         &#8212; Monty Python and the Holy Grail
@@ -143,9 +135,7 @@ assert_html!(
       <div class="content">
         <div class="openblock">
           <div class="content">
-            <div class="paragraph">
-              <p>foo</p>
-            </div>
+            <p>foo</p>
           </div>
         </div>
       </div>
@@ -167,17 +157,13 @@ assert_html!(
   html! {r#"
     <div class="sidebarblock">
       <div class="content">
-        <div class="paragraph">
-          <p>This is content in a sidebar block.</p>
-        </div>
+        <p>This is content in a sidebar block.</p>
         <div class="imageblock">
           <div class="content">
             <img src="name.png" alt="name">
           </div>
         </div>
-        <div class="paragraph">
-          <p>This is more content in the sidebar block.</p>
-        </div>
+        <p>This is more content in the sidebar block.</p>
       </div>
     </div>
   "#}
