@@ -34,7 +34,7 @@ pub struct Args {
   #[clap(short, long, help = "Output file path - omit to write to stdout")]
   pub output: Option<std::path::PathBuf>,
 
-  #[clap(short, long, default_value = "false")]
+  #[clap(short, long, alias = "no-header-footer", default_value = "false")]
   #[clap(help = "Supress enclosing document structure")]
   pub embedded: bool,
 
