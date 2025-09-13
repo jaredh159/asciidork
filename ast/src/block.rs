@@ -24,8 +24,8 @@ pub enum BlockContent<'arena> {
   DocumentAttribute(String, AttrValue),
   QuotedParagraph {
     quote: InlineNodes<'arena>,
-    attr: SourceString<'arena>,
-    cite: Option<SourceString<'arena>>,
+    attr: InlineNodes<'arena>,
+    cite: Option<InlineNodes<'arena>>,
   },
   List {
     variant: ListVariant,
@@ -103,9 +103,10 @@ impl BlockContent<'_> {
       BlockContent::Empty(EmptyMetadata::None) => None,
       BlockContent::Table(table) => table.last_loc(),
       BlockContent::DocumentAttribute(_, _) => None,
-      BlockContent::QuotedParagraph { attr, cite, .. } => {
-        cite.as_ref().map(|c| c.loc).or(Some(attr.loc))
-      }
+      BlockContent::QuotedParagraph { attr, cite, .. } => cite
+        .as_ref()
+        .map(|c| c.last_loc())
+        .unwrap_or(attr.last_loc()),
       BlockContent::List { items, .. } => items.last().and_then(|i| i.last_loc()),
     }
   }

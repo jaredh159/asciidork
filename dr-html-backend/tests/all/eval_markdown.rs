@@ -53,6 +53,112 @@ assert_html!(
 );
 
 assert_html!(
+  markdown_simple_block_quote,
+  adoc! {r#"
+    > a quote
+  "#},
+  html! {r#"
+    <div class="quoteblock">
+      <blockquote>
+        <div class="paragraph">
+          <p>a quote</p>
+        </div>
+      </blockquote>
+    </div>
+  "#}
+);
+
+assert_html!(
+  markdown_quote_w_lazy_continuation,
+  adoc! {r#"
+    > A famous quote.
+    Some more inspiring words.
+  "#},
+  html! {r#"
+    <div class="quoteblock">
+      <blockquote>
+        <div class="paragraph">
+          <p>A famous quote. Some more inspiring words.</p>
+        </div>
+      </blockquote>
+    </div>
+  "#}
+);
+
+assert_html!(
+  markdown_quote_implicit_attribution,
+  adoc! {r#"
+    > I hold it that a little rebellion now and then is a good thing,
+    > and as necessary in the political world as storms in the physical.
+    > -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
+  "#},
+  html! {r#"
+    <div class="quoteblock">
+      <blockquote>
+        I hold it that a little rebellion now and then is a good thing, and as necessary in the political world as storms in the physical.
+      </blockquote>
+      <div class="attribution">
+        &#8212; Thomas Jefferson<br>
+        <cite>Papers of Thomas Jefferson: Volume 11</cite>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  markdown_complex_block_quote,
+  adoc! {r#"
+    > > What's new?
+    >
+    > I've got Markdown in my AsciiDoc!
+    >
+    > > Like what?
+    >
+    > * Blockquotes
+    > * Headings
+    > * Fenced code blocks
+    >
+    > > Is there more?
+    >
+    > Yep. AsciiDoc and Markdown share a lot of common syntax already.
+  "#},
+  html! {r#"
+    <div class="quoteblock">
+      <blockquote>
+        <div class="quoteblock">
+          <blockquote>
+            <div class="paragraph"><p>What&#8217;s new?</p></div>
+          </blockquote>
+        </div>
+        <div class="paragraph">
+          <p>I&#8217;ve got Markdown in my AsciiDoc!</p>
+        </div>
+        <div class="quoteblock">
+          <blockquote>
+            <div class="paragraph"><p>Like what?</p></div>
+          </blockquote>
+        </div>
+        <div class="ulist">
+          <ul>
+            <li><p>Blockquotes</p></li>
+            <li><p>Headings</p></li>
+            <li><p>Fenced code blocks</p></li>
+          </ul>
+        </div>
+        <div class="quoteblock">
+          <blockquote>
+            <div class="paragraph"><p>Is there more?</p></div>
+          </blockquote>
+        </div>
+        <div class="paragraph">
+          <p>Yep. AsciiDoc and Markdown share a lot of common syntax already.</p>
+        </div>
+      </blockquote>
+    </div>
+  "#}
+);
+
+assert_html!(
   markdown_thematic_break,
   adoc! {r#"
     foo

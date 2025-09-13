@@ -138,10 +138,11 @@ impl<'arena> ContiguousLines<'arena> {
     self.lines.first().and_then(|line| line.first_loc())
   }
 
-  pub fn is_quoted_paragraph(&self) -> bool {
+  pub fn is_quoted_paragraph(&self, in_markdown_blockquote: bool) -> bool {
     if self.lines.len() < 2 {
       return false;
     }
+
     let last_line = self.last().unwrap();
     if !last_line.starts_with_seq(&[Kind(Dashes), Kind(Whitespace)])
       || last_line.num_tokens() < 3
@@ -149,12 +150,17 @@ impl<'arena> ContiguousLines<'arena> {
     {
       return false;
     }
+
     let first_line = self.current().unwrap();
-    if !first_line.starts(DoubleQuote) || first_line.num_tokens() < 2 {
-      return false;
+    if !in_markdown_blockquote {
+      if !first_line.starts(DoubleQuote) || first_line.num_tokens() < 2 {
+        return false;
+      }
+      let penult = self.nth(self.lines.len() - 2).unwrap();
+      penult.ends(DoubleQuote)
+    } else {
+      !first_line.is_empty()
     }
-    let penult = self.nth(self.lines.len() - 2).unwrap();
-    penult.ends(DoubleQuote)
   }
 
   pub fn starts_list(&self) -> bool {
@@ -330,7 +336,7 @@ mod tests {
     for (input, expected) in cases {
       let mut parser = test_parser!(input);
       let lines = parser.read_lines().unwrap().unwrap();
-      expect_eq!(lines.is_quoted_paragraph(), expected, from: input);
+      expect_eq!(lines.is_quoted_paragraph(false), expected, from: input);
     }
   }
 }

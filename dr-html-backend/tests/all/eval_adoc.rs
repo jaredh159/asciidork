@@ -449,6 +449,24 @@ assert_html!(
 );
 
 assert_html!(
+  quoted_paragraph_w_attr,
+  adoc! {r#"
+    "I hold it blah blah..."
+    -- Thomas Jefferson https://site.com[Source]
+  "#},
+  html! {r#"
+    <div class="quoteblock">
+      <blockquote>
+        I hold it blah blah&#8230;&#8203;
+      </blockquote>
+      <div class="attribution">
+        &#8212; Thomas Jefferson <a href="https://site.com">Source</a>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   multiple_image_blocks_w_title,
   adoc! {r#"
     .Cat

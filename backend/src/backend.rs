@@ -69,10 +69,10 @@ pub trait Backend {
   fn exit_open_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_example_block(&mut self, block: &Block, content: &BlockContent);
   fn exit_example_block(&mut self, block: &Block, content: &BlockContent);
-  fn enter_quote_block(&mut self, block: &Block, content: &BlockContent);
-  fn exit_quote_block(&mut self, block: &Block, content: &BlockContent);
-  fn enter_verse_block(&mut self, block: &Block, content: &BlockContent);
-  fn exit_verse_block(&mut self, block: &Block, content: &BlockContent);
+  fn enter_quote_block(&mut self, block: &Block, has_attribution: bool);
+  fn exit_quote_block(&mut self, block: &Block, has_attribution: bool);
+  fn enter_verse_block(&mut self, block: &Block, has_attribution: bool);
+  fn exit_verse_block(&mut self, block: &Block, has_attribution: bool);
   fn enter_listing_block(&mut self, block: &Block, content: &BlockContent);
   fn exit_listing_block(&mut self, block: &Block, content: &BlockContent);
   fn enter_literal_block(&mut self, block: &Block, content: &BlockContent);
@@ -83,18 +83,12 @@ pub trait Backend {
   fn exit_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block);
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
-  fn enter_quoted_paragraph(
-    &mut self,
-    block: &Block,
-    attr: &SourceString,
-    cite: Option<&SourceString>,
-  );
-  fn exit_quoted_paragraph(
-    &mut self,
-    block: &Block,
-    attr: &SourceString,
-    cite: Option<&SourceString>,
-  );
+  fn enter_quote_attribution(&mut self, block: &Block, has_cite: bool);
+  fn exit_quote_attribution(&mut self, block: &Block, has_cite: bool);
+  fn enter_quote_cite(&mut self, block: &Block, has_attribution: bool);
+  fn exit_quote_cite(&mut self, block: &Block, has_attribution: bool);
+  fn enter_quoted_paragraph(&mut self, block: &Block);
+  fn exit_quoted_paragraph(&mut self, block: &Block);
   fn enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block);
   fn exit_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block);
 

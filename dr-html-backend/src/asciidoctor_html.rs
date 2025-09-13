@@ -454,57 +454,79 @@ impl Backend for AsciidoctorHtml {
   fn exit_passthrough_block(&mut self, _block: &Block, _content: &BlockContent) {}
 
   #[instrument(skip_all)]
-  fn enter_quoted_paragraph(
-    &mut self,
-    block: &Block,
-    _attr: &SourceString,
-    _cite: Option<&SourceString>,
-  ) {
+  fn enter_quoted_paragraph(&mut self, block: &Block) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
     self.render_buffered_block_title(block);
     self.push_str("<blockquote>");
   }
 
   #[instrument(skip_all)]
-  fn exit_quoted_paragraph(
-    &mut self,
-    _block: &Block,
-    attr: &SourceString,
-    cite: Option<&SourceString>,
-  ) {
-    self.exit_attributed(
-      BlockContext::BlockQuote,
-      Some(attr),
-      cite.as_ref().map(|v| &***v),
-    );
+  fn exit_quoted_paragraph(&mut self, _block: &Block) {
+    self.push_str("</div>");
   }
 
   #[instrument(skip_all)]
-  fn enter_quote_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn enter_quote_block(&mut self, block: &Block, _has_attribution: bool) {
     self.open_element("div", &["quoteblock"], &block.meta.attrs);
     self.render_buffered_block_title(block);
     self.push_str("<blockquote>");
   }
 
   #[instrument(skip_all)]
-  fn exit_quote_block(&mut self, block: &Block, _content: &BlockContent) {
-    self.exit_attributed(
-      block.context,
-      block.meta.attrs.str_positional_at(1),
-      block.meta.attrs.str_positional_at(2),
-    );
+  fn exit_quote_block(&mut self, block: &Block, has_attribution: bool) {
+    if block.context == BlockContext::Verse && !has_attribution {
+      self.push_str("</pre>");
+    } else if !has_attribution {
+      self.push_str("</blockquote>");
+    }
+    self.push_str("</div>");
   }
 
   #[instrument(skip_all)]
-  fn enter_verse_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn enter_quote_attribution(&mut self, block: &Block, _has_cite: bool) {
+    if block.context == BlockContext::Verse {
+      self.push_str("</pre>");
+    } else {
+      self.push_str("</blockquote>");
+    }
+    self.push_str(r#"<div class="attribution">&#8212; "#);
+  }
+
+  #[instrument(skip_all)]
+  fn exit_quote_attribution(&mut self, _block: &Block, has_cite: bool) {
+    if !has_cite {
+      self.push_str("</div>");
+    }
+  }
+
+  #[instrument(skip_all)]
+  fn enter_quote_cite(&mut self, _block: &Block, has_attribution: bool) {
+    if has_attribution {
+      self.push_str(r#"<br><cite>"#);
+    } else {
+      self.push_str(r#"</blockquote><div class="attribution">&#8212; "#);
+    }
+  }
+
+  #[instrument(skip_all)]
+  fn exit_quote_cite(&mut self, _block: &Block, has_attribution: bool) {
+    if has_attribution {
+      self.push_str(r#"</cite></div>"#);
+    } else {
+      self.push_str("</div>");
+    }
+  }
+
+  #[instrument(skip_all)]
+  fn enter_verse_block(&mut self, block: &Block, _has_attribution: bool) {
     self.open_element("div", &["verseblock"], &block.meta.attrs);
     self.render_buffered_block_title(block);
     self.push_str(r#"<pre class="content">"#);
   }
 
   #[instrument(skip_all)]
-  fn exit_verse_block(&mut self, block: &Block, content: &BlockContent) {
-    self.exit_quote_block(block, content)
+  fn exit_verse_block(&mut self, block: &Block, has_attribution: bool) {
+    self.exit_quote_block(block, has_attribution);
   }
 
   #[instrument(skip_all)]
@@ -1692,32 +1714,6 @@ impl AsciidoctorHtml {
     } else if let Some(css) = meta.string("_asciidork_asciidoctor_resolved_css") {
       self.push(["<style>", &css, "</style>"]);
     }
-  }
-
-  fn exit_attributed(
-    &mut self,
-    context: BlockContext,
-    attribution: Option<&str>,
-    cite: Option<&str>,
-  ) {
-    if context == BlockContext::BlockQuote {
-      self.push_str("</blockquote>");
-    } else {
-      self.push_str("</pre>");
-    }
-    if let Some(attribution) = attribution {
-      self.push_str(r#"<div class="attribution">&#8212; "#);
-      self.push_str(attribution);
-      if let Some(cite) = cite {
-        self.push_str(r#"<br><cite>"#);
-        self.push([cite, "</cite>"]);
-      }
-      self.push_str("</div>");
-    } else if let Some(cite) = cite {
-      self.push_str(r#"<div class="attribution">&#8212; "#);
-      self.push([cite, "</div>"]);
-    }
-    self.push_str("</div>");
   }
 
   fn render_checklist_item(&mut self, item: &ListItem) {

@@ -84,6 +84,9 @@ impl<'arena> Parser<'arena> {
       {
         return Ok(Some(self.parse_table(lines, meta)?));
       }
+      GreaterThan if lines.nth_token(1).kind(Whitespace) => {
+        return self.parse_markdown_blockquote(lines, meta);
+      }
       AttrDef => {
         let pos = self
           .ctx
@@ -174,7 +177,7 @@ impl<'arena> Parser<'arena> {
       _ => {}
     }
 
-    if lines.is_quoted_paragraph() {
+    if lines.is_quoted_paragraph(self.ctx.in_markdown_blockquote) {
       self.parse_quoted_paragraph(lines, meta)
     } else {
       self.parse_paragraph(lines, meta)
@@ -225,6 +228,58 @@ impl<'arena> Parser<'arena> {
       }
     }
     None
+  }
+
+  fn parse_markdown_blockquote(
+    &mut self,
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Option<Block<'arena>>> {
+    let mut loc = MultiSourceLocation::from(lines.current_token().unwrap().loc);
+    let mut paras = BumpVec::new_in(self.bump);
+    let mut current = ContiguousLines::new(Deq::new(self.bump));
+    while let Some(mut line) = lines.consume_current() {
+      if line.starts(GreaterThan) {
+        line.remove_first_token();
+        if line.starts(Whitespace) {
+          line.remove_first_token();
+        }
+      }
+      if line.is_empty() {
+        if !current.is_empty() {
+          paras.push(current);
+          current = ContiguousLines::new(Deq::new(self.bump));
+        }
+      } else {
+        current.push(line);
+      }
+    }
+    if !current.is_empty() {
+      paras.push(current);
+    }
+
+    self.ctx.in_markdown_blockquote = true;
+    assert!(self.peeked_lines.is_none());
+    let mut blocks = BumpVec::new_in(self.bump);
+    for para in paras.into_iter() {
+      self.restore_lines(para);
+      if let Some(block) = self.parse_block()? {
+        loc.extend_end(&block.loc);
+        blocks.push(block);
+      }
+    }
+    self.ctx.in_markdown_blockquote = false;
+
+    if blocks.len() == 1 && blocks[0].context == Context::QuotedParagraph {
+      return Ok(Some(blocks.pop().unwrap()));
+    }
+
+    Ok(Some(Block {
+      content: Content::Compound(blocks),
+      context: Context::BlockQuote,
+      loc,
+      meta,
+    }))
   }
 
   fn parse_delimited_block(
@@ -400,20 +455,43 @@ impl<'arena> Parser<'arena> {
     meta: ChunkMeta<'arena>,
   ) -> Result<Option<Block<'arena>>> {
     let mut attr_line = lines.pop().unwrap();
-    attr_line.discard_assert(TokenKind::Dashes); // `--`
+    attr_line.discard_assert(TokenKind::Dashes);
     attr_line.discard_assert(TokenKind::Whitespace);
     let last_loc = attr_line.last_loc().unwrap();
-    let (attr, cite) = attr_line
-      .consume_to_string(self.bump)
-      .split_once(", ", self.bump);
-    let start_token = lines
-      .current_mut()
-      .unwrap()
-      .discard_assert(TokenKind::DoubleQuote);
-    lines
-      .last_mut()
-      .unwrap()
-      .discard_assert_last(TokenKind::DoubleQuote);
+
+    let mut saw_comma = false;
+    let mut attr_toks = Deq::with_capacity(8, self.bump);
+    let mut cite_toks = Deq::with_capacity(8, self.bump);
+    let mut current = &mut attr_toks;
+    while let Some(tok) = attr_line.consume_current() {
+      if tok.kind == Comma && !saw_comma {
+        saw_comma = true;
+        current = &mut cite_toks;
+        if attr_line.starts(Whitespace) {
+          attr_line.discard(1);
+        }
+        continue;
+      }
+      current.push(tok);
+    }
+    let attr = self.parse_inlines(&mut Line::new(attr_toks).into_lines())?;
+    let cite = if cite_toks.is_empty() {
+      None
+    } else {
+      Some(self.parse_inlines(&mut Line::new(cite_toks).into_lines())?)
+    };
+
+    let first_line = lines.current_mut().unwrap();
+    let start_token_loc = if self.ctx.in_markdown_blockquote {
+      first_line.current_token().unwrap().loc
+    } else {
+      let loc = first_line.discard_assert(TokenKind::DoubleQuote).loc;
+      lines
+        .last_mut()
+        .unwrap()
+        .discard_assert_last(TokenKind::DoubleQuote);
+      loc
+    };
     Ok(Some(Block {
       meta,
       context: Context::QuotedParagraph,
@@ -422,7 +500,7 @@ impl<'arena> Parser<'arena> {
         attr,
         cite,
       },
-      loc: MultiSourceLocation::spanning(start_token.loc, last_loc),
+      loc: MultiSourceLocation::spanning(start_token_loc, last_loc),
     }))
   }
 
