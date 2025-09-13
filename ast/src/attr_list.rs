@@ -14,6 +14,7 @@ pub struct AttrList<'arena> {
 pub trait AttrData {
   fn is_empty(&self) -> bool;
   fn str_positional_at(&self, index: usize) -> Option<&str>;
+  fn positional_at(&self, index: usize) -> Option<&InlineNodes<'_>>;
   fn has_option(&self, option: &str) -> bool;
   fn has_str_positional(&self, positional: &str) -> bool;
   fn is_source(&self) -> bool;
@@ -50,6 +51,10 @@ impl AttrData for AttrList<'_> {
       return None;
     };
     nodes.single_text()
+  }
+
+  fn positional_at(&self, index: usize) -> Option<&InlineNodes<'_>> {
+    self.positional.get(index).and_then(|o| o.as_ref())
   }
 
   fn has_option(&self, option: &str) -> bool {

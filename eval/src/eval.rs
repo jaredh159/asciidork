@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 
 use crate::internal::*;
+use asciidork_ast::InlineNodes;
 use asciidork_backend::utils;
 
 pub fn eval<B: Backend>(document: &Document, mut backend: B) -> Result<B::Output, B::Error> {
@@ -168,31 +169,41 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_compound_block_content(blocks, block);
       backend.exit_sidebar_block(block, &block.content);
     }
-    (Context::BlockQuote, Content::Simple(children)) => {
-      backend.enter_quote_block(block, &block.content);
+    (Context::Verse, Content::Simple(children)) => {
+      let attr = block.meta.attrs.positional_at(1);
+      let cite = block.meta.attrs.positional_at(2);
+      backend.enter_verse_block(block, attr.is_some() || cite.is_some());
       backend.enter_simple_block_content(children, block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
       backend.exit_simple_block_content(children, block);
-      backend.exit_quote_block(block, &block.content);
+      eval_quote_attr(attr, cite, block, ctx, backend);
+      backend.exit_verse_block(block, attr.is_some() || cite.is_some());
+    }
+    (Context::BlockQuote, Content::Simple(children)) => {
+      let attr = block.meta.attrs.positional_at(1);
+      let cite = block.meta.attrs.positional_at(2);
+      backend.enter_quote_block(block, attr.is_some() || cite.is_some());
+      backend.enter_simple_block_content(children, block);
+      children.iter().for_each(|n| eval_inline(n, ctx, backend));
+      backend.exit_simple_block_content(children, block);
+      eval_quote_attr(attr, cite, block, ctx, backend);
+      backend.exit_quote_block(block, attr.is_some() || cite.is_some());
     }
     (Context::BlockQuote, Content::Compound(blocks)) => {
-      backend.enter_quote_block(block, &block.content);
+      let attr = block.meta.attrs.positional_at(1);
+      let cite = block.meta.attrs.positional_at(2);
+      backend.enter_quote_block(block, attr.is_some() || cite.is_some());
       backend.enter_compound_block_content(blocks, block);
       blocks.iter().for_each(|b| eval_block(b, ctx, backend));
       backend.exit_compound_block_content(blocks, block);
-      backend.exit_quote_block(block, &block.content);
-    }
-    (Context::Verse, Content::Simple(children)) => {
-      backend.enter_verse_block(block, &block.content);
-      backend.enter_simple_block_content(children, block);
-      children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
-      backend.exit_verse_block(block, &block.content);
+      eval_quote_attr(attr, cite, block, ctx, backend);
+      backend.exit_quote_block(block, attr.is_some() || cite.is_some());
     }
     (Context::QuotedParagraph, Content::QuotedParagraph { quote, attr, cite }) => {
-      backend.enter_quoted_paragraph(block, attr, cite.as_ref());
+      backend.enter_quoted_paragraph(block);
       quote.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_quoted_paragraph(block, attr, cite.as_ref());
+      eval_quote_attr(Some(attr), cite.as_ref(), block, ctx, backend);
+      backend.exit_quoted_paragraph(block);
     }
     (Context::Open, Content::Compound(blocks)) => {
       backend.enter_open_block(block, &block.content);
@@ -444,11 +455,11 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws),
     Macro(Footnote { id, text }) => {
-      backend.enter_footnote(id.as_ref(), text.as_ref().map(|t| t.as_slice()));
+      backend.enter_footnote(id.as_ref(), map_slice(text));
       if let Some(text) = text {
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
       }
-      backend.exit_footnote(id.as_ref(), text.as_ref().map(|t| t.as_slice()));
+      backend.exit_footnote(id.as_ref(), map_slice(text));
     }
     Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
     Macro(Button(text)) => backend.visit_button_macro(text),
@@ -471,7 +482,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       let anchors = ctx.doc.anchors.borrow();
       let anchor = anchors.get(utils::xref::get_id(&target.src));
       let is_biblio = anchor.map(|a| a.is_biblio).unwrap_or(false);
-      backend.enter_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
+      backend.enter_xref(target, map_slice(linktext), *kind);
       if ctx.resolving_xref.replace(true) {
         backend.visit_missing_xref(target, *kind, ctx.doc.title());
       } else if let Some(text) = anchor
@@ -494,7 +505,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
         backend.visit_missing_xref(target, *kind, ctx.doc.title());
       }
       ctx.resolving_xref.replace(false);
-      backend.exit_xref(target, linktext.as_ref().map(|t| t.as_slice()), *kind);
+      backend.exit_xref(target, map_slice(linktext), *kind);
     }
     Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
     Macro(Plugin(plugin_macro)) => backend.visit_plugin_macro(plugin_macro),
@@ -520,6 +531,25 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     }
     Symbol(kind) => backend.visit_symbol(*kind),
     LineComment(_) | Discarded => {}
+  }
+}
+
+fn eval_quote_attr(
+  attr: Option<&InlineNodes>,
+  cite: Option<&InlineNodes>,
+  block: &Block,
+  ctx: &Ctx,
+  backend: &mut impl Backend,
+) {
+  if let Some(attr) = attr {
+    backend.enter_quote_attribution(block, cite.is_some());
+    attr.iter().for_each(|n| eval_inline(n, ctx, backend));
+    backend.exit_quote_attribution(block, cite.is_some());
+  }
+  if let Some(cite) = cite {
+    backend.enter_quote_cite(block, attr.is_some());
+    cite.iter().for_each(|n| eval_inline(n, ctx, backend));
+    backend.exit_quote_cite(block, attr.is_some());
   }
 }
 
@@ -583,4 +613,9 @@ fn eval_toc_level(nodes: &[TocNode], ctx: &Ctx, backend: &mut impl Backend) {
     });
     backend.exit_toc_level(first.level, nodes);
   }
+}
+
+#[inline(always)]
+fn map_slice<'a>(nodes: &'a Option<InlineNodes<'a>>) -> Option<&'a [InlineNode<'a>]> {
+  nodes.as_ref().map(|n| n.as_slice())
 }

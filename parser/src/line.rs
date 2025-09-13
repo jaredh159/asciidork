@@ -876,6 +876,13 @@ impl<'arena> Line<'arena> {
     }
   }
 
+  /// very fast, because underlying deq just bumps the pos
+  pub fn remove_first_token(&mut self) {
+    if !self.tokens.is_empty() {
+      self.tokens.remove_first();
+    }
+  }
+
   pub fn get_indentation(&self) -> usize {
     self
       .current_token()

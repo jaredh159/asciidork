@@ -19,8 +19,8 @@ fn test_quoted_paragraph() {
         node!(Newline, 30..31),
         node!("and as necessary in the blah."; 31..60),
       ],
-      attr: src!("Thomas Jefferson", 65..81),
-      cite: Some(src!("Papers of Thomas Jefferson: Volume 11", 83..120)),
+      attr: just!("Thomas Jefferson", 65..81),
+      cite: Some(just!("Papers of Thomas Jefferson: Volume 11", 83..120)),
     },
     ..empty_block!(0, 120)
   };
@@ -53,7 +53,7 @@ fn test_quoted_paragraph_no_cite_w_attr_meta() {
           node!(Newline, 46..47),
           node!("and as necessary in the blah."; 47..76),
         ],
-        attr: src!("Thomas Jefferson", 81..97),
+        attr: just!("Thomas Jefferson", 81..97),
         cite: None,
       },
       loc: (16..97).into(),

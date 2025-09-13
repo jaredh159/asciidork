@@ -24,6 +24,7 @@ pub struct ParseContext<'arena> {
   pub ifdef_stack: BumpVec<'arena, BumpString<'arena>>,
   pub comment_delim_in_lines: bool,
   pub in_header: bool,
+  pub in_markdown_blockquote: bool,
   pub attr_defs: BumpVec<'arena, AttrDef>,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
 }
@@ -91,6 +92,7 @@ impl<'arena> ParseContext<'arena> {
       ifdef_stack: BumpVec::new_in(bump),
       attr_defs: BumpVec::new_in(bump),
       in_header: false,
+      in_markdown_blockquote: false,
     }
   }
 
@@ -116,6 +118,7 @@ impl<'arena> ParseContext<'arena> {
       ifdef_stack: BumpVec::new_in(bump),
       attr_defs: BumpVec::new_in(bump),
       in_header: false,
+      in_markdown_blockquote: false,
     }
   }
 

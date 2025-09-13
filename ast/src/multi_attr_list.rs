@@ -36,6 +36,10 @@ impl AttrData for MultiAttrList<'_> {
     self.0.iter().find_map(|attr| attr.str_positional_at(index))
   }
 
+  fn positional_at(&self, index: usize) -> Option<&InlineNodes<'_>> {
+    self.0.iter().find_map(|attr| attr.positional_at(index))
+  }
+
   fn has_option(&self, option: &str) -> bool {
     self.0.iter().any(|attr| attr.has_option(option))
   }
@@ -111,6 +115,10 @@ impl AttrData for NoAttrs {
   }
 
   fn str_positional_at(&self, _index: usize) -> Option<&str> {
+    None
+  }
+
+  fn positional_at(&self, _index: usize) -> Option<&InlineNodes<'_>> {
     None
   }
 
