@@ -157,7 +157,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_document_title(&mut self, _nodes: &[InlineNode]) {
+  fn enter_document_title(&mut self) {
     if self.render_doc_title() {
       self.push_str("<h1>")
     } else {
@@ -166,7 +166,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_document_title(&mut self, _nodes: &[InlineNode]) {
+  fn exit_document_title(&mut self) {
     if self.render_doc_title() {
       self.push_str("</h1>");
     } else {
@@ -240,7 +240,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_toc_content(&mut self, _content: &[InlineNode]) {
+  fn exit_toc_content(&mut self) {
     self.push_str("</a>");
   }
 
@@ -365,12 +365,12 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_meta_title(&mut self, _title: &[InlineNode]) {
+  fn enter_meta_title(&mut self) {
     self.start_buffering();
   }
 
   #[instrument(skip_all)]
-  fn exit_meta_title(&mut self, _title: &[InlineNode]) {
+  fn exit_meta_title(&mut self) {
     self.stop_buffering();
   }
 
@@ -380,7 +380,7 @@ impl Backend for AsciidoctorHtml {
   fn exit_compound_block_content(&mut self, _children: &[Block], _block: &Block) {}
 
   #[instrument(skip_all)]
-  fn enter_simple_block_content(&mut self, _children: &[InlineNode], block: &Block) {
+  fn enter_simple_block_content(&mut self, block: &Block) {
     if block.context == BlockContext::Verse {
       self.newlines = Newlines::Preserve;
     } else if block.meta.attrs.has_option("hardbreaks") {
@@ -389,24 +389,24 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_simple_block_content(&mut self, _children: &[InlineNode], _block: &Block) {
+  fn exit_simple_block_content(&mut self, _block: &Block) {
     self.newlines = self.default_newlines;
   }
 
   #[instrument(skip_all)]
-  fn enter_sidebar_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn enter_sidebar_block(&mut self, block: &Block) {
     self.open_element("div", &["sidebarblock"], &block.meta.attrs);
     self.push_str(r#"<div class="content">"#);
     self.render_buffered_block_title(block);
   }
 
   #[instrument(skip_all)]
-  fn exit_sidebar_block(&mut self, _block: &Block, _content: &BlockContent) {
+  fn exit_sidebar_block(&mut self, _block: &Block) {
     self.push_str("</div></div>");
   }
 
   #[instrument(skip_all)]
-  fn enter_listing_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn enter_listing_block(&mut self, block: &Block) {
     self.open_element("div", &["listingblock"], &block.meta.attrs);
     self.render_buffered_block_title(block);
     self.push_str(r#"<div class="content"><pre"#);
@@ -427,7 +427,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_listing_block(&mut self, _block: &Block, _content: &BlockContent) {
+  fn exit_listing_block(&mut self, _block: &Block) {
     if self.state.remove(&IsSourceBlock) {
       self.push_str("</code>");
     }
@@ -436,7 +436,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_literal_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn enter_literal_block(&mut self, block: &Block) {
     self.open_element("div", &["literalblock"], &block.meta.attrs);
     self.render_buffered_block_title(block);
     self.push_str(r#"<div class="content"><pre>"#);
@@ -444,15 +444,15 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_literal_block(&mut self, _block: &Block, _content: &BlockContent) {
+  fn exit_literal_block(&mut self, _block: &Block) {
     self.push_str("</pre></div></div>");
     self.newlines = self.default_newlines;
   }
 
   #[instrument(skip_all)]
-  fn enter_passthrough_block(&mut self, _block: &Block, _content: &BlockContent) {}
+  fn enter_passthrough_block(&mut self, _block: &Block) {}
   #[instrument(skip_all)]
-  fn exit_passthrough_block(&mut self, _block: &Block, _content: &BlockContent) {}
+  fn exit_passthrough_block(&mut self, _block: &Block) {}
 
   #[instrument(skip_all)]
   fn enter_quoted_paragraph(&mut self, block: &Block) {
@@ -531,7 +531,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_example_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn enter_example_block(&mut self, block: &Block) {
     if block.meta.attrs.has_option("collapsible") {
       self.open_element("details", &[], &block.meta.attrs);
       if block.meta.attrs.has_option("open") {
@@ -553,7 +553,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_example_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn exit_example_block(&mut self, block: &Block) {
     if block.meta.attrs.has_option("collapsible") {
       self.push_str("</div></details>");
     } else {
@@ -562,7 +562,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_open_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn enter_open_block(&mut self, block: &Block) {
     if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
       self.open_element("div", &["quoteblock abstract"], &block.meta.attrs);
       self.render_buffered_block_title(block);
@@ -575,7 +575,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_open_block(&mut self, block: &Block, _content: &BlockContent) {
+  fn exit_open_block(&mut self, block: &Block) {
     if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
       self.push_str("</blockquote></div>");
     } else {
@@ -672,7 +672,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_description_list_term(&mut self, _term: &[InlineNode], _item: &ListItem) {
+  fn enter_description_list_term(&mut self, _item: &ListItem) {
     if self.state.contains(&InGlossaryList) {
       self.push_str(r#"<dt>"#);
     } else {
@@ -681,7 +681,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_description_list_term(&mut self, _term: &[InlineNode], _item: &ListItem) {
+  fn exit_description_list_term(&mut self, _item: &ListItem) {
     self.push_str("</dt>");
   }
 
@@ -909,12 +909,12 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_italic(&mut self, _children: &[InlineNode]) {
+  fn enter_inline_italic(&mut self) {
     self.push_str("<em>");
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_italic(&mut self, _children: &[InlineNode]) {
+  fn exit_inline_italic(&mut self) {
     self.push_str("</em>");
   }
 
@@ -943,17 +943,17 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_text_span(&mut self, attrs: &AttrList, _children: &[InlineNode]) {
+  fn enter_text_span(&mut self, attrs: &AttrList) {
     self.open_element("span", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_text_span(&mut self, _attrs: &AttrList, _children: &[InlineNode]) {
+  fn exit_text_span(&mut self, _attrs: &AttrList) {
     self.push_str("</span>");
   }
 
   #[instrument(skip_all)]
-  fn enter_xref(&mut self, target: &SourceString, _reftext: Option<&[InlineNode]>, kind: XrefKind) {
+  fn enter_xref(&mut self, target: &SourceString, _has_reftext: bool, kind: XrefKind) {
     self.xref_depth += 1;
     if self.xref_depth == 1 {
       self.push([
@@ -965,12 +965,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_xref(
-    &mut self,
-    _target: &SourceString,
-    _reftext: Option<&[InlineNode]>,
-    _kind: XrefKind,
-  ) {
+  fn exit_xref(&mut self, _target: &SourceString, _has_reftext: bool, _kind: XrefKind) {
     self.xref_depth -= 1;
     if self.xref_depth == 0 {
       self.push_str("</a>");
@@ -1011,14 +1006,14 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_xref_text(&mut self, _text: &[InlineNode], is_biblio: bool) {
+  fn enter_xref_text(&mut self, is_biblio: bool) {
     if is_biblio {
       self.push_str("[");
     }
   }
 
   #[instrument(skip_all)]
-  fn exit_xref_text(&mut self, _text: &[InlineNode], is_biblio: bool) {
+  fn exit_xref_text(&mut self, is_biblio: bool) {
     if is_biblio {
       self.push_str("]");
     }
@@ -1053,29 +1048,29 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_mono(&mut self, _children: &[InlineNode]) {
+  fn enter_inline_mono(&mut self) {
     self.push_str("<code>");
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_mono(&mut self, _children: &[InlineNode]) {
+  fn exit_inline_mono(&mut self) {
     self.push_str("</code>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_bold(&mut self, _children: &[InlineNode]) {
+  fn enter_inline_bold(&mut self) {
     self.push_str("<strong>");
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_bold(&mut self, _children: &[InlineNode]) {
+  fn exit_inline_bold(&mut self) {
     self.push_str("</strong>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_passthrough(&mut self, _children: &[InlineNode]) {}
+  fn enter_inline_passthrough(&mut self) {}
   #[instrument(skip_all)]
-  fn exit_inline_passthrough(&mut self, _children: &[InlineNode]) {}
+  fn exit_inline_passthrough(&mut self) {}
 
   #[instrument(skip_all)]
   fn visit_button_macro(&mut self, text: &SourceString) {
@@ -1299,37 +1294,37 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_highlight(&mut self, _children: &[InlineNode]) {
+  fn enter_inline_highlight(&mut self) {
     self.push_str("<mark>");
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_highlight(&mut self, _children: &[InlineNode]) {
+  fn exit_inline_highlight(&mut self) {
     self.push_str("</mark>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_subscript(&mut self, _children: &[InlineNode]) {
+  fn enter_inline_subscript(&mut self) {
     self.push_str("<sub>");
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_subscript(&mut self, _children: &[InlineNode]) {
+  fn exit_inline_subscript(&mut self) {
     self.push_str("</sub>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_superscript(&mut self, _children: &[InlineNode]) {
+  fn enter_inline_superscript(&mut self) {
     self.push_str("<sup>");
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_superscript(&mut self, _children: &[InlineNode]) {
+  fn exit_inline_superscript(&mut self) {
     self.push_str("</sup>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_quote(&mut self, kind: QuoteKind, _children: &[InlineNode]) {
+  fn enter_inline_quote(&mut self, kind: QuoteKind) {
     match kind {
       QuoteKind::Double => self.push_str("&#8220;"),
       QuoteKind::Single => self.push_str("&#8216;"),
@@ -1337,7 +1332,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_quote(&mut self, kind: QuoteKind, _children: &[InlineNode]) {
+  fn exit_inline_quote(&mut self, kind: QuoteKind) {
     match kind {
       QuoteKind::Double => self.push_str("&#8221;"),
       QuoteKind::Single => self.push_str("&#8217;"),
@@ -1356,12 +1351,12 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_lit_mono(&mut self, _children: &[InlineNode]) {
+  fn enter_inline_lit_mono(&mut self) {
     self.push_str("<code>");
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_lit_mono(&mut self, _children: &[InlineNode]) {
+  fn exit_inline_lit_mono(&mut self) {
     self.push_str("</code>");
   }
 
@@ -1450,8 +1445,8 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_footnote(&mut self, id: Option<&SourceString>, content: Option<&[InlineNode]>) {
-    if content.is_some() {
+  fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
+    if has_content {
       self.start_buffering();
       return;
     }
@@ -1479,8 +1474,8 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_footnote(&mut self, id: Option<&SourceString>, content: Option<&[InlineNode]>) {
-    if content.is_none() {
+  fn exit_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
+    if !has_content {
       return; // this means the footnore was referring to a previously defined fn by id
     }
     let num = self.footnotes.borrow().len() + 1;
