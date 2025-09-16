@@ -1,4 +1,3 @@
-use crate::assert_html;
 use asciidork_core::{JobAttr, JobSettings};
 use asciidork_parser::prelude::*;
 use test_utils::*;

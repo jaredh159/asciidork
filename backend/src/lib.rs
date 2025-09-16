@@ -15,3 +15,7 @@ pub mod prelude {
   pub use super::Backend;
   pub use core::{AttrValue, DocType};
 }
+
+#[cfg(debug_assertions)]
+#[macro_use]
+pub mod test;
