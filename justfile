@@ -24,6 +24,9 @@ ptest:
 btest:
   @cd dr-html-backend && bacon test
 
+jtest:
+  @cd backend-html5s && bacon test
+
 ktest:
   @cd tck && bacon test
 

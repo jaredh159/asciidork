@@ -79,6 +79,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "asciidork-backend-html5s"
+version = "0.25.0"
+dependencies = [
+ "asciidork-ast",
+ "asciidork-backend",
+ "asciidork-core",
+ "asciidork-eval",
+ "asciidork-parser",
+ "indoc",
+ "lazy_static",
+ "pretty_assertions",
+ "regex",
+ "roman_numerals_fn",
+ "test-utils",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "asciidork-cli"
 version = "0.25.0"
 dependencies = [

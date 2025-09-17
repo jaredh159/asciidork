@@ -802,7 +802,11 @@ impl Backend for AsciidoctorHtml {
       self.open_block_wrap(block);
       self.render_buffered_block_title(block);
     }
-    self.open_block_content(block);
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.push_str("<blockquote>");
+    } else {
+      self.push_str("<p>");
+    }
   }
 
   #[instrument(skip_all)]
@@ -810,7 +814,11 @@ impl Backend for AsciidoctorHtml {
     if self.doc_meta.get_doctype() == DocType::Inline {
       return;
     }
-    self.close_block_content(block);
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.push_str("</blockquote>");
+    } else {
+      self.push_str("</p>");
+    }
     if !self.state.contains(&VisitingSimpleTermDescription) {
       self.push_str("</div>");
     }
@@ -1616,22 +1624,6 @@ impl AsciidoctorHtml {
       classes = &["quoteblock", "abstract"]
     };
     self.open_element("div", classes, &block.meta.attrs);
-  }
-
-  pub fn open_block_content(&mut self, block: &Block) {
-    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
-      self.push_str("<blockquote>");
-    } else {
-      self.push_str("<p>");
-    }
-  }
-
-  pub fn close_block_content(&mut self, block: &Block) {
-    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
-      self.push_str("</blockquote>");
-    } else {
-      self.push_str("</p>");
-    }
   }
 
   fn render_footnotes(&mut self) {
