@@ -152,11 +152,7 @@ macro_rules! _html {
       parser.set_resolver(resolver);
     }
     let document = parser.parse().unwrap().document;
-    ::asciidork_eval::eval(
-      &document,
-      crate::helpers::test_backend_factory(),
-    )
-    .unwrap()
+    ::asciidork_eval::eval(&document, crate::helpers::test_backend_factory()).unwrap()
   }};
 }
 
@@ -182,3 +178,4 @@ pub mod source {
     ))
   }
 }
+

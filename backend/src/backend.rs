@@ -1,6 +1,6 @@
 use super::admonition::AdmonitionKind;
 use crate::prelude::*;
-use ast::prelude::*;
+use ast::{prelude::*, DocumentMeta};
 
 macro_rules! warn_unimplemented {
   ($x:ident) => {
@@ -18,6 +18,7 @@ pub trait Backend {
   const OUTFILESUFFIX: &'static str;
 
   fn set_job_attrs(attrs: &mut asciidork_core::JobAttrs);
+  fn doc_meta(&self) -> &DocumentMeta;
 
   // document
   fn enter_document(&mut self, document: &Document);

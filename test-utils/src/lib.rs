@@ -391,6 +391,13 @@ macro_rules! html {
 }
 
 #[macro_export]
+macro_rules! html_e {
+  ($s:expr) => {{
+    ::indoc::indoc!($s).to_string()
+  }};
+}
+
+#[macro_export]
 macro_rules! adoc {
   ($s:expr) => {
     ::indoc::indoc!($s)

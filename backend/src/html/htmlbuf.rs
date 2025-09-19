@@ -1,6 +1,42 @@
 use ast::prelude::*;
 use core::{Path, ReadAttr};
 
+use crate::html::OpenTag;
+
+pub trait AltHtmlBuf: HtmlBuf {
+  fn alt_htmlbuf(&mut self) -> &mut String;
+  /// (htmlbuf, alt_htmlbuf)
+  fn buffers(&mut self) -> (&mut String, &mut String);
+
+  fn push_buffered(&mut self) {
+    let buffer = self.take_buffer();
+    self.push_str(&buffer);
+  }
+
+  fn take_buffer(&mut self) -> String {
+    std::mem::take(&mut self.alt_htmlbuf())
+  }
+
+  fn swap_take_buffer(&mut self) -> String {
+    let (html, alt_html) = self.buffers();
+    std::mem::swap(alt_html, html);
+    std::mem::take(alt_html)
+  }
+
+  fn start_buffering(&mut self) {
+    self.swap_buffers();
+  }
+
+  fn stop_buffering(&mut self) {
+    self.swap_buffers();
+  }
+
+  fn swap_buffers(&mut self) {
+    let (html, alt_html) = self.buffers();
+    std::mem::swap(html, alt_html);
+  }
+}
+
 pub trait HtmlBuf {
   fn htmlbuf(&mut self) -> &mut String;
 
@@ -52,6 +88,16 @@ pub trait HtmlBuf {
     if let Some(value) = attrs.named(name).or_else(|| attrs.str_positional_at(pos)) {
       self.push_html_attr(name, value);
     }
+  }
+
+  fn open_element(&mut self, element: &str, classes: &[&str], attrs: &impl AttrData) {
+    let mut open_tag = OpenTag::new(element, attrs);
+    classes.iter().for_each(|c| open_tag.push_class(c));
+    self.push_open_tag(open_tag);
+  }
+
+  fn push_open_tag(&mut self, tag: OpenTag) {
+    self.push_str(&tag.finish());
   }
 }
 

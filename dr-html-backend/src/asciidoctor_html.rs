@@ -1516,6 +1516,16 @@ impl HtmlBuf for AsciidoctorHtml {
   }
 }
 
+impl AltHtmlBuf for AsciidoctorHtml {
+  fn alt_htmlbuf(&mut self) -> &mut String {
+    &mut self.alt_html
+  }
+
+  fn buffers(&mut self) -> (&mut String, &mut String) {
+    (&mut self.html, &mut self.alt_html)
+  }
+}
+
 impl AsciidoctorHtml {
   pub fn new() -> Self {
     Self::default()
@@ -1523,11 +1533,6 @@ impl AsciidoctorHtml {
 
   pub fn into_string(self) -> String {
     self.html
-  }
-
-  pub(crate) fn push_buffered(&mut self) {
-    let buffer = self.take_buffer();
-    self.push_str(&buffer);
   }
 
   pub(crate) fn push_appendix_caption(&mut self) {
@@ -1544,19 +1549,6 @@ impl AsciidoctorHtml {
     } else {
       self.push_str(": ");
     }
-  }
-
-  fn take_buffer(&mut self) -> String {
-    mem::take(&mut self.alt_html)
-  }
-
-  fn swap_take_buffer(&mut self) -> String {
-    std::mem::swap(&mut self.alt_html, &mut self.html);
-    std::mem::take(&mut self.alt_html)
-  }
-
-  pub(crate) fn push_open_tag(&mut self, tag: OpenTag) {
-    self.push_str(&tag.finish());
   }
 
   fn source_lang<'a>(&self, block: &'a Block) -> Option<Cow<'a, str>> {
@@ -1610,12 +1602,6 @@ impl AsciidoctorHtml {
     } else {
       self.push_str(r#"</div>"#);
     }
-  }
-
-  pub(crate) fn open_element(&mut self, element: &str, classes: &[&str], attrs: &impl AttrData) {
-    let mut open_tag = OpenTag::new(element, attrs);
-    classes.iter().for_each(|c| open_tag.push_class(c));
-    self.push_open_tag(open_tag);
   }
 
   pub fn open_block_wrap(&mut self, block: &Block) {
@@ -1714,34 +1700,16 @@ impl AsciidoctorHtml {
     }
   }
 
-  const fn start_buffering(&mut self) {
-    mem::swap(&mut self.html, &mut self.alt_html);
-  }
-
-  const fn stop_buffering(&mut self) {
-    mem::swap(&mut self.html, &mut self.alt_html);
-  }
-
-  // TODO: handle embedding images, data-uri, etc., this is a naive impl
-  // @see https://github.com/jaredh159/asciidork/issues/7
-  fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
-    // PERF: we could work to prevent all these allocations w/ some caching
-    // these might get rendered many times in a given document
-    let icondir = self.doc_meta.string_or("iconsdir", "./images/icons");
-    let ext = self.doc_meta.string_or("icontype", "png");
-    self.push([&icondir, "/", prefix.unwrap_or(""), name, ".", &ext]);
-  }
-
   fn push_admonition_img(&mut self, kind: AdmonitionKind) {
     self.push_str(r#"<img src=""#);
-    self.push_icon_uri(kind.lowercase_str(), None);
+    backend::html::util::push_icon_uri(self, kind.lowercase_str(), None);
     self.push([r#"" alt=""#, kind.str(), r#"">"#]);
   }
 
   fn push_callout_number_img(&mut self, num: u8) {
     let n_str = &num_str!(num);
     self.push_str(r#"<img src=""#);
-    self.push_icon_uri(n_str, Some("callouts/"));
+    backend::html::util::push_icon_uri(self, n_str, Some("callouts/"));
     self.push([r#"" alt=""#, n_str, r#"">"#]);
   }
 

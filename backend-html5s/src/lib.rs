@@ -22,7 +22,7 @@ mod internal {
   // pub use crate::AsciidoctorHtml;
   pub use asciidork_core::*;
   pub use ast::prelude::*;
-  pub use backend::html::HtmlBuf;
+  pub use backend::html::*;
   pub use backend::prelude::*;
   pub use backend::utils;
   pub use eval::helpers;
