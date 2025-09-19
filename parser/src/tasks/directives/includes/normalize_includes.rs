@@ -92,7 +92,7 @@ impl<'arena> Parser<'arena> {
     // UTF-16 BOM, big endian
     if bytes.len() >= 2 && bytes[0..2] == [0xFE, 0xFF] {
       bytes.drain(0..2);
-      if bytes.len() % 2 != 0 {
+      if !bytes.len().is_multiple_of(2) {
         bytes.push(0x00);
       }
 
@@ -118,7 +118,7 @@ impl<'arena> Parser<'arena> {
   }
 
   fn convert_utf16_le(&self, bytes: &mut BumpVec<u8>) -> std::result::Result<(), &'static str> {
-    if bytes.len() % 2 != 0 {
+    if !bytes.len().is_multiple_of(2) {
       bytes.push(0x00);
     }
     let utf16: BumpVec<u16> = bytes
