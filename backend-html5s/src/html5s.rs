@@ -1,7 +1,11 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use std::collections::HashSet;
+
 use crate::internal::*;
+use backend::html::htmlbuf::HtmlBufBackend;
+use EphemeralState::*;
 
 #[derive(Debug, Default)]
 pub struct Html5s {
@@ -9,6 +13,31 @@ pub struct Html5s {
   html: String,
   alt_html: String,
   in_source_block: bool,
+  fig_caption_num: usize,
+  table_caption_num: usize,
+  example_caption_num: usize,
+  listing_caption_num: usize,
+  newlines: Newlines,
+  default_newlines: Newlines,
+  interactive_list_stack: Vec<bool>,
+  xref_depth: u8,
+  state: HashSet<EphemeralState>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Newlines {
+  #[default]
+  Preserve,
+  JoinWithBreak,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EphemeralState {
+  VisitingSimpleTermDescription,
+  IsSourceBlock,
+  InBibliography,
+  InGlossaryList,
+  InAppendix,
 }
 
 impl Backend for Html5s {
@@ -44,6 +73,15 @@ impl Backend for Html5s {
   fn exit_footer(&mut self) {}
 
   fn visit_document_attribute_decl(&mut self, name: &str, value: &AttrValue) {
+    if name == "hardbreaks-option" {
+      if value.is_true() {
+        self.default_newlines = Newlines::JoinWithBreak;
+        self.newlines = Newlines::JoinWithBreak;
+      } else {
+        self.default_newlines = Newlines::default();
+        self.newlines = Newlines::default();
+      }
+    }
     _ = self.doc_meta.insert_doc_attr(name, value.clone());
   }
 
@@ -56,27 +94,73 @@ impl Backend for Html5s {
   }
 
   fn enter_document_title(&mut self) {
-    todo!()
+    if self.render_doc_title() {
+      self.push_str("<h1>")
+    } else {
+      self.start_buffering();
+    }
   }
 
   fn exit_document_title(&mut self) {
-    todo!()
+    if self.render_doc_title() {
+      self.push_str("</h1>");
+    } else {
+      self.swap_take_buffer(); // discard
+    }
+    // self.render_document_authors();
   }
 
   fn enter_section(&mut self, section: &Section) {
-    todo!()
+    let mut section_tag = OpenTag::without_id("section", &section.meta.attrs);
+    section_tag.push_class("doc-section");
+    section_tag.push_class(&format!("level-{}", section.level));
+    // section_tag.push_class(section::class(section));
+    self.push_open_tag(section_tag);
+    match section.meta.attrs.special_sect() {
+      Some(SpecialSection::Appendix) => {
+        // self.section_nums = [0; 5];
+        self.state.insert(InAppendix)
+      }
+      Some(SpecialSection::Bibliography) => self.state.insert(InBibliography),
+      _ => true,
+    };
   }
 
   fn exit_section(&mut self, section: &Section) {
-    todo!()
+    if section.level == 1 {
+      // self.push_str("</div>");
+    }
+    self.push_str("</section>");
+    match section.meta.attrs.special_sect() {
+      Some(SpecialSection::Appendix) => {
+        // self.section_nums = [0; 5];
+        self.state.remove(&InAppendix)
+      }
+      Some(SpecialSection::Bibliography) => self.state.remove(&InBibliography),
+      _ => true,
+    };
   }
 
   fn enter_section_heading(&mut self, section: &Section) {
-    todo!()
+    let level_str = num_str!(section.level + 1);
+    if let Some(id) = &section.id {
+      self.push(["<h", &level_str, r#" id=""#, id, "\">"]);
+    } else {
+      self.push(["<h", &level_str, ">"]);
+    }
+    if section.meta.attrs.special_sect() == Some(SpecialSection::Appendix) {
+      // self.push_appendix_caption();
+    } else {
+      // self.push_section_heading_prefix(section.level, section.meta.attrs.special_sect());
+    }
   }
 
   fn exit_section_heading(&mut self, section: &Section) {
-    todo!()
+    let level_str = num_str!(section.level + 1);
+    self.push(["</h", &level_str, ">"]);
+    if section.level == 1 {
+      // self.push_str(r#"<div class="sectionbody">"#);
+    }
   }
 
   fn enter_book_part(&mut self, part: &Part) {
@@ -115,10 +199,10 @@ impl Backend for Html5s {
     if self.doc_meta.get_doctype() == DocType::Inline {
       return;
     }
-    if block.meta.title.is_some() {
+    if block.has_title() {
       self.push_str(r#"<section class="paragraph">"#);
+      self.render_buffered_block_title(block, true);
     }
-    self.render_buffered_block_title(block);
     // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
     //   self.push_str("<blockquote>");
     // } else {
@@ -135,7 +219,7 @@ impl Backend for Html5s {
     //   self.push_str("</blockquote>\n");
     // } else {
     self.push_str("</p>");
-    if block.meta.title.is_some() {
+    if block.has_title() {
       self.push_str(r#"</section>"#);
     }
     // }
@@ -143,7 +227,7 @@ impl Backend for Html5s {
 
   fn enter_sidebar_block(&mut self, block: &Block) {
     self.open_element("aside", &["sidebar"], &block.meta.attrs);
-    // self.render_buffered_block_title(block);
+    self.render_buffered_block_title(block, true);
   }
 
   fn exit_sidebar_block(&mut self, block: &Block) {
@@ -151,27 +235,88 @@ impl Backend for Html5s {
   }
 
   fn enter_open_block(&mut self, block: &Block) {
-    todo!()
+    // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+    //   self.open_element("div", &["quoteblock abstract"], &block.meta.attrs);
+    //   self.render_buffered_block_title(block, true);
+    //   self.push_str(r#"<blockquote>"#);
+    // } else {
+    self.open_element("div", &["open-block"], &block.meta.attrs);
+    self.render_buffered_block_title(block, true);
+    self.push_str(r#"<div class="content">"#);
+    // }
   }
 
   fn exit_open_block(&mut self, block: &Block) {
-    todo!()
+    // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+    //   self.push_str("</blockquote></div>");
+    // } else {
+    self.push_str("</div></div>");
+    // }
   }
 
   fn enter_example_block(&mut self, block: &Block) {
-    todo!()
+    if block.meta.attrs.has_option("collapsible") {
+      self.open_element("details", &[], &block.meta.attrs);
+      if block.meta.attrs.has_option("open") {
+        self.html.pop();
+        self.push_str(" open>");
+      }
+      self.push_str(r#"<summary class="title">"#);
+      if block.has_title() {
+        self.push_buffered();
+      } else {
+        self.push_str("Details");
+      }
+      self.push_str("</summary>");
+    } else {
+      self.open_element("div", &["example-block"], &block.meta.attrs);
+      self.render_buffered_block_title(block, false);
+    }
+    self.push_str(r#"<div class="example">"#);
   }
 
   fn exit_example_block(&mut self, block: &Block) {
-    todo!()
+    if block.meta.attrs.has_option("collapsible") {
+      self.push_str("</div></details>");
+    } else {
+      self.push_str("</div></div>");
+    }
   }
 
-  fn enter_quote_block(&mut self, block: &Block, has_attribution: bool) {
-    todo!()
+  fn enter_quote_block(&mut self, block: &Block, _has_attribution: bool) {
+    let el = if block.has_title() { "section" } else { "div" };
+    self.open_element(el, &["quote-block"], &block.meta.attrs);
+    if block.has_title() {
+      self.render_buffered_block_title(block, true);
+    }
+    self.push_str("<blockquote>");
   }
 
   fn exit_quote_block(&mut self, block: &Block, has_attribution: bool) {
-    todo!()
+    if block.context == BlockContext::Verse && !has_attribution {
+      self.push_str("</pre>");
+      // } else if !has_attribution {
+      //   self.push_str("</blockquote>");
+    }
+    let el = if block.has_title() { "</section>" } else { "</div>" };
+    self.push(["</blockquote>", el]);
+  }
+
+  fn enter_quote_cite(&mut self, _block: &Block, has_attribution: bool) {
+    if has_attribution {
+      self.push_str(r#", "#);
+    } else {
+      // self.push_str(r#"</blockquote><div class="attribution">&#8212; "#);
+      self.push_str(r#"<footer>&#8212; <cite>"#);
+    }
+  }
+
+  fn exit_quote_cite(&mut self, _block: &Block, has_attribution: bool) {
+    // if has_attribution {
+    self.push_str(r#"</cite></footer>"#);
+    // } else {
+    //   self.push_str("</div>");
+    // }
   }
 
   fn enter_verse_block(&mut self, block: &Block, has_attribution: bool) {
@@ -183,8 +328,9 @@ impl Backend for Html5s {
   }
 
   fn enter_listing_block(&mut self, block: &Block) {
-    self.open_element("div", &["listingblock"], &block.meta.attrs);
-    // self.render_buffered_block_title(block);
+    let el = if block.has_title() { "figure" } else { "div" };
+    self.open_element(el, &["listing-block"], &block.meta.attrs);
+    self.render_buffered_block_title(block, false);
     self.push_str("<pre");
     if let Some(lang) = self.source_lang(block) {
       self.push([
@@ -202,82 +348,124 @@ impl Backend for Html5s {
     // self.newlines = Newlines::Preserve;
   }
 
-  fn exit_listing_block(&mut self, _block: &Block) {
+  fn exit_listing_block(&mut self, block: &Block) {
     // if self.state.remove(&IsSourceBlock) {
     if self.in_source_block {
       self.in_source_block = false;
       self.push_str("</code>");
     }
-    self.push_str("</pre></div>");
+    self.push_str("</pre>");
+    let close = if block.has_title() { "</figure>" } else { "</div>" };
+    self.push_str(close);
     // self.newlines = self.default_newlines;
   }
 
   fn enter_literal_block(&mut self, block: &Block) {
-    todo!()
+    self.open_element("section", &["literal-block"], &block.meta.attrs);
+    self.render_buffered_block_title(block, true);
+    self.push_str(r#"<pre>"#);
+    self.newlines = Newlines::Preserve;
   }
 
-  fn exit_literal_block(&mut self, block: &Block) {
-    todo!()
+  fn exit_literal_block(&mut self, _block: &Block) {
+    self.push_str("</pre></section>");
+    self.newlines = self.default_newlines;
   }
 
   fn enter_passthrough_block(&mut self, block: &Block) {}
   fn exit_passthrough_block(&mut self, block: &Block) {}
 
   fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
-    todo!()
+    let el = if block.has_title() { "figure" } else { "div" };
+    let mut open_tag = OpenTag::new(el, &block.meta.attrs);
+    open_tag.push_class("image-block");
+    open_tag.push_opt_class(img_attrs.named("float"));
+    open_tag.push_opt_prefixed_class(img_attrs.named("align"), Some("text-"));
+    self.push_open_tag(open_tag);
+
+    let mut has_link = false;
+    if let Some(href) = &block
+      .meta
+      .attrs
+      .named("link")
+      .or_else(|| img_attrs.named("link"))
+    {
+      self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
+      has_link = true;
+    }
+    self.render_image(img_target, img_attrs, true);
+    if has_link {
+      self.push_str("</a>");
+    }
   }
 
   fn exit_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
-    todo!()
+    if let Some(title) = img_attrs.named("title") {
+      self.render_block_title(title, block, false);
+    } else if block.has_title() {
+      let title = self.take_buffer();
+      self.render_block_title(&title, block, false);
+    }
+    let el = if block.has_title() { "</figure>" } else { "</div>" };
+    self.push_str(el);
   }
 
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
-    let classes = &["admonitionblock", kind.lowercase_str()];
-    self.open_element("div", classes, &block.meta.attrs);
-    self.push_str(r#"<table><tr><td class="icon">"#);
-    match self.doc_meta.icon_mode() {
-      IconMode::Text => {
-        self.push([r#"<div class="title">"#, kind.str()]);
-        self.push_str(r#"</div></td><td class="content">"#);
-      }
-      IconMode::Image => {
-        self.push_admonition_img(kind);
-        self.push_str(r#"</td><td class="content">"#);
-      }
-      IconMode::Font => {
-        self.push([r#"<i class="fa icon-"#, kind.lowercase_str(), "\" title=\""]);
-        self.push([kind.str(), r#""></i></td><td class="content">"#]);
-      }
+    let classes = &["admonition-block", kind.lowercase_str()];
+    self.open_element("aside", classes, &block.meta.attrs);
+    self.html.pop();
+    self.push_str(r#" role=""#);
+    match kind {
+      AdmonitionKind::Tip => self.push_str("doc-tip\">"),
+      AdmonitionKind::Caution => todo!(),
+      AdmonitionKind::Important => todo!(),
+      AdmonitionKind::Note => self.push_str("note\">"),
+      AdmonitionKind::Warning => todo!(),
     }
-    self.render_buffered_block_title(block);
+    self.push_str(r#"<h6 class="block-title"#);
+    if block.meta.title.is_none() {
+      self.push_str(r#" label-only"#);
+    }
+    self.push_str(r#""><span class="title-label">"#);
+    self.push([kind.str(), ": </span>"]);
+    if block.has_title() {
+      self.render_buffered_block_title(block, false);
+    }
+    self.push_str("</h6>");
+    if !matches!(block.content, BlockContent::Compound(_)) {
+      self.push_str("<p>");
+    }
+    self.render_buffered_block_title(block, false);
   }
 
-  fn exit_admonition_block(&mut self, _kind: AdmonitionKind, _block: &Block) {
-    self.push_str(r#"</td></tr></table></div>"#);
+  fn exit_admonition_block(&mut self, _kind: AdmonitionKind, block: &Block) {
+    if !matches!(block.content, BlockContent::Compound(_)) {
+      self.push_str("</p>");
+    }
+    self.push_str(r#"</aside>"#);
   }
 
-  fn enter_quote_attribution(&mut self, block: &Block, has_cite: bool) {
-    todo!()
+  fn enter_quote_attribution(&mut self, block: &Block, _has_cite: bool) {
+    if block.context == BlockContext::QuotedParagraph {
+      self.push_str("</p>");
+    }
+    self.push_str(r#"<footer>&#8212; <cite>"#);
   }
 
-  fn exit_quote_attribution(&mut self, block: &Block, has_cite: bool) {
-    todo!()
-  }
-
-  fn enter_quote_cite(&mut self, block: &Block, has_attribution: bool) {
-    todo!()
-  }
-
-  fn exit_quote_cite(&mut self, block: &Block, has_attribution: bool) {
-    todo!()
+  fn exit_quote_attribution(&mut self, _block: &Block, has_cite: bool) {
+    if !has_cite {
+      self.push_str("</cite></footer>");
+    }
   }
 
   fn enter_quoted_paragraph(&mut self, block: &Block) {
-    todo!()
+    self.open_element("div", &["quote-block"], &block.meta.attrs);
+    self.render_buffered_block_title(block, false);
+    self.push_str("<blockquote><p>");
   }
 
-  fn exit_quoted_paragraph(&mut self, block: &Block) {
-    todo!()
+  fn exit_quoted_paragraph(&mut self, _block: &Block) {
+    self.push_str("</blockquote></div>");
   }
 
   fn enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block) {
@@ -289,19 +477,87 @@ impl Backend for Html5s {
   }
 
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+    let custom = block.meta.attrs.unordered_list_custom_marker_style();
+    let interactive = block.meta.attrs.has_option("interactive");
+    self.interactive_list_stack.push(interactive);
+    let el = if block.has_title() { "section" } else { "div" };
+    let mut div = OpenTag::new(el, &block.meta.attrs);
+    let mut ul = OpenTag::new("ul", &NoAttrs);
+    div.push_class("ulist");
+    if self.state.contains(&InBibliography)
+      || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
+    {
+      div.push_class("bibliography");
+      ul.push_class("bibliography");
+    }
+    if let Some(custom) = custom {
+      div.push_class(custom);
+      ul.push_class(custom);
+    }
+    if items.iter().any(ListItem::is_checklist) {
+      ul.push_class("task-list");
+    }
+    if depth == 1 {
+      self.push_open_tag(div);
+    }
+    self.render_buffered_block_title(block, true);
+    self.push_open_tag(ul);
   }
 
-  fn exit_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+  fn exit_unordered_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
+    self.interactive_list_stack.pop();
+    self.push_str("</ul>");
+    if depth == 1 {
+      self.push_str(if block.has_title() { "</section>" } else { "</div>" });
+    }
   }
 
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+    self.interactive_list_stack.push(false);
+    let custom = block.meta.attrs.ordered_list_custom_number_style();
+    let list_type = custom
+      .and_then(backend::html::list::type_from_class)
+      .unwrap_or_else(|| backend::html::list::type_from_depth(depth));
+    let class = custom.unwrap_or_else(|| backend::html::list::class_from_depth(depth));
+    if depth == 1 {
+      let classes = &["olist", class];
+      let el = if block.has_title() { "section" } else { "div" };
+      self.open_element(el, classes, &block.meta.attrs);
+    }
+    self.render_buffered_block_title(block, true);
+    self.push([r#"<ol class=""#, class, "\""]);
+
+    if list_type != "1" {
+      self.push([" type=\"", list_type, "\""]);
+    }
+
+    if let Some(attr_start) = block.meta.attrs.named("start") {
+      self.push([" start=\"", attr_start, "\""]);
+    } else {
+      match items[0].marker {
+        ListMarker::Digits(1) => {}
+        ListMarker::Digits(n) => {
+          // TODO: asciidoctor documents that this is OK,
+          // but it doesn't actually work, and emits a warning
+          self.push([" start=\"", &num_str!(n), "\""]);
+        }
+        _ => {}
+      }
+    }
+
+    if block.meta.attrs.has_option("reversed") {
+      self.push_str(" reversed>");
+    } else {
+      self.push_str(">");
+    }
   }
 
-  fn exit_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+  fn exit_ordered_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
+    self.interactive_list_stack.pop();
+    self.push_str("</ol>");
+    if depth == 1 {
+      self.push_str(if block.has_title() { "</section>" } else { "</div>" });
+    }
   }
 
   fn enter_callout_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
@@ -352,20 +608,52 @@ impl Backend for Html5s {
     todo!()
   }
 
-  fn enter_list_item_principal(&mut self, item: &ListItem, variant: ListVariant) {
-    todo!()
+  fn enter_list_item_principal(&mut self, item: &ListItem, list_variant: ListVariant) {
+    if let ListItemTypeMeta::Checklist(checked, _) = &item.type_meta {
+      self.push_str(r#"<li class="task-list-item"><input class="task-list-item-checkbox" type="checkbox" disabled"#);
+      self.push_str(if *checked { " checked>" } else { ">" });
+    } else if list_variant != ListVariant::Callout || self.doc_meta.icon_mode() == IconMode::Text {
+      self.push_str("<li>");
+    } else {
+      //   self.push_str("<tr><td>");
+      //   let n = item.marker.callout_num().unwrap_or(self.autogen_conum);
+      //   self.autogen_conum = n + 1;
+      //   if self.doc_meta.icon_mode() == IconMode::Font {
+      //     self.push_callout_number_font(n);
+      //   } else {
+      //     self.push_callout_number_img(n);
+      //   }
+      //   self.push_str("</td><td>");
+    }
+    if item
+      .blocks
+      .first()
+      .is_some_and(|b| !matches!(b.content, BlockContent::List { .. }))
+    {
+      self.push_str("<p>");
+    }
   }
 
-  fn exit_list_item_principal(&mut self, item: &ListItem, variant: ListVariant) {
-    todo!()
+  fn exit_list_item_principal(&mut self, item: &ListItem, list_variant: ListVariant) {
+    // if list_variant != ListVariant::Callout || self.doc_meta.icon_mode() == IconMode::Text {
+    // self.push_str("</p>");
+    // } else {
+    //   self.push_str("</td>");
+    // }
+    // if !item.blocks.is_empty() {
+    if item
+      .blocks
+      .first()
+      .is_some_and(|b| !matches!(b.content, BlockContent::List { .. }))
+    {
+      self.push_str("</p>");
+    }
   }
 
-  fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem, variant: ListVariant) {
-    todo!()
-  }
+  fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem, variant: ListVariant) {}
 
   fn exit_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem, variant: ListVariant) {
-    todo!()
+    self.push_str("</li>");
   }
 
   fn enter_table(&mut self, table: &Table, block: &Block) {
@@ -424,17 +712,24 @@ impl Backend for Html5s {
     self.stop_buffering();
   }
 
-  fn enter_simple_block_content(&mut self, block: &Block) {}
-
-  fn exit_simple_block_content(&mut self, block: &Block) {}
-
-  fn enter_compound_block_content(&mut self, children: &[Block], block: &Block) {
-    todo!()
+  fn enter_simple_block_content(&mut self, block: &Block) {
+    if block.context == BlockContext::BlockQuote {
+      self.push_str("<p>"); // this is sketchy...
+    }
+    if block.meta.attrs.has_option("hardbreaks") {
+      self.newlines = Newlines::JoinWithBreak;
+    }
   }
 
-  fn exit_compound_block_content(&mut self, children: &[Block], block: &Block) {
-    todo!()
+  fn exit_simple_block_content(&mut self, block: &Block) {
+    if block.context == BlockContext::BlockQuote {
+      self.push_str("</p>");
+    }
+    self.newlines = self.default_newlines;
   }
+
+  fn enter_compound_block_content(&mut self, children: &[Block], block: &Block) {}
+  fn exit_compound_block_content(&mut self, children: &[Block], block: &Block) {}
 
   fn visit_thematic_break(&mut self, block: &Block) {
     todo!()
@@ -449,7 +744,10 @@ impl Backend for Html5s {
   }
 
   fn visit_joining_newline(&mut self) {
-    self.push_ch('\n');
+    match self.newlines {
+      Newlines::JoinWithBreak => self.push_str("<br>\n"),
+      Newlines::Preserve => self.push_str("\n"),
+    }
   }
 
   fn visit_curly_quote(&mut self, kind: CurlyKind) {
@@ -646,12 +944,34 @@ impl Backend for Html5s {
     self.push_str("</span>");
   }
 
-  fn enter_xref(&mut self, target: &SourceString, has_reftext: bool, kind: XrefKind) {
-    todo!()
+  fn enter_xref(&mut self, target: &SourceString, _has_reftext: bool, kind: XrefKind) {
+    self.xref_depth += 1;
+    if self.xref_depth == 1 {
+      self.push([
+        "<a href=\"",
+        &utils::xref::href(target, &self.doc_meta, kind, true),
+        "\">",
+      ]);
+    }
   }
 
-  fn exit_xref(&mut self, target: &SourceString, has_reftext: bool, kind: XrefKind) {
-    todo!()
+  fn exit_xref(&mut self, _target: &SourceString, _has_reftext: bool, _kind: XrefKind) {
+    self.xref_depth -= 1;
+    if self.xref_depth == 0 {
+      self.push_str("</a>");
+    }
+  }
+
+  fn enter_xref_text(&mut self, is_biblio: bool) {
+    if is_biblio {
+      self.push_ch('[');
+    }
+  }
+
+  fn exit_xref_text(&mut self, is_biblio: bool) {
+    if is_biblio {
+      self.push_ch(']');
+    }
   }
 
   fn visit_missing_xref(
@@ -660,7 +980,7 @@ impl Backend for Html5s {
     kind: XrefKind,
     doc_title: Option<&DocTitle>,
   ) {
-    todo!()
+    self.render_missing_xref(target, kind, doc_title);
   }
 
   fn visit_inline_anchor(&mut self, id: &str) {
@@ -668,7 +988,13 @@ impl Backend for Html5s {
   }
 
   fn visit_biblio_anchor(&mut self, id: &str, reftext: Option<&str>) {
-    todo!()
+    self.push([
+      "<a id=\"",
+      id,
+      "\" aria-hidden=\"true\"></a>[",
+      reftext.unwrap_or(id),
+      "]",
+    ]);
   }
 
   fn visit_symbol(&mut self, kind: SymbolKind) {
@@ -687,7 +1013,7 @@ impl Backend for Html5s {
   }
 
   fn visit_linebreak(&mut self) {
-    todo!()
+    self.push_str("<br>\n");
   }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {
@@ -717,43 +1043,63 @@ impl Html5s {
     }
   }
 
-  fn render_buffered_block_title(&mut self, block: &Block) {
-    if block.meta.title.is_some() {
+  fn render_buffered_block_title(&mut self, block: &Block, wrap_in_h6: bool) {
+    if block.has_title() {
       let buf = self.take_buffer();
-      self.render_block_title(&buf, block);
+      self.render_block_title(&buf, block, wrap_in_h6);
     }
   }
 
-  fn render_block_title(&mut self, title: &str, block: &Block) {
-    // self.push_str(r#"<section class="paragraph">"#);
-    self.push_str(r#"<h6 class="block-title">"#);
-    // if let Some(custom_caption) = block.meta.attrs.named("caption") {
-    //   self.push_str(custom_caption);
-    // } else if let Some(caption) = block
-    //   .context
-    //   .caption_attr_name()
-    //   .and_then(|attr_name| self.doc_meta.string(attr_name))
-    // {
-    //   self.push_str(&caption);
-    //   self.push_ch(' ');
-    //   let num = match block.context {
-    //     BlockContext::Table => incr(&mut self.table_caption_num),
-    //     BlockContext::Image => incr(&mut self.fig_caption_num),
-    //     BlockContext::Example => incr(&mut self.example_caption_num),
-    //     BlockContext::Listing => incr(&mut self.listing_caption_num),
-    //     _ => unreachable!(),
-    //   };
-    //   self.push_str(&num.to_string());
-    //   self.push_str(". ");
-    // }
-    self.push_str(title);
-    self.push_str(r#"</h6>"#);
+  fn render_block_title(&mut self, title: &str, block: &Block, wrap_in_h6: bool) {
+    if wrap_in_h6 {
+      self.push_str(r#"<h6 class="block-title">"#);
+    }
+    let (open, close) = match block.context {
+      BlockContext::Table => todo!(),
+      BlockContext::Image => ("<figcaption>", "</figcaption>"),
+      BlockContext::Example => todo!(),
+      BlockContext::Listing => ("<figcaption>", "</figcaption>"),
+      _ => ("", ""),
+    };
+    if let Some(custom_caption) = block.meta.attrs.named("caption") {
+      self.push_str(custom_caption);
+    } else if let Some(caption) = block
+      .context
+      .caption_attr_name()
+      .and_then(|attr_name| self.doc_meta.string(attr_name))
+    {
+      self.push([open, &caption, " "]);
+      let num = match block.context {
+        BlockContext::Table => incr(&mut self.table_caption_num),
+        BlockContext::Image => incr(&mut self.fig_caption_num),
+        BlockContext::Example => incr(&mut self.example_caption_num),
+        BlockContext::Listing => incr(&mut self.listing_caption_num),
+        _ => unreachable!(),
+      };
+      self.push([&num.to_string(), ". ", title, close]);
+    } else {
+      self.push([open, title, close]);
+    }
+    if wrap_in_h6 {
+      self.push_str("</h6>");
+    }
   }
 
   fn push_admonition_img(&mut self, kind: AdmonitionKind) {
     self.push_str(r#"<img src=""#);
-    backend::html::util::push_icon_uri(self, kind.lowercase_str(), None);
+    self.push_icon_uri(kind.lowercase_str(), None);
     self.push([r#"" alt=""#, kind.str(), r#"">"#]);
+  }
+
+  fn render_checklist_item(&mut self, item: &ListItem) {
+    if let ListItemTypeMeta::Checklist(checked, _) = &item.type_meta {
+      match (self.interactive_list_stack.last() == Some(&true), checked) {
+        (false, true) => self.push_str(r#" class="task-list-item"><input class="task-list-item-checkbox" type="checkbox" disabled checked>"#),
+        (false, false) => self.push_str("&#10063;"),
+        (true, true) => self.push_str(r#"<input type="checkbox" data-item-complete="1" checked>"#),
+        (true, false) => self.push_str(r#"<input type="checkbox" data-item-complete="0">"#),
+      }
+    }
   }
 }
 
@@ -770,3 +1116,25 @@ impl AltHtmlBuf for Html5s {
     (&mut self.html, &mut self.alt_html)
   }
 }
+
+const fn incr(num: &mut usize) -> usize {
+  *num += 1;
+  *num
+}
+
+macro_rules! num_str {
+  ($n:expr) => {
+    match $n {
+      0 => Cow::Borrowed("0"),
+      1 => Cow::Borrowed("1"),
+      2 => Cow::Borrowed("2"),
+      3 => Cow::Borrowed("3"),
+      4 => Cow::Borrowed("4"),
+      5 => Cow::Borrowed("5"),
+      6 => Cow::Borrowed("6"),
+      _ => Cow::Owned($n.to_string()),
+    }
+  };
+}
+
+pub(crate) use num_str;

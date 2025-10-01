@@ -7,3 +7,5 @@ extern crate asciidork_backend;
 mod helpers;
 
 mod eval_adoc;
+mod eval_blocks;
+mod eval_lists;

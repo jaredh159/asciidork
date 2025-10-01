@@ -1,6 +1,6 @@
 use super::admonition::AdmonitionKind;
 use crate::prelude::*;
-use ast::{prelude::*, DocumentMeta};
+use ast::{prelude::*, DocumentMeta, ReadAttr};
 
 macro_rules! warn_unimplemented {
   ($x:ident) => {
@@ -233,6 +233,10 @@ pub trait Backend {
   }
   fn exit_xref_text(&mut self, is_biblio: bool) {
     _ = is_biblio;
+  }
+
+  fn render_doc_title(&self) -> bool {
+    !self.doc_meta().is_true("noheader") && self.doc_meta().show_doc_title()
   }
 
   // result

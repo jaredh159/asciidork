@@ -1,4 +1,5 @@
 pub mod htmlbuf;
+pub mod list;
 pub mod open_tag;
 pub mod util;
 

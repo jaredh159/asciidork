@@ -159,595 +159,308 @@ assert_html!(
     TIP: never start a land war in Asia
   "#},
   html! {r#"
-    <aside class="admonition-block tip some-class" id="my-id" role="doc-tip"><h6 class="block-title label-only"><span class="title-label">Tip: </span></h6><p>never start a land war in Asia</p></aside>
+    <aside id="my-id" class="admonition-block tip some-class" role="doc-tip"><h6 class="block-title label-only"><span class="title-label">Tip: </span></h6><p>never start a land war in Asia</p></aside>
   "#}
 );
 
-// assert_html!(
-//   inferred_doc_title_attr,
-//   adoc! {r#"
-//     = Doc _Title_
-//
-//     foo {doctitle}
-//   "#},
-//    // jirutka backend doesn't process inlines in doctitle attribute ref
-//    contains: "foo Doc _Title_"
-// );
-//
-// assert_html!(
-//   explicit_doc_title_attr,
-//   adoc! {r#"
-//     = Doc _Title_
-//     :doctitle: Custom Title
-//
-//     foo {doctitle}
-//   "#},
-//    contains: "foo Custom Title"
-// );
-//
-// assert_html!(
-//   note_w_title,
-//   adoc! {r#"
-//     .Title
-//     NOTE: foo
-//   "#},
-//   html! {r#"
-//     <div class="admonitionblock note">
-//       <table>
-//         <tr>
-//           <td class="icon">
-//             <div class="title">Note</div>
-//           </td>
-//           <td class="content">
-//             <div class="title">Title</div>
-//             foo
-//           </td>
-//         </tr>
-//       </table>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   image_macro,
-//   "image::name.png[]",
-//   html! {r#"
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="name.png" alt="name">
-//       </div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   image_w_title_and_attrs,
-//   adoc! {r#"
-//     .Title
-//     [#lol.rofl]
-//     image::cat.jpg[]
-//   "#},
-//   html! {r#"
-//     <div id="lol" class="imageblock rofl">
-//       <div class="content">
-//         <img src="cat.jpg" alt="cat">
-//       </div>
-//       <div class="title">Figure 1. Title</div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   quote_cite,
-//   adoc! {r#"
-//     [quote,,cite]
-//     foo bar
-//   "#},
-//   html! {r#"
-//     <div class="quoteblock">
-//       <blockquote>foo bar</blockquote>
-//       <div class="attribution">&#8212; cite</div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   quote_source,
-//   adoc! {r#"
-//     [quote,source]
-//     foo bar
-//   "#},
-//   html! {r#"
-//     <div class="quoteblock">
-//       <blockquote>foo bar</blockquote>
-//       <div class="attribution">&#8212; source</div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   quote_source_location,
-//   adoc! {r#"
-//     [quote,source,location]
-//     foo bar
-//   "#},
-//   html! {r#"
-//     <div class="quoteblock">
-//       <blockquote>foo bar</blockquote>
-//       <div class="attribution">
-//         &#8212; source<br>
-//         <cite>location</cite>
-//       </div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   complex_quote_example,
-//   adoc! {r#"
-//     .After landing the cloaked Klingon bird of prey in Golden Gate park:
-//     [quote,Captain James T. Kirk,Star Trek IV: The Voyage Home]
-//     Everybody remember where we parked.
-//   "#},
-//   html! {r#"
-//     <div class="quoteblock">
-//       <div class="title">After landing the cloaked Klingon bird of prey in Golden Gate park:</div>
-//       <blockquote>
-//         Everybody remember where we parked.
-//       </blockquote>
-//       <div class="attribution">
-//         &#8212; Captain James T. Kirk<br>
-//         <cite>Star Trek IV: The Voyage Home</cite>
-//       </div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   quoted_paragraph,
-//   adoc! {r#"
-//     "I hold it that a little rebellion now and then is a good thing,
-//     and as necessary in the political world as storms in the physical."
-//     -- Thomas Jefferson, Papers of Thomas Jefferson: Volume 11
-//   "#},
-//   html! {r#"
-//     <div class="quoteblock">
-//       <blockquote>
-//         I hold it that a little rebellion now and then is a good thing, and as necessary in the political world as storms in the physical.
-//       </blockquote>
-//       <div class="attribution">
-//         &#8212; Thomas Jefferson<br>
-//         <cite>Papers of Thomas Jefferson: Volume 11</cite>
-//       </div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   quoted_paragraph_w_attr,
-//   adoc! {r#"
-//     "I hold it blah blah..."
-//     -- Thomas Jefferson https://site.com[Source]
-//   "#},
-//   html! {r#"
-//     <div class="quoteblock">
-//       <blockquote>
-//         I hold it blah blah&#8230;&#8203;
-//       </blockquote>
-//       <div class="attribution">
-//         &#8212; Thomas Jefferson <a href="https://site.com">Source</a>
-//       </div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   multiple_image_blocks_w_title,
-//   adoc! {r#"
-//     .Cat
-//     image::cat.png[]
-//
-//     .Dog
-//     image::dog.png[]
-//   "#},
-//   html! {r#"
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="cat.png" alt="cat">
-//       </div>
-//       <div class="title">Figure 1. Cat</div>
-//     </div>
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="dog.png" alt="dog">
-//       </div>
-//       <div class="title">Figure 2. Dog</div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   fig_caption,
-//   adoc! {r#"
-//     = Doc Header
-//     :!figure-caption:
-//
-//     .Cat
-//     image::cat.png[]
-//
-//     .Dog
-//     image::dog.png[]
-//   "#},
-//   html! {r#"
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="cat.png" alt="cat">
-//       </div>
-//       <div class="title">Cat</div>
-//     </div>
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="dog.png" alt="dog">
-//       </div>
-//       <div class="title">Dog</div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   complex_image_block,
-//   adoc! {r#"
-//     .A mountain sunset
-//     [#img-sunset,link=https://www.flickr.com/photos/javh/5448336655]
-//     image::sunset.jpg[Sunset,200,100]
-//   "#},
-//   html! {r#"
-//     <div id="img-sunset" class="imageblock">
-//       <div class="content">
-//         <a class="image" href="https://www.flickr.com/photos/javh/5448336655">
-//           <img src="sunset.jpg" alt="Sunset" width="200" height="100">
-//         </a>
-//       </div>
-//       <div class="title">Figure 1. A mountain sunset</div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   change_fig_cap,
-//   adoc! {r#"
-//     .Title
-//     image::foo.png[]
-//
-//     :!figure-caption:
-//
-//     .Next
-//     image::bar.png[]
-//   "#},
-//   html! {r#"
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="foo.png" alt="foo">
-//       </div>
-//       <div class="title">Figure 1. Title</div>
-//     </div>
-//     <div class="imageblock">
-//       <div class="content">
-//         <img src="bar.png" alt="bar">
-//       </div>
-//       <div class="title">Next</div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   quote_newlines,
-//   adoc! {r#"
-//     "`foo
-//     bar`"
-//     baz
-//   "#},
-//   html! {r#"
-//     <div class="paragraph">
-//       <p>&#8220;foo bar&#8221; baz</p>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   line_breaks,
-//   adoc! {r#"
-//     foo +
-//     bar
-//
-//     [%hardbreaks]
-//     Ruby is red.
-//     Java is beige.
-//
-//     normal
-//     breaks
-//
-//     :hardbreaks-option:
-//
-//     foo
-//     bar
-//
-//     :!hardbreaks-option:
-//
-//     bar
-//     baz
-//   "#},
-//   html! {r#"
-//     <div class="paragraph">
-//       <p>foo<br> bar</p>
-//     </div>
-//     <div class="paragraph">
-//       <p>Ruby is red.<br> Java is beige.</p>
-//     </div>
-//     <div class="paragraph">
-//       <p>normal breaks</p>
-//     </div>
-//     <div class="paragraph">
-//       <p>foo<br> bar</p>
-//     </div>
-//     <div class="paragraph">
-//       <p>bar baz</p>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   simple_listing_block,
-//   adoc! {r#"
-//     [listing]
-//     foo `bar`
-//   "#},
-//   html! {r#"
-//     <div class="listingblock">
-//       <div class="content">
-//         <pre>foo `bar`</pre>
-//       </div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   delimited_unspaced_from_paragraph,
-//   adoc! {r#"
-//     foobar
-//     ====
-//     baz
-//     ====
-//   "#},
-//   html! {r#"
-//     <div class="paragraph">
-//       <p>foobar</p>
-//     </div>
-//     <div class="exampleblock">
-//       <div class="content">
-//         <div class="paragraph">
-//           <p>baz</p>
-//         </div>
-//       </div>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   admonition_icons,
-//   adoc! {r#"
-//     NOTE: Tip #1
-//
-//     :icons:
-//
-//     NOTE: Tip #2
-//
-//     :icons: font
-//
-//     NOTE: Tip #3
-//   "#},
-//   html! {r#"
-//     <div class="admonitionblock note">
-//       <table>
-//         <tr>
-//           <td class="icon"><div class="title">Note</div></td>
-//           <td class="content">Tip #1</td>
-//         </tr>
-//       </table>
-//     </div>
-//     <div class="admonitionblock note">
-//       <table>
-//         <tr>
-//           <td class="icon"><img src="./images/icons/note.png" alt="Note"></td>
-//           <td class="content">Tip #2</td>
-//         </tr>
-//       </table>
-//     </div>
-//     <div class="admonitionblock note">
-//       <table>
-//         <tr>
-//           <td class="icon"><i class="fa icon-note" title="Note"></i></td>
-//           <td class="content">Tip #3</td>
-//         </tr>
-//       </table>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   admonition_blocks,
-//   adoc! {r#"
-//     [NOTE]
-//     ====
-//     This is a note!
-//     ====
-//   "#},
-//   html! {r#"
-//     <div class="admonitionblock note">
-//       <table>
-//         <tr>
-//           <td class="icon"><div class="title">Note</div></td>
-//           <td class="content">
-//             <div class="paragraph"><p>This is a note!</p></div>
-//           </td>
-//         </tr>
-//       </table>
-//     </div>
-//   "#}
-// );
-//
-// assert_html!(
-//   escaped_ifdef,
-//   adoc! {"
-//     \\ifdef::yup[]
-//
-//     Some line
-//
-//     \\endif::[]
-//   "},
-//   html! {r#"
-//     <div class="paragraph"><p>ifdef::yup[]</p></div>
-//     <div class="paragraph"><p>Some line</p></div>
-//     <div class="paragraph"><p>endif::[]</p></div>
-//   "#}
-// );
-//
-// assert_html!(
-//   attr_ref_behavior,
-//   adoc! {r#"
-//     :attribute-missing: drop-line
-//     :foo: bar
-//     :Baz: qux
-//
-//     foo bar
-//     whoops {missing}
-//     baz
-//
-//     :attribute-missing: skip
-//
-//     foo bar
-//     whoops {missing}
-//     baz
-//
-//     {foo} {Foo} {Baz} {baz}
-//   "#},
-//   html! {r#"
-//     <div class="paragraph">
-//       <p>foo bar baz</p>
-//     </div>
-//     <div class="paragraph">
-//       <p>foo bar whoops {missing} baz</p>
-//     </div>
-//     <div class="paragraph">
-//       <p>bar bar qux qux</p>
-//     </div>
-//   "#}
-// );
-//
-// assert_error!(
-//   missing_attr_ref,
-//   adoc! {"
-//     :attribute-missing: warn
-//
-//     whoops {missing}
-//   "},
-//   error! {"
-//      --> test.adoc:3:8
-//       |
-//     3 | whoops {missing}
-//       |        ^^^^^^^^^ Skipping reference to missing attribute
-//   "}
-// );
-//
-// enum SubstrTest {
-//   Contains(&'static str),
-//   DoesNotContain(&'static str),
-// }
+assert_html!(
+  note_w_title,
+  adoc! {r#"
+    .Title
+    NOTE: foo
+  "#},
+  html! {r#"
+    <aside class="admonition-block note" role="note">
+      <h6 class="block-title"><span class="title-label">Note: </span>Title</h6>
+      <p>foo</p>
+    </aside>
+  "#}
+);
 
-// #[test]
-// fn test_head_opts() {
-//   use SubstrTest::*;
-//   let cases = vec![
-//     (":nolang:", DoesNotContain("lang=")),
-//     (":nolang:", Contains("<title>Doc Header</title>")),
-//     (
-//       ":title: Such Custom Title",
-//       Contains("<title>Such Custom Title</title>"),
-//     ),
-//     (":lang: es", Contains("lang=\"es\"")),
-//     (":encoding: latin1", Contains("charset=\"latin1\"")),
-//     (":reproducible:", DoesNotContain("generator")),
-//     (
-//       ":app-name: x",
-//       Contains(r#"<meta name="application-name" content="x">"#),
-//     ),
-//     (
-//       ":description: x",
-//       Contains(r#"<meta name="description" content="x">"#),
-//     ),
-//     (
-//       ":keywords: x, y",
-//       Contains(r#"<meta name="keywords" content="x, y">"#),
-//     ),
-//     (
-//       "Kismet R. Lee <kismet@asciidoctor.org>",
-//       Contains(r#"<meta name="author" content="Kismet R. Lee">"#),
-//     ),
-//     (
-//       "Kismet R. Lee <kismet@asciidoctor.org>; Bob Smith",
-//       Contains(r#"<meta name="author" content="Kismet R. Lee, Bob Smith">"#),
-//     ),
-//     (
-//       ":copyright: x",
-//       Contains(r#"<meta name="copyright" content="x">"#),
-//     ),
-//     (
-//       ":favicon:",
-//       Contains(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#),
-//     ),
-//     (
-//       ":favicon: ./images/favicon/favicon.png",
-//       Contains(r#"<link rel="icon" type="image/png" href="./images/favicon/favicon.png">"#),
-//     ),
-//     (
-//       ":iconsdir: custom\n:favicon: {iconsdir}/my/icon.png",
-//       Contains(r#"<link rel="icon" type="image/png" href="custom/my/icon.png">"#),
-//     ),
-//   ];
-//
-//   for (opts, expectation) in cases {
-//     let input = format!("= Doc Header\n{opts}\n\nignore me\n\n");
-//     let mut parser = test_parser!(&input);
-//     let mut job_settings = JobSettings::default();
-//     job_settings
-//       .job_attrs
-//       .insert_unchecked("stylesheet", JobAttr::readonly(false));
-//     parser.apply_job_settings(job_settings);
-//     let document = parser.parse().unwrap().document;
-//     let html = eval(&document, AsciidoctorHtml::new()).unwrap();
-//     match expectation {
-//       Contains(s) => assert!(
-//         html.contains(s),
-//         "\n`{}` was NOT found when expected\n\n```adoc\n{}\n```\n\n```html\n{}\n```",
-//         s,
-//         input.trim(),
-//         html.replace('>', ">\n").trim()
-//       ),
-//       DoesNotContain(s) => assert!(
-//         !html.contains(s),
-//         "\n`{}` WAS found when not expected\n\n```adoc\n{}\n```\n\n```html\n{}\n```",
-//         s,
-//         input.trim(),
-//         html.replace('>', ">\n").trim()
-//       ),
-//     }
-//   }
-//   // one test with no doc header
-//   let parser = test_parser!("without doc header");
-//   let document = parser.parse().unwrap().document;
-//   let html = eval(&document, AsciidoctorHtml::new()).unwrap();
-//   assert!(html.contains("<title>Untitled</title>"));
-// }
+assert_html!(
+  image_macro,
+  "image::name.png[]",
+  html! {r#"
+    <div class="image-block">
+      <img src="name.png" alt="name">
+    </div>
+  "#}
+);
+
+assert_html!(
+  image_w_title_and_attrs,
+  adoc! {r#"
+    .Title
+    [#lol.rofl]
+    image::cat.jpg[]
+  "#},
+  html! {r#"
+    <figure id="lol" class="image-block rofl">
+      <img src="cat.jpg" alt="cat">
+      <figcaption>Figure 1. Title</figcaption>
+    </figure>
+  "#}
+);
+
+assert_html!(
+  quote_cite,
+  adoc! {r#"
+    [quote,,cite]
+    foo bar
+  "#},
+  html! {r#"
+    <div class="quote-block">
+      <blockquote>
+        <p>foo bar</p>
+        <footer>&#8212; <cite>cite</cite></footer>
+      </blockquote>
+    </div>
+  "#}
+);
+
+assert_html!(
+  quote_source,
+  adoc! {r#"
+    [quote,source]
+    foo bar
+  "#},
+  html! {r#"
+    <div class="quote-block">
+      <blockquote>
+        <p>foo bar</p>
+        <footer>&#8212; <cite>source</cite></footer>
+      </blockquote>
+    </div>
+  "#}
+);
+
+assert_html!(
+  quote_source_location,
+  adoc! {r#"
+    [quote,source,location]
+    foo bar
+  "#},
+  html! {r#"
+    <div class="quote-block">
+      <blockquote>
+        <p>foo bar</p><footer>&#8212; <cite>source, location</cite></footer>
+      </blockquote>
+    </div>
+  "#}
+);
+
+assert_html!(
+  complex_quote_example,
+  adoc! {r#"
+    .After landing the cloaked Klingon bird of prey in Golden Gate park:
+    [quote,Captain James T. Kirk,Star Trek IV: The Voyage Home]
+    Everybody remember where we parked.
+  "#},
+  html! {r#"
+    <section class="quote-block">
+      <h6 class="block-title">After landing the cloaked Klingon bird of prey in Golden Gate park:</h6>
+      <blockquote>
+        <p>Everybody remember where we parked.</p>
+        <footer>&#8212; <cite>Captain James T. Kirk, Star Trek IV: The Voyage Home</cite></footer>
+      </blockquote>
+    </section>
+  "#}
+);
+
+assert_html!(
+  quoted_paragraph_w_attr,
+  adoc! {r#"
+    "I hold it blah blah..."
+    -- Thomas Jefferson https://site.com[Source]
+  "#},
+  html! {r#"
+    <div class="quote-block">
+      <blockquote>
+        <p>I hold it blah blah&#8230;&#8203;</p>
+        <footer>&#8212; <cite>Thomas Jefferson <a href="https://site.com">Source</a></cite></footer>
+      </blockquote>
+    </div>
+  "#}
+);
+
+assert_html!(
+  multiple_image_blocks_w_title,
+  adoc! {r#"
+    .Cat
+    image::cat.png[]
+
+    .Dog
+    image::dog.png[]
+  "#},
+  html! {r#"
+    <figure class="image-block">
+      <img src="cat.png" alt="cat">
+      <figcaption>Figure 1. Cat</figcaption>
+    </figure>
+    <figure class="image-block">
+      <img src="dog.png" alt="dog">
+      <figcaption>Figure 2. Dog</figcaption>
+    </figure>
+  "#}
+);
+
+assert_html!(
+  fig_caption,
+  adoc! {r#"
+    = Doc Header
+    :!figure-caption:
+
+    .Cat
+    image::cat.png[]
+
+    .Dog
+    image::dog.png[]
+  "#},
+  html! {r#"
+    <figure class="image-block">
+      <img src="cat.png" alt="cat">
+      <figcaption>Cat</figcaption>
+    </figure>
+    <figure class="image-block">
+      <img src="dog.png" alt="dog">
+      <figcaption>Dog</figcaption>
+    </figure>
+  "#}
+);
+
+assert_html!(
+  complex_image_block,
+  adoc! {r#"
+    .A mountain sunset
+    [#img-sunset,link=https://www.flickr.com/photos/javh/5448336655]
+    image::sunset.jpg[Sunset,200,100]
+  "#},
+  html! {r#"
+    <figure id="img-sunset" class="image-block">
+      <a class="image" href="https://www.flickr.com/photos/javh/5448336655">
+        <img src="sunset.jpg" alt="Sunset" width="200" height="100">
+      </a>
+      <figcaption>Figure 1. A mountain sunset</figcaption>
+    </figure>
+  "#}
+);
+
+assert_html!(
+  quote_newlines,
+  adoc! {r#"
+    "`foo
+    bar`"
+    baz
+  "#},
+  html_e! {r#"
+    <p>&#x201c;foo
+    bar&#x201d;
+    baz</p>"#}
+);
+
+assert_html!(
+  line_breaks,
+  adoc! {r#"
+    foo +
+    bar
+
+    [%hardbreaks]
+    Ruby is red.
+    Java is beige.
+
+    normal
+    breaks
+
+    :hardbreaks-option:
+
+    foo
+    bar
+
+    :!hardbreaks-option:
+
+    bar
+    baz
+  "#},
+  html_e! {r#"
+    <p>foo<br>
+    bar</p><p>Ruby is red.<br>
+    Java is beige.</p><p>normal
+    breaks</p><p>foo<br>
+    bar</p><p>bar
+    baz</p>"#}
+);
+
+assert_html!(
+  simple_listing_block,
+  adoc! {r#"
+    [listing]
+    foo `bar`
+  "#},
+  html! {r#"
+    <div class="listing-block"><pre>foo `bar`</pre></div>
+  "#}
+);
+
+assert_html!(
+  delimited_unspaced_from_paragraph,
+  adoc! {r#"
+    foobar
+    ====
+    baz
+    ====
+  "#},
+  html! {r#"
+   <p>foobar</p>
+   <div class="example-block">
+     <div class="example"><p>baz</p></div>
+   </div>
+  "#}
+);
+
+assert_html!(
+  admonition_icons,
+  adoc! {r#"
+    NOTE: Tip #1
+
+    :icons:
+
+    NOTE: Tip #2
+
+    :icons: font
+
+    NOTE: Tip #3
+  "#},
+  html! {r#"
+    <aside class="admonition-block note" role="note">
+      <h6 class="block-title label-only"><span class="title-label">Note: </span></h6>
+      <p>Tip #1</p>
+    </aside>
+    <aside class="admonition-block note" role="note">
+      <h6 class="block-title label-only"><span class="title-label">Note: </span></h6>
+      <p>Tip #2</p>
+    </aside>
+    <aside class="admonition-block note" role="note">
+      <h6 class="block-title label-only"><span class="title-label">Note: </span></h6>
+      <p>Tip #3</p>
+    </aside>
+  "#}
+);
+
+assert_html!(
+  admonition_blocks,
+  adoc! {r#"
+    [NOTE]
+    ====
+    This is a note!
+    ====
+  "#},
+  html! {r#"
+    <aside class="admonition-block note" role="note">
+      <h6 class="block-title label-only"><span class="title-label">Note: </span></h6>
+      <p>This is a note!</p>
+    </aside>
+  "#}
+);
 
 // #[test]
 // fn test_full_doc() {

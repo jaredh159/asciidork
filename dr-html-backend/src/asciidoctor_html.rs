@@ -19,7 +19,7 @@ pub struct AsciidoctorHtml {
   #[allow(clippy::type_complexity)]
   pub(crate) footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
   pub(crate) doc_meta: DocumentMeta,
-  pub(crate) list_stack: Vec<bool>,
+  pub(crate) interactive_list_stack: Vec<bool>,
   pub(crate) default_newlines: Newlines,
   pub(crate) newlines: Newlines,
   pub(crate) state: HashSet<EphemeralState>,
@@ -538,7 +538,7 @@ impl Backend for AsciidoctorHtml {
         self.push_str(" open>");
       }
       self.push_str(r#"<summary class="title">"#);
-      if block.meta.title.is_some() {
+      if block.has_title() {
         self.push_buffered();
       } else {
         self.push_str("Details");
@@ -607,7 +607,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], _depth: u8) {
     let custom = block.meta.attrs.unordered_list_custom_marker_style();
     let interactive = block.meta.attrs.has_option("interactive");
-    self.list_stack.push(interactive);
+    self.interactive_list_stack.push(interactive);
     let mut div = OpenTag::new("div", &block.meta.attrs);
     let mut ul = OpenTag::new("ul", &NoAttrs);
     div.push_class("ulist");
@@ -632,7 +632,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_unordered_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
-    self.list_stack.pop();
+    self.interactive_list_stack.pop();
     self.push_str("</ul></div>");
   }
 
@@ -712,12 +712,12 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    self.list_stack.push(false);
+    self.interactive_list_stack.push(false);
     let custom = block.meta.attrs.ordered_list_custom_number_style();
     let list_type = custom
-      .and_then(list_type_from_class)
-      .unwrap_or_else(|| list_type_from_depth(depth));
-    let class = custom.unwrap_or_else(|| list_class_from_depth(depth));
+      .and_then(backend::html::list::type_from_class)
+      .unwrap_or_else(|| backend::html::list::type_from_depth(depth));
+    let class = custom.unwrap_or_else(|| backend::html::list::class_from_depth(depth));
     let classes = &["olist", class];
     self.open_element("div", classes, &block.meta.attrs);
     self.render_buffered_block_title(block);
@@ -750,7 +750,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_ordered_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
-    self.list_stack.pop();
+    self.interactive_list_stack.pop();
     self.push_str("</ol></div>");
   }
 
@@ -986,20 +986,7 @@ impl Backend for AsciidoctorHtml {
     kind: XrefKind,
     doc_title: Option<&DocTitle>,
   ) {
-    // TODO: consider whether all this logic could be moved into backend::utils::xref
-    // it's possible that other backends would want to do the exact same things
-    if target == "#" || Some(target.src.as_str()) == self.doc_meta.str("asciidork-docfilename") {
-      let doctitle = doc_title
-        .and_then(|t| t.attrs.named("reftext"))
-        .unwrap_or_else(|| self.doc_meta.str("doctitle").unwrap_or("[^top]"))
-        .to_string();
-      self.push_str(&doctitle);
-    } else if utils::xref::is_interdoc(target, kind) {
-      let href = utils::xref::href(target, &self.doc_meta, kind, false);
-      self.push_str(utils::xref::remove_leading_hash(&href));
-    } else {
-      self.push(["[", target.strip_prefix('#').unwrap_or(target), "]"]);
-    }
+    self.render_missing_xref(target, kind, doc_title);
   }
 
   #[instrument(skip_all)]
@@ -1160,7 +1147,10 @@ impl Backend for AsciidoctorHtml {
       a_tag.push_class("image");
       a_tag.push_str("\" href=\"");
       if link_href == "self" {
-        push_img_path(a_tag.htmlbuf(), target, &self.doc_meta);
+        assert!(self.alt_html.is_empty());
+        self.swap_buffers();
+        self.push_img_path(target);
+        a_tag.push_str(&self.swap_take_buffer());
       } else {
         a_tag.push_str_attr_escaped(link_href);
       }
@@ -1429,7 +1419,7 @@ impl Backend for AsciidoctorHtml {
   fn exit_image_block(&mut self, _target: &SourceString, attrs: &AttrList, block: &Block) {
     if let Some(title) = attrs.named("title") {
       self.render_block_title(title, block);
-    } else if block.meta.title.is_some() {
+    } else if block.has_title() {
       let title = self.take_buffer();
       self.render_block_title(&title, block);
     }
@@ -1500,6 +1490,9 @@ impl Backend for AsciidoctorHtml {
       .borrow_mut()
       .push((id.map(|id| id.to_string()), footnote));
   }
+  fn doc_meta(&self) -> &DocumentMeta {
+    &self.doc_meta
+  }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {
     Ok(self.html)
@@ -1565,7 +1558,7 @@ impl AsciidoctorHtml {
   }
 
   fn render_buffered_block_title(&mut self, block: &Block) {
-    if block.meta.title.is_some() {
+    if block.has_title() {
       let buf = self.take_buffer();
       self.render_block_title(&buf, block);
     }
@@ -1691,7 +1684,7 @@ impl AsciidoctorHtml {
 
   fn render_checklist_item(&mut self, item: &ListItem) {
     if let ListItemTypeMeta::Checklist(checked, _) = &item.type_meta {
-      match (self.list_stack.last() == Some(&true), checked) {
+      match (self.interactive_list_stack.last() == Some(&true), checked) {
         (false, true) => self.push_str("&#10003;"),
         (false, false) => self.push_str("&#10063;"),
         (true, true) => self.push_str(r#"<input type="checkbox" data-item-complete="1" checked>"#),
@@ -1702,14 +1695,14 @@ impl AsciidoctorHtml {
 
   fn push_admonition_img(&mut self, kind: AdmonitionKind) {
     self.push_str(r#"<img src=""#);
-    backend::html::util::push_icon_uri(self, kind.lowercase_str(), None);
+    self.push_icon_uri(kind.lowercase_str(), None);
     self.push([r#"" alt=""#, kind.str(), r#"">"#]);
   }
 
   fn push_callout_number_img(&mut self, num: u8) {
     let n_str = &num_str!(num);
     self.push_str(r#"<img src=""#);
-    backend::html::util::push_icon_uri(self, n_str, Some("callouts/"));
+    self.push_icon_uri(n_str, Some("callouts/"));
     self.push([r#"" alt=""#, n_str, r#"">"#]);
   }
 
@@ -1755,10 +1748,6 @@ impl AsciidoctorHtml {
       && !self.doc_meta.embedded
   }
 
-  fn render_doc_title(&self) -> bool {
-    !self.doc_meta.is_true("noheader") && self.doc_meta.show_doc_title()
-  }
-
   fn render_division_start(&mut self, id: &str) {
     self.push([r#"<div id=""#, id, "\""]);
     if let Some(max_width) = self.doc_meta.string("max-width") {
@@ -1768,25 +1757,6 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn render_interactive_svg(&mut self, target: &str, attrs: &AttrList) {
-    self.push_str(r#"<object type="image/svg+xml" data=""#);
-    push_img_path(&mut self.html, target, &self.doc_meta);
-    self.push_ch('"');
-    self.push_named_or_pos_attr("width", 1, attrs);
-    self.push_named_or_pos_attr("height", 2, attrs);
-    self.push_ch('>');
-    if let Some(fallback) = attrs.named("fallback") {
-      self.push_str(r#"<img src=""#);
-      push_img_path(&mut self.html, fallback, &self.doc_meta);
-      self.push_ch('"');
-      self.push_named_or_pos_attr("alt", 0, attrs);
-      self.push_ch('>');
-    } else if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
-      self.push([r#"<span class="alt">"#, alt, "</span>"]);
-    }
-    self.push_str("</object>");
-  }
-
   fn render_image(&mut self, target: &str, attrs: &AttrList, is_block: bool) {
     let format = attrs.named("format").or_else(|| file::ext(target));
     let is_svg = matches!(format, Some("svg" | "SVG"));
@@ -1794,7 +1764,7 @@ impl AsciidoctorHtml {
       return self.render_interactive_svg(target, attrs);
     }
     self.push_str(r#"<img src=""#);
-    push_img_path(&mut self.html, target, &self.doc_meta);
+    self.push_img_path(target);
     self.push_str(r#"" alt=""#);
     if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
       self.push_str_attr_escaped(alt);
@@ -1844,37 +1814,6 @@ pub enum EphemeralState {
   InBibliography,
   InGlossaryList,
   InAppendix,
-}
-
-const fn list_type_from_depth(depth: u8) -> &'static str {
-  match depth {
-    1 => "1",
-    2 => "a",
-    3 => "i",
-    4 => "A",
-    _ => "I",
-  }
-}
-
-fn list_type_from_class(class: &str) -> Option<&'static str> {
-  match class {
-    "arabic" => Some("1"),
-    "loweralpha" => Some("a"),
-    "lowerroman" => Some("i"),
-    "upperalpha" => Some("A"),
-    "upperroman" => Some("I"),
-    _ => None,
-  }
-}
-
-const fn list_class_from_depth(depth: u8) -> &'static str {
-  match depth {
-    1 => "arabic",
-    2 => "loweralpha",
-    3 => "lowerroman",
-    4 => "upperalpha",
-    _ => "upperroman",
-  }
 }
 
 macro_rules! num_str {
