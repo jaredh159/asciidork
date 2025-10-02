@@ -1002,14 +1002,14 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_xref_text(&mut self, is_biblio: bool) {
     if is_biblio {
-      self.push_str("[");
+      self.push_ch('[');
     }
   }
 
   #[instrument(skip_all)]
   fn exit_xref_text(&mut self, is_biblio: bool) {
     if is_biblio {
-      self.push_str("]");
+      self.push_ch(']');
     }
   }
 

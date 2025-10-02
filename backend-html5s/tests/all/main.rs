@@ -9,3 +9,4 @@ mod helpers;
 mod eval_adoc;
 mod eval_blocks;
 mod eval_lists;
+mod eval_tables_psv;

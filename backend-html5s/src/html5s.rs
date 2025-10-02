@@ -2,6 +2,7 @@
 #![allow(unused_variables)]
 
 use std::collections::HashSet;
+use std::fmt::Write;
 
 use crate::internal::*;
 use backend::html::htmlbuf::HtmlBufBackend;
@@ -9,19 +10,19 @@ use EphemeralState::*;
 
 #[derive(Debug, Default)]
 pub struct Html5s {
-  doc_meta: DocumentMeta,
-  html: String,
-  alt_html: String,
-  in_source_block: bool,
-  fig_caption_num: usize,
-  table_caption_num: usize,
-  example_caption_num: usize,
-  listing_caption_num: usize,
-  newlines: Newlines,
-  default_newlines: Newlines,
-  interactive_list_stack: Vec<bool>,
-  xref_depth: u8,
-  state: HashSet<EphemeralState>,
+  pub(crate) doc_meta: DocumentMeta,
+  pub(crate) html: String,
+  pub(crate) alt_html: String,
+  pub(crate) in_source_block: bool,
+  pub(crate) fig_caption_num: usize,
+  pub(crate) table_caption_num: usize,
+  pub(crate) example_caption_num: usize,
+  pub(crate) listing_caption_num: usize,
+  pub(crate) newlines: Newlines,
+  pub(crate) default_newlines: Newlines,
+  pub(crate) interactive_list_stack: Vec<bool>,
+  pub(crate) xref_depth: u8,
+  pub(crate) state: HashSet<EphemeralState>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -657,43 +658,75 @@ impl Backend for Html5s {
   }
 
   fn enter_table(&mut self, table: &Table, block: &Block) {
-    todo!()
+    // tablenew
+    let el = if block.has_title() { "figure" } else { "div" };
+    self.open_element(el, &["table-block"], &block.meta.attrs); // tablenew
+    self.render_buffered_block_title(block, false); // tablenew, moved
+    self.open_table_element(block);
+    self.push_str("<colgroup>");
+    let autowidth = block.meta.attrs.has_option("autowidth");
+    for width in table.col_widths.distribute() {
+      self.push_str("<col");
+      if !autowidth {
+        if let DistributedColWidth::Percentage(width) = width {
+          if width.fract() == 0.0 {
+            write!(self.html, r#" style="width: {width}%;""#).unwrap();
+          } else {
+            let width_s = format!("{width:.4}");
+            let width_s = width_s.trim_end_matches('0');
+            write!(self.html, r#" style="width: {width_s}%;""#).unwrap();
+          }
+        }
+      }
+      self.push_ch('>');
+    }
+    self.push_str("</colgroup>");
   }
 
-  fn exit_table(&mut self, table: &Table, block: &Block) {
-    todo!()
+  fn exit_table(&mut self, _table: &Table, block: &Block) {
+    self.push_str("</tbody></table>"); // tbody weird tablenew
+                                       // tablenew  vvv
+    self.push_str(if block.has_title() { "</figure>" } else { "</div>" });
   }
 
   fn enter_table_section(&mut self, section: TableSection) {
-    todo!()
+    match section {
+      TableSection::Header => self.push_str("<thead>"),
+      TableSection::Body => self.push_str("<tbody>"),
+      TableSection::Footer => {} // self.push_str("<tfoot>"),
+    }
   }
 
   fn exit_table_section(&mut self, section: TableSection) {
-    todo!()
+    match section {
+      TableSection::Header => self.push_str("</thead>"),
+      TableSection::Body => {}   // self.push_str("</tbody>"),
+      TableSection::Footer => {} // self.push_str("</tfoot>"),
+    }
   }
 
-  fn enter_table_row(&mut self, row: &Row, section: TableSection) {
-    todo!()
+  fn enter_table_row(&mut self, _row: &Row, _section: TableSection) {
+    self.push_str("<tr>");
   }
 
-  fn exit_table_row(&mut self, row: &Row, section: TableSection) {
-    todo!()
+  fn exit_table_row(&mut self, _row: &Row, _section: TableSection) {
+    self.push_str("</tr>");
   }
 
   fn enter_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    todo!()
+    self.open_cell(cell, section);
   }
 
   fn exit_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    todo!()
+    self.close_cell(cell, section);
   }
 
   fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
-    todo!()
+    self.open_cell_paragraph(cell, section);
   }
 
   fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
-    todo!()
+    self.close_cell_paragraph(cell, section);
   }
 
   fn asciidoc_table_cell_backend(&mut self) -> Self {
@@ -1055,14 +1088,14 @@ impl Html5s {
       self.push_str(r#"<h6 class="block-title">"#);
     }
     let (open, close) = match block.context {
-      BlockContext::Table => todo!(),
+      BlockContext::Table => ("<figcaption>", "</figcaption>"),
       BlockContext::Image => ("<figcaption>", "</figcaption>"),
       BlockContext::Example => todo!(),
       BlockContext::Listing => ("<figcaption>", "</figcaption>"),
       _ => ("", ""),
     };
     if let Some(custom_caption) = block.meta.attrs.named("caption") {
-      self.push_str(custom_caption);
+      self.push([open, custom_caption, title, close]);
     } else if let Some(caption) = block
       .context
       .caption_attr_name()

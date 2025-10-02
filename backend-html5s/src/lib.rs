@@ -5,6 +5,7 @@ extern crate asciidork_backend as backend;
 extern crate asciidork_eval as eval;
 
 mod html5s;
+mod table;
 
 pub use crate::html5s::Html5s;
 
@@ -19,7 +20,7 @@ mod internal {
   // pub use crate::htmlbuf::*;
   // pub use crate::open_tag::*;
   // pub use crate::section;
-  // pub use crate::AsciidoctorHtml;
+  pub use crate::Html5s;
   pub use asciidork_core::*;
   pub use ast::prelude::*;
   pub use backend::html::*;
