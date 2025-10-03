@@ -78,7 +78,7 @@ impl Html5s {
     self.push_str("\">");
 
     match &cell.content {
-      CellContent::AsciiDoc(_) => self.push_str("<div class=\"content\">"),
+      CellContent::AsciiDoc(_) => {} // self.push_str("<div class=\"content\">"),
       CellContent::Literal(_) => {
         self.newlines = Newlines::Preserve;
         self.push_str("<div class=\"literal\"><pre>");
@@ -99,7 +99,7 @@ impl Html5s {
         self.newlines = self.default_newlines;
         self.push_str("</pre></div></td>");
       }
-      (_, CellContent::AsciiDoc(_)) => self.push_str("</div></td>"),
+      (_, CellContent::AsciiDoc(_)) => self.push_str("</td>"), // tablenew
       _ => self.push_str("</td>"),
     }
   }

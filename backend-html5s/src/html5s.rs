@@ -730,11 +730,16 @@ impl Backend for Html5s {
   }
 
   fn asciidoc_table_cell_backend(&mut self) -> Self {
-    todo!()
+    Self {
+      // in_asciidoc_table_cell: true,
+      // footnotes: Rc::clone(&self.footnotes),
+      ..Self::default()
+    }
   }
 
   fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self) {
-    todo!()
+    // self.in_asciidoc_table_cell = false;
+    self.html.push_str(&cell_backend.into_result().unwrap());
   }
 
   fn enter_meta_title(&mut self) {
