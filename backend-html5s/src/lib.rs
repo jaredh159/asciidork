@@ -5,7 +5,6 @@ extern crate asciidork_backend as backend;
 extern crate asciidork_eval as eval;
 
 mod html5s;
-mod table;
 
 pub use crate::html5s::Html5s;
 

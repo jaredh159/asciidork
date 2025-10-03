@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::fmt::Write;
 use std::sync::Once;
 use std::{cell::RefCell, rc::Rc};
 
@@ -14,26 +13,26 @@ use EphemeralState::*;
 
 #[derive(Debug, Default)]
 pub struct AsciidoctorHtml {
-  pub(crate) html: String,
-  pub(crate) alt_html: String,
+  html: String,
+  alt_html: String,
   #[allow(clippy::type_complexity)]
-  pub(crate) footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
-  pub(crate) doc_meta: DocumentMeta,
-  pub(crate) interactive_list_stack: Vec<bool>,
-  pub(crate) default_newlines: Newlines,
-  pub(crate) newlines: Newlines,
-  pub(crate) state: HashSet<EphemeralState>,
-  pub(crate) autogen_conum: u8,
-  pub(crate) xref_depth: u8,
-  pub(crate) in_asciidoc_table_cell: bool,
-  pub(crate) section_nums: [u16; 5],
-  pub(crate) section_num_levels: isize,
-  pub(crate) fig_caption_num: usize,
-  pub(crate) book_part_num: usize,
-  pub(crate) table_caption_num: usize,
-  pub(crate) example_caption_num: usize,
-  pub(crate) listing_caption_num: usize,
-  pub(crate) appendix_caption_num: u8,
+  footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
+  doc_meta: DocumentMeta,
+  interactive_list_stack: Vec<bool>,
+  default_newlines: Newlines,
+  newlines: Newlines,
+  state: HashSet<EphemeralState>,
+  autogen_conum: u8,
+  xref_depth: u8,
+  in_asciidoc_table_cell: bool,
+  section_nums: [u16; 5],
+  section_num_levels: isize,
+  fig_caption_num: usize,
+  book_part_num: usize,
+  table_caption_num: usize,
+  example_caption_num: usize,
+  listing_caption_num: usize,
+  appendix_caption_num: u8,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -827,26 +826,12 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_table(&mut self, table: &Table, block: &Block) {
-    self.open_table_element(block);
+    let mut tag = OpenTag::new("table", &block.meta.attrs);
+    tag.push_class("tableblock");
+    backend::html::table::finish_open_table_tag(&mut tag, block, &self.doc_meta);
+    self.push_open_tag(tag);
     self.render_buffered_block_title(block);
-    self.push_str("<colgroup>");
-    let autowidth = block.meta.attrs.has_option("autowidth");
-    for width in table.col_widths.distribute() {
-      self.push_str("<col");
-      if !autowidth {
-        if let DistributedColWidth::Percentage(width) = width {
-          if width.fract() == 0.0 {
-            write!(self.html, r#" style="width: {width}%;""#).unwrap();
-          } else {
-            let width_s = format!("{width:.4}");
-            let width_s = width_s.trim_end_matches('0');
-            write!(self.html, r#" style="width: {width_s}%;""#).unwrap();
-          }
-        }
-      }
-      self.push_ch('>');
-    }
-    self.push_str("</colgroup>");
+    backend::html::table::push_colgroup(&mut self.html, table, block);
   }
 
   fn exit_table(&mut self, _table: &Table, _block: &Block) {
@@ -897,22 +882,56 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    self.open_cell(cell, section);
+    // self.open_cell(cell, section);
+    backend::html::table::open_cell(&mut self.html, cell, &section, Some("tableblock"));
+    match &cell.content {
+      CellContent::AsciiDoc(_) => self.push_str("<div class=\"content\">"),
+      CellContent::Literal(_) => {
+        self.newlines = Newlines::Preserve;
+        self.push_str("<div class=\"literal\"><pre>");
+      }
+      _ => {}
+    }
   }
 
   #[instrument(skip_all)]
   fn exit_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    self.close_cell(cell, section);
+    match (section, &cell.content) {
+      (TableSection::Header, _) | (_, CellContent::Header(_)) => {
+        if self.html.as_bytes().last() == Some(&b' ') {
+          self.html.pop();
+        }
+        self.push_str("</th>");
+      }
+      (_, CellContent::Literal(_)) => {
+        self.newlines = self.default_newlines;
+        self.push_str("</pre></div></td>");
+      }
+      (_, CellContent::AsciiDoc(_)) => self.push_str("</div></td>"),
+      _ => self.push_str("</td>"),
+    }
   }
 
   #[instrument(skip_all)]
   fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
-    self.open_cell_paragraph(cell, section);
+    match (section, &cell.content) {
+      (TableSection::Header, _) => {}
+      (_, CellContent::Emphasis(_)) => self.push_str("<p class=\"tableblock\"><em>"),
+      (_, CellContent::Monospace(_)) => self.push_str("<p class=\"tableblock\"><code>"),
+      (_, CellContent::Strong(_)) => self.push_str("<p class=\"tableblock\"><strong>"),
+      _ => self.push_str("<p class=\"tableblock\">"),
+    }
   }
 
   #[instrument(skip_all)]
   fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
-    self.close_cell_paragraph(cell, section);
+    match (section, &cell.content) {
+      (TableSection::Header, _) => self.push_str(" "),
+      (_, CellContent::Emphasis(_)) => self.push_str("</em></p>"),
+      (_, CellContent::Monospace(_)) => self.push_str("</code></p>"),
+      (_, CellContent::Strong(_)) => self.push_str("</strong></p>"),
+      _ => self.push_str("</p>"),
+    }
   }
 
   #[instrument(skip_all)]
@@ -1797,6 +1816,45 @@ impl AsciidoctorHtml {
       }
     }
   }
+
+  fn push_section_heading_prefix(&mut self, level: u8, special_sect: Option<SpecialSection>) {
+    if self.should_number_section(level, special_sect) {
+      if level == 1 && self.doc_meta.get_doctype() == DocType::Book {
+        if let Some(chapter_signifier) = self.doc_meta.string("chapter-signifier") {
+          self.push([&chapter_signifier, " "]);
+        }
+      }
+      let prefix = section::number_prefix(
+        level,
+        &mut self.section_nums,
+        self.state.contains(&EphemeralState::InAppendix),
+      );
+      self.push_str(&prefix);
+    }
+  }
+
+  fn should_number_section(&self, level: u8, special_sect: Option<SpecialSection>) -> bool {
+    let Some(sectnums) = self.doc_meta.get("sectnums") else {
+      return false;
+    };
+    if self.section_num_levels < level as isize {
+      return false;
+    }
+    match sectnums {
+      AttrValue::String(val) if val == "all" => true,
+      AttrValue::Bool(true) => {
+        if let Some(special_sect) = special_sect {
+          self
+            .doc_meta
+            .get_doctype()
+            .supports_special_section(special_sect)
+        } else {
+          true
+        }
+      }
+      _ => false,
+    }
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1816,27 +1874,12 @@ pub enum EphemeralState {
   InAppendix,
 }
 
-macro_rules! num_str {
-  ($n:expr) => {
-    match $n {
-      0 => Cow::Borrowed("0"),
-      1 => Cow::Borrowed("1"),
-      2 => Cow::Borrowed("2"),
-      3 => Cow::Borrowed("3"),
-      4 => Cow::Borrowed("4"),
-      5 => Cow::Borrowed("5"),
-      6 => Cow::Borrowed("6"),
-      _ => Cow::Owned($n.to_string()),
-    }
-  };
-}
-
 const fn incr(num: &mut usize) -> usize {
   *num += 1;
   *num
 }
 
-pub(crate) use num_str;
+pub(crate) use backend::num_str;
 
 lazy_static! {
   pub static ref REMOVE_FILE_EXT: Regex = Regex::new(r"^(.*)\.[^.]+$").unwrap();

@@ -10,19 +10,19 @@ use EphemeralState::*;
 
 #[derive(Debug, Default)]
 pub struct Html5s {
-  pub(crate) doc_meta: DocumentMeta,
-  pub(crate) html: String,
-  pub(crate) alt_html: String,
-  pub(crate) in_source_block: bool,
-  pub(crate) fig_caption_num: usize,
-  pub(crate) table_caption_num: usize,
-  pub(crate) example_caption_num: usize,
-  pub(crate) listing_caption_num: usize,
-  pub(crate) newlines: Newlines,
-  pub(crate) default_newlines: Newlines,
-  pub(crate) interactive_list_stack: Vec<bool>,
-  pub(crate) xref_depth: u8,
-  pub(crate) state: HashSet<EphemeralState>,
+  doc_meta: DocumentMeta,
+  html: String,
+  alt_html: String,
+  in_source_block: bool,
+  fig_caption_num: usize,
+  table_caption_num: usize,
+  example_caption_num: usize,
+  listing_caption_num: usize,
+  newlines: Newlines,
+  default_newlines: Newlines,
+  interactive_list_stack: Vec<bool>,
+  xref_depth: u8,
+  state: HashSet<EphemeralState>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -658,34 +658,17 @@ impl Backend for Html5s {
   }
 
   fn enter_table(&mut self, table: &Table, block: &Block) {
-    // tablenew
     let el = if block.has_title() { "figure" } else { "div" };
-    self.open_element(el, &["table-block"], &block.meta.attrs); // tablenew
-    self.render_buffered_block_title(block, false); // tablenew, moved
-    self.open_table_element(block);
-    self.push_str("<colgroup>");
-    let autowidth = block.meta.attrs.has_option("autowidth");
-    for width in table.col_widths.distribute() {
-      self.push_str("<col");
-      if !autowidth {
-        if let DistributedColWidth::Percentage(width) = width {
-          if width.fract() == 0.0 {
-            write!(self.html, r#" style="width: {width}%;""#).unwrap();
-          } else {
-            let width_s = format!("{width:.4}");
-            let width_s = width_s.trim_end_matches('0');
-            write!(self.html, r#" style="width: {width_s}%;""#).unwrap();
-          }
-        }
-      }
-      self.push_ch('>');
-    }
-    self.push_str("</colgroup>");
+    self.open_element(el, &["table-block"], &block.meta.attrs);
+    self.render_buffered_block_title(block, false);
+    let mut tag = OpenTag::new("table", &NoAttrs);
+    backend::html::table::finish_open_table_tag(&mut tag, block, &self.doc_meta);
+    self.push_open_tag(tag);
+    backend::html::table::push_colgroup(&mut self.html, table, block);
   }
 
   fn exit_table(&mut self, _table: &Table, block: &Block) {
-    self.push_str("</tbody></table>"); // tbody weird tablenew
-                                       // tablenew  vvv
+    self.push_str("</table>");
     self.push_str(if block.has_title() { "</figure>" } else { "</div>" });
   }
 
@@ -693,15 +676,15 @@ impl Backend for Html5s {
     match section {
       TableSection::Header => self.push_str("<thead>"),
       TableSection::Body => self.push_str("<tbody>"),
-      TableSection::Footer => {} // self.push_str("<tfoot>"),
+      TableSection::Footer => self.push_str("<tfoot>"),
     }
   }
 
   fn exit_table_section(&mut self, section: TableSection) {
     match section {
       TableSection::Header => self.push_str("</thead>"),
-      TableSection::Body => {}   // self.push_str("</tbody>"),
-      TableSection::Footer => {} // self.push_str("</tfoot>"),
+      TableSection::Body => self.push_str("</tbody>"),
+      TableSection::Footer => self.push_str("</tfoot>"),
     }
   }
 
@@ -714,19 +697,53 @@ impl Backend for Html5s {
   }
 
   fn enter_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    self.open_cell(cell, section);
+    backend::html::table::open_cell(&mut self.html, cell, &section, None);
+    if matches!(cell.content, CellContent::Literal(_)) {
+      self.newlines = Newlines::Preserve;
+      self.push_str("<div class=\"literal\"><pre>");
+    }
   }
 
   fn exit_table_cell(&mut self, cell: &Cell, section: TableSection) {
-    self.close_cell(cell, section);
+    match (section, &cell.content) {
+      (TableSection::Header, _) | (_, CellContent::Header(_)) => {
+        if self.html.as_bytes().last() == Some(&b' ') {
+          self.html.pop();
+        }
+        self.push_str("</th>");
+      }
+      (_, CellContent::Literal(_)) => {
+        self.newlines = self.default_newlines;
+        self.push_str("</pre></div></td>");
+      }
+      (_, CellContent::AsciiDoc(_)) => self.push_str("</td>"),
+      _ => self.push_str("</td>"),
+    }
   }
 
   fn enter_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
-    self.open_cell_paragraph(cell, section);
+    if cell.content.has_multiple_paras() {
+      self.push_str("<p>");
+    }
+    match (section, &cell.content) {
+      (_, CellContent::Emphasis(_)) => self.push_str("<em>"),
+      (_, CellContent::Monospace(_)) => self.push_str("<code>"),
+      (_, CellContent::Strong(_)) => self.push_str("<strong>"),
+      _ => {} // tablenew
+    }
   }
 
   fn exit_cell_paragraph(&mut self, cell: &Cell, section: TableSection) {
-    self.close_cell_paragraph(cell, section);
+    match (section, &cell.content) {
+      (TableSection::Header, _) => self.push_str(" "),
+      (_, CellContent::Emphasis(_)) => self.push_str("</em>"),
+      (_, CellContent::Monospace(_)) => self.push_str("</code>"),
+      (_, CellContent::Strong(_)) => self.push_str("</strong>"),
+      _ => {} // tablenew
+    }
+    if cell.content.has_multiple_paras() {
+      self.push_str("</p>");
+    }
   }
 
   fn asciidoc_table_cell_backend(&mut self) -> Self {
@@ -1160,19 +1177,4 @@ const fn incr(num: &mut usize) -> usize {
   *num
 }
 
-macro_rules! num_str {
-  ($n:expr) => {
-    match $n {
-      0 => Cow::Borrowed("0"),
-      1 => Cow::Borrowed("1"),
-      2 => Cow::Borrowed("2"),
-      3 => Cow::Borrowed("3"),
-      4 => Cow::Borrowed("4"),
-      5 => Cow::Borrowed("5"),
-      6 => Cow::Borrowed("6"),
-      _ => Cow::Owned($n.to_string()),
-    }
-  };
-}
-
-pub(crate) use num_str;
+pub(crate) use backend::num_str;

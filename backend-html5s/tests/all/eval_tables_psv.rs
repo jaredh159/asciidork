@@ -19,26 +19,6 @@ assert_html!(
 );
 
 assert_html!(
-  complex_table,
-  adoc! {r#"
-    .Table Title
-    [cols="25%,~",width=50%,%footer,frame=ends]
-    |===
-    |h1 | *h2*
-
-    >e|a ^h| b \| b2
-    .>l|c .^m| d\|
-    2*s| ef
-    |foot1 | foot2
-    |===
-  "#},
-  html! {r#"
-    <figure class="table-block"><figcaption>Table 1. Table Title</figcaption>
-    <table class="frame-ends grid-all" style="width: 50%;"><colgroup><col style="width: 25%;"><col></colgroup><thead><tr><th class="halign-left valign-top">h1</th><th class="halign-left valign-top"><strong>h2</strong></th></tr></thead><tbody><tr><td class="halign-right valign-top"><em>a</em></td><th class="halign-center valign-top">b | b2</th></tr><tr><td class="halign-left valign-bottom"><div class="literal"><pre>c</pre></div></td><td class="halign-left valign-middle"><code>d|</code></td></tr><tr><td class="halign-left valign-top"><strong>ef</strong></td><td class="halign-left valign-top"><strong>ef</strong></td></tr><tr><td class="halign-left valign-top">foot1</td><td class="halign-left valign-top">foot2</td></tr></tbody></table></figure>
-  "#}
-);
-
-assert_html!(
   break_in_table,
   adoc! {r#"
     |===

@@ -68,6 +68,7 @@ pub mod prelude {
   pub use crate::source_string::SourceString;
   pub use crate::table::*;
   pub use crate::toc::*;
+  pub use asciidork_core::DocumentMeta;
 }
 
 pub mod short {

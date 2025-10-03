@@ -67,16 +67,6 @@ pub trait HtmlBuf {
   }
 }
 
-// pub fn push_img_path(buf: &mut String, target: &str, doc_meta: &ast::DocumentMeta) {
-//   if let Some(imagesdir) = doc_meta.str("imagesdir") {
-//     let mut path = Path::new_specifying_separator(imagesdir, '/');
-//     path.push(target);
-//     push_url_encoded(buf, &path.to_string());
-//   } else {
-//     push_url_encoded(buf, target);
-//   }
-// }
-
 fn push_url_encoded(buf: &mut String, s: &str) {
   for c in s.chars() {
     match c {
