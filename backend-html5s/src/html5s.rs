@@ -21,12 +21,8 @@ pub struct Html5s {
   default_newlines: Newlines,
   interactive_list_stack: Vec<bool>,
   xref_depth: u8,
-  ephemeral_state: HashSet<EphemeralState>,
-  appendix_caption_num: u8,
-  section_nums: [u16; 5],
-  section_num_levels: isize,
   section_level_stack: Vec<u8>,
-  book_part_num: usize,
+  state: BackendState,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -86,10 +82,7 @@ impl Backend for Html5s {
 
   fn exit_toc(&mut self, _toc: &TableOfContents) {
     self.push_str("</nav>"); // tocnew `nav`
-
-    self.appendix_caption_num = 0;
-    self.section_nums = [0; 5];
-    self.book_part_num = 0;
+    self.on_toc_exit();
   }
 
   fn enter_toc_level(&mut self, level: u8, _nodes: &[TocNode]) {
@@ -107,8 +100,8 @@ impl Backend for Html5s {
     }
     self.push_str("\">");
     if node.special_sect == Some(SpecialSection::Appendix) {
-      self.section_nums = [0; 5];
-      self.ephemeral_state.insert(InAppendix);
+      self.state.section_nums = [0; 5];
+      self.state.ephemeral.insert(InAppendix);
       self.push_appendix_caption();
     } else if node.level == 0 {
       self.push_part_prefix();
@@ -119,8 +112,8 @@ impl Backend for Html5s {
 
   fn exit_toc_node(&mut self, node: &TocNode) {
     if node.special_sect == Some(SpecialSection::Appendix) {
-      self.section_nums = [0; 5];
-      self.ephemeral_state.remove(&InAppendix);
+      self.state.section_nums = [0; 5];
+      self.state.ephemeral.remove(&InAppendix);
     }
     self.push_str("</li>");
   }
@@ -180,10 +173,10 @@ impl Backend for Html5s {
     self.push_open_tag(section_tag);
     match section.meta.attrs.special_sect() {
       Some(SpecialSection::Appendix) => {
-        self.section_nums = [0; 5];
-        self.ephemeral_state.insert(InAppendix)
+        self.state.section_nums = [0; 5];
+        self.state.ephemeral.insert(InAppendix)
       }
-      Some(SpecialSection::Bibliography) => self.ephemeral_state.insert(InBibliography),
+      Some(SpecialSection::Bibliography) => self.state.ephemeral.insert(InBibliography),
       _ => true,
     };
   }
@@ -192,10 +185,10 @@ impl Backend for Html5s {
     self.push_str("</section>");
     match section.meta.attrs.special_sect() {
       Some(SpecialSection::Appendix) => {
-        self.section_nums = [0; 5];
-        self.ephemeral_state.remove(&InAppendix)
+        self.state.section_nums = [0; 5];
+        self.state.ephemeral.remove(&InAppendix)
       }
-      Some(SpecialSection::Bibliography) => self.ephemeral_state.remove(&InBibliography),
+      Some(SpecialSection::Bibliography) => self.state.ephemeral.remove(&InBibliography),
       _ => true,
     };
     self.section_level_stack.pop();
@@ -548,7 +541,7 @@ impl Backend for Html5s {
     let mut div = OpenTag::new(el, &block.meta.attrs);
     let mut ul = OpenTag::new("ul", &NoAttrs);
     div.push_class("ulist");
-    if self.ephemeral_state.contains(&InBibliography)
+    if self.state.ephemeral.contains(&InBibliography)
       || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
     {
       div.push_class("bibliography");
@@ -1235,33 +1228,13 @@ impl AltHtmlBuf for Html5s {
     (&mut self.html, &mut self.alt_html)
   }
 }
+
 impl HtmlBackend for Html5s {
-  fn section_nums(&mut self) -> &[u16; 5] {
-    &self.section_nums
+  fn state(&self) -> &BackendState {
+    &self.state
   }
-  fn section_nums_mut(&mut self) -> &mut [u16; 5] {
-    &mut self.section_nums
-  }
-  fn ephemeral_state(&self) -> &HashSet<EphemeralState> {
-    &self.ephemeral_state
-  }
-  fn ephemeral_state_mut(&mut self) -> &mut HashSet<EphemeralState> {
-    &mut self.ephemeral_state
-  }
-  fn appendix_caption_num(&self) -> u8 {
-    self.appendix_caption_num
-  }
-  fn appendix_caption_num_mut(&mut self) -> &mut u8 {
-    &mut self.appendix_caption_num
-  }
-  fn section_num_levels(&self) -> isize {
-    self.section_num_levels
-  }
-  fn book_part_num(&self) -> usize {
-    self.book_part_num
-  }
-  fn book_part_num_mut(&mut self) -> &mut usize {
-    &mut self.book_part_num
+  fn state_mut(&mut self) -> &mut BackendState {
+    &mut self.state
   }
 }
 

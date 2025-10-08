@@ -6,17 +6,61 @@ use ast::{prelude::*, AttrValue, ReadAttr, SpecialSection};
 
 use crate::{html::HtmlBuf, utils, Backend};
 
+#[derive(Debug, Default)]
+pub struct BackendState {
+  pub section_nums: [u16; 5],
+  pub section_num_levels: isize,
+  pub ephemeral: HashSet<EphemeralState>,
+  pub appendix_caption_num: u8,
+  pub book_part_num: usize,
+}
+
 pub trait HtmlBackend: Backend + HtmlBuf {
-  // TODO: try extracting state substruct
-  fn section_nums(&mut self) -> &[u16; 5];
-  fn section_nums_mut(&mut self) -> &mut [u16; 5];
-  fn section_num_levels(&self) -> isize;
-  fn ephemeral_state(&self) -> &HashSet<EphemeralState>;
-  fn ephemeral_state_mut(&mut self) -> &mut HashSet<EphemeralState>;
-  fn appendix_caption_num(&self) -> u8;
-  fn appendix_caption_num_mut(&mut self) -> &mut u8;
-  fn book_part_num(&self) -> usize;
-  fn book_part_num_mut(&mut self) -> &mut usize;
+  fn state(&self) -> &BackendState;
+  fn state_mut(&mut self) -> &mut BackendState;
+
+  fn section_nums(&mut self) -> &[u16; 5] {
+    &self.state().section_nums
+  }
+
+  fn section_nums_mut(&mut self) -> &mut [u16; 5] {
+    &mut self.state_mut().section_nums
+  }
+
+  fn section_num_levels(&self) -> isize {
+    self.state().section_num_levels
+  }
+
+  fn ephemeral_state(&self) -> &HashSet<EphemeralState> {
+    &self.state().ephemeral
+  }
+
+  fn ephemeral_state_mut(&mut self) -> &mut HashSet<EphemeralState> {
+    &mut self.state_mut().ephemeral
+  }
+
+  fn appendix_caption_num(&self) -> u8 {
+    self.state().appendix_caption_num
+  }
+
+  fn appendix_caption_num_mut(&mut self) -> &mut u8 {
+    &mut self.state_mut().appendix_caption_num
+  }
+
+  fn book_part_num(&self) -> usize {
+    self.state().book_part_num
+  }
+
+  fn book_part_num_mut(&mut self) -> &mut usize {
+    &mut self.state_mut().book_part_num
+  }
+
+  fn on_toc_exit(&mut self) {
+    let state = self.state_mut();
+    state.section_nums = [0; 5];
+    state.appendix_caption_num = 0;
+    state.book_part_num = 0;
+  }
 
   fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
     // PERF: we could work to prevent all these allocations w/ some caching
@@ -108,9 +152,9 @@ pub trait HtmlBackend: Backend + HtmlBuf {
       self.push([&appendix_caption, " "]);
     }
 
-    let letter = (self.appendix_caption_num() + b'A') as char;
+    let letter = (self.state().appendix_caption_num + b'A') as char;
     self.push_ch(letter);
-    *self.appendix_caption_num_mut() += 1;
+    self.state_mut().appendix_caption_num += 1;
 
     if self.doc_meta().is_false("appendix-caption") {
       self.push_str(". ");
@@ -121,26 +165,27 @@ pub trait HtmlBackend: Backend + HtmlBuf {
 
   fn push_section_number_prefix(&mut self, level: u8) {
     debug_assert!(level > 0 && level < 6);
+    let appendix = self.state().ephemeral.contains(&EphemeralState::InAppendix);
+    let mut sect_nums = self.state().section_nums;
+
     let level_idx = (level - 1) as usize;
-    self.section_nums_mut()[level_idx] += 1;
-    self
-      .section_nums_mut()
+    sect_nums[level_idx] += 1;
+    sect_nums
       .iter_mut()
       .skip(level_idx + 1)
       .for_each(|n| *n = 0);
-    let mut idx = 0;
-    while idx <= level_idx {
-      if self.ephemeral_state().contains(&EphemeralState::InAppendix) && idx == 0 {
-        let ch = (b'A' + self.section_nums()[idx] as u8) as char;
-        self.push_ch(ch);
+
+    for idx in 0..=level_idx {
+      if appendix && idx == 0 {
+        self.push_ch((b'A' + sect_nums[idx] as u8) as char);
       } else {
-        let number = &(self.section_nums()[idx]).to_string();
-        self.push_str(number);
+        self.push_str(&sect_nums[idx].to_string());
       }
       self.push_ch('.');
-      idx += 1;
     }
     self.push_ch(' ');
+
+    self.state_mut().section_nums = sect_nums;
   }
 
   fn push_section_heading_prefix(&mut self, level: u8, special_sect: Option<SpecialSection>) {

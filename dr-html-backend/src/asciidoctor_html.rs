@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::sync::Once;
 use std::{cell::RefCell, rc::Rc};
 
@@ -20,18 +19,14 @@ pub struct AsciidoctorHtml {
   interactive_list_stack: Vec<bool>,
   default_newlines: Newlines,
   newlines: Newlines,
-  state: HashSet<EphemeralState>,
   autogen_conum: u8,
   xref_depth: u8,
   in_asciidoc_table_cell: bool,
-  section_nums: [u16; 5],
-  section_num_levels: isize,
   fig_caption_num: usize,
-  book_part_num: usize,
   table_caption_num: usize,
   example_caption_num: usize,
   listing_caption_num: usize,
-  appendix_caption_num: u8,
+  state: BackendState,
 }
 
 impl Backend for AsciidoctorHtml {
@@ -53,7 +48,7 @@ impl Backend for AsciidoctorHtml {
 
     self.doc_meta = document.meta.clone();
     set_backend_attrs::<Self>(&mut self.doc_meta);
-    self.section_num_levels = document.meta.isize("sectnumlevels").unwrap_or(3);
+    self.state.section_num_levels = document.meta.isize("sectnumlevels").unwrap_or(3);
     if document.meta.is_true("hardbreaks-option") {
       self.default_newlines = Newlines::JoinWithBreak
     }
@@ -195,9 +190,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_toc(&mut self, _toc: &TableOfContents) {
     self.push_str("</div>");
-    self.appendix_caption_num = 0;
-    self.section_nums = [0; 5];
-    self.book_part_num = 0;
+    self.on_toc_exit();
   }
 
   #[instrument(skip_all)]
@@ -218,8 +211,8 @@ impl Backend for AsciidoctorHtml {
     }
     self.push_str("\">");
     if node.special_sect == Some(SpecialSection::Appendix) {
-      self.section_nums = [0; 5];
-      self.state.insert(InAppendix);
+      self.state.section_nums = [0; 5];
+      self.state.ephemeral.insert(InAppendix);
       self.push_appendix_caption();
     } else if node.level == 0 {
       self.push_part_prefix();
@@ -231,8 +224,8 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_toc_node(&mut self, node: &TocNode) {
     if node.special_sect == Some(SpecialSection::Appendix) {
-      self.section_nums = [0; 5];
-      self.state.remove(&InAppendix);
+      self.state.section_nums = [0; 5];
+      self.state.ephemeral.remove(&InAppendix);
     }
     self.push_str("</li>");
   }
@@ -314,10 +307,10 @@ impl Backend for AsciidoctorHtml {
     self.push_open_tag(section_tag);
     match section.meta.attrs.special_sect() {
       Some(SpecialSection::Appendix) => {
-        self.section_nums = [0; 5];
-        self.state.insert(InAppendix)
+        self.state.section_nums = [0; 5];
+        self.state.ephemeral.insert(InAppendix)
       }
-      Some(SpecialSection::Bibliography) => self.state.insert(InBibliography),
+      Some(SpecialSection::Bibliography) => self.state.ephemeral.insert(InBibliography),
       _ => true,
     };
   }
@@ -330,10 +323,10 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</div>");
     match section.meta.attrs.special_sect() {
       Some(SpecialSection::Appendix) => {
-        self.section_nums = [0; 5];
-        self.state.remove(&InAppendix)
+        self.state.section_nums = [0; 5];
+        self.state.ephemeral.remove(&InAppendix)
       }
-      Some(SpecialSection::Bibliography) => self.state.remove(&InBibliography),
+      Some(SpecialSection::Bibliography) => self.state.ephemeral.remove(&InBibliography),
       _ => true,
     };
   }
@@ -416,7 +409,7 @@ impl Backend for AsciidoctorHtml {
         &lang,
         r#"">"#,
       ]);
-      self.state.insert(IsSourceBlock);
+      self.state.ephemeral.insert(IsSourceBlock);
     } else {
       self.push_ch('>');
     }
@@ -425,7 +418,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_listing_block(&mut self, _block: &Block) {
-    if self.state.remove(&IsSourceBlock) {
+    if self.state.ephemeral.remove(&IsSourceBlock) {
       self.push_str("</code>");
     }
     self.push_str("</pre></div></div>");
@@ -609,7 +602,7 @@ impl Backend for AsciidoctorHtml {
     let mut div = OpenTag::new("div", &block.meta.attrs);
     let mut ul = OpenTag::new("ul", &NoAttrs);
     div.push_class("ulist");
-    if self.state.contains(&InBibliography)
+    if self.state.ephemeral.contains(&InBibliography)
       || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
     {
       div.push_class("bibliography");
@@ -653,7 +646,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
-      self.state.insert(InGlossaryList);
+      self.state.ephemeral.insert(InGlossaryList);
       self.open_element("div", &["dlist", "glossary"], &block.meta.attrs);
     } else {
       self.open_element("div", &["dlist"], &block.meta.attrs);
@@ -664,13 +657,13 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
-    self.state.remove(&InGlossaryList);
+    self.state.ephemeral.remove(&InGlossaryList);
     self.push_str("</dl></div>");
   }
 
   #[instrument(skip_all)]
   fn enter_description_list_term(&mut self, _item: &ListItem) {
-    if self.state.contains(&InGlossaryList) {
+    if self.state.ephemeral.contains(&InGlossaryList) {
       self.push_str(r#"<dt>"#);
     } else {
       self.push_str(r#"<dt class="hdlist1">"#);
@@ -694,12 +687,12 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_description_list_description_text(&mut self, _text: &Block, _item: &ListItem) {
-    self.state.insert(VisitingSimpleTermDescription);
+    self.state.ephemeral.insert(VisitingSimpleTermDescription);
   }
 
   #[instrument(skip_all)]
   fn exit_description_list_description_text(&mut self, _text: &Block, _item: &ListItem) {
-    self.state.remove(&VisitingSimpleTermDescription);
+    self.state.ephemeral.remove(&VisitingSimpleTermDescription);
   }
 
   #[instrument(skip_all)]
@@ -796,7 +789,11 @@ impl Backend for AsciidoctorHtml {
     if self.doc_meta.get_doctype() == DocType::Inline {
       return;
     }
-    if !self.state.contains(&VisitingSimpleTermDescription) {
+    if !self
+      .state
+      .ephemeral
+      .contains(&VisitingSimpleTermDescription)
+    {
       self.open_block_wrap(block);
       self.render_buffered_block_title(block);
     }
@@ -817,10 +814,14 @@ impl Backend for AsciidoctorHtml {
     } else {
       self.push_str("</p>");
     }
-    if !self.state.contains(&VisitingSimpleTermDescription) {
+    if !self
+      .state
+      .ephemeral
+      .contains(&VisitingSimpleTermDescription)
+    {
       self.push_str("</div>");
     }
-    self.state.remove(&VisitingSimpleTermDescription);
+    self.state.ephemeral.remove(&VisitingSimpleTermDescription);
   }
 
   #[instrument(skip_all)]
@@ -1538,32 +1539,11 @@ impl AltHtmlBuf for AsciidoctorHtml {
 }
 
 impl HtmlBackend for AsciidoctorHtml {
-  fn section_nums(&mut self) -> &[u16; 5] {
-    &self.section_nums
-  }
-  fn section_nums_mut(&mut self) -> &mut [u16; 5] {
-    &mut self.section_nums
-  }
-  fn ephemeral_state(&self) -> &HashSet<EphemeralState> {
+  fn state(&self) -> &BackendState {
     &self.state
   }
-  fn ephemeral_state_mut(&mut self) -> &mut HashSet<EphemeralState> {
+  fn state_mut(&mut self) -> &mut BackendState {
     &mut self.state
-  }
-  fn appendix_caption_num(&self) -> u8 {
-    self.appendix_caption_num
-  }
-  fn appendix_caption_num_mut(&mut self) -> &mut u8 {
-    &mut self.appendix_caption_num
-  }
-  fn section_num_levels(&self) -> isize {
-    self.section_num_levels
-  }
-  fn book_part_num(&self) -> usize {
-    self.book_part_num
-  }
-  fn book_part_num_mut(&mut self) -> &mut usize {
-    &mut self.book_part_num
   }
 }
 
