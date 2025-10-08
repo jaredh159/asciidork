@@ -1,7 +1,6 @@
-use asciidork_core::{file, Path, SafeMode};
-use ast::{prelude::*, ReadAttr};
+use ast::prelude::*;
 
-use crate::{html::OpenTag, utils, Backend};
+use crate::html::OpenTag;
 
 pub trait HtmlBuf {
   fn htmlbuf(&mut self) -> &mut String;
@@ -109,92 +108,3 @@ pub trait AltHtmlBuf: HtmlBuf {
     std::mem::swap(html, alt_html);
   }
 }
-
-pub trait HtmlBufBackend: Backend + HtmlBuf {
-  fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
-    // PERF: we could work to prevent all these allocations w/ some caching
-    // these might get rendered many times in a given document
-    let icondir = self.doc_meta().string_or("iconsdir", "./images/icons");
-    let ext = self.doc_meta().string_or("icontype", "png");
-    self.push([&icondir, "/", prefix.unwrap_or(""), name, ".", &ext]);
-  }
-
-  fn render_image(&mut self, target: &str, attrs: &AttrList, is_block: bool) {
-    let format = attrs.named("format").or_else(|| file::ext(target));
-    let is_svg = matches!(format, Some("svg" | "SVG"));
-    if is_svg && attrs.has_option("interactive") && self.doc_meta().safe_mode != SafeMode::Secure {
-      self.render_interactive_svg(target, attrs);
-    }
-    self.push_str(r#"<img src=""#);
-    self.push_img_path(target);
-    self.push_str(r#"" alt=""#);
-    if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
-      self.push_str_attr_escaped(alt);
-    } else if let Some(Some(nodes)) = attrs.positional.first() {
-      for s in nodes.plain_text() {
-        self.push_str_attr_escaped(s);
-      }
-    } else {
-      let alt = file::stem(target).replace(['-', '_'], " ");
-      self.push_str_attr_escaped(&alt);
-    }
-    self.push_ch('"');
-    self.push_named_or_pos_attr("width", 1, attrs);
-    self.push_named_or_pos_attr("height", 2, attrs);
-    if !is_block {
-      self.push_named_attr("title", attrs);
-    }
-    self.push_ch('>');
-  }
-
-  fn render_interactive_svg(&mut self, target: &str, attrs: &AttrList) {
-    self.push_str(r#"<object type="image/svg+xml" data=""#);
-    self.push_img_path(target);
-    self.push_ch('"');
-    self.push_named_or_pos_attr("width", 1, attrs);
-    self.push_named_or_pos_attr("height", 2, attrs);
-    self.push_ch('>');
-    if let Some(fallback) = attrs.named("fallback") {
-      self.push_str(r#"<img src=""#);
-      self.push_img_path(fallback);
-      self.push_ch('"');
-      self.push_named_or_pos_attr("alt", 0, attrs);
-      self.push_ch('>');
-    } else if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
-      self.push([r#"<span class="alt">"#, alt, "</span>"]);
-    }
-    self.push_str("</object>");
-  }
-
-  fn push_img_path(&mut self, target: &str) {
-    if let Some(imagesdir) = self.doc_meta().str("imagesdir") {
-      let mut path = Path::new_specifying_separator(imagesdir, '/');
-      path.push(target);
-      self.push_url_encoded(&path.to_string());
-    } else {
-      self.push_url_encoded(target);
-    }
-  }
-
-  fn render_missing_xref(
-    &mut self,
-    target: &SourceString,
-    kind: XrefKind,
-    doc_title: Option<&DocTitle>,
-  ) {
-    if target == "#" || Some(target.src.as_str()) == self.doc_meta().str("asciidork-docfilename") {
-      let doctitle = doc_title
-        .and_then(|t| t.attrs.named("reftext"))
-        .unwrap_or_else(|| self.doc_meta().str("doctitle").unwrap_or("[^top]"))
-        .to_string();
-      self.push_str(&doctitle);
-    } else if utils::xref::is_interdoc(target, kind) {
-      let href = utils::xref::href(target, self.doc_meta(), kind, false);
-      self.push_str(utils::xref::remove_leading_hash(&href));
-    } else {
-      self.push(["[", target.strip_prefix('#').unwrap_or(target), "]"]);
-    }
-  }
-}
-
-impl<T> HtmlBufBackend for T where T: Backend + HtmlBuf {}

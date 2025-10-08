@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::sync::Once;
 use std::{cell::RefCell, rc::Rc};
 
-use roman_numerals_fn::to_roman_numeral;
 use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -311,7 +310,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_section(&mut self, section: &Section) {
     let mut section_tag = OpenTag::without_id("div", &section.meta.attrs);
-    section_tag.push_class(section::class(section));
+    section_tag.push_class(backend::html::util::section_class(section));
     self.push_open_tag(section_tag);
     match section.meta.attrs.special_sect() {
       Some(SpecialSection::Appendix) => {
@@ -1538,6 +1537,36 @@ impl AltHtmlBuf for AsciidoctorHtml {
   }
 }
 
+impl HtmlBackend for AsciidoctorHtml {
+  fn section_nums(&mut self) -> &[u16; 5] {
+    &self.section_nums
+  }
+  fn section_nums_mut(&mut self) -> &mut [u16; 5] {
+    &mut self.section_nums
+  }
+  fn ephemeral_state(&self) -> &HashSet<EphemeralState> {
+    &self.state
+  }
+  fn ephemeral_state_mut(&mut self) -> &mut HashSet<EphemeralState> {
+    &mut self.state
+  }
+  fn appendix_caption_num(&self) -> u8 {
+    self.appendix_caption_num
+  }
+  fn appendix_caption_num_mut(&mut self) -> &mut u8 {
+    &mut self.appendix_caption_num
+  }
+  fn section_num_levels(&self) -> isize {
+    self.section_num_levels
+  }
+  fn book_part_num(&self) -> usize {
+    self.book_part_num
+  }
+  fn book_part_num_mut(&mut self) -> &mut usize {
+    &mut self.book_part_num
+  }
+}
+
 impl AsciidoctorHtml {
   pub fn new() -> Self {
     Self::default()
@@ -1545,22 +1574,6 @@ impl AsciidoctorHtml {
 
   pub fn into_string(self) -> String {
     self.html
-  }
-
-  pub(crate) fn push_appendix_caption(&mut self) {
-    if let Some(appendix_caption) = self.doc_meta.string("appendix-caption") {
-      self.push([&appendix_caption, " "]);
-    }
-
-    let letter = (self.appendix_caption_num + b'A') as char;
-    self.push_ch(letter);
-    self.appendix_caption_num += 1;
-
-    if self.doc_meta.is_false("appendix-caption") {
-      self.push_str(". ");
-    } else {
-      self.push_str(": ");
-    }
   }
 
   fn source_lang<'a>(&self, block: &'a Block) -> Option<Cow<'a, str>> {
@@ -1803,58 +1816,6 @@ impl AsciidoctorHtml {
     }
     self.push_ch('>');
   }
-
-  fn push_part_prefix(&mut self) {
-    if self.doc_meta.is_true("partnums") {
-      let part_num = incr(&mut self.book_part_num);
-      if part_num <= 3999 {
-        if let Some(part_signifier) = self.doc_meta.string("part-signifier") {
-          self.push([&part_signifier, " "]);
-        }
-        self.push_str(&to_roman_numeral(part_num as u16).unwrap());
-        self.push_str(": ");
-      }
-    }
-  }
-
-  fn push_section_heading_prefix(&mut self, level: u8, special_sect: Option<SpecialSection>) {
-    if self.should_number_section(level, special_sect) {
-      if level == 1 && self.doc_meta.get_doctype() == DocType::Book {
-        if let Some(chapter_signifier) = self.doc_meta.string("chapter-signifier") {
-          self.push([&chapter_signifier, " "]);
-        }
-      }
-      let prefix = section::number_prefix(
-        level,
-        &mut self.section_nums,
-        self.state.contains(&EphemeralState::InAppendix),
-      );
-      self.push_str(&prefix);
-    }
-  }
-
-  fn should_number_section(&self, level: u8, special_sect: Option<SpecialSection>) -> bool {
-    let Some(sectnums) = self.doc_meta.get("sectnums") else {
-      return false;
-    };
-    if self.section_num_levels < level as isize {
-      return false;
-    }
-    match sectnums {
-      AttrValue::String(val) if val == "all" => true,
-      AttrValue::Bool(true) => {
-        if let Some(special_sect) = special_sect {
-          self
-            .doc_meta
-            .get_doctype()
-            .supports_special_section(special_sect)
-        } else {
-          true
-        }
-      }
-      _ => false,
-    }
-  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1863,15 +1824,6 @@ pub enum Newlines {
   #[default]
   JoinWithSpace,
   Preserve,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EphemeralState {
-  VisitingSimpleTermDescription,
-  IsSourceBlock,
-  InBibliography,
-  InGlossaryList,
-  InAppendix,
 }
 
 const fn incr(num: &mut usize) -> usize {

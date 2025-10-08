@@ -15,14 +15,11 @@ mod internal {
   // pub use lazy_static::lazy_static;
   pub use regex::Regex;
 
-  // pub use crate::asciidoctor_html::EphemeralState;
-  // pub use crate::htmlbuf::*;
-  // pub use crate::open_tag::*;
-  // pub use crate::section;
   pub use crate::Html5s;
   pub use asciidork_core::*;
   pub use ast::prelude::*;
-  pub use backend::html::*;
+  pub use backend::html::backend::*;
+  pub use backend::html::{AltHtmlBuf, HtmlBuf, OpenTag};
   pub use backend::prelude::*;
   pub use backend::utils;
   pub use eval::helpers;

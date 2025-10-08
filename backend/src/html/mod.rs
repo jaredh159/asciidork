@@ -1,3 +1,4 @@
+pub mod backend;
 pub mod htmlbuf;
 pub mod list;
 pub mod open_tag;

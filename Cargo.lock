@@ -76,6 +76,7 @@ version = "0.25.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
+ "roman_numerals_fn",
 ]
 
 [[package]]
@@ -91,7 +92,6 @@ dependencies = [
  "lazy_static",
  "pretty_assertions",
  "regex",
- "roman_numerals_fn",
  "test-utils",
  "tracing",
  "tracing-subscriber",

@@ -6,7 +6,6 @@ extern crate asciidork_eval as eval;
 
 mod asciidoctor_html;
 pub mod css;
-pub mod section;
 
 pub use asciidoctor_html::AsciidoctorHtml;
 pub use backend::Backend;
@@ -23,11 +22,10 @@ mod internal {
   pub use lazy_static::lazy_static;
   pub use regex::Regex;
 
-  pub use crate::section;
   pub use asciidork_core::*;
   pub use ast::prelude::*;
-  pub use backend::html::htmlbuf::*;
-  pub use backend::html::*;
+  pub use backend::html::backend::*;
+  pub use backend::html::{AltHtmlBuf, HtmlBuf, OpenTag};
   pub use backend::prelude::*;
   pub use backend::utils;
   pub use eval::helpers;

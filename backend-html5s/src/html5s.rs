@@ -5,7 +5,6 @@ use std::collections::HashSet;
 use std::fmt::Write;
 
 use crate::internal::*;
-use backend::html::htmlbuf::HtmlBufBackend;
 use EphemeralState::*;
 
 #[derive(Debug, Default)]
@@ -22,7 +21,12 @@ pub struct Html5s {
   default_newlines: Newlines,
   interactive_list_stack: Vec<bool>,
   xref_depth: u8,
-  state: HashSet<EphemeralState>,
+  ephemeral_state: HashSet<EphemeralState>,
+  appendix_caption_num: u8,
+  section_nums: [u16; 5],
+  section_num_levels: isize,
+  section_level_stack: Vec<u8>,
+  book_part_num: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -30,15 +34,6 @@ pub enum Newlines {
   #[default]
   Preserve,
   JoinWithBreak,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EphemeralState {
-  VisitingSimpleTermDescription,
-  IsSourceBlock,
-  InBibliography,
-  InGlossaryList,
-  InAppendix,
 }
 
 impl Backend for Html5s {
@@ -73,6 +68,67 @@ impl Backend for Html5s {
 
   fn exit_footer(&mut self) {}
 
+  fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    let id = &macro_block
+      .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
+      .unwrap_or("toc".to_string());
+    self.push([r#"<nav id=""#, id, r#"" class=""#]); // tocnew
+    self.push_str(&self.doc_meta.string_or("toc-class", "toc"));
+    self.push_str(r#"" role="doc-toc"#); // tocnew
+    if matches!(toc.position, TocPosition::Left | TocPosition::Right) {
+      self.push_ch('2'); // `toc2` roughly means "toc-aside", per dr src
+    }
+    let level = self.section_level_stack.last().copied().unwrap_or(0) + 2;
+    self.push([r#""><h"#, &num_str!(level), r#" id=""#, id, r#"-title">"#]);
+    self.push_str(&toc.title);
+    self.push([r#"</h"#, &num_str!(level), ">"]);
+  }
+
+  fn exit_toc(&mut self, _toc: &TableOfContents) {
+    self.push_str("</nav>"); // tocnew `nav`
+
+    self.appendix_caption_num = 0;
+    self.section_nums = [0; 5];
+    self.book_part_num = 0;
+  }
+
+  fn enter_toc_level(&mut self, level: u8, _nodes: &[TocNode]) {
+    self.push(["<ol class=\"toc-list level-", &num_str!(level), "\">"]);
+  }
+
+  fn exit_toc_level(&mut self, _level: u8, _nodes: &[TocNode]) {
+    self.push_str("</ol>");
+  }
+
+  fn enter_toc_node(&mut self, node: &TocNode) {
+    self.push_str("<li><a href=\"#");
+    if let Some(id) = &node.id {
+      self.push_str(id);
+    }
+    self.push_str("\">");
+    if node.special_sect == Some(SpecialSection::Appendix) {
+      self.section_nums = [0; 5];
+      self.ephemeral_state.insert(InAppendix);
+      self.push_appendix_caption();
+    } else if node.level == 0 {
+      self.push_part_prefix();
+    } else {
+      self.push_section_heading_prefix(node.level, node.special_sect);
+    }
+  }
+
+  fn exit_toc_node(&mut self, node: &TocNode) {
+    if node.special_sect == Some(SpecialSection::Appendix) {
+      self.section_nums = [0; 5];
+      self.ephemeral_state.remove(&InAppendix);
+    }
+    self.push_str("</li>");
+  }
+
+  fn exit_toc_content(&mut self) {
+    self.push_str("</a>");
+  }
+
   fn visit_document_attribute_decl(&mut self, name: &str, value: &AttrValue) {
     if name == "hardbreaks-option" {
       if value.is_true() {
@@ -87,11 +143,15 @@ impl Backend for Html5s {
   }
 
   fn enter_preamble(&mut self, doc_has_title: bool, blocks: &[Block]) {
-    todo!()
+    if doc_has_title {
+      self.push_str(r#"<section id="preamble" aria-label="Preamble">"#);
+    }
   }
 
-  fn exit_preamble(&mut self, doc_has_title: bool, blocks: &[Block]) {
-    todo!()
+  fn exit_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
+    if doc_has_title {
+      self.push_str("</section>");
+    }
   }
 
   fn enter_document_title(&mut self) {
@@ -112,34 +172,33 @@ impl Backend for Html5s {
   }
 
   fn enter_section(&mut self, section: &Section) {
+    self.section_level_stack.push(section.level);
     let mut section_tag = OpenTag::without_id("section", &section.meta.attrs);
     section_tag.push_class("doc-section");
     section_tag.push_class(&format!("level-{}", section.level));
-    // section_tag.push_class(section::class(section));
+    // section_tag.push_class(backend::html::util::section_class(section));
     self.push_open_tag(section_tag);
     match section.meta.attrs.special_sect() {
       Some(SpecialSection::Appendix) => {
-        // self.section_nums = [0; 5];
-        self.state.insert(InAppendix)
+        self.section_nums = [0; 5];
+        self.ephemeral_state.insert(InAppendix)
       }
-      Some(SpecialSection::Bibliography) => self.state.insert(InBibliography),
+      Some(SpecialSection::Bibliography) => self.ephemeral_state.insert(InBibliography),
       _ => true,
     };
   }
 
   fn exit_section(&mut self, section: &Section) {
-    if section.level == 1 {
-      // self.push_str("</div>");
-    }
     self.push_str("</section>");
     match section.meta.attrs.special_sect() {
       Some(SpecialSection::Appendix) => {
-        // self.section_nums = [0; 5];
-        self.state.remove(&InAppendix)
+        self.section_nums = [0; 5];
+        self.ephemeral_state.remove(&InAppendix)
       }
-      Some(SpecialSection::Bibliography) => self.state.remove(&InBibliography),
+      Some(SpecialSection::Bibliography) => self.ephemeral_state.remove(&InBibliography),
       _ => true,
     };
+    self.section_level_stack.pop();
   }
 
   fn enter_section_heading(&mut self, section: &Section) {
@@ -150,9 +209,9 @@ impl Backend for Html5s {
       self.push(["<h", &level_str, ">"]);
     }
     if section.meta.attrs.special_sect() == Some(SpecialSection::Appendix) {
-      // self.push_appendix_caption();
+      self.push_appendix_caption();
     } else {
-      // self.push_section_heading_prefix(section.level, section.meta.attrs.special_sect());
+      self.push_section_heading_prefix(section.level, section.meta.attrs.special_sect());
     }
   }
 
@@ -164,20 +223,24 @@ impl Backend for Html5s {
     }
   }
 
-  fn enter_book_part(&mut self, part: &Part) {
-    todo!()
-  }
-
-  fn exit_book_part(&mut self, part: &Part) {
-    todo!()
-  }
+  fn enter_book_part(&mut self, part: &Part) {}
+  fn exit_book_part(&mut self, part: &Part) {}
 
   fn enter_book_part_title(&mut self, title: &PartTitle) {
-    todo!()
+    self.push_str("<h1");
+    if let Some(id) = &title.id {
+      self.push([r#" id=""#, id]); //, "\""]);
+    }
+    // self.push_str(r#" class="sect0"#);
+    for role in title.meta.attrs.roles() {
+      self.push([" ", role]);
+    }
+    self.push_str("\">");
+    // self.push_part_prefix(); ??
   }
 
-  fn exit_book_part_title(&mut self, title: &PartTitle) {
-    todo!()
+  fn exit_book_part_title(&mut self, _title: &PartTitle) {
+    self.push_str("</h1>");
   }
 
   fn enter_book_part_intro(&mut self, part: &Part) {
@@ -485,7 +548,7 @@ impl Backend for Html5s {
     let mut div = OpenTag::new(el, &block.meta.attrs);
     let mut ul = OpenTag::new("ul", &NoAttrs);
     div.push_class("ulist");
-    if self.state.contains(&InBibliography)
+    if self.ephemeral_state.contains(&InBibliography)
       || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
     {
       div.push_class("bibliography");
@@ -1163,12 +1226,42 @@ impl HtmlBuf for Html5s {
     &mut self.html
   }
 }
+
 impl AltHtmlBuf for Html5s {
   fn alt_htmlbuf(&mut self) -> &mut String {
     &mut self.alt_html
   }
   fn buffers(&mut self) -> (&mut String, &mut String) {
     (&mut self.html, &mut self.alt_html)
+  }
+}
+impl HtmlBackend for Html5s {
+  fn section_nums(&mut self) -> &[u16; 5] {
+    &self.section_nums
+  }
+  fn section_nums_mut(&mut self) -> &mut [u16; 5] {
+    &mut self.section_nums
+  }
+  fn ephemeral_state(&self) -> &HashSet<EphemeralState> {
+    &self.ephemeral_state
+  }
+  fn ephemeral_state_mut(&mut self) -> &mut HashSet<EphemeralState> {
+    &mut self.ephemeral_state
+  }
+  fn appendix_caption_num(&self) -> u8 {
+    self.appendix_caption_num
+  }
+  fn appendix_caption_num_mut(&mut self) -> &mut u8 {
+    &mut self.appendix_caption_num
+  }
+  fn section_num_levels(&self) -> isize {
+    self.section_num_levels
+  }
+  fn book_part_num(&self) -> usize {
+    self.book_part_num
+  }
+  fn book_part_num_mut(&mut self) -> &mut usize {
+    &mut self.book_part_num
   }
 }
 

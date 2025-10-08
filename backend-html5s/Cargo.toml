@@ -14,7 +14,6 @@ lazy_static = "1.4.0"
 regex = "1.10.2"
 tracing = { version = "0.1", features = ["release_max_level_off"] }
 tracing-subscriber = {version ="0.3", features = ["env-filter", "std"]}
-roman_numerals_fn = "1.0.0"
 
 [dev-dependencies]
 asciidork-parser = { path = "../parser" }
