@@ -48,6 +48,7 @@ impl Backend for Html5s {
   fn enter_document(&mut self, document: &Document) {
     self.doc_meta = document.meta.clone();
     utils::set_backend_attrs::<Self>(&mut self.doc_meta);
+    self.state.section_num_levels = document.meta.isize("sectnumlevels").unwrap_or(3);
   }
 
   fn exit_document(&mut self, document: &Document) {}
@@ -216,20 +217,25 @@ impl Backend for Html5s {
     }
   }
 
-  fn enter_book_part(&mut self, part: &Part) {}
-  fn exit_book_part(&mut self, part: &Part) {}
+  fn enter_book_part(&mut self, part: &Part) {
+    let mut section_tag = OpenTag::without_id("section", &part.title.meta.attrs);
+    section_tag.push_class("doc-section");
+    section_tag.push_class("level-0");
+    // section_tag.push_class(&format!("level-{}", section.level));
+    // section_tag.push_class(backend::html::util::section_class(section));
+    self.push_open_tag(section_tag);
+  }
+  fn exit_book_part(&mut self, part: &Part) {
+    self.push_str("</section>");
+  }
 
   fn enter_book_part_title(&mut self, title: &PartTitle) {
     self.push_str("<h1");
     if let Some(id) = &title.id {
       self.push([r#" id=""#, id]); //, "\""]);
     }
-    // self.push_str(r#" class="sect0"#);
-    for role in title.meta.attrs.roles() {
-      self.push([" ", role]);
-    }
     self.push_str("\">");
-    // self.push_part_prefix(); ??
+    self.push_part_prefix();
   }
 
   fn exit_book_part_title(&mut self, _title: &PartTitle) {
@@ -237,19 +243,31 @@ impl Backend for Html5s {
   }
 
   fn enter_book_part_intro(&mut self, part: &Part) {
-    todo!()
+    if part.title.meta.title.is_some() {
+      self.push_str(r#"<section class="open-block partintro">"#);
+      self.push_str(r#"<h6 class="block-title">"#);
+    } else {
+      self.push_str(r#"<div class="open-block partintro">"#);
+    }
   }
 
   fn exit_book_part_intro(&mut self, part: &Part) {
-    todo!()
+    if part.title.meta.title.is_some() {
+      self.push_str("</section>");
+    } else {
+      self.push_str("</div>");
+    }
   }
 
   fn enter_book_part_intro_content(&mut self, part: &Part) {
-    todo!()
+    if part.title.meta.title.is_some() {
+      self.push_str("</h6>");
+    }
+    self.push_str(r#"<div class="content">"#);
   }
 
-  fn exit_book_part_intro_content(&mut self, part: &Part) {
-    todo!()
+  fn exit_book_part_intro_content(&mut self, _part: &Part) {
+    self.push_str("</div>");
   }
 
   fn enter_paragraph_block(&mut self, block: &Block) {
