@@ -376,12 +376,14 @@ impl Backend for Html5s {
     // }
   }
 
-  fn enter_verse_block(&mut self, block: &Block, has_attribution: bool) {
-    todo!()
+  fn enter_verse_block(&mut self, block: &Block, _has_attribution: bool) {
+    self.open_element("div", &["verse-block"], &block.meta.attrs);
+    self.render_buffered_block_title(block, false);
+    self.push_str(r#"<blockquote class="verse"><pre class="verse">"#);
   }
 
   fn exit_verse_block(&mut self, block: &Block, has_attribution: bool) {
-    todo!()
+    self.exit_quote_block(block, has_attribution);
   }
 
   fn enter_listing_block(&mut self, block: &Block) {
@@ -835,6 +837,8 @@ impl Backend for Html5s {
   fn exit_simple_block_content(&mut self, block: &Block) {
     if block.context == BlockContext::BlockQuote {
       self.push_str("</p>");
+    } else if block.context == BlockContext::Verse {
+      self.push_str("</pre>");
     }
     self.newlines = self.default_newlines;
   }
