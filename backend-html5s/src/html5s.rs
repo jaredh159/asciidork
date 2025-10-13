@@ -19,7 +19,6 @@ pub struct Html5s {
   listing_caption_num: usize,
   newlines: Newlines,
   default_newlines: Newlines,
-  interactive_list_stack: Vec<bool>,
   xref_depth: u8,
   section_level_stack: Vec<u8>,
   state: BackendState,
@@ -282,7 +281,16 @@ impl Backend for Html5s {
     //   self.push_str("<blockquote>");
     // } else {
     // self.push_str("<p>");
-    self.open_element("p", &[], &block.meta.attrs);
+    // dbg!(&self.state.ephemeral);
+    if !self
+      .state
+      .ephemeral
+      .contains(&VisitingSimpleTermDescription)
+    {
+      self.open_element("p", &[], &block.meta.attrs);
+    } else {
+      eprintln!("foo bar");
+    }
     // }
   }
 
@@ -293,7 +301,13 @@ impl Backend for Html5s {
     // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
     //   self.push_str("</blockquote>\n");
     // } else {
-    self.push_str("</p>");
+    if !self
+      .state
+      .ephemeral
+      .contains(&VisitingSimpleTermDescription)
+    {
+      self.push_str("</p>");
+    }
     if block.has_title() {
       self.push_str(r#"</section>"#);
     }
@@ -438,14 +452,24 @@ impl Backend for Html5s {
   }
 
   fn enter_literal_block(&mut self, block: &Block) {
-    self.open_element("section", &["literal-block"], &block.meta.attrs);
+    let el = if self.state.ephemeral.contains(&InDescListDesc) {
+      "div"
+    } else {
+      "section"
+    };
+    self.open_element(el, &["literal-block"], &block.meta.attrs);
     self.render_buffered_block_title(block, true);
     self.push_str(r#"<pre>"#);
     self.newlines = Newlines::Preserve;
   }
 
   fn exit_literal_block(&mut self, _block: &Block) {
-    self.push_str("</pre></section>");
+    self.push_str("</pre>");
+    let el = if self.state.ephemeral.contains(&InDescListDesc) {
+      self.push_str("</div>");
+    } else {
+      self.push_str("</section>");
+    };
     self.newlines = self.default_newlines;
   }
 
@@ -554,35 +578,20 @@ impl Backend for Html5s {
   }
 
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    let custom = block.meta.attrs.unordered_list_custom_marker_style();
-    let interactive = block.meta.attrs.has_option("interactive");
-    self.interactive_list_stack.push(interactive);
     let el = if block.has_title() { "section" } else { "div" };
-    let mut div = OpenTag::new(el, &block.meta.attrs);
-    let mut ul = OpenTag::new("ul", &NoAttrs);
-    div.push_class("ulist");
-    if self.state.ephemeral.contains(&InBibliography)
-      || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
-    {
-      div.push_class("bibliography");
-      ul.push_class("bibliography");
-    }
-    if let Some(custom) = custom {
-      div.push_class(custom);
-      ul.push_class(custom);
-    }
+    let (wrap, mut list) = self.start_enter_unordered_list(el, block);
     if items.iter().any(ListItem::is_checklist) {
-      ul.push_class("task-list");
+      list.push_class("task-list");
     }
     if depth == 1 {
-      self.push_open_tag(div);
+      self.push_open_tag(wrap);
     }
     self.render_buffered_block_title(block, true);
-    self.push_open_tag(ul);
+    self.push_open_tag(list);
   }
 
   fn exit_unordered_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
-    self.interactive_list_stack.pop();
+    self.state.interactive_list_stack.pop();
     self.push_str("</ul>");
     if depth == 1 {
       self.push_str(if block.has_title() { "</section>" } else { "</div>" });
@@ -590,47 +599,18 @@ impl Backend for Html5s {
   }
 
   fn enter_ordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    self.interactive_list_stack.push(false);
-    let custom = block.meta.attrs.ordered_list_custom_number_style();
-    let list_type = custom
-      .and_then(backend::html::list::type_from_class)
-      .unwrap_or_else(|| backend::html::list::type_from_depth(depth));
-    let class = custom.unwrap_or_else(|| backend::html::list::class_from_depth(depth));
+    let (class, list_type) = self.start_enter_ordered_list(block, depth);
     if depth == 1 {
       let classes = &["olist", class];
       let el = if block.has_title() { "section" } else { "div" };
       self.open_element(el, classes, &block.meta.attrs);
     }
     self.render_buffered_block_title(block, true);
-    self.push([r#"<ol class=""#, class, "\""]);
-
-    if list_type != "1" {
-      self.push([" type=\"", list_type, "\""]);
-    }
-
-    if let Some(attr_start) = block.meta.attrs.named("start") {
-      self.push([" start=\"", attr_start, "\""]);
-    } else {
-      match items[0].marker {
-        ListMarker::Digits(1) => {}
-        ListMarker::Digits(n) => {
-          // TODO: asciidoctor documents that this is OK,
-          // but it doesn't actually work, and emits a warning
-          self.push([" start=\"", &num_str!(n), "\""]);
-        }
-        _ => {}
-      }
-    }
-
-    if block.meta.attrs.has_option("reversed") {
-      self.push_str(" reversed>");
-    } else {
-      self.push_str(">");
-    }
+    self.finish_enter_ordered_list(class, list_type, block, items);
   }
 
   fn exit_ordered_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
-    self.interactive_list_stack.pop();
+    self.state.interactive_list_stack.pop();
     self.push_str("</ol>");
     if depth == 1 {
       self.push_str(if block.has_title() { "</section>" } else { "</div>" });
@@ -645,45 +625,71 @@ impl Backend for Html5s {
     todo!()
   }
 
-  fn enter_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+  fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
+    self.state.desc_list_depth += 1;
+    let mut tag = OpenTag::new("div", &block.meta.attrs);
+    if depth == 1 {
+      tag.push_class("dlist");
+    }
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
+      self.state.ephemeral.insert(InGlossaryList);
+      tag.push_class("glossary");
+    }
+    if depth == 1 {
+      self.push_open_tag(tag);
+    }
+    self.render_buffered_block_title(block, false);
+    self.push_str("<dl");
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
+      self.push_str(r#" class="glossary""#);
+    }
+    self.push_ch('>');
   }
 
-  fn exit_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+  fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], depth: u8) {
+    self.state.ephemeral.remove(&InGlossaryList);
+    self.push_str("</dl>");
+    if depth == 1 {
+      self.push_str("</div>");
+    }
+    self.state.desc_list_depth -= 1;
   }
 
-  fn enter_description_list_term(&mut self, item: &ListItem) {
-    todo!()
+  fn enter_description_list_term(&mut self, _item: &ListItem) {
+    // if self.state.ephemeral.contains(&InGlossaryList) {
+    self.push_str(r#"<dt>"#);
+    // } else {
+    //   self.push_str(r#"<dt class="hdlist1">"#);
+    // }
   }
 
-  fn exit_description_list_term(&mut self, item: &ListItem) {
-    todo!()
+  fn exit_description_list_term(&mut self, _item: &ListItem) {
+    self.push_str("</dt>");
   }
 
-  fn enter_description_list_description(&mut self, item: &ListItem) {
-    todo!()
+  fn enter_description_list_description(&mut self, _item: &ListItem) {
+    self.state.ephemeral.insert(InDescListDesc);
+    self.push_str("<dd>");
   }
 
-  fn exit_description_list_description(&mut self, item: &ListItem) {
-    todo!()
+  fn exit_description_list_description(&mut self, _item: &ListItem) {
+    self.state.ephemeral.remove(&InDescListDesc);
+    self.push_str("</dd>");
   }
 
-  fn enter_description_list_description_text(&mut self, text: &Block, item: &ListItem) {
-    todo!()
+  fn enter_description_list_description_text(&mut self, _text: &Block, item: &ListItem) {
+    let first = item.blocks.first();
+    if first.is_none() || !matches!(first.unwrap().content, BlockContent::Simple { .. }) {
+      self.state.ephemeral.insert(VisitingSimpleTermDescription);
+    }
   }
 
-  fn exit_description_list_description_text(&mut self, text: &Block, item: &ListItem) {
-    todo!()
+  fn exit_description_list_description_text(&mut self, _text: &Block, _item: &ListItem) {
+    self.state.ephemeral.remove(&VisitingSimpleTermDescription);
   }
 
-  fn enter_description_list_description_block(&mut self, block: &Block, item: &ListItem) {
-    todo!()
-  }
-
-  fn exit_description_list_description_block(&mut self, block: &Block, item: &ListItem) {
-    todo!()
-  }
+  fn enter_description_list_description_block(&mut self, _block: &Block, _item: &ListItem) {}
+  fn exit_description_list_description_block(&mut self, _block: &Block, _item: &ListItem) {}
 
   fn enter_list_item_principal(&mut self, item: &ListItem, list_variant: ListVariant) {
     if let ListItemTypeMeta::Checklist(checked, _) = &item.type_meta {
@@ -1226,7 +1232,7 @@ impl Html5s {
 
   fn render_checklist_item(&mut self, item: &ListItem) {
     if let ListItemTypeMeta::Checklist(checked, _) = &item.type_meta {
-      match (self.interactive_list_stack.last() == Some(&true), checked) {
+      match (self.state.interactive_list_stack.last() == Some(&true), checked) {
         (false, true) => self.push_str(r#" class="task-list-item"><input class="task-list-item-checkbox" type="checkbox" disabled checked>"#),
         (false, false) => self.push_str("&#10063;"),
         (true, true) => self.push_str(r#"<input type="checkbox" data-item-complete="1" checked>"#),

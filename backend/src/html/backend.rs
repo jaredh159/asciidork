@@ -4,7 +4,10 @@ use std::collections::HashSet;
 use asciidork_core::{file, DocType, Path, SafeMode};
 use ast::{prelude::*, AttrValue, ReadAttr, SpecialSection};
 
-use crate::{html::HtmlBuf, utils, Backend};
+use crate::{
+  html::{HtmlBuf, OpenTag},
+  utils, Backend,
+};
 
 #[derive(Debug, Default)]
 pub struct BackendState {
@@ -13,6 +16,8 @@ pub struct BackendState {
   pub ephemeral: HashSet<EphemeralState>,
   pub appendix_caption_num: u8,
   pub book_part_num: usize,
+  pub desc_list_depth: u8,
+  pub interactive_list_stack: Vec<bool>,
 }
 
 pub trait HtmlBackend: Backend + HtmlBuf {
@@ -238,11 +243,80 @@ pub trait HtmlBackend: Backend + HtmlBuf {
       }
     }
   }
+
+  fn start_enter_ordered_list(&mut self, block: &Block, depth: u8) -> (&'static str, &'static str) {
+    let non_dd_depth = depth - self.state().desc_list_depth;
+    self.state_mut().interactive_list_stack.push(false);
+    let custom = block.meta.attrs.ordered_list_custom_number_style();
+    let list_type = custom
+      .and_then(super::list::type_from_class)
+      .unwrap_or_else(|| super::list::type_from_depth(non_dd_depth));
+    let class = custom.unwrap_or_else(|| super::list::class_from_depth(non_dd_depth));
+    return (class, list_type);
+  }
+
+  fn finish_enter_ordered_list(
+    &mut self,
+    class: &str,
+    list_type: &str,
+    block: &Block,
+    items: &[ListItem],
+  ) {
+    self.push([r#"<ol class=""#, class, "\""]);
+
+    if list_type != "1" {
+      self.push([" type=\"", list_type, "\""]);
+    }
+
+    if let Some(attr_start) = block.meta.attrs.named("start") {
+      self.push([" start=\"", attr_start, "\""]);
+    } else {
+      match items[0].marker {
+        ListMarker::Digits(1) => {}
+        ListMarker::Digits(n) => {
+          // TODO: asciidoctor documents that this is OK,
+          // but it doesn't actually work, and emits a warning
+          self.push([" start=\"", &crate::num_str!(n), "\""]);
+        }
+        _ => {}
+      }
+    }
+
+    if block.meta.attrs.has_option("reversed") {
+      self.push_str(" reversed>");
+    } else {
+      self.push_str(">");
+    }
+  }
+
+  fn start_enter_unordered_list(&mut self, wrap: &str, block: &Block) -> (OpenTag, OpenTag) {
+    let custom = block.meta.attrs.unordered_list_custom_marker_style();
+    let interactive = block.meta.attrs.has_option("interactive");
+    self.state_mut().interactive_list_stack.push(interactive);
+    let mut div = OpenTag::new(wrap, &block.meta.attrs);
+    let mut ul = OpenTag::new("ul", &NoAttrs);
+    div.push_class("ulist");
+    if self
+      .state()
+      .ephemeral
+      .contains(&EphemeralState::InBibliography)
+      || block.meta.attrs.special_sect() == Some(SpecialSection::Bibliography)
+    {
+      div.push_class("bibliography");
+      ul.push_class("bibliography");
+    }
+    if let Some(custom) = custom {
+      div.push_class(custom);
+      ul.push_class(custom);
+    }
+    (div, ul)
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EphemeralState {
   VisitingSimpleTermDescription,
+  InDescListDesc,
   IsSourceBlock,
   InBibliography,
   InGlossaryList,
