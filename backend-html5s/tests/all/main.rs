@@ -9,6 +9,7 @@ mod helpers;
 mod eval_adoc;
 mod eval_blocks;
 mod eval_books;
+mod eval_breaks;
 mod eval_desc_lists;
 mod eval_lists;
 mod eval_tables_adoc;

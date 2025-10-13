@@ -871,11 +871,11 @@ impl Backend for Html5s {
   fn exit_compound_block_content(&mut self, children: &[Block], block: &Block) {}
 
   fn visit_thematic_break(&mut self, block: &Block) {
-    todo!()
+    self.open_element("hr", &[], &block.meta.attrs);
   }
 
-  fn visit_page_break(&mut self, block: &Block) {
-    todo!()
+  fn visit_page_break(&mut self, _block: &Block) {
+    self.push_str(r#"<div role="doc-pagebreak" style="page-break-after: always;"></div>"#);
   }
 
   fn visit_inline_text(&mut self, text: &str) {
