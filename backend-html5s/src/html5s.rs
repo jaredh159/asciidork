@@ -21,6 +21,7 @@ pub struct Html5s {
   default_newlines: Newlines,
   xref_depth: u8,
   section_level_stack: Vec<u8>,
+  autogen_conum: u8,
   state: BackendState,
 }
 
@@ -446,30 +447,24 @@ impl Backend for Html5s {
       self.push_str("</code>");
     }
     self.push_str("</pre>");
+    // dbg!(&block);
     let close = if block.has_title() { "</figure>" } else { "</div>" };
     self.push_str(close);
     // self.newlines = self.default_newlines;
   }
 
   fn enter_literal_block(&mut self, block: &Block) {
-    let el = if self.state.ephemeral.contains(&InDescListDesc) {
-      "div"
-    } else {
-      "section"
-    };
+    let el = if block.has_title() { "section" } else { "div" };
     self.open_element(el, &["literal-block"], &block.meta.attrs);
     self.render_buffered_block_title(block, true);
     self.push_str(r#"<pre>"#);
     self.newlines = Newlines::Preserve;
   }
 
-  fn exit_literal_block(&mut self, _block: &Block) {
+  fn exit_literal_block(&mut self, block: &Block) {
     self.push_str("</pre>");
-    let el = if self.state.ephemeral.contains(&InDescListDesc) {
-      self.push_str("</div>");
-    } else {
-      self.push_str("</section>");
-    };
+    let end = if block.has_title() { "</section>" } else { "</div>" };
+    self.push_str(end);
     self.newlines = self.default_newlines;
   }
 
@@ -618,11 +613,20 @@ impl Backend for Html5s {
   }
 
   fn enter_callout_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+    self.autogen_conum = 1;
+    // remove the </div> added by exit listing block
+    self.html.truncate(self.html.len().saturating_sub(6));
+    self.open_element("ol", &["callout-list arabic"], &block.meta.attrs);
+    // self.push_str(if self.doc_meta.icon_mode() != IconMode::Text { "<table>" } else { "<ol>" });
   }
 
-  fn exit_callout_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {
-    todo!()
+  fn exit_callout_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
+    // self.push_str(if self.doc_meta.icon_mode() != IconMode::Text {
+    //   "</div>"
+    // } else {
+    // "</ol></div>"
+    // });
+    self.push_str("</ol></div>");
   }
 
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
@@ -695,9 +699,11 @@ impl Backend for Html5s {
     if let ListItemTypeMeta::Checklist(checked, _) = &item.type_meta {
       self.push_str(r#"<li class="task-list-item"><input class="task-list-item-checkbox" type="checkbox" disabled"#);
       self.push_str(if *checked { " checked>" } else { ">" });
-    } else if list_variant != ListVariant::Callout || self.doc_meta.icon_mode() == IconMode::Text {
-      self.push_str("<li>");
+    // } else if list_variant != ListVariant::Callout || self.doc_meta.icon_mode() == IconMode::Text {
+    //
     } else {
+      self.push_str("<li>");
+      // } else {
       //   self.push_str("<tr><td>");
       //   let n = item.marker.callout_num().unwrap_or(self.autogen_conum);
       //   self.autogen_conum = n + 1;
@@ -979,11 +985,25 @@ impl Backend for Html5s {
   }
 
   fn visit_callout(&mut self, callout: Callout) {
-    todo!()
+    if !self.html.ends_with(' ') {
+      self.push_ch(' ');
+    }
+    match self.doc_meta.icon_mode() {
+      IconMode::Image => self.push_callout_number_img(callout.number),
+      IconMode::Font => self.push_callout_number_font(callout.number),
+      // TODO: asciidoctor also handles special `guard` case
+      //   elsif ::Array === (guard = node.attributes['guard'])
+      //     %(&lt;!--<b class="conum">(#{node.text})</b>--&gt;)
+      // @see https://github.com/asciidoctor/asciidoctor/issues/3319
+      // IconMode::Text => self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]),
+      IconMode::Text => self.push([r##"<b class="conum">"##, &num_str!(callout.number), "</b>"]),
+    }
   }
 
   fn visit_callout_tuck(&mut self, comment: &str) {
-    todo!()
+    if self.doc_meta.icon_mode() != IconMode::Font {
+      self.push_str(comment);
+    }
   }
 
   fn enter_inline_italic(&mut self) {
@@ -1228,6 +1248,12 @@ impl Html5s {
     self.push_str(r#"<img src=""#);
     self.push_icon_uri(kind.lowercase_str(), None);
     self.push([r#"" alt=""#, kind.str(), r#"">"#]);
+  }
+
+  fn push_callout_number_font(&mut self, num: u8) {
+    let n_str = &num_str!(num);
+    // self.push([r#"<i class="conum" data-value=""#, n_str, r#""></i>"#]);
+    self.push([r#"<b class="conum">"#, n_str, "</b>"]);
   }
 
   fn render_checklist_item(&mut self, item: &ListItem) {
