@@ -351,18 +351,17 @@ impl Backend for Html5s {
         self.html.pop();
         self.push_str(" open>");
       }
-      self.push_str(r#"<summary class="title">"#);
       if block.has_title() {
+        self.push_str("<summary>");
         self.push_buffered();
-      } else {
-        self.push_str("Details");
+        self.push_str("</summary>");
       }
-      self.push_str("</summary>");
+      self.push_str(r#"<div class="content">"#);
     } else {
       self.open_element("div", &["example-block"], &block.meta.attrs);
       self.render_buffered_block_title(block, false);
+      self.push_str(r#"<div class="example">"#);
     }
-    self.push_str(r#"<div class="example">"#);
   }
 
   fn exit_example_block(&mut self, block: &Block) {
@@ -995,7 +994,6 @@ impl Backend for Html5s {
       //   elsif ::Array === (guard = node.attributes['guard'])
       //     %(&lt;!--<b class="conum">(#{node.text})</b>--&gt;)
       // @see https://github.com/asciidoctor/asciidoctor/issues/3319
-      // IconMode::Text => self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]),
       IconMode::Text => self.push([r##"<b class="conum">"##, &num_str!(callout.number), "</b>"]),
     }
   }
