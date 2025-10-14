@@ -13,6 +13,8 @@ mod eval_breaks;
 mod eval_callout_lists;
 mod eval_callouts;
 mod eval_collapsible;
+mod eval_comments;
+mod eval_delimited;
 mod eval_desc_lists;
 mod eval_lists;
 mod eval_source;

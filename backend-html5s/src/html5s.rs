@@ -358,7 +358,8 @@ impl Backend for Html5s {
       }
       self.push_str(r#"<div class="content">"#);
     } else {
-      self.open_element("div", &["example-block"], &block.meta.attrs);
+      let el = if block.has_title() { "figure" } else { "div" };
+      self.open_element(el, &["example-block"], &block.meta.attrs);
       self.render_buffered_block_title(block, false);
       self.push_str(r#"<div class="example">"#);
     }
@@ -367,6 +368,8 @@ impl Backend for Html5s {
   fn exit_example_block(&mut self, block: &Block) {
     if block.meta.attrs.has_option("collapsible") {
       self.push_str("</div></details>");
+    } else if block.has_title() {
+      self.push_str("</div></figure>");
     } else {
       self.push_str("</div></div>");
     }
@@ -1214,7 +1217,7 @@ impl Html5s {
     let (open, close) = match block.context {
       BlockContext::Table => ("<figcaption>", "</figcaption>"),
       BlockContext::Image => ("<figcaption>", "</figcaption>"),
-      BlockContext::Example => todo!(),
+      BlockContext::Example => ("<figcaption>", "</figcaption>"),
       BlockContext::Listing => ("<figcaption>", "</figcaption>"),
       _ => ("", ""),
     };
