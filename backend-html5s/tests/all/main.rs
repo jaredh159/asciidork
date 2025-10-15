@@ -16,6 +16,7 @@ mod eval_collapsible;
 mod eval_comments;
 mod eval_delimited;
 mod eval_desc_lists;
+mod eval_footnotes;
 mod eval_lists;
 mod eval_source;
 mod eval_tables_adoc;

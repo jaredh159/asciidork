@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use std::{cell::RefCell, rc::Rc};
+
 use std::collections::HashSet;
 use std::fmt::Write;
 
@@ -23,6 +25,10 @@ pub struct Html5s {
   section_level_stack: Vec<u8>,
   autogen_conum: u8,
   state: BackendState,
+  // maybe move me into html;w
+  #[allow(clippy::type_complexity)]
+  footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
+  in_asciidoc_table_cell: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -61,7 +67,11 @@ impl Backend for Html5s {
 
   fn exit_content(&mut self) {}
 
-  fn enter_footer(&mut self) {}
+  fn enter_footer(&mut self) {
+    if !self.footnotes.borrow().is_empty() && !self.in_asciidoc_table_cell {
+      self.render_footnotes();
+    }
+  }
 
   fn exit_footer(&mut self) {}
 
@@ -838,14 +848,14 @@ impl Backend for Html5s {
 
   fn asciidoc_table_cell_backend(&mut self) -> Self {
     Self {
-      // in_asciidoc_table_cell: true,
-      // footnotes: Rc::clone(&self.footnotes),
+      in_asciidoc_table_cell: true,
+      footnotes: Rc::clone(&self.footnotes),
       ..Self::default()
     }
   }
 
   fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self) {
-    // self.in_asciidoc_table_cell = false;
+    self.in_asciidoc_table_cell = false;
     self.html.push_str(&cell_backend.into_result().unwrap());
   }
 
@@ -1089,11 +1099,60 @@ impl Backend for Html5s {
   }
 
   fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    todo!()
+    if has_content {
+      self.start_buffering();
+      return;
+    }
+    let prev_ref_num = self
+      .footnotes
+      .borrow()
+      .iter()
+      .enumerate()
+      .filter(|(_, (prev, _))| {
+        prev.is_some() && prev.as_ref().map(|s| s.as_str()) == id.map(|s| &**s)
+      })
+      .map(|(i, _)| (i + 1).to_string())
+      .next();
+    if let Some(prev_ref_num) = prev_ref_num {
+      self.push([
+        r##"<a class="footnote-ref" href="#_footnote_"##,
+        &prev_ref_num,
+        r#"" title="View footnote "#,
+        &prev_ref_num,
+        r#"" role="doc-noteref">["#,
+        &prev_ref_num,
+        r#"]</a>"#,
+      ]);
+    } else {
+      // TODO: maybe warn?
+    }
   }
 
   fn exit_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    todo!()
+    if !has_content {
+      return; // this means the footnore was referring to a previously defined fn by id
+    }
+    let num = self.footnotes.borrow().len() + 1;
+    let footnote = self.swap_take_buffer();
+    let nums = num.to_string();
+    self.push_str(r#"<a class="footnote-ref" id="_footnoteref_"#);
+    // if let Some(id) = id {
+    //   self.push_str(id);
+    // } else {
+    //   self.push_str(&nums);
+    // }
+    // self.push_str(if let Some(id) = id { id } else { &nums });
+    self.push([&nums, r##"" href="#_footnote_"##, &nums]);
+    self.push([
+      r#"" title="View footnote "#,
+      &nums,
+      r#"" role="doc-noteref">"#,
+    ]);
+    self
+      .footnotes
+      .borrow_mut()
+      .push((id.map(|id| id.to_string()), footnote));
+    self.push(["[", &nums, "]</a>"]);
   }
 
   fn enter_text_span(&mut self, attrs: &AttrList) {
@@ -1266,6 +1325,26 @@ impl Html5s {
         (true, false) => self.push_str(r#"<input type="checkbox" data-item-complete="0">"#),
       }
     }
+  }
+
+  fn render_footnotes(&mut self) {
+    self.push_str(r#"<section class="footnotes" aria-label="Footnotes" role="doc-endnotes">"#);
+    self.push_str(r#"<hr><ol class="footnotes">"#);
+    let footnotes = mem::take(&mut self.footnotes);
+    for (i, (_, footnote)) in footnotes.borrow().iter().enumerate() {
+      let num = (i + 1).to_string();
+      self.push_str(r#"<li class="footnote" id="_footnote_"#);
+      self.push([
+        &num,
+        r##"" role="doc-endnote">"##,
+        footnote,
+        r##" <a class="footnote-backref" href="#_footnoteref_"##,
+        &num,
+        r#"" role="doc-backlink" title="Jump to the first occurrence in the text">&#8617;</a></li>"#,
+      ]);
+    }
+    self.push_str(r#"</ol></section>"#);
+    self.footnotes = footnotes;
   }
 }
 
