@@ -484,11 +484,19 @@ impl Backend for Html5s {
   fn exit_passthrough_block(&mut self, block: &Block) {}
 
   fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
-    let el = if block.has_title() { "figure" } else { "div" };
+    let el = if block.has_title() || img_attrs.named("title").is_some() {
+      "figure"
+    } else {
+      "div"
+    };
     let mut open_tag = OpenTag::new(el, &block.meta.attrs);
     open_tag.push_class("image-block");
-    open_tag.push_opt_class(img_attrs.named("float"));
-    open_tag.push_opt_prefixed_class(img_attrs.named("align"), Some("text-"));
+    if let Some(align) = img_attrs.named("align") {
+      open_tag.push_style(&format!("text-align: {align}"));
+    }
+    if let Some(float) = img_attrs.named("float") {
+      open_tag.push_style(&format!("float: {float}"));
+    }
     self.push_open_tag(open_tag);
 
     let mut has_link = false;
@@ -498,7 +506,23 @@ impl Backend for Html5s {
       .named("link")
       .or_else(|| img_attrs.named("link"))
     {
-      self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
+      self.push_str(r#"<a class="image"#);
+      let self_link = if *href == &img_target.src {
+        self.push_str(" bare");
+        true
+      } else {
+        false
+      };
+      self.push([r#"" href=""#, *href, r#"""#]);
+      if self_link {
+        let label = self.doc_meta.string_or(
+          "html5s-image-self-link-label",
+          "Open the image in full size",
+        );
+        self.push([r#" title=""#, &label, r#"" aria-label=""#, &label, r#"">"#]);
+      } else {
+        self.push_ch('>');
+      }
       has_link = true;
     }
     self.render_image(img_target, img_attrs, true);
@@ -514,8 +538,11 @@ impl Backend for Html5s {
       let title = self.take_buffer();
       self.render_block_title(&title, block, false);
     }
-    let el = if block.has_title() { "</figure>" } else { "</div>" };
-    self.push_str(el);
+    let el = if block.has_title() || img_attrs.named("title").is_some() {
+      self.push_str("</figure>");
+    } else {
+      self.push_str("</div>");
+    };
   }
 
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
@@ -989,7 +1016,60 @@ impl Backend for Html5s {
   }
 
   fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList) {
-    todo!()
+    let with_link = if let Some(link_href) = attrs.named("link") {
+      let mut a_tag = OpenTag::new("a", &NoAttrs);
+      a_tag.push_class("image");
+      a_tag.push_str("\" href=\"");
+      if link_href == "self" {
+        assert!(self.alt_html.is_empty());
+        self.swap_buffers();
+        self.push_img_path(target);
+        a_tag.push_str(&self.swap_take_buffer());
+      } else {
+        a_tag.push_str_attr_escaped(link_href);
+      }
+      a_tag.push_ch('"');
+      a_tag.opened_classes = false;
+      a_tag.push_link_attrs(attrs, true, false);
+      self.push_open_tag(a_tag);
+      true
+    } else {
+      false
+    };
+
+    self.render_image(target, attrs, false);
+    let mut style = String::new();
+    if let Some(align) = attrs.named("align") {
+      style.push_str("text-align: ");
+      style.push_str(align);
+      if attrs.named("float").is_some() {
+        style.push_str("; ");
+      } else {
+        style.push(';');
+      }
+    }
+    if let Some(float) = attrs.named("float") {
+      style.push_str("float: ");
+      style.push_str(float);
+      style.push(';');
+    }
+    if !style.is_empty() {
+      self.html.pop();
+      self.push([" style=\"", &style, "\">"]);
+    }
+    if !attrs.roles.is_empty() {
+      self.html.pop();
+      self.push_str(" class=\"");
+      for role in attrs.roles.iter() {
+        self.push_str(&role.src);
+        self.push_ch(' ');
+      }
+      self.html.pop();
+      self.push_str("\">");
+    }
+    if with_link {
+      self.push_str("</a>");
+    }
   }
 
   fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList) {

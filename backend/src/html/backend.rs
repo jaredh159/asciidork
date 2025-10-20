@@ -6,7 +6,7 @@ use ast::{prelude::*, AttrValue, ReadAttr, SpecialSection};
 
 use crate::{
   html::{HtmlBuf, OpenTag},
-  num_str, utils, Backend,
+  utils, Backend,
 };
 
 #[derive(Debug, Default)]
@@ -317,12 +317,6 @@ pub trait HtmlBackend: Backend + HtmlBuf {
     self.push_str(r#"<img src=""#);
     self.push_icon_uri(n_str, Some("callouts/"));
     self.push([r#"" alt=""#, n_str, r#"">"#]);
-  }
-
-  fn push_callout_number_font(&mut self, num: u8) {
-    let n_str = &num_str!(num);
-    self.push([r#"<i class="conum" data-value=""#, n_str, r#""></i>"#]);
-    self.push([r#"<b>("#, n_str, ")</b>"]);
   }
 }
 

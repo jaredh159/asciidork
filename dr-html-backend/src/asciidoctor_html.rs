@@ -1466,6 +1466,8 @@ impl Backend for AsciidoctorHtml {
       .borrow_mut()
       .push((id.map(|id| id.to_string()), footnote));
   }
+
+  // cani move this to html backend?
   fn doc_meta(&self) -> &DocumentMeta {
     &self.doc_meta
   }
@@ -1742,6 +1744,12 @@ impl AsciidoctorHtml {
       self.push_named_attr("title", attrs);
     }
     self.push_ch('>');
+  }
+
+  fn push_callout_number_font(&mut self, num: u8) {
+    let n_str = &num_str!(num);
+    self.push([r#"<i class="conum" data-value=""#, n_str, r#""></i>"#]);
+    self.push([r#"<b>("#, n_str, ")</b>"]);
   }
 }
 
