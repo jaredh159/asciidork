@@ -23,6 +23,7 @@ mod eval_links;
 mod eval_lists;
 mod eval_macros;
 mod eval_markdown;
+mod eval_sections;
 mod eval_source;
 mod eval_tables_adoc;
 mod eval_tables_csv;

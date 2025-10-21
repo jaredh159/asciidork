@@ -574,23 +574,12 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block) {
-    let level_str = num_str!(level + 1);
-    if let Some(id) = id {
-      self.push(["<h", &level_str, r#" id=""#, id, "\""]);
-    } else {
-      self.push(["<h", &level_str]);
-    }
-    self.push_str(r#" class="discrete"#);
-    for role in block.meta.attrs.roles() {
-      self.push_ch(' ');
-      self.push_str(role);
-    }
-    self.push_str("\">");
+    self.push_enter_discrete_heading(level, id, block);
   }
 
   #[instrument(skip_all)]
   fn exit_discrete_heading(&mut self, level: u8, _id: Option<&str>, _block: &Block) {
-    self.push(["</h", &num_str!(level + 1), ">"]);
+    self.push_exit_discrete_heading(level);
   }
 
   #[instrument(skip_all)]

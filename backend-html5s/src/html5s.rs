@@ -604,11 +604,11 @@ impl Backend for Html5s {
   }
 
   fn enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block) {
-    todo!()
+    self.push_enter_discrete_heading(level, id, block);
   }
 
-  fn exit_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block) {
-    todo!()
+  fn exit_discrete_heading(&mut self, level: u8, _id: Option<&str>, _block: &Block) {
+    self.push_exit_discrete_heading(level);
   }
 
   fn enter_unordered_list(&mut self, block: &Block, items: &[ListItem], depth: u8) {

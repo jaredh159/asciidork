@@ -318,6 +318,25 @@ pub trait HtmlBackend: Backend + HtmlBuf {
     self.push_icon_uri(n_str, Some("callouts/"));
     self.push([r#"" alt=""#, n_str, r#"">"#]);
   }
+
+  fn push_enter_discrete_heading(&mut self, level: u8, id: Option<&str>, block: &Block) {
+    let level_str = crate::num_str!(level + 1);
+    if let Some(id) = id {
+      self.push(["<h", &level_str, r#" id=""#, id, "\""]);
+    } else {
+      self.push(["<h", &level_str]);
+    }
+    self.push_str(r#" class="discrete"#);
+    for role in block.meta.attrs.roles() {
+      self.push_ch(' ');
+      self.push_str(role);
+    }
+    self.push_str("\">");
+  }
+
+  fn push_exit_discrete_heading(&mut self, level: u8) {
+    self.push(["</h", &crate::num_str!(level + 1), ">"]);
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
