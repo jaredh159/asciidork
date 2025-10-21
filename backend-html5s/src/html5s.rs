@@ -1072,8 +1072,90 @@ impl Backend for Html5s {
     }
   }
 
+  fn visit_keyboard_macro(&mut self, keys: &[&str]) {
+    if keys.len() > 1 {
+      self.push_str(r#"<kbd class="keyseq">"#);
+    }
+    for (idx, key) in keys.iter().enumerate() {
+      if idx > 0 {
+        self.push_ch('+');
+      }
+      self.push(["<kbd class=\"key\">", key, "</kbd>"]);
+    }
+    if keys.len() > 1 {
+      self.push_str("</kbd>");
+    }
+  }
+
   fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList) {
-    todo!()
+    let has_link = if let Some(link) = attrs.named("link") {
+      self.push_str(r#"<a class="image""#);
+      self.push_html_attr("href", link);
+      if let Some(window) = attrs.named("window") {
+        self.push_html_attr("target", window);
+      }
+      self.push_str(">");
+      true
+    } else {
+      false
+    };
+    match dbg!(self.doc_meta.icon_mode()) {
+      IconMode::Text => {
+        self.push_str(r#"<b class="icon"#); // b not span
+        attrs.roles.iter().for_each(|role| {
+          self.push_str(" ");
+          self.push_str(role);
+        });
+        if let Some(title) = attrs.named("title") {
+          self.push([r#"" title=""#, title]);
+        }
+        self.push_str(r#"">["#);
+        self.push_str(attrs.named("alt").unwrap_or(target));
+        self.push_str("]</b>");
+      }
+      IconMode::Image => {
+        self.push_str(r#"<img src=""#);
+        self.push_icon_uri(target, None);
+        self.push_str(r#"" alt=""#);
+        self.push_str(attrs.named("alt").unwrap_or(target));
+        if let Some(width) = attrs.named("width") {
+          self.push([r#"" width=""#, width]);
+        }
+        if let Some(title) = attrs.named("title") {
+          self.push([r#"" title=""#, title]);
+        }
+        self.push_str(r#"" class="icon"#);
+        attrs.roles.iter().for_each(|role| {
+          self.push_str(" ");
+          self.push_str(role);
+        });
+        self.push_str(r#"">"#);
+      }
+      IconMode::Font => {
+        self.push_str(r#"<i class="fa fa-"#);
+        self.push_str(target);
+        if let Some(size) = attrs.named("size").or(attrs.str_positional_at(0)) {
+          self.push([r#" fa-"#, size]);
+        }
+        if let Some(flip) = attrs.named("flip") {
+          self.push([r#" fa-flip-"#, flip]);
+        }
+        if let Some(rotate) = attrs.named("rotate") {
+          self.push([r#" fa-rotate-"#, rotate]);
+        }
+        attrs.roles.iter().for_each(|role| {
+          self.push_str(" ");
+          self.push_str(role);
+        });
+        if let Some(title) = attrs.named("title") {
+          self.push([r#"" title=""#, title]);
+        }
+        self.push_str(r#""></i>"#);
+      }
+    }
+    if has_link {
+      self.push_str("</a>");
+    }
   }
 
   fn visit_callout(&mut self, callout: Callout) {
