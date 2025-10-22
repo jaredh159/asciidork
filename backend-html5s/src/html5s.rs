@@ -285,44 +285,44 @@ impl Backend for Html5s {
       return;
     }
     if block.has_title() {
-      self.push_str(r#"<section class="paragraph">"#);
+      if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+        self.push_str(r#"<section class="quote-block abstract">"#);
+      } else {
+        self.push_str(r#"<section class="paragraph">"#);
+      }
       self.render_buffered_block_title(block, true);
     }
-    // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
-    //   self.push_str("<blockquote>");
-    // } else {
-    // self.push_str("<p>");
-    // dbg!(&self.state.ephemeral);
     if !self
       .state
       .ephemeral
       .contains(&VisitingSimpleTermDescription)
     {
-      self.open_element("p", &[], &block.meta.attrs);
-    } else {
-      eprintln!("foo bar");
+      if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+        self.push_str("<blockquote>");
+      } else {
+        self.open_element("p", &[], &block.meta.attrs);
+      }
     }
-    // }
   }
 
   fn exit_paragraph_block(&mut self, block: &Block) {
     if self.doc_meta.get_doctype() == DocType::Inline {
       return;
     }
-    // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
-    //   self.push_str("</blockquote>\n");
-    // } else {
     if !self
       .state
       .ephemeral
       .contains(&VisitingSimpleTermDescription)
     {
-      self.push_str("</p>");
+      if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+        self.push_str("</blockquote>");
+      } else {
+        self.push_str("</p>");
+      }
     }
     if block.has_title() {
       self.push_str(r#"</section>"#);
     }
-    // }
   }
 
   fn enter_sidebar_block(&mut self, block: &Block) {
@@ -335,23 +335,23 @@ impl Backend for Html5s {
   }
 
   fn enter_open_block(&mut self, block: &Block) {
-    // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
-    //   self.open_element("div", &["quoteblock abstract"], &block.meta.attrs);
-    //   self.render_buffered_block_title(block, true);
-    //   self.push_str(r#"<blockquote>"#);
-    // } else {
-    self.open_element("div", &["open-block"], &block.meta.attrs);
-    self.render_buffered_block_title(block, true);
-    self.push_str(r#"<div class="content">"#);
-    // }
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.open_element("section", &["quote-block abstract"], &block.meta.attrs);
+      self.render_buffered_block_title(block, true);
+      self.push_str(r#"<blockquote>"#);
+    } else {
+      self.open_element("div", &["open-block"], &block.meta.attrs);
+      self.render_buffered_block_title(block, true);
+      self.push_str(r#"<div class="content">"#);
+    }
   }
 
   fn exit_open_block(&mut self, block: &Block) {
-    // if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
-    //   self.push_str("</blockquote></div>");
-    // } else {
-    self.push_str("</div></div>");
-    // }
+    if block.meta.attrs.special_sect() == Some(SpecialSection::Abstract) {
+      self.push_str("</blockquote></section>");
+    } else {
+      self.push_str("</div></div>");
+    }
   }
 
   fn enter_example_block(&mut self, block: &Block) {
