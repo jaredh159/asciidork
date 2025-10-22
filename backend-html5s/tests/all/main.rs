@@ -32,3 +32,4 @@ mod eval_tables_dsv;
 mod eval_tables_psv;
 mod eval_toc;
 mod eval_verses;
+mod eval_xrefs;
