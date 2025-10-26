@@ -28,5 +28,4 @@ mod internal {
   pub use backend::html::{AltHtmlBuf, HtmlBuf, OpenTag};
   pub use backend::prelude::*;
   pub use backend::utils;
-  pub use eval::helpers;
 }

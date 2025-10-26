@@ -18,6 +18,7 @@ pub struct BackendState {
   pub book_part_num: usize,
   pub desc_list_depth: u8,
   pub interactive_list_stack: Vec<bool>,
+  pub in_asciidoc_table_cell: bool,
 }
 
 pub trait HtmlBackend: Backend + HtmlBuf {
@@ -336,6 +337,63 @@ pub trait HtmlBackend: Backend + HtmlBuf {
 
   fn push_exit_discrete_heading(&mut self, level: u8) {
     self.push(["</h", &crate::num_str!(level + 1), ">"]);
+  }
+
+  fn standalone(&self) -> bool {
+    self.doc_meta().get_doctype() != DocType::Inline
+      && !self.state().in_asciidoc_table_cell
+      && !self.doc_meta().embedded
+  }
+
+  fn render_title(&mut self, document: &Document, attrs: &DocumentMeta) {
+    self.push_str(r#"<title>"#);
+    if let Some(title) = attrs.str("title") {
+      self.push_str(title);
+    } else if let Some(title) = document.title() {
+      for s in title.main.plain_text() {
+        self.push_str(s);
+      }
+    } else {
+      self.push_str("Untitled");
+    }
+    self.push_str(r#"</title>"#);
+  }
+
+  fn render_embedded_stylesheet(&mut self, default_css: &str) {
+    if self.doc_meta().str("stylesheet") == Some("") {
+      self.push(["<style>", default_css, "</style>"]);
+    } else if let Some(css) = self.doc_meta().string("_asciidork_resolved_custom_css") {
+      self.push(["<style>", &css, "</style>"]);
+    }
+  }
+
+  fn render_meta_authors(&mut self, authors: &[asciidork_core::Author]) {
+    if authors.is_empty() {
+      return;
+    }
+    self.push_str(r#"<meta name="author" content=""#);
+    for (index, author) in authors.iter().enumerate() {
+      if index > 0 {
+        self.push_str(", ");
+      }
+      // TODO: escape/sanitize, w/ tests, see asciidoctor
+      self.push_str(&author.fullname());
+    }
+    self.push_str(r#"">"#);
+  }
+
+  fn render_favicon(&mut self, meta: &DocumentMeta) {
+    match meta.get("favicon") {
+      Some(AttrValue::String(path)) => {
+        let ext = crate::utils::file_ext(path).unwrap_or("ico");
+        self.push_str(r#"<link rel="icon" type="image/"#);
+        self.push([ext, r#"" href=""#, path, "\">"]);
+      }
+      Some(AttrValue::Bool(true)) => {
+        self.push_str(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#);
+      }
+      _ => {}
+    }
   }
 }
 

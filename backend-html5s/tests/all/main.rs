@@ -26,6 +26,7 @@ mod eval_markdown;
 mod eval_sections;
 mod eval_source;
 mod eval_special_sects;
+mod eval_standalone;
 mod eval_tables_adoc;
 mod eval_tables_csv;
 mod eval_tables_dsv;

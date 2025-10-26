@@ -126,6 +126,7 @@ macro_rules! test_non_embedded_contains {
       let actual = ::asciidork_eval::eval(
         &document,
         crate::helpers::test_backend_factory()).unwrap();
+      dbg!(&actual);
       for needle in &$needles {
         ::test_utils::assert_html_contains!(actual, needle.to_string(), from: $input);
       }
@@ -178,4 +179,3 @@ pub mod source {
     ))
   }
 }
-

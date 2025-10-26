@@ -1,3 +1,4 @@
+use std::path::Path;
 pub mod xref {
   use ast::{DocumentMeta, ReadAttr, XrefKind};
   use core::file;
@@ -101,6 +102,10 @@ pub mod xref {
   pub fn get_id(target: &str) -> &str {
     target.split_once('#').map(|x| x.1).unwrap_or(target)
   }
+}
+
+pub fn file_ext(path: &str) -> Option<&str> {
+  Path::new(path).extension().and_then(|s| s.to_str())
 }
 
 pub fn set_backend_attrs<B: crate::Backend>(doc_meta: &mut ast::DocumentMeta) {

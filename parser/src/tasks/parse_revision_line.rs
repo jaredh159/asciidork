@@ -11,7 +11,7 @@ impl Parser<'_> {
     }
 
     // https://regexr.com/7mbsk
-    let pattern = r"^([^\s,:]+)(?:,\s*([^\s:]+))?(?::\s*(.+))?$";
+    let pattern = r"^([^\s,:]+)(?:,\s*([^:]+?))?(?::\s*(.+))?$";
     let re = Regex::new(pattern).unwrap();
     let src = line.reassemble_src();
     let captures = re.captures(&src)?;
@@ -113,6 +113,12 @@ mod tests {
         Some("A new analysis"),
       ),
       ("v7.5 1-29-2020 A new analysis", None, None, None),
+      (
+        "2.9, October 31, 2021: Fall incarnation",
+        Some("2.9"),
+        Some("October 31, 2021"),
+        Some("Fall incarnation"),
+      ),
     ];
 
     for (input, rev, date, remark) in cases {

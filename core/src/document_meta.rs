@@ -4,7 +4,7 @@ use crate::internal::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DocumentMeta {
-  authors: Vec<Author>,
+  pub authors: Vec<Author>,
   doctype: DocType,
   job_attrs: JobAttrs,
   doc_attrs: Attrs,

@@ -20,7 +20,6 @@ pub struct AsciidoctorHtml {
   newlines: Newlines,
   autogen_conum: u8,
   xref_depth: u8,
-  in_asciidoc_table_cell: bool,
   fig_caption_num: usize,
   table_caption_num: usize,
   example_caption_num: usize,
@@ -79,7 +78,7 @@ impl Backend for AsciidoctorHtml {
       self.push([r#"<meta name="copyright" content=""#, copyright, "\">"]);
     }
     self.render_favicon(&document.meta);
-    self.render_authors(document.meta.authors());
+    self.render_meta_authors(document.meta.authors());
     self.render_title(document, &document.meta);
     self.render_styles(&document.meta);
 
@@ -133,7 +132,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_footer(&mut self) {
-    if !self.footnotes.borrow().is_empty() && !self.in_asciidoc_table_cell {
+    if !self.footnotes.borrow().is_empty() && !self.state.in_asciidoc_table_cell {
       self.render_footnotes();
     }
     if !self.doc_meta.embedded && !self.doc_meta.is_true("nofooter") {
@@ -784,17 +783,19 @@ impl Backend for AsciidoctorHtml {
     self.push_str("</table>");
   }
 
+  #[instrument(skip_all)]
   fn asciidoc_table_cell_backend(&mut self) -> Self {
-    Self {
-      in_asciidoc_table_cell: true,
+    let mut backend = Self {
       footnotes: Rc::clone(&self.footnotes),
       ..Self::default()
-    }
+    };
+    backend.state.in_asciidoc_table_cell = true;
+    backend
   }
 
   #[instrument(skip_all)]
   fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self) {
-    self.in_asciidoc_table_cell = false;
+    self.state.in_asciidoc_table_cell = false;
     self.html.push_str(&cell_backend.into_result().unwrap());
   }
 
@@ -1579,49 +1580,6 @@ impl AsciidoctorHtml {
     self.footnotes = footnotes;
   }
 
-  fn render_favicon(&mut self, meta: &DocumentMeta) {
-    match meta.get("favicon") {
-      Some(AttrValue::String(path)) => {
-        let ext = helpers::file_ext(path).unwrap_or("ico");
-        self.push_str(r#"<link rel="icon" type="image/"#);
-        self.push([ext, r#"" href=""#, path, "\">"]);
-      }
-      Some(AttrValue::Bool(true)) => {
-        self.push_str(r#"<link rel="icon" type="image/x-icon" href="favicon.ico">"#);
-      }
-      _ => {}
-    }
-  }
-
-  fn render_authors(&mut self, authors: &[Author]) {
-    if authors.is_empty() {
-      return;
-    }
-    self.push_str(r#"<meta name="author" content=""#);
-    for (index, author) in authors.iter().enumerate() {
-      if index > 0 {
-        self.push_str(", ");
-      }
-      // TODO: escape/sanitize, w/ tests, see asciidoctor
-      self.push_str(&author.fullname());
-    }
-    self.push_str(r#"">"#);
-  }
-
-  fn render_title(&mut self, document: &Document, attrs: &DocumentMeta) {
-    self.push_str(r#"<title>"#);
-    if let Some(title) = attrs.str("title") {
-      self.push_str(title);
-    } else if let Some(title) = document.title() {
-      for s in title.main.plain_text() {
-        self.push_str(s);
-      }
-    } else {
-      self.push_str("Untitled");
-    }
-    self.push_str(r#"</title>"#);
-  }
-
   fn render_styles(&mut self, meta: &DocumentMeta) {
     if meta.str("stylesheet") == Some("") {
       let family = match meta.str("webfonts") {
@@ -1635,11 +1593,7 @@ impl AsciidoctorHtml {
       ]);
     }
 
-    if meta.str("stylesheet") == Some("") {
-      self.push(["<style>", crate::css::DEFAULT, "</style>"]);
-    } else if let Some(css) = meta.string("_asciidork_asciidoctor_resolved_css") {
-      self.push(["<style>", &css, "</style>"]);
-    }
+    self.render_embedded_stylesheet(crate::css::DEFAULT);
   }
 
   fn render_checklist_item(&mut self, item: &ListItem) {
@@ -1690,12 +1644,6 @@ impl AsciidoctorHtml {
       }
     }
     self.push([&buffer, "</div>"]);
-  }
-
-  fn standalone(&self) -> bool {
-    self.doc_meta.get_doctype() != DocType::Inline
-      && !self.in_asciidoc_table_cell
-      && !self.doc_meta.embedded
   }
 
   fn render_division_start(&mut self, id: &str) {

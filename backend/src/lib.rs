@@ -4,6 +4,7 @@ extern crate asciidork_core as core;
 mod admonition;
 mod backend;
 pub mod html;
+pub mod time;
 pub mod utils;
 
 // TODO: maybe move this into ast?

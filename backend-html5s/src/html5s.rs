@@ -28,7 +28,6 @@ pub struct Html5s {
   // maybe move me into html;w
   #[allow(clippy::type_complexity)]
   footnotes: Rc<RefCell<Vec<(Option<String>, String)>>>,
-  in_asciidoc_table_cell: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -55,25 +54,115 @@ impl Backend for Html5s {
     self.doc_meta = document.meta.clone();
     utils::set_backend_attrs::<Self>(&mut self.doc_meta);
     self.state.section_num_levels = document.meta.isize("sectnumlevels").unwrap_or(3);
+
+    if !self.standalone() {
+      return;
+    }
+    // TODO: dupy
+    self.push_str(r#"<!DOCTYPE html><html"#);
+    if !document.meta.is_true("nolang") {
+      self.push([r#" lang=""#, document.meta.str_or("lang", "en"), "\""]);
+    }
+    let encoding = document.meta.str_or("encoding", "UTF-8");
+    self.push([r#"><head><meta charset=""#, encoding, r#"">"#]);
+    self.push_str(r#"<meta http-equiv="X-UA-Compatible" content="IE=edge">"#);
+    self.push_str(r#"<meta name="viewport" content="width=device-width, initial-scale=1.0">"#);
+    if !document.meta.is_true("reproducible") {
+      self.push_str(r#"<meta name="generator" content="Asciidork">"#);
+    }
+    if let Some(appname) = document.meta.str("app-name") {
+      self.push([r#"<meta name="application-name" content=""#, appname, "\">"]);
+    }
+    if let Some(desc) = document.meta.str("description") {
+      self.push([r#"<meta name="description" content=""#, desc, "\">"]);
+    }
+    if let Some(keywords) = document.meta.str("keywords") {
+      self.push([r#"<meta name="keywords" content=""#, keywords, "\">"]);
+    }
+    if let Some(copyright) = document.meta.str("copyright") {
+      self.push([r#"<meta name="copyright" content=""#, copyright, "\">"]);
+    }
+    self.render_favicon(&document.meta);
+    self.render_meta_authors(document.meta.authors());
+    self.render_title(document, &document.meta);
+    self.render_embedded_stylesheet(crate::css::DEFAULT);
+    //
+    self.push_str("</head><body");
+    if let Some(custom_id) = document.meta.str("css-signature") {
+      self.push([r#" id=""#, custom_id, "\""]);
+    }
+    self.push([r#" class=""#, document.meta.get_doctype().to_str()]);
+    match document.toc.as_ref().map(|toc| &toc.position) {
+      Some(TocPosition::Left) => self.push_str(" toc2 toc-left"),
+      Some(TocPosition::Right) => self.push_str(" toc2 toc-right"),
+      _ => {}
+    }
+    if let Some(max_width) = self.doc_meta.string("max-width") {
+      self.push([r#"" style="max-width: "#, &max_width, r#";"#]);
+    }
+    self.push_str("\">");
   }
 
-  fn exit_document(&mut self, document: &Document) {}
-
-  fn enter_header(&mut self) {}
-
-  fn exit_header(&mut self) {}
-
-  fn enter_content(&mut self) {}
-
-  fn exit_content(&mut self) {}
-
-  fn enter_footer(&mut self) {
-    if !self.footnotes.borrow().is_empty() && !self.in_asciidoc_table_cell {
-      self.render_footnotes();
+  fn exit_document(&mut self, document: &Document) {
+    if self.standalone() {
+      self.push_str("</body></html>");
     }
   }
 
-  fn exit_footer(&mut self) {}
+  fn enter_header(&mut self) {
+    if !self.doc_meta.embedded && !self.doc_meta.is_true("noheader") {
+      self.push_str("<header>");
+    }
+  }
+
+  fn exit_header(&mut self) {
+    if self.doc_meta.embedded || self.doc_meta.is_true("noheader") {
+      return;
+    }
+    if !self.doc_meta.authors().is_empty()
+      || self.doc_meta.get("revnumber").is_some()
+      || self.doc_meta.get("revdate").is_some()
+      || self.doc_meta.get("revremark").is_some()
+    {
+      self.render_header_details();
+    }
+    self.push_str("</header>");
+  }
+
+  fn enter_content(&mut self) {
+    if !self.doc_meta.embedded {
+      self.push_str(r#"<div id="content">"#)
+    }
+  }
+
+  fn exit_content(&mut self) {
+    if !self.doc_meta.embedded {
+      self.push_str("</div>")
+    }
+  }
+
+  fn enter_footer(&mut self) {
+    if !self.footnotes.borrow().is_empty() && !self.state.in_asciidoc_table_cell {
+      self.render_footnotes();
+    }
+    if self.doc_meta.embedded || self.doc_meta.is_true("nofooter") {
+      return;
+    }
+    self.push_str("<footer><div id=\"footer-text\">");
+    if let Some(revnumber) = self.doc_meta.string("revnumber") {
+      let label = self.doc_meta.string_or("version-label", "");
+      self.push([&label, " ", &revnumber]);
+    }
+    // TODO: last-update-label
+    // TODO: docinfo
+    self.push_str("</div>");
+  }
+
+  fn exit_footer(&mut self) {
+    if !self.doc_meta.embedded && !self.doc_meta.is_true("nofooter") {
+      self.push_str("</footer>");
+    }
+  }
 
   fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
     let id = &macro_block
@@ -873,16 +962,19 @@ impl Backend for Html5s {
     }
   }
 
+  // TODO: exact dupe
   fn asciidoc_table_cell_backend(&mut self) -> Self {
-    Self {
-      in_asciidoc_table_cell: true,
+    let mut backend = Self {
       footnotes: Rc::clone(&self.footnotes),
       ..Self::default()
-    }
+    };
+    backend.state.in_asciidoc_table_cell = true;
+    backend
   }
 
+  // TODO: exact dupe
   fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self) {
-    self.in_asciidoc_table_cell = false;
+    self.state.in_asciidoc_table_cell = false;
     self.html.push_str(&cell_backend.into_result().unwrap());
   }
 
@@ -1507,6 +1599,68 @@ impl Html5s {
     }
     self.push_str(r#"</ol></section>"#);
     self.footnotes = footnotes;
+  }
+
+  fn render_author_detail(&mut self, author: &Author, index: usize) {
+    self.push_str(r#"<span class="author" id="author"#);
+    if index > 0 {
+      self.push_str(&(index + 1).to_string());
+    }
+    self.push_str("\">");
+    self.push_str(&author.fullname());
+    self.push_str("</span><br>");
+    if let Some(email) = &author.email {
+      self.push_str(r#"<span class="email" id="email"#);
+      if index > 0 {
+        self.push_str(&(index + 1).to_string());
+      }
+      self.push(["\"><a href=\"mailto:", email, "\">", email, "</a></span>"]);
+      if index == 0 {
+        self.push_str("<br>");
+      }
+    }
+  }
+
+  fn render_header_details(&mut self) {
+    self.push_str("<div class=\"details\">");
+    if !self.doc_meta.authors().is_empty() {
+      let authors = std::mem::take(&mut self.doc_meta.authors);
+      for (index, author) in authors.iter().enumerate() {
+        self.render_author_detail(author, index);
+      }
+      self.doc_meta.authors = authors;
+    }
+
+    if let Some(revnumber) = self.doc_meta.string("revnumber") {
+      let label = self.doc_meta.string_or("version-label", "").to_lowercase();
+      self.push([r#"<span id="revnumber">"#, &label, " ", &revnumber]);
+      if self.doc_meta.get("revdate").is_some() {
+        self.push_str(",</span> ");
+      } else {
+        self.push_str("</span>");
+      }
+    }
+    if let Some(revdate) = self.doc_meta.string("revdate") {
+      self.push([
+        r#"<time id="revdate" datetime=""#,
+        &backend::time::format_date_str(&revdate, "%Y-%m-%d").unwrap_or_else(|| revdate.clone()),
+        r#"">"#,
+        &revdate,
+        "</time>",
+      ]);
+    }
+    if let Some(revremark) = self.doc_meta.string("revremark") {
+      self.push([r#"<br><span id="revremark">"#, &revremark, "</span>"]);
+    }
+    self.push_str("</div>");
+  }
+
+  fn render_styles(&mut self, meta: &DocumentMeta) {
+    if meta.str("stylesheet") == Some("") {
+      self.push(["<style>", crate::css::DEFAULT, "</style>"]);
+    } else if let Some(css) = meta.string("_asciidork_resolved_custom_css") {
+      self.push(["<style>", &css, "</style>"]);
+    }
   }
 }
 

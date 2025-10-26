@@ -4,6 +4,7 @@ extern crate asciidork_ast as ast;
 extern crate asciidork_backend as backend;
 extern crate asciidork_eval as eval;
 
+mod css;
 mod html5s;
 
 pub use crate::html5s::Html5s;
@@ -22,5 +23,4 @@ mod internal {
   pub use backend::html::{AltHtmlBuf, HtmlBuf, OpenTag};
   pub use backend::prelude::*;
   pub use backend::utils;
-  pub use eval::helpers;
 }
