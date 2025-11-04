@@ -17,6 +17,7 @@ mod eval_comments;
 mod eval_delimited;
 mod eval_desc_lists;
 mod eval_footnotes;
+mod eval_html5;
 mod eval_image_macros;
 mod eval_includes;
 mod eval_links;

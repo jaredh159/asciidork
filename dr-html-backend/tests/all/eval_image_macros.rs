@@ -407,3 +407,30 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  image_link_attrs,
+  adoc! {r#"
+    // .with-link-and-window-blank
+    image::sunset.jpg[link="http://www.flickr.com/photos/javh/5448336651", window=_blank]
+
+    // .with-link-and-nofollow
+    image::sunset.jpg[link="http://www.flickr.com/photos/javh/5448336653", opts=nofollow]
+  "#},
+  html! {r##"
+    <div class="imageblock">
+      <div class="content">
+        <a class="image" href="http://www.flickr.com/photos/javh/5448336651" target="_blank" rel="noopener">
+          <img src="sunset.jpg" alt="sunset">
+        </a>
+      </div>
+    </div>
+    <div class="imageblock">
+      <div class="content">
+        <a class="image" href="http://www.flickr.com/photos/javh/5448336653" rel="nofollow">
+          <img src="sunset.jpg" alt="sunset">
+        </a>
+      </div>
+    </div>
+  "##}
+);

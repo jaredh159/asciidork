@@ -594,15 +594,39 @@ impl Backend for Html5s {
       .attrs
       .named("link")
       .or_else(|| img_attrs.named("link"))
+      .or_else(|| {
+        if self.doc_meta.str("html5s-image-default-link") == Some("self") {
+          Some("self")
+        } else {
+          None
+        }
+      })
+      .filter(|h| *h != "none")
     {
       self.push_str(r#"<a class="image"#);
-      let self_link = if *href == &img_target.src {
+      let self_link = if *href == &img_target.src || *href == "self" {
         self.push_str(" bare");
         true
       } else {
         false
       };
-      self.push([r#"" href=""#, *href, r#"""#]);
+      let href = if *href == "self" { &img_target.src } else { *href };
+      self.push([r#"" href=""#, href, r#"""#]);
+      if let Some(window) = img_attrs.named("window") {
+        self.push([r#" target=""#, window, "\""]);
+        if window == "_blank" || img_attrs.has_option("noopener") {
+          self.push_str(" rel=\"noopener");
+        }
+        if img_attrs.has_option("nofollow") {
+          self.push_str(" nofollow\"");
+        } else {
+          self.push_ch('"');
+        }
+      } else if img_attrs.has_option("noopener") {
+        self.push_str(" rel=\"noopener\"");
+      } else if img_attrs.has_option("nofollow") {
+        self.push_str(" rel=\"nofollow\"");
+      }
       if self_link {
         let label = self.doc_meta.string_or(
           "html5s-image-self-link-label",
@@ -615,6 +639,10 @@ impl Backend for Html5s {
       has_link = true;
     }
     self.render_image(img_target, img_attrs, true);
+    if img_attrs.named("loading") == Some("lazy") {
+      self.html.pop();
+      self.push_str(r#" loading="lazy">"#);
+    }
     if has_link {
       self.push_str("</a>");
     }

@@ -1371,7 +1371,14 @@ impl Backend for AsciidoctorHtml {
       .named("link")
       .or_else(|| img_attrs.named("link"))
     {
-      self.push([r#"<a class="image" href=""#, *href, r#"">"#]);
+      let mut a_tag = OpenTag::new("a", &NoAttrs);
+      a_tag.push_class("image");
+      a_tag.push_str("\" href=\"");
+      a_tag.push_str(href);
+      a_tag.push_ch('"');
+      a_tag.opened_classes = false;
+      a_tag.push_link_attrs(img_attrs, true, false);
+      self.push_open_tag(a_tag);
       has_link = true;
     }
     self.render_image(img_target, img_attrs, true);
