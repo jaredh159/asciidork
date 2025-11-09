@@ -38,14 +38,26 @@ pub trait HtmlBuf {
   }
 
   fn push_html_attr(&mut self, name: &'static str, value: &str) {
-    self.push([r#" "#, name, r#"=""#]);
+    self.push([" ", name, "=\""]);
     self.push_str_attr_escaped(value);
     self.push_ch('"');
   }
 
+  fn push_html_attr_nodes(&mut self, name: &'static str, nodes: &ast::InlineNodes<'_>) {
+    self.push([" ", name, "=\""]);
+    if let Some(single) = nodes.single_text() {
+      self.push_str_attr_escaped(&single);
+    } else {
+      for s in nodes.plain_text() {
+        self.push_str_attr_escaped(s);
+      }
+    }
+    self.push_ch('"');
+  }
+
   fn push_named_attr(&mut self, name: &'static str, attrs: &AttrList) {
-    if let Some(value) = attrs.named(name) {
-      self.push_html_attr(name, value);
+    if let Some(nodes) = attrs.named.get(name) {
+      self.push_html_attr_nodes(name, nodes);
     }
   }
 

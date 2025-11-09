@@ -84,15 +84,51 @@ assert_html!(
   "##}
 );
 
-// assert_html!(
-//   image2,
-//   adoc! {r#"
-//     // .html5s-image-default-link-self
-//     :html5s-image-default-link: self
-//     image::sunset.jpg[]
-//   "#},
-//   html! {r##"
-//     <div class="image-block"><a class="image bare" href="sunset.jpg" title="Open the image in full size" aria-label="Open the image in full size"><img src="sunset.jpg" alt="sunset"></a></div>
-//   "##} // <div class="image-block"><img src="sunset.jpg" alt="sunset"></div>
-//        // <div class="image-block"><a class="image" href="http://www.flickr.com/photos/javh/5448336655"><img src="sunset.jpg" alt="sunset"></a></div>
-// );
+assert_html!(
+  inline_image,
+  adoc! {r#"
+    // .image-with-link-and-window-blank
+    image:linux.svg[link="http://inkscape.org/doc/examples/tux.svg", window=_blank]
+
+    // .image-with-link-and-noopener
+    // NB: jirutka adds rel="noopener" but we don't because target=_blank is not used
+    image:linux.svg[link="http://inkscape.org/doc/examples/tux.svg", opts=noopener]
+
+    // .with-link-and-nofollow
+    image:linux.svg[link="http://inkscape.org/doc/examples/tux.svg", opts=nofollow]
+
+    // .image-with-loading-lazy
+    image:sunset.jpg[loading=lazy]
+
+    // .icon-font
+    :icons: font
+    icon:heart[]
+
+    // .icon-font-with-title
+    :icons: font
+    icon:heart[title="I <3 Asciidoctor"]
+
+    // .icon-font-with-size
+    :icons: font
+    icon:shield[2x]
+
+    // .icon-font-with-rotate
+    :icons: font
+    icon:shield[rotate=90]
+
+    // .icon-font-with-flip
+    :icons: font
+    icon:shield[flip=vertical]
+  "#},
+  html! {r##"
+    <p><a class="image" href="http://inkscape.org/doc/examples/tux.svg" target="_blank" rel="noopener"><img src="linux.svg" alt="linux"></a></p>
+    <p><a class="image" href="http://inkscape.org/doc/examples/tux.svg"><img src="linux.svg" alt="linux"></a></p>
+    <p><a class="image" href="http://inkscape.org/doc/examples/tux.svg" rel="nofollow"><img src="linux.svg" alt="linux"></a></p>
+    <p><img src="sunset.jpg" alt="sunset" loading="lazy"></p>
+    <p><i class="fa fa-heart"></i></p>
+    <p><i class="fa fa-heart" title="I &lt;3 Asciidoctor"></i></p>
+    <p><i class="fa fa-shield fa-2x"></i></p>
+    <p><i class="fa fa-shield fa-rotate-90"></i></p>
+    <p><i class="fa fa-shield fa-flip-vertical"></i></p>
+  "##}
+);

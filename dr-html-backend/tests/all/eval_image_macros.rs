@@ -282,6 +282,10 @@ assert_html!(
 
     // image in section title, NB: our generated id differs from asciidoctor
     == image:{iconsdir}/dot.gif[dot] Title
+
+    // .icon-font-with-title
+    :icons: font
+    icon:heart[title="I <3 Asciidoctor"]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -348,7 +352,13 @@ assert_html!(
       <h2 id="_imagefixturesdot_gifdot_title">
         <span class="image"><img src="fixtures/dot.gif" alt="dot"></span> Title
       </h2>
-      <div class="sectionbody"></div>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>
+            <span class="icon"><i class="fa fa-heart" title="I &lt;3 Asciidoctor"></i></span>
+          </p>
+        </div>
+      </div>
     </div>
  "#}
 );

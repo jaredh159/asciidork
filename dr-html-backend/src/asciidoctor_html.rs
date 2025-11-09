@@ -1067,13 +1067,10 @@ impl Backend for AsciidoctorHtml {
         self.push_icon_uri(target, None);
         self.push_str(r#"" alt=""#);
         self.push_str(attrs.named("alt").unwrap_or(target));
-        if let Some(width) = attrs.named("width") {
-          self.push([r#"" width=""#, width]);
-        }
-        if let Some(title) = attrs.named("title") {
-          self.push([r#"" title=""#, title]);
-        }
-        self.push_str(r#"">"#);
+        self.push_ch('"');
+        self.push_named_attr("width", attrs);
+        self.push_named_attr("title", attrs);
+        self.push_str(r#">"#);
       }
       IconMode::Font => {
         self.push_str(r#"<i class="fa fa-"#);
@@ -1087,10 +1084,9 @@ impl Backend for AsciidoctorHtml {
         if let Some(rotate) = attrs.named("rotate") {
           self.push([r#" fa-rotate-"#, rotate]);
         }
-        if let Some(title) = attrs.named("title") {
-          self.push([r#"" title=""#, title]);
-        }
-        self.push_str(r#""></i>"#);
+        self.push_ch('"');
+        self.push_named_attr("title", attrs);
+        self.push_str("></i>");
       }
     }
     if has_link {

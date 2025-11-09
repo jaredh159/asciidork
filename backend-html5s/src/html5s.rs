@@ -1187,6 +1187,10 @@ impl Backend for Html5s {
       self.html.pop();
       self.push_str("\">");
     }
+    if attrs.named("loading") == Some("lazy") {
+      self.html.pop();
+      self.push_str(r#" loading="lazy">"#);
+    }
     if with_link {
       self.push_str("</a>");
     }
@@ -1219,7 +1223,7 @@ impl Backend for Html5s {
     } else {
       false
     };
-    match dbg!(self.doc_meta.icon_mode()) {
+    match self.doc_meta.icon_mode() {
       IconMode::Text => {
         self.push_str(r#"<b class="icon"#); // b not span
         attrs.roles.iter().for_each(|role| {
@@ -1238,13 +1242,10 @@ impl Backend for Html5s {
         self.push_icon_uri(target, None);
         self.push_str(r#"" alt=""#);
         self.push_str(attrs.named("alt").unwrap_or(target));
-        if let Some(width) = attrs.named("width") {
-          self.push([r#"" width=""#, width]);
-        }
-        if let Some(title) = attrs.named("title") {
-          self.push([r#"" title=""#, title]);
-        }
-        self.push_str(r#"" class="icon"#);
+        self.push_ch('"');
+        self.push_named_attr("width", attrs);
+        self.push_named_attr("title", attrs);
+        self.push_str(r#" class="icon"#);
         attrs.roles.iter().for_each(|role| {
           self.push_str(" ");
           self.push_str(role);
@@ -1267,10 +1268,9 @@ impl Backend for Html5s {
           self.push_str(" ");
           self.push_str(role);
         });
-        if let Some(title) = attrs.named("title") {
-          self.push([r#"" title=""#, title]);
-        }
-        self.push_str(r#""></i>"#);
+        self.push_ch('"');
+        self.push_named_attr("title", attrs);
+        self.push_str("></i>");
       }
     }
     if has_link {
