@@ -1367,19 +1367,20 @@ impl Backend for Html5s {
   }
 
   fn enter_inline_quote(&mut self, kind: QuoteKind) {
-    match kind {
-      QuoteKind::Double => self.push_str("&#x201c;"),
-      QuoteKind::Single => self.push_str("&#8216;"),
-    }
+    let q = quote_entities(&self.doc_meta.str_or("lang", "en"));
+    self.push_str(match kind {
+      QuoteKind::Single => q[0],
+      QuoteKind::Double => q[2],
+    });
   }
 
   fn exit_inline_quote(&mut self, kind: QuoteKind) {
-    match kind {
-      QuoteKind::Double => self.push_str("&#x201d;"),
-      QuoteKind::Single => self.push_str("&#8217;"),
-    }
+    let q = quote_entities(&self.doc_meta.str_or("lang", "en"));
+    self.push_str(match kind {
+      QuoteKind::Single => q[1],
+      QuoteKind::Double => q[3],
+    });
   }
-
   fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
     if has_content {
       self.start_buffering();
@@ -1438,11 +1439,37 @@ impl Backend for Html5s {
   }
 
   fn enter_text_span(&mut self, attrs: &AttrList) {
-    self.open_element("span", &[], attrs);
+    match attrs.roles.first().map(|r| r.src.as_str()) {
+      Some("line-through" | "strike") => {
+        let mut attrs = attrs.clone();
+        attrs
+          .roles
+          .retain(|r| r.src != "line-through" && r.src != "strike");
+        self.open_element("s", &[], &attrs);
+      }
+      Some("del") => {
+        let mut attrs = attrs.clone();
+        attrs.roles.retain(|r| r.src != "del");
+        self.open_element("del", &[], &attrs);
+      }
+      Some("ins") => {
+        let mut attrs = attrs.clone();
+        attrs.roles.retain(|r| r.src != "ins");
+        self.open_element("ins", &[], &attrs);
+      }
+      _ => {
+        self.open_element("span", &[], attrs);
+      }
+    }
   }
 
   fn exit_text_span(&mut self, attrs: &AttrList) {
-    self.push_str("</span>");
+    match attrs.roles.first().map(|r| r.src.as_str()) {
+      Some("line-through" | "strike") => self.push_str("</s>"),
+      Some("del") => self.push_str("</del>"),
+      Some("ins") => self.push_str("</ins>"),
+      _ => self.push_str("</span>"),
+    }
   }
 
   fn enter_xref(&mut self, target: &SourceString, _has_reftext: bool, kind: XrefKind) {
@@ -1689,6 +1716,18 @@ impl Html5s {
     } else if let Some(css) = meta.string("_asciidork_resolved_custom_css") {
       self.push(["<style>", &css, "</style>"]);
     }
+  }
+}
+
+fn quote_entities(lang: &str) -> [&'static str; 4] {
+  match lang {
+    "bs" | "fi" | "sv" => ["&#x2019;", "&#x2019;", "&#x201d;", "&#x201d;"],
+    "cs" | "da" | "de" | "is" | "lt" | "sl" | "sk" | "sr" => {
+      ["&#x201a;", "&#x2018;", "&#x201e;", "&#x201c;"]
+    }
+    "nl" => ["&#x201a;", "&#x2019;", "&#x201e;", "&#x201d;"],
+    "hu" | "pl" | "ro" => ["&#x00ab;", "&#x00bb;", "&#x201e;", "&#x201d;"],
+    _ => ["&#x2018;", "&#x2019;", "&#x201c;", "&#x201d;"],
   }
 }
 

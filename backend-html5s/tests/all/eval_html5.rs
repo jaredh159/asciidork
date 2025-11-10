@@ -132,3 +132,82 @@ assert_html!(
     <p><i class="fa fa-shield fa-flip-vertical"></i></p>
   "##}
 );
+
+assert_html!(
+  roles,
+  adoc! {r#"
+    // .role-line-through
+    [line-through]#striked text#
+
+    // .role-strike
+    [strike]#striked text#
+
+    // .role-del
+    [del]#deleted text#
+
+    // .role-ins
+    [ins]#inserted text#
+  "#},
+  html! {r##"
+    <p><s>striked text</s></p>
+    <p><s>striked text</s></p>
+    <p><del>deleted text</del></p>
+    <p><ins>inserted text</ins></p>
+  "##}
+);
+
+assert_html!(
+  quotes_cs,
+  adoc! {r#"
+      :lang: cs
+      "`chunky bacon`"
+
+      '`chunky bacon`'
+    "#},
+  html! {r##"
+      <p>&#x201e;chunky bacon&#x201c;</p>
+      <p>&#x201a;chunky bacon&#x2018;</p>
+    "##}
+);
+
+assert_html!(
+  quotes_fi,
+  adoc! {r#"
+    :lang: fi
+    "`chunky bacon`"
+
+    '`chunky bacon`'
+  "#},
+  html! {r##"
+    <p>&#x201d;chunky bacon&#x201d;</p>
+    <p>&#x2019;chunky bacon&#x2019;</p>
+  "##}
+);
+
+assert_html!(
+  quotes_nl,
+  adoc! {r#"
+    :lang: nl
+    "`chunky bacon`"
+
+    '`chunky bacon`'
+  "#},
+  html! {r##"
+    <p>&#x201e;chunky bacon&#x201d;</p>
+    <p>&#x201a;chunky bacon&#x2019;</p>
+  "##}
+);
+
+assert_html!(
+  quotes_pl,
+  adoc! {r#"
+    :lang: pl
+    "`chunky bacon`"
+
+    '`chunky bacon`'
+  "#},
+  html! {r##"
+    <p>&#x201e;chunky bacon&#x201d;</p>
+    <p>&#x00ab;chunky bacon&#x00bb;</p>
+  "##}
+);
