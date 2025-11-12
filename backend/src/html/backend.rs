@@ -400,6 +400,7 @@ pub trait HtmlBackend: Backend + HtmlBuf {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EphemeralState {
   VisitingSimpleTermDescription,
+  InTableOfContents,
   InDescListDesc,
   IsSourceBlock,
   InBibliography,

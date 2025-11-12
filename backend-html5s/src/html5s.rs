@@ -14,7 +14,6 @@ pub struct Html5s {
   doc_meta: DocumentMeta,
   html: String,
   alt_html: String,
-  in_source_block: bool,
   fig_caption_num: usize,
   table_caption_num: usize,
   example_caption_num: usize,
@@ -165,6 +164,7 @@ impl Backend for Html5s {
   }
 
   fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    self.state.ephemeral.insert(InTableOfContents);
     let id = &macro_block
       .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
       .unwrap_or("toc".to_string());
@@ -183,6 +183,7 @@ impl Backend for Html5s {
   fn exit_toc(&mut self, _toc: &TableOfContents) {
     self.push_str("</nav>"); // tocnew `nav`
     self.on_toc_exit();
+    self.state.ephemeral.remove(&InTableOfContents);
   }
 
   fn enter_toc_level(&mut self, level: u8, _nodes: &[TocNode]) {
@@ -526,15 +527,18 @@ impl Backend for Html5s {
     self.render_buffered_block_title(block, false);
     self.push_str("<pre");
     if let Some(lang) = self.source_lang(block) {
+      self.push_str(r#" class="highlight"#);
+      if block.meta.attrs.has_option("nowrap") {
+        self.push_str(" nowrap");
+      }
       self.push([
-        r#" class="highlight"><code class="language-"#,
+        r#""><code class="language-"#,
         &lang,
         r#"" data-lang=""#,
         &lang,
         r#"">"#,
       ]);
-      // self.state.insert(IsSourceBlock);
-      self.in_source_block = true;
+      self.state.ephemeral.insert(IsSourceBlock);
     } else {
       self.push_ch('>');
     }
@@ -542,13 +546,10 @@ impl Backend for Html5s {
   }
 
   fn exit_listing_block(&mut self, block: &Block) {
-    // if self.state.remove(&IsSourceBlock) {
-    if self.in_source_block {
-      self.in_source_block = false;
+    if self.state.ephemeral.remove(&IsSourceBlock) {
       self.push_str("</code>");
     }
     self.push_str("</pre>");
-    // dbg!(&block);
     let close = if block.has_title() { "</figure>" } else { "</div>" };
     self.push_str(close);
     // self.newlines = self.default_newlines;
@@ -1077,7 +1078,7 @@ impl Backend for Html5s {
     has_link_text: bool,
     blank_window_shorthand: bool,
   ) {
-    if resolving_xref {
+    if resolving_xref || self.state.ephemeral.contains(&InTableOfContents) {
       return;
     }
     let mut tag = if let Some(attrs) = attrs {
@@ -1112,7 +1113,7 @@ impl Backend for Html5s {
     resolving_xref: bool,
     has_link_text: bool,
   ) {
-    if resolving_xref {
+    if resolving_xref || self.state.ephemeral.contains(&InTableOfContents) {
       return;
     }
     if has_link_text {
@@ -1512,7 +1513,9 @@ impl Backend for Html5s {
   }
 
   fn visit_inline_anchor(&mut self, id: &str) {
-    self.push(["<a id=\"", id, "\" aria-hidden=\"true\"></a>"]);
+    if !self.state.ephemeral.contains(&InTableOfContents) {
+      self.push(["<a id=\"", id, "\" aria-hidden=\"true\"></a>"]);
+    }
   }
 
   fn visit_biblio_anchor(&mut self, id: &str, reftext: Option<&str>) {

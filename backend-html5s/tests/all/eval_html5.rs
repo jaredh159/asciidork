@@ -211,3 +211,109 @@ assert_html!(
     <p>&#x00ab;chunky bacon&#x00bb;</p>
   "##}
 );
+
+assert_html!(
+  source,
+  adoc! {r#"
+    [source, ruby]
+    ----
+    5.times do
+      print "Odelay!"
+    end
+    ----
+
+    [source, ruby, options="nowrap"]
+    ----
+    5.times do
+      print "Odelay!"
+    end
+    ----
+  "#},
+  raw_html! {r##"
+    <div class="listing-block"><pre class="highlight"><code class="language-ruby" data-lang="ruby">5.times do
+      print "Odelay!"
+    end</code></pre></div><div class="listing-block"><pre class="highlight nowrap"><code class="language-ruby" data-lang="ruby">5.times do
+      print "Odelay!"
+    end</code></pre></div>"##}
+);
+
+assert_html!(
+  outline,
+  adoc! {r#"
+    // .sections-with-ids
+    = Document Title
+    :toc:
+
+    == [[un]]Section _One_
+
+    content one
+
+    == [[two]][[deux]]Section Two
+
+    content two
+
+    == https://www.cvut.cz[*CTU* in Prague]
+
+    content three
+  "#},
+  html! {r##"
+    <nav id="toc" class="toc" role="doc-toc"><h2 id="toc-title">Table of Contents</h2><ol class="toc-list level-1"><li><a href="#_unsection_one">Section <em>One</em></a></li><li><a href="#_twodeuxsection_two">Section Two</a></li><li><a href="#_httpswww_cvut_czctu_in_prague"><strong>CTU</strong> in Prague</a></li></ol></nav><section class="doc-section level-1"><h2 id="_unsection_one"><a id="un" aria-hidden="true"></a>Section <em>One</em></h2><p>content one</p></section>
+    <section class="doc-section level-1"><h2 id="_twodeuxsection_two"><a id="two" aria-hidden="true"></a><a id="deux" aria-hidden="true"></a>Section Two</h2><p>content two</p></section>
+    <section class="doc-section level-1"><h2 id="_httpswww_cvut_czctu_in_prague"><a href="https://www.cvut.cz"><strong>CTU</strong> in Prague</a></h2><p>content three</p></section>
+  "##}
+);
+
+assert_html!(
+  regressions,
+  adoc! {r#"
+    // .issue-10-two-sources-with-collist
+    [source]
+    ----
+    source 1 line 1 // <1>
+    source 1 line 2 // <2>
+    ----
+    <1> source 1 callout 1
+    <2> source 1 callout 2
+
+  "#},
+  // Some text in here.
+  //
+  // [source]
+  // ----
+  // source 2 line 1 // <1>
+  // source 2 line 2 // <2>
+  // ----
+  // <1> source 2 callout 1
+  // <2> source 2 callout 2
+  //
+  // Where is this?
+  //
+  // == Heading
+  //
+  // This is actually here.
+  //
+  // // .issue-14-duplicated-footnotes-in-table
+  // |===
+  //
+  // |cell footnote:intable[first]
+  //
+  // |cell footnote:intable[]
+  // |===
+  //
+  // paragraph footnote:notintable[second]
+  //
+  // another paragraph footnote:notintable[]
+  html! {r##"
+    <div class="listing-block"><pre class="highlight"><code>source 1 line 1 <b class="conum">1</b>
+    source 1 line 2 <b class="conum">2</b></code></pre><ol class="callout-list arabic"><li>source 1 callout 1</li><li>source 1 callout 2</li></ol></div>
+
+  "##} // <p>Some text in here.</p>
+       // <div class="listing-block"><pre class="highlight"><code>source 2 line 1 <b class="conum">1</b>
+       // source 2 line 2 <b class="conum">2</b></code></pre><ol class="callout-list arabic"><li>source 2 callout 1</li><li>source 2 callout 2</li></ol></div>
+       //
+       // <p>Where is this?</p>
+       // <section class="doc-section level-1"><h2 id="_heading">Heading</h2><p>This is actually here.</p>
+       // <div class="table-block"><table class="frame-all grid-all stretch"><colgroup><col style="width: 100%;"></colgroup><tbody><tr><td class="halign-left valign-top">cell <a class="footnote-ref" id="_footnoteref_1" href="#_footnote_1" title="View footnote 1" role="doc-noteref">[1]</a></td></tr><tr><td class="halign-left valign-top">cell <a class="footnote-ref" href="#_footnote_1" title="View footnote 1" role="doc-noteref">[1]</a></td></tr></tbody></table></div>
+       // <p>paragraph <a class="footnote-ref" id="_footnoteref_2" href="#_footnote_2" title="View footnote 2" role="doc-noteref">[2]</a></p>
+       // <p>another paragraph <a class="footnote-ref" href="#_footnote_2" title="View footnote 2" role="doc-noteref">[2]</a></p></section><section class="footnotes" aria-label="Footnotes" role="doc-endnotes"><hr><ol class="footnotes"><li class="footnote" id="_footnote_1" role="doc-endnote">first <a class="footnote-backref" href="#_footnoteref_1" role="doc-backlink" title="Jump to the first occurrence in the text">&#8617;</a></li><li class="footnote" id="_footnote_2" role="doc-endnote">second <a class="footnote-backref" href="#_footnoteref_2" role="doc-backlink" title="Jump to the first occurrence in the text">&#8617;</a></li></ol></section>
+);

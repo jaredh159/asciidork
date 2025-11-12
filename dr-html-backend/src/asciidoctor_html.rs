@@ -168,6 +168,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    self.state.ephemeral.insert(InTableOfContents);
     let id = &macro_block
       .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
       .unwrap_or("toc".to_string());
@@ -189,6 +190,7 @@ impl Backend for AsciidoctorHtml {
   fn exit_toc(&mut self, _toc: &TableOfContents) {
     self.push_str("</div>");
     self.on_toc_exit();
+    self.state.ephemeral.remove(&InTableOfContents);
   }
 
   #[instrument(skip_all)]
@@ -400,8 +402,12 @@ impl Backend for AsciidoctorHtml {
     self.render_buffered_block_title(block);
     self.push_str(r#"<div class="content"><pre"#);
     if let Some(lang) = self.source_lang(block) {
+      self.push_str(r#" class="highlight"#);
+      if block.meta.attrs.has_option("nowrap") {
+        self.push_str(" nowrap");
+      }
       self.push([
-        r#" class="highlight"><code class="language-"#,
+        r#""><code class="language-"#,
         &lang,
         r#"" data-lang=""#,
         &lang,
@@ -957,7 +963,9 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn visit_inline_anchor(&mut self, id: &str) {
-    self.push(["<a id=\"", id, "\"></a>"]);
+    if !self.state.ephemeral.contains(&InTableOfContents) {
+      self.push(["<a id=\"", id, "\"></a>"]);
+    }
   }
 
   #[instrument(skip_all)]
@@ -1158,7 +1166,7 @@ impl Backend for AsciidoctorHtml {
     has_link_text: bool,
     blank_window_shorthand: bool,
   ) {
-    if resolving_xref {
+    if resolving_xref || self.state.ephemeral.contains(&InTableOfContents) {
       return;
     }
     let mut tag = if let Some(attrs) = attrs {
@@ -1193,7 +1201,7 @@ impl Backend for AsciidoctorHtml {
     resolving_xref: bool,
     has_link_text: bool,
   ) {
-    if resolving_xref {
+    if resolving_xref || self.state.ephemeral.contains(&InTableOfContents) {
       return;
     }
     if has_link_text {
