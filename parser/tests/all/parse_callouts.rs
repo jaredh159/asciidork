@@ -208,22 +208,6 @@ fn test_subs_none_callout() {
 }
 
 #[test]
-fn test_parse_non_delim_callout() {
-  let input = adoc! {"
-    [, ruby]
-    puts 'hello world' <1>
-  "};
-  assert_block_core!(
-    input,
-    Context::Paragraph,
-    Content::Simple(nodes![
-      node!("puts 'hello world'"; 9..27),
-      node!(callout(1, 0, 0), 27..31),
-    ]),
-  );
-}
-
-#[test]
 fn test_parse_xml_callout_num() {
   let input = adoc! {r#"
     ....

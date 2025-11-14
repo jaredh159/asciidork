@@ -82,8 +82,8 @@ impl AttrData for MultiAttrList<'_> {
       .find_map(AttrList::unordered_list_custom_marker_style)
   }
 
-  fn block_style(&self) -> Option<BlockContext> {
-    self.0.iter().find_map(AttrList::block_style)
+  fn block_style(&self, context: BlockContext) -> Option<BlockContext> {
+    self.0.iter().find_map(|attr| attr.block_style(context))
   }
 }
 
@@ -158,7 +158,7 @@ impl AttrData for NoAttrs {
     None
   }
 
-  fn block_style(&self) -> Option<BlockContext> {
+  fn block_style(&self, _context: BlockContext) -> Option<BlockContext> {
     None
   }
 

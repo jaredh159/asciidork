@@ -1,5 +1,6 @@
 .DS_Store
 target
+target_bacon
 Session.vim
 scratch.adoc
 !kitchen-sink.adoc
