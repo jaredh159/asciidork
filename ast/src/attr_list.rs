@@ -24,7 +24,7 @@ pub trait AttrData {
   fn named_with_loc(&self, key: &str) -> Option<(&str, SourceLocation)>;
   fn ordered_list_custom_number_style(&self) -> Option<&'static str>;
   fn unordered_list_custom_marker_style(&self) -> Option<&'static str>;
-  fn block_style(&self) -> Option<BlockContext>;
+  fn block_style(&self, context: BlockContext) -> Option<BlockContext>;
   fn id(&self) -> Option<&SourceString<'_>>;
   fn roles(&self) -> impl Iterator<Item = &SourceString<'_>>;
 }
@@ -70,14 +70,29 @@ impl AttrData for AttrList<'_> {
   }
 
   fn is_source(&self) -> bool {
-    self.source_language().is_some()
+    if self.str_positional_at(0) == Some("source") || self.source_language().is_some() {
+      true
+    }
+    // handle scenarios like `[#id%opt,ruby]`
+    else if self.id.is_none() && self.roles.is_empty() && self.options.is_empty() {
+      false
+    } else {
+      !matches!(self.str_positional_at(0), None | Some("listing"))
+    }
   }
 
-  // TODO: this is incorrect, see https://github.com/jaredh159/asciidork/issues/4
   fn source_language(&self) -> Option<&str> {
     match (self.str_positional_at(0), self.str_positional_at(1)) {
       (None | Some("source"), Some(lang)) => Some(lang),
-      _ => None,
+      (Some("listing") | None, _) => None,
+      (Some(pos), _) => {
+        // handle scenarios like `[#id%opt,ruby]`
+        if self.id.is_none() && self.roles.is_empty() && self.options.is_empty() {
+          None
+        } else {
+          Some(pos)
+        }
+      }
     }
   }
 
@@ -106,11 +121,22 @@ impl AttrData for AttrList<'_> {
   }
 
   /// https://docs.asciidoctor.org/asciidoc/latest/blocks/#block-style
-  fn block_style(&self) -> Option<BlockContext> {
-    if let Some(first_positional) = self.str_positional_at(0) {
-      BlockContext::derive(first_positional)
-    } else {
-      None
+  fn block_style(&self, context: BlockContext) -> Option<BlockContext> {
+    let masquerade = self.str_positional_at(0).and_then(BlockContext::derive)?;
+    // not all masquerades are valid in all contexts
+    // https://docs.asciidoctor.org/asciidoc/latest/blocks/masquerading/#built-in-permutations
+    use BlockContext::*;
+    match (context, masquerade) {
+      (Open | Paragraph, _) => Some(masquerade),
+      (Listing, Literal) => Some(Literal),
+      (Literal, Listing) => Some(Listing),
+      (BlockQuote, Verse) => Some(Verse),
+      (
+        Example,
+        AdmonitionCaution | AdmonitionImportant | AdmonitionNote | AdmonitionTip
+        | AdmonitionWarning,
+      ) => Some(masquerade),
+      _ => None,
     }
   }
 

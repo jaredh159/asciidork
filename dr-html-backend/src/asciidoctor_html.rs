@@ -410,14 +410,15 @@ impl Backend for AsciidoctorHtml {
     self.open_element("div", &["listingblock"], &block.meta.attrs);
     self.render_buffered_block_title(block);
     self.push_str(r#"<div class="content"><pre"#);
-    if let Some(lang) = self.source_lang(block) {
-      self.push([
-        r#" class="highlight"><code class="language-"#,
-        &lang,
-        r#"" data-lang=""#,
-        &lang,
-        r#"">"#,
-      ]);
+    let doc_lang = self.doc_meta.string("source-language");
+    if block.meta.attrs.is_source() || doc_lang.is_some() {
+      self.push_str(r#" class="highlight"><code"#);
+      if let Some(lang) = block.meta.attrs.source_language() {
+        self.push([" class=\"language-", lang, "\" data-lang=\"", lang, "\""]);
+      } else if let Some(lang) = doc_lang {
+        self.push([" class=\"language-", &lang, "\" data-lang=\"", &lang, "\""]);
+      }
+      self.push_ch('>');
       self.state.insert(IsSourceBlock);
     } else {
       self.push_ch('>');
@@ -1554,19 +1555,6 @@ impl AsciidoctorHtml {
 
   pub(crate) fn push_open_tag(&mut self, tag: OpenTag) {
     self.push_str(&tag.finish());
-  }
-
-  fn source_lang<'a>(&self, block: &'a Block) -> Option<Cow<'a, str>> {
-    match (
-      block.meta.attrs.str_positional_at(0),
-      block.meta.attrs.str_positional_at(1),
-    ) {
-      (None | Some("source"), Some(lang)) => Some(Cow::Borrowed(lang)),
-      _ => self
-        .doc_meta
-        .str("source-language")
-        .map(|s| Cow::Owned(s.to_string())),
-    }
   }
 
   fn render_buffered_block_title(&mut self, block: &Block) {

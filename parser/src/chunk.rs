@@ -7,15 +7,15 @@ pub trait ChunkMetaExt<'arena> {
 }
 
 impl<'arena> ChunkMetaExt<'arena> for ChunkMeta<'arena> {
-  fn block_style_or(&self, default: BlockContext) -> BlockContext {
-    self.attrs.block_style().unwrap_or(default)
+  fn block_style_or(&self, context: BlockContext) -> BlockContext {
+    self.attrs.block_style(context).unwrap_or(context)
   }
 
   fn block_paragraph_context(&self, lines: &mut ContiguousLines) -> BlockContext {
     let uniform_indented = lines.trim_uniform_leading_whitespace();
 
     // line from block attrs takes precedence
-    if let Some(block_style) = self.attrs.block_style() {
+    if let Some(block_style) = self.attrs.block_style(BlockContext::Paragraph) {
       return block_style;
     }
 

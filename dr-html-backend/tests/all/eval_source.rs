@@ -188,3 +188,192 @@ assert_html!(
     so baz</pre>
   "#})
 );
+
+assert_html!(
+  source_block_ruby,
+  &attach_listing("[source,ruby]"),
+  source::wrap("ruby", "foo")
+);
+
+assert_html!(
+  source_block_not_a_lang,
+  &attach_listing("[source,not-a-lang]"),
+  source::wrap("not-a-lang", "foo")
+);
+
+assert_html!(
+  source_block_bracket_not_a_lang_implicit,
+  &attach_listing("[,not-a-lang]"),
+  source::wrap("not-a-lang", "foo")
+);
+
+assert_html!(
+  source_block_no_doc_lang,
+  &attach_listing("[source]"),
+  html! {r#"
+    <div class="listingblock">
+      <div class="content">
+        <pre class="highlight"><code>foo</code></pre>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  source_block_with_doc_attr_lang,
+  adoc! {r#"
+    :source-language: doc-attr-lang
+
+    [source]
+    ----
+    foo
+    ----
+  "#},
+  source::wrap("doc-attr-lang", "foo")
+);
+
+assert_html!(
+  source_block_custom_id,
+  &attach_listing("[#custom-id,ruby]"),
+  html! {r#"
+    <div id="custom-id" class="listingblock">
+      <div class="content">
+        <pre class="highlight"><code class="language-ruby" data-lang="ruby">foo</code></pre>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  source_block_with_linenums_start,
+  &attach_listing("[source%linenums=3,ruby]"),
+  source::wrap("ruby", "foo")
+);
+
+assert_html!(
+  source_block_with_linenums,
+  &attach_listing("[source%linenums,ruby]"),
+  source::wrap("ruby", "foo")
+);
+
+assert_html!(
+  source_block_mixed_php,
+  &attach_listing("[%mixed,php]"),
+  source::wrap("php", "foo")
+);
+
+assert_html!(
+  source_block_role_ruby,
+  &attach_listing("[.role,ruby]"),
+  html! {r#"
+    <div class="listingblock role">
+      <div class="content">
+        <pre class="highlight"><code class="language-ruby" data-lang="ruby">foo</code></pre>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  source_block_id_role_ruby,
+  &attach_listing("[#id.role%opt,ruby]"),
+  html! {r#"
+    <div id="id" class="listingblock role">
+      <div class="content">
+        <pre class="highlight"><code class="language-ruby" data-lang="ruby">foo</code></pre>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  source_block_source_id2_role_ruby,
+  &attach_listing("[source#id2.role%opt,ruby]"),
+  html! {r#"
+    <div id="id2" class="listingblock role">
+      <div class="content">
+        <pre class="highlight"><code class="language-ruby" data-lang="ruby">foo</code></pre>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  source_block_ruby_dots,
+  adoc! {r#"
+    [source, ruby]
+    ....
+    foo
+    ....
+  "#},
+  source::wrap("ruby", "foo")
+);
+
+assert_html!(
+  not_source_blocks,
+  adoc! {r#"
+    [,]
+    ----
+    foo
+    ----
+
+    []
+    ----
+    foo
+    ----
+
+    [listing]
+    ----
+    foo
+    ----
+
+    [verse]
+    ----
+    foo
+    ----
+
+    [example]
+    ----
+    foo
+    ----
+
+    [literal,ruby]
+    ----
+    foo
+    ----
+
+    [source]
+    ====
+    foo
+    ====
+  "#},
+  html! {r#"
+    <div class="listingblock">
+      <div class="content"><pre>foo</pre></div>
+    </div>
+    <div class="listingblock">
+      <div class="content"><pre>foo</pre></div>
+    </div>
+    <div class="listingblock">
+      <div class="content"><pre>foo</pre></div>
+    </div>
+    <div class="listingblock">
+      <div class="content"><pre>foo</pre></div>
+    </div>
+    <div class="listingblock">
+      <div class="content"><pre>foo</pre></div>
+    </div>
+    <div class="literalblock">
+      <div class="content"><pre>foo</pre></div>
+    </div>
+    <div class="exampleblock">
+      <div class="content">
+        <div class="paragraph"><p>foo</p></div>
+      </div>
+    </div>
+  "#}
+);
+
+fn attach_listing(attrs: &str) -> String {
+  format!("{attrs}\n----\nfoo\n----")
+}

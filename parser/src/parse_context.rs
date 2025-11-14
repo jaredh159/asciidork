@@ -175,7 +175,7 @@ impl<'arena> ParseContext<'arena> {
       BlockContext::Listing | BlockContext::Literal => {
         self.subs = Substitutions::verbatim();
       }
-      BlockContext::Paragraph if meta.attrs.is_source() => {
+      BlockContext::Paragraph if meta.attrs.has_str_positional("source") => {
         self.subs = Substitutions::verbatim();
       }
       _ => {}
