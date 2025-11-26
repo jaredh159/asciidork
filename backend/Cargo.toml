@@ -8,6 +8,11 @@ license = "MIT"
 [dependencies]
 asciidork-ast = { path = "../ast", version = "0.26.0" }
 asciidork-core = { path = "../core", version = "0.23.0" }
+roman_numerals_fn = "1.0.0"
+dateparser = "0.2"
 
 [lints]
 workspace = true
+
+[lib]
+doctest = false

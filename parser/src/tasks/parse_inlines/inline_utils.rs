@@ -94,7 +94,11 @@ impl<'arena> Accum<'arena> {
     let next_char = next_token.as_ref().and_then(|t| t.lexeme.chars().next());
     match (last_char, next_char) {
       (Some(c), Some(n)) if is_word_char(c) && is_word_char(n) => {
-        self.push_node(Symbol(SymbolKind::EmDash), token.loc);
+        if token.len() == 2 {
+          self.push_node(Symbol(SymbolKind::EmDash), token.loc);
+        } else {
+          self.push_node(Symbol(SymbolKind::TripleDash), token.loc);
+        }
       }
       (None, None) => self.push_text_token(&token),
       (None | Some(' '), None | Some(' ')) => {
@@ -108,7 +112,10 @@ impl<'arena> Accum<'arena> {
           newline = AdjacentNewline::Leading;
           loc.start -= 1;
         }
-        self.push_node(Symbol(SymbolKind::SpacedEmDash(newline)), loc.incr_end());
+        self.push_node(
+          Inline::SpacedDashes(token.len() as u8, newline),
+          loc.incr_end(),
+        );
         if let Some(next_token) = next_token {
           next_token.drop_leading_bytes(1);
         }
@@ -125,15 +132,13 @@ impl<'arena> Accum<'arena> {
     if !lines.is_empty() {
       self.commit();
       self.text.loc.end += 1;
-      if self
-        .inlines
-        .last_is(&Inline::Symbol(SymbolKind::SpacedEmDash(
-          AdjacentNewline::None,
-        )))
-      {
+      if matches!(
+        self.inlines.last().map(|n| &n.content),
+        Some(Inline::SpacedDashes(_, AdjacentNewline::None))
+      ) {
         let emdash = self.inlines.last_mut().unwrap();
         emdash.loc.end += 1;
-        emdash.content = Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Trailing));
+        emdash.content = Inline::SpacedDashes(2, AdjacentNewline::Trailing);
       } else {
         self.push_node(Inline::Newline, self.text.loc);
       }

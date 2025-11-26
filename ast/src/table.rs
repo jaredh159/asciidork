@@ -42,6 +42,17 @@ impl CellContent<'_> {
       | Self::Strong(paras) => paras.last().and_then(|i| i.last_loc()),
     }
   }
+
+  pub fn has_multiple_paras(&self) -> bool {
+    match self {
+      Self::AsciiDoc(_) | Self::Literal(_) => false,
+      Self::Default(paras)
+      | Self::Emphasis(paras)
+      | Self::Header(paras)
+      | Self::Monospace(paras)
+      | Self::Strong(paras) => paras.len() > 1,
+    }
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]

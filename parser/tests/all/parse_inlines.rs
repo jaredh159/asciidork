@@ -83,10 +83,7 @@ fn test_emdashes() {
     (
       "-- foo",
       nodes![
-        node!(
-          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
-          0..3
-        ),
+        node!(SpacedDashes(2, AdjacentNewline::None), 0..3),
         node!("foo"; 3..6)
       ],
     ),
@@ -94,10 +91,7 @@ fn test_emdashes() {
       "foo --",
       nodes![
         node!("foo"; 0..3),
-        node!(
-          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
-          3..7
-        ),
+        node!(SpacedDashes(2, AdjacentNewline::None), 3..7),
       ],
     ),
     (
@@ -114,10 +108,7 @@ fn test_emdashes() {
       "line1\n-- foo",
       nodes![
         node!("line1"; 0..5),
-        node!(
-          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Leading)),
-          5..9
-        ),
+        node!(SpacedDashes(2, AdjacentNewline::Leading), 5..9),
         node!("foo"; 9..12),
       ],
     ),
@@ -125,10 +116,7 @@ fn test_emdashes() {
       "foo --\nbar",
       nodes![
         node!("foo"; 0..3),
-        node!(
-          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::Trailing)),
-          3..8
-        ),
+        node!(SpacedDashes(2, AdjacentNewline::Trailing), 3..8),
         node!("bar"; 7..10),
       ],
     ),
@@ -136,10 +124,7 @@ fn test_emdashes() {
       "foo -- bar",
       nodes![
         node!("foo"; 0..3),
-        node!(
-          Symbol(SymbolKind::SpacedEmDash(AdjacentNewline::None)),
-          3..7
-        ),
+        node!(SpacedDashes(2, AdjacentNewline::None), 3..7),
         node!("bar"; 7..10),
       ],
     ),

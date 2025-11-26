@@ -68,16 +68,15 @@ assert_html!(
 
     Subsection content
   "},
-  contains: &html! {r##"
+  html! {r##"
     <div id="toc" class="toc">
       <div id="toctitle">Table of Contents</div>
       <ul class="sectlevel0">
         <li><a href="#_the_colophon">The Colophon</a></li>
-        <li>
-          <a href="#_the_first_part">The First Part</a>
-          <ul class="sectlevel1">
-            <li><a href="#_the_first_chapter">The First Chapter</a></li>
-          </ul>
+        <li><a href="#_the_first_part">The First Part</a>
+        <ul class="sectlevel1">
+          <li><a href="#_the_first_chapter">The First Chapter</a></li>
+        </ul>
         </li>
         <li>
           <a href="#_the_appendix">Appendix A: The Appendix</a>
@@ -87,6 +86,32 @@ assert_html!(
           </ul>
         </li>
       </ul>
+    </div>
+    <div class="sect1">
+      <h2 id="_the_colophon">The Colophon</h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>Colophon content</p></div>
+      </div>
+    </div>
+    <h1 id="_the_first_part" class="sect0">The First Part</h1>
+    <div class="sect1">
+      <h2 id="_the_first_chapter">The First Chapter</h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>Chapter 1 content</p></div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_the_appendix">Appendix A: The Appendix</h2>
+      <div class="sectionbody">
+        <div class="sect2">
+          <h3 id="_basics">Basics</h3>
+          <div class="paragraph"><p>Basics content</p></div>
+        </div>
+        <div class="sect2">
+          <h3 id="_subsections">Subsections</h3>
+          <div class="paragraph"><p>Subsection content</p></div>
+        </div>
+      </div>
     </div>
   "##}
 );
@@ -264,4 +289,56 @@ test_non_embedded_contains!(
     r#"<body class="article toc2 toc-left">"#,
     r#"<div id="toc" class="toc2">"#
   ],
+);
+
+assert_html!(
+  sections_with_ids_and_anchors,
+  adoc! {r#"
+    = Document Title
+    :toc:
+
+    == [[un]]Section _One_
+
+    content one
+
+    == [[two]][[deux]]Section Two
+
+    content two
+
+    == https://www.cvut.cz[*CTU* in Prague]
+
+    content three
+  "#},
+  html! {r##"
+    <div id="toc" class="toc">
+      <div id="toctitle">Table of Contents</div>
+      <ul class="sectlevel1">
+        <li><a href="#_unsection_one">Section <em>One</em></a></li>
+        <li><a href="#_twodeuxsection_two">Section Two</a></li>
+        <li><a href="#_httpswww_cvut_czctu_in_prague"><strong>CTU</strong> in Prague</a></li>
+      </ul>
+    </div>
+    <div class="sect1">
+      <h2 id="_unsection_one">
+        <a id="un"></a>Section <em>One</em>
+      </h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>content one</p></div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_twodeuxsection_two"><a id="two"></a><a id="deux"></a>Section Two</h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>content two</p></div>
+      </div>
+    </div>
+    <div class="sect1">
+      <h2 id="_httpswww_cvut_czctu_in_prague">
+        <a href="https://www.cvut.cz"><strong>CTU</strong> in Prague</a>
+      </h2>
+      <div class="sectionbody">
+        <div class="paragraph"><p>content three</p></div>
+      </div>
+    </div>
+  "##}
 );

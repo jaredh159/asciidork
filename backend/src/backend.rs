@@ -1,6 +1,6 @@
 use super::admonition::AdmonitionKind;
 use crate::prelude::*;
-use ast::prelude::*;
+use ast::{prelude::*, AdjacentNewline};
 
 macro_rules! warn_unimplemented {
   ($x:ident) => {
@@ -77,8 +77,8 @@ pub trait Backend {
   fn exit_listing_block(&mut self, block: &Block);
   fn enter_literal_block(&mut self, block: &Block);
   fn exit_literal_block(&mut self, block: &Block);
-  fn enter_passthrough_block(&mut self, block: &Block);
-  fn exit_passthrough_block(&mut self, block: &Block);
+  fn enter_passthrough_block(&mut self, _block: &Block) {}
+  fn exit_passthrough_block(&mut self, _block: &Block) {}
   fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block);
   fn exit_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block);
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
@@ -107,8 +107,8 @@ pub trait Backend {
   fn exit_description_list_description(&mut self, item: &ListItem);
   fn enter_description_list_description_text(&mut self, text: &Block, item: &ListItem);
   fn exit_description_list_description_text(&mut self, text: &Block, item: &ListItem);
-  fn enter_description_list_description_block(&mut self, block: &Block, item: &ListItem);
-  fn exit_description_list_description_block(&mut self, block: &Block, item: &ListItem);
+  fn enter_description_list_description_block(&mut self, _block: &Block, _item: &ListItem) {}
+  fn exit_description_list_description_block(&mut self, _block: &Block, _item: &ListItem) {}
   fn enter_list_item_principal(&mut self, item: &ListItem, variant: ListVariant);
   fn exit_list_item_principal(&mut self, item: &ListItem, variant: ListVariant);
   fn enter_list_item_blocks(&mut self, blocks: &[Block], item: &ListItem, variant: ListVariant);
@@ -147,6 +147,7 @@ pub trait Backend {
   fn visit_menu_macro(&mut self, items: &[SourceString]);
   fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList);
   fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList);
+  fn visit_spaced_dashes(&mut self, len: u8, adjacent_newline: AdjacentNewline);
 
   fn visit_plugin_macro(&mut self, plugin_macro: &PluginMacro) {
     _ = plugin_macro;
@@ -201,8 +202,8 @@ pub trait Backend {
   fn enter_inline_lit_mono(&mut self);
   fn exit_inline_lit_mono(&mut self);
   fn visit_inline_specialchar(&mut self, char: &SpecialCharKind);
-  fn enter_inline_passthrough(&mut self);
-  fn exit_inline_passthrough(&mut self);
+  fn enter_inline_passthrough(&mut self) {}
+  fn exit_inline_passthrough(&mut self) {}
   fn enter_inline_highlight(&mut self);
   fn exit_inline_highlight(&mut self);
   fn enter_inline_subscript(&mut self);

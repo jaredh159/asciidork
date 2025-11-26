@@ -39,6 +39,7 @@ pub enum Inline<'arena> {
   Symbol(SymbolKind),
   Text(BumpString<'arena>),
   TextSpan(AttrList<'arena>, InlineNodes<'arena>),
+  SpacedDashes(u8, AdjacentNewline),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -76,7 +77,7 @@ pub enum SymbolKind {
   Registered,
   Trademark,
   EmDash,
-  SpacedEmDash(AdjacentNewline),
+  TripleDash,
   Ellipsis,
   SingleRightArrow,
   DoubleRightArrow,

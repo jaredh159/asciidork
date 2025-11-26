@@ -12,6 +12,10 @@ impl Block<'_> {
   pub fn is_comment(&self) -> bool {
     self.context == BlockContext::Comment
   }
+
+  pub const fn has_title(&self) -> bool {
+    self.meta.title.is_some()
+  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -46,7 +46,7 @@ pub fn resolve(document: &mut Document) -> Result<(), String> {
 
   document
     .meta
-    .insert_header_attr("_asciidork_asciidoctor_resolved_css", css)
+    .insert_header_attr("_asciidork_resolved_custom_css", css)
     .unwrap();
   Ok(())
 }

@@ -1,3 +1,5 @@
+#![allow(clippy::crate_in_macro_def)]
+
 /// Test backend factory type
 pub type TestBackendFactory<B> = fn() -> B;
 
@@ -123,9 +125,12 @@ macro_rules! test_non_embedded_contains {
         bump
       );
       let document = parser.parse().unwrap().document;
+
       let actual = ::asciidork_eval::eval(
         &document,
-        crate::helpers::test_backend_factory()).unwrap();
+        crate::helpers::test_backend_factory()
+      ).unwrap();
+
       for needle in &$needles {
         ::test_utils::assert_html_contains!(actual, needle.to_string(), from: $input);
       }
@@ -152,11 +157,7 @@ macro_rules! _html {
       parser.set_resolver(resolver);
     }
     let document = parser.parse().unwrap().document;
-    ::asciidork_eval::eval(
-      &document,
-      crate::helpers::test_backend_factory(),
-    )
-    .unwrap()
+    ::asciidork_eval::eval(&document, crate::helpers::test_backend_factory()).unwrap()
   }};
 }
 

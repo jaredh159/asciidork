@@ -11,3 +11,7 @@ asciidork-backend = { path = "../backend", version = "0.26.0" }
 
 [lints]
 workspace = true
+
+[lib]
+doctest = false
+

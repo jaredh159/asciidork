@@ -100,8 +100,11 @@ impl<'arena> Parser<'arena> {
               _ => acc.push_text_token(&token),
             }
           }
-          Dashes if subs.char_replacement() && token.is_len(2) => {
+          Dashes if subs.char_replacement() && (token.is_len(2) || token.is_len(3)) => {
             acc.push_emdash(token, line.current_token_mut());
+          }
+          Dashes if subs.char_replacement() && token.is_len(3) => {
+            acc.push_node(Symbol(SymbolKind::TripleDash), token.loc);
           }
           Dots if subs.char_replacement() && token.is_len(3) => {
             acc.push_node(Symbol(SymbolKind::Ellipsis), token.loc);

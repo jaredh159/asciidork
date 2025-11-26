@@ -36,7 +36,7 @@ impl ListStack {
   }
 
   pub fn depth(&self) -> u8 {
-    self.iter().filter(|m| !m.is_description()).count() as u8
+    self.len() as u8
   }
 }
 

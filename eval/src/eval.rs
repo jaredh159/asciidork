@@ -530,6 +530,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_text_span(attrs);
     }
     Symbol(kind) => backend.visit_symbol(*kind),
+    SpacedDashes(len, adjacent_newline) => backend.visit_spaced_dashes(*len, *adjacent_newline),
     LineComment(_) | Discarded => {}
   }
 }

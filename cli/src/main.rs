@@ -85,37 +85,42 @@ fn run(
   let parse_time = parse_start.elapsed();
 
   match result {
-    Ok(mut parse_result) => match &args.format {
-      Output::DrHtml | Output::DrHtmlPrettier => {
-        let convert_start = Instant::now();
-        if let Err(css_err) = css::resolve(&mut parse_result.document) {
-          writeln!(stderr, "ERROR: {css_err}")?;
-          if args.strict {
-            std::process::exit(1);
-          }
-        }
-        let mut html = convert(parse_result.document)?;
-        let convert_time = convert_start.elapsed();
-        let prettify = args.format == Output::DrHtmlPrettier;
-        if prettify {
-          html = format_html(html);
-        }
-        if let Some(file) = &args.output {
-          fs::write(file, html)?;
-        } else {
-          if prettify {
-            writeln!(stderr)?;
-          }
-          writeln!(stdout, "{html}")?;
-        }
-        if args.print_timings {
-          if !prettify {
-            writeln!(stderr)?;
-          }
-          print_timings(&mut stderr, src.len(), parse_time, Some(convert_time));
+    Ok(mut parse_result) => {
+      let convert_start = Instant::now();
+      if let Err(css_err) = css::resolve(&mut parse_result.document) {
+        writeln!(stderr, "ERROR: {css_err}")?;
+        if args.strict {
+          std::process::exit(1);
         }
       }
-    },
+      let mut html = match &args.format {
+        Output::DrHtml | Output::DrHtmlPrettier => {
+          asciidork_dr_html_backend::convert(parse_result.document)?
+        }
+        Output::Html5 | Output::Html5Prettier => {
+          asciidork_backend_html5s::convert(parse_result.document)?
+        }
+      };
+      let convert_time = convert_start.elapsed();
+      let prettify = args.format == Output::Html5Prettier || args.format == Output::DrHtmlPrettier;
+      if prettify {
+        html = format_html(html);
+      }
+      if let Some(file) = &args.output {
+        fs::write(file, html)?;
+      } else {
+        if prettify {
+          writeln!(stderr)?;
+        }
+        writeln!(stdout, "{html}")?;
+      }
+      if args.print_timings {
+        if !prettify {
+          writeln!(stderr)?;
+        }
+        print_timings(&mut stderr, src.len(), parse_time, Some(convert_time));
+      }
+    }
     Err(diagnostics) => {
       if args.json_errors {
         print_json_diagnostics(&mut stderr, diagnostics);

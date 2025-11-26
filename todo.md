@@ -3,6 +3,7 @@
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/assignment-precedence
 - https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref
 
+- [ ] video macro (check test file in jirutka as well)
 - [ ] "natural" xrefs (eg: `<<Section Title>>`), these are officially discouraged, so i'd
       like to not implement them
 - [ ] multi-line inline (not block) img macro attrs (search rx for `a multi-line image`)
