@@ -4,22 +4,17 @@ extern crate asciidork_ast as ast;
 extern crate asciidork_backend as backend;
 extern crate asciidork_eval as eval;
 
-mod asciidoctor_html;
-pub mod css;
+mod css;
+mod html5s;
 
-pub use asciidoctor_html::AsciidoctorHtml;
-pub use backend::Backend;
+pub use crate::html5s::Html5s;
 
 pub fn convert(document: ast::Document) -> Result<String, Box<dyn Error>> {
-  Ok(eval::eval(&document, AsciidoctorHtml::new())?)
+  Ok(eval::eval(&document, Html5s::new())?)
 }
 
 mod internal {
-  pub use std::convert::Infallible;
   pub use std::mem;
-
-  pub use lazy_static::lazy_static;
-  pub use regex::Regex;
 
   pub use asciidork_core::*;
   pub use ast::prelude::*;

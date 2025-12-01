@@ -282,6 +282,10 @@ assert_html!(
 
     // image in section title, NB: our generated id differs from asciidoctor
     == image:{iconsdir}/dot.gif[dot] Title
+
+    // .icon-font-with-title
+    :icons: font
+    icon:heart[title="I <3 Asciidoctor"]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -348,7 +352,13 @@ assert_html!(
       <h2 id="_imagefixturesdot_gifdot_title">
         <span class="image"><img src="fixtures/dot.gif" alt="dot"></span> Title
       </h2>
-      <div class="sectionbody"></div>
+      <div class="sectionbody">
+        <div class="paragraph">
+          <p>
+            <span class="icon"><i class="fa fa-heart" title="I &lt;3 Asciidoctor"></i></span>
+          </p>
+        </div>
+      </div>
     </div>
  "#}
 );
@@ -406,4 +416,31 @@ assert_html!(
       <div class="content"><img src="image_003.png" alt="image 003"></div>
     </div>
   "#}
+);
+
+assert_html!(
+  image_link_attrs,
+  adoc! {r#"
+    // .with-link-and-window-blank
+    image::sunset.jpg[link="http://www.flickr.com/photos/javh/5448336651", window=_blank]
+
+    // .with-link-and-nofollow
+    image::sunset.jpg[link="http://www.flickr.com/photos/javh/5448336653", opts=nofollow]
+  "#},
+  html! {r##"
+    <div class="imageblock">
+      <div class="content">
+        <a class="image" href="http://www.flickr.com/photos/javh/5448336651" target="_blank" rel="noopener">
+          <img src="sunset.jpg" alt="sunset">
+        </a>
+      </div>
+    </div>
+    <div class="imageblock">
+      <div class="content">
+        <a class="image" href="http://www.flickr.com/photos/javh/5448336653" rel="nofollow">
+          <img src="sunset.jpg" alt="sunset">
+        </a>
+      </div>
+    </div>
+  "##}
 );

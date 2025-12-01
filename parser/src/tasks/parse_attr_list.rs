@@ -205,7 +205,14 @@ impl<'arena> Parser<'arena> {
       return Ok(());
     }
     match self.attr_ir(tokens) {
-      AttrIr::Positional(inner, _) | AttrIr::Id(inner) if formatted_text => {
+      AttrIr::Positional(inner, _) if formatted_text && !attr_list.roles.is_empty() => {
+        self.err_at(
+          ONLY_SHORTHAND_ERR,
+          SourceLocation::spanning(inner.first().unwrap().loc, inner.last().unwrap().loc),
+        )?;
+        return Ok(());
+      }
+      AttrIr::Id(inner) if formatted_text => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
           SourceLocation::spanning(inner.first().unwrap().loc, inner.last().unwrap().loc),
@@ -230,6 +237,18 @@ impl<'arena> Parser<'arena> {
             tokens.last().map(|t| t.loc).unwrap_or(name.loc.incr_end()),
           ),
         )?;
+        return Ok(());
+      }
+      AttrIr::Positional(tokens, _) if formatted_text => {
+        let Some(loc) = self
+          .parse_attr_nodes(tokens)?
+          .and_then(|nodes| nodes.loc())
+          .and_then(|multi_loc| multi_loc.coalesce())
+        else {
+          return Ok(()); // correct?
+        };
+        let role = self.lexer.src_string_from_loc(loc);
+        attr_list.roles.push(role);
         return Ok(());
       }
       AttrIr::Positional(mut tokens, with_shorthand) => {
@@ -523,8 +542,7 @@ fn trim<'a>(mut tokens: Deq<'a, Token<'a>>) -> Deq<'a, Token<'a>> {
   tokens
 }
 
-const ONLY_SHORTHAND_ERR: &str =
-  "Formatted text only supports attribute shorthand: id, roles, & options";
+const ONLY_SHORTHAND_ERR: &str = "Formatted text only supports single role or attribute shorthand";
 
 #[cfg(test)]
 mod tests {
@@ -1470,14 +1488,23 @@ mod tests {
 
   #[test]
   fn test_parse_formatted_text_attr_list() {
-    let cases = vec![(
-      "[#tigers]#a text span#",
-      AttrList {
-        positional: vecb![],
-        id: Some(src!("tigers", 2..8)),
-        ..attr_list!(0..9)
-      },
-    )];
+    let cases = vec![
+      (
+        "[#tigers]#a text span#",
+        AttrList {
+          positional: vecb![],
+          id: Some(src!("tigers", 2..8)),
+          ..attr_list!(0..9)
+        },
+      ),
+      (
+        "[tigers]#a text span#",
+        AttrList {
+          roles: vecb![src!("tigers", 1..7)],
+          ..attr_list!(0..8)
+        },
+      ),
+    ];
     for (input, expected) in cases {
       let mut parser = test_parser!(input);
       let mut line = parser.read_line().unwrap().unwrap();
@@ -1578,13 +1605,13 @@ mod tests {
         "},
       ),
       (
-        "[foobar]",
+        "[foo, bar]",
         true,
         error! {"
-           --> test.adoc:1:2
+           --> test.adoc:1:7
             |
-          1 | [foobar]
-            |  ^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
+          1 | [foo, bar]
+            |       ^^^ Formatted text only supports single role or attribute shorthand
         "},
       ),
       (
@@ -1594,7 +1621,7 @@ mod tests {
            --> test.adoc:1:5
             |
           1 | [#a,b=c]
-            |     ^^^ Formatted text only supports attribute shorthand: id, roles, & options
+            |     ^^^ Formatted text only supports single role or attribute shorthand
         "},
       ),
       (
@@ -1604,7 +1631,7 @@ mod tests {
            --> test.adoc:1:11
             |
           1 | [#a,opts='opt1,opt2']
-            |           ^^^^^^^^^ Formatted text only supports attribute shorthand: id, roles, & options
+            |           ^^^^^^^^^ Formatted text only supports single role or attribute shorthand
         "},
       ),
       (

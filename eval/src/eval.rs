@@ -22,12 +22,12 @@ pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
   backend.enter_document(ctx.doc);
   backend.enter_header();
   if let Some(doc_title) = doc.title() {
-    backend.enter_document_title(&doc_title.main);
+    backend.enter_document_title();
     doc_title
       .main
       .iter()
       .for_each(|node| eval_inline(node, &ctx, backend));
-    backend.exit_document_title(&doc_title.main);
+    backend.exit_document_title();
   }
   backend.exit_header();
   eval_toc_at(
@@ -136,46 +136,46 @@ fn eval_section(section: &Section, ctx: &Ctx, backend: &mut impl Backend) {
 
 fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
   if let Some(title) = &block.meta.title {
-    backend.enter_meta_title(title);
+    backend.enter_meta_title();
     title.iter().for_each(|n| eval_inline(n, ctx, backend));
-    backend.exit_meta_title(title);
+    backend.exit_meta_title();
   }
   match (block.context, &block.content) {
     (Context::Paragraph, Content::Simple(children)) => {
       backend.enter_paragraph_block(block);
-      backend.enter_simple_block_content(children, block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
+      backend.exit_simple_block_content(block);
       backend.exit_paragraph_block(block);
     }
     (Context::Sidebar, Content::Simple(children)) => {
-      backend.enter_sidebar_block(block, &block.content);
-      backend.enter_simple_block_content(children, block);
+      backend.enter_sidebar_block(block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
-      backend.exit_sidebar_block(block, &block.content);
+      backend.exit_simple_block_content(block);
+      backend.exit_sidebar_block(block);
     }
     (Context::Listing, Content::Simple(children)) => {
-      backend.enter_listing_block(block, &block.content);
-      backend.enter_simple_block_content(children, block);
+      backend.enter_listing_block(block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
-      backend.exit_listing_block(block, &block.content);
+      backend.exit_simple_block_content(block);
+      backend.exit_listing_block(block);
     }
     (Context::Sidebar, Content::Compound(blocks)) => {
-      backend.enter_sidebar_block(block, &block.content);
+      backend.enter_sidebar_block(block);
       backend.enter_compound_block_content(blocks, block);
       blocks.iter().for_each(|b| eval_block(b, ctx, backend));
       backend.exit_compound_block_content(blocks, block);
-      backend.exit_sidebar_block(block, &block.content);
+      backend.exit_sidebar_block(block);
     }
     (Context::Verse, Content::Simple(children)) => {
       let attr = block.meta.attrs.positional_at(1);
       let cite = block.meta.attrs.positional_at(2);
       backend.enter_verse_block(block, attr.is_some() || cite.is_some());
-      backend.enter_simple_block_content(children, block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
+      backend.exit_simple_block_content(block);
       eval_quote_attr(attr, cite, block, ctx, backend);
       backend.exit_verse_block(block, attr.is_some() || cite.is_some());
     }
@@ -183,9 +183,9 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       let attr = block.meta.attrs.positional_at(1);
       let cite = block.meta.attrs.positional_at(2);
       backend.enter_quote_block(block, attr.is_some() || cite.is_some());
-      backend.enter_simple_block_content(children, block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
+      backend.exit_simple_block_content(block);
       eval_quote_attr(attr, cite, block, ctx, backend);
       backend.exit_quote_block(block, attr.is_some() || cite.is_some());
     }
@@ -206,25 +206,25 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_quoted_paragraph(block);
     }
     (Context::Open, Content::Compound(blocks)) => {
-      backend.enter_open_block(block, &block.content);
+      backend.enter_open_block(block);
       backend.enter_compound_block_content(blocks, block);
       blocks.iter().for_each(|b| eval_block(b, ctx, backend));
       backend.exit_compound_block_content(blocks, block);
-      backend.exit_open_block(block, &block.content);
+      backend.exit_open_block(block);
     }
     (Context::Example, Content::Compound(blocks)) => {
-      backend.enter_example_block(block, &block.content);
+      backend.enter_example_block(block);
       backend.enter_compound_block_content(blocks, block);
       blocks.iter().for_each(|b| eval_block(b, ctx, backend));
       backend.exit_compound_block_content(blocks, block);
-      backend.exit_example_block(block, &block.content);
+      backend.exit_example_block(block);
     }
     (Context::Example, Content::Simple(children)) => {
-      backend.enter_example_block(block, &block.content);
-      backend.enter_simple_block_content(children, block);
+      backend.enter_example_block(block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
-      backend.exit_example_block(block, &block.content);
+      backend.exit_simple_block_content(block);
+      backend.exit_example_block(block);
     }
     (
       Context::AdmonitionTip
@@ -297,16 +297,16 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
         let ListItemTypeMeta::DescList { extra_terms, description } = &item.type_meta else {
           unreachable!("eval description list extract meta");
         };
-        backend.enter_description_list_term(&item.principle, item);
+        backend.enter_description_list_term(item);
         item
           .principle
           .iter()
           .for_each(|node| eval_inline(node, ctx, backend));
-        backend.exit_description_list_term(&item.principle, item);
+        backend.exit_description_list_term(item);
         extra_terms.iter().for_each(|(term, _)| {
-          backend.enter_description_list_term(term, item);
+          backend.enter_description_list_term(item);
           term.iter().for_each(|node| eval_inline(node, ctx, backend));
-          backend.exit_description_list_term(term, item);
+          backend.exit_description_list_term(item);
         });
         if description.is_some() || !item.blocks.is_empty() {
           backend.enter_description_list_description(item);
@@ -344,18 +344,18 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       eval_section(section, ctx, backend);
     }
     (Context::Literal, Content::Simple(children)) => {
-      backend.enter_literal_block(block, &block.content);
-      backend.enter_simple_block_content(children, block);
+      backend.enter_literal_block(block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
-      backend.exit_literal_block(block, &block.content);
+      backend.exit_simple_block_content(block);
+      backend.exit_literal_block(block);
     }
     (Context::Passthrough, Content::Simple(children)) => {
-      backend.enter_passthrough_block(block, &block.content);
-      backend.enter_simple_block_content(children, block);
+      backend.enter_passthrough_block(block);
+      backend.enter_simple_block_content(block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_simple_block_content(children, block);
-      backend.exit_passthrough_block(block, &block.content);
+      backend.exit_simple_block_content(block);
+      backend.exit_passthrough_block(block);
     }
     (Context::Table, Content::Table(table)) => {
       backend.enter_table(table, block);
@@ -405,61 +405,61 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
 fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
   match &inline.content {
     Bold(children) => {
-      backend.enter_inline_bold(children);
+      backend.enter_inline_bold();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_bold(children);
+      backend.exit_inline_bold();
     }
     Mono(children) => {
-      backend.enter_inline_mono(children);
+      backend.enter_inline_mono();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_mono(children);
+      backend.exit_inline_mono();
     }
     InlinePassthru(children) => {
-      backend.enter_inline_passthrough(children);
+      backend.enter_inline_passthrough();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_passthrough(children);
+      backend.exit_inline_passthrough();
     }
     SpecialChar(char) => backend.visit_inline_specialchar(char),
     Text(text) => backend.visit_inline_text(text.as_str()),
     Newline => backend.visit_joining_newline(),
     Italic(children) => {
-      backend.enter_inline_italic(children);
+      backend.enter_inline_italic();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_italic(children);
+      backend.exit_inline_italic();
     }
     Highlight(children) => {
-      backend.enter_inline_highlight(children);
+      backend.enter_inline_highlight();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_highlight(children);
+      backend.exit_inline_highlight();
     }
     Subscript(children) => {
-      backend.enter_inline_subscript(children);
+      backend.enter_inline_subscript();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_subscript(children);
+      backend.exit_inline_subscript();
     }
     Superscript(children) => {
-      backend.enter_inline_superscript(children);
+      backend.enter_inline_superscript();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_superscript(children);
+      backend.exit_inline_superscript();
     }
     Quote(kind, children) => {
-      backend.enter_inline_quote(*kind, children);
+      backend.enter_inline_quote(*kind);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_quote(*kind, children);
+      backend.exit_inline_quote(*kind);
     }
     LitMono(text) => {
-      backend.enter_inline_lit_mono(text);
+      backend.enter_inline_lit_mono();
       text.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_lit_mono(text);
+      backend.exit_inline_lit_mono();
     }
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws),
     Macro(Footnote { id, text }) => {
-      backend.enter_footnote(id.as_ref(), map_slice(text));
+      backend.enter_footnote(id.as_ref(), text.is_some());
       if let Some(text) = text {
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
       }
-      backend.exit_footnote(id.as_ref(), map_slice(text));
+      backend.exit_footnote(id.as_ref(), text.is_some());
     }
     Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
     Macro(Button(text)) => backend.visit_button_macro(text),
@@ -482,7 +482,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       let anchors = ctx.doc.anchors.borrow();
       let anchor = anchors.get(utils::xref::get_id(&target.src));
       let is_biblio = anchor.map(|a| a.is_biblio).unwrap_or(false);
-      backend.enter_xref(target, map_slice(linktext), *kind);
+      backend.enter_xref(target, linktext.is_some(), *kind);
       if ctx.resolving_xref.replace(true) {
         backend.visit_missing_xref(target, *kind, ctx.doc.title());
       } else if let Some(text) = anchor
@@ -494,18 +494,18 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
         })
         .filter(|text| !text.is_empty())
       {
-        backend.enter_xref_text(text, is_biblio);
+        backend.enter_xref_text(is_biblio);
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
-        backend.exit_xref_text(text, is_biblio);
+        backend.exit_xref_text(is_biblio);
       } else if let Some(text) = linktext {
-        backend.enter_xref_text(text, is_biblio);
+        backend.enter_xref_text(is_biblio);
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
-        backend.exit_xref_text(text, is_biblio);
+        backend.exit_xref_text(is_biblio);
       } else {
         backend.visit_missing_xref(target, *kind, ctx.doc.title());
       }
       ctx.resolving_xref.replace(false);
-      backend.exit_xref(target, map_slice(linktext), *kind);
+      backend.exit_xref(target, linktext.is_some(), *kind);
     }
     Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
     Macro(Plugin(plugin_macro)) => backend.visit_plugin_macro(plugin_macro),
@@ -525,11 +525,12 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     CalloutNum(callout) => backend.visit_callout(*callout),
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),
     TextSpan(attrs, nodes) => {
-      backend.enter_text_span(attrs, nodes);
+      backend.enter_text_span(attrs);
       nodes.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_text_span(attrs, nodes);
+      backend.exit_text_span(attrs);
     }
     Symbol(kind) => backend.visit_symbol(*kind),
+    SpacedDashes(len, adjacent_newline) => backend.visit_spaced_dashes(*len, *adjacent_newline),
     LineComment(_) | Discarded => {}
   }
 }
@@ -605,17 +606,12 @@ fn eval_toc_level(nodes: &[TocNode], ctx: &Ctx, backend: &mut impl Backend) {
     backend.enter_toc_level(first.level, nodes);
     nodes.iter().for_each(|node| {
       backend.enter_toc_node(node);
-      backend.enter_toc_content(&node.title);
+      backend.enter_toc_content();
       node.title.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_toc_content(&node.title);
+      backend.exit_toc_content();
       eval_toc_level(&node.children, ctx, backend);
       backend.exit_toc_node(node);
     });
     backend.exit_toc_level(first.level, nodes);
   }
-}
-
-#[inline(always)]
-fn map_slice<'a>(nodes: &'a Option<InlineNodes<'a>>) -> Option<&'a [InlineNode<'a>]> {
-  nodes.as_ref().map(|n| n.as_slice())
 }

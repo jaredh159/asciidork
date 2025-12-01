@@ -304,6 +304,20 @@ impl<'arena> Parser<'arena> {
         content: Inline::Text(lang.src),
         loc: lang.loc,
       });
+      // handle special case, ``` lang, numbered
+      if delim_line.current_is(Comma) {
+        delim_line.discard(1);
+        if delim_line.current_is(Whitespace) {
+          delim_line.discard(1);
+        }
+        if let Some(current) = delim_line.consume_current() {
+          if current.kind == Word && current.lexeme == "numbered" {
+            attr_list
+              .options
+              .push(SourceString::new(current.lexeme, current.loc))
+          }
+        }
+      }
       attr_list.positional.push(None);
       attr_list.positional.push(Some(nodes));
       meta.attrs.push(attr_list);

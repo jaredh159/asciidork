@@ -4,6 +4,7 @@ members = [
   "ast",
   "core",
   "backend",
+  "backend-html5s",
   "cli",
   "dr-html-backend",
   "dr-html-wasm",

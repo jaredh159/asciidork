@@ -1,4 +1,6 @@
-use crate::internal::*;
+use crate::html::htmlbuf::HtmlBuf;
+use ast::{prelude::*, AttrValue, DocumentMeta};
+use core::ReadAttr;
 
 // NB: the awkward api here is because we want to make the common path
 // of some classes and an id very fast, with minimal allocations, as it

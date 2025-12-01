@@ -12,6 +12,7 @@ path = "src/main.rs"
 [lib]
 name = "asciidork_tck"
 path = "src/lib.rs"
+doctest = false
 
 [dependencies]
 asciidork-ast = { path = "../ast", version = "0.26.0" }

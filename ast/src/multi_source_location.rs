@@ -53,6 +53,18 @@ impl MultiSourceLocation {
     self.end_pos = other.end_pos;
     self.end_depth = other.end_depth;
   }
+
+  pub const fn coalesce(&self) -> Option<SourceLocation> {
+    if self.start_depth == self.end_depth {
+      Some(SourceLocation {
+        start: self.start_pos,
+        end: self.end_pos,
+        include_depth: self.start_depth,
+      })
+    } else {
+      None
+    }
+  }
 }
 
 impl From<SourceLocation> for MultiSourceLocation {

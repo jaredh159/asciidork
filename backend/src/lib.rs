@@ -3,6 +3,8 @@ extern crate asciidork_core as core;
 
 mod admonition;
 mod backend;
+pub mod html;
+pub mod time;
 pub mod utils;
 
 // TODO: maybe move this into ast?
@@ -15,3 +17,7 @@ pub mod prelude {
   pub use super::Backend;
   pub use core::{AttrValue, DocType};
 }
+
+#[cfg(debug_assertions)]
+#[macro_use]
+pub mod test;

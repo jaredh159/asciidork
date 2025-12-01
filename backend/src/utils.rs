@@ -1,3 +1,5 @@
+use std::path::Path;
+
 pub mod xref {
   use ast::{DocumentMeta, ReadAttr, XrefKind};
   use core::file;
@@ -103,9 +105,29 @@ pub mod xref {
   }
 }
 
+pub fn file_ext(path: &str) -> Option<&str> {
+  Path::new(path).extension().and_then(|s| s.to_str())
+}
+
 pub fn set_backend_attrs<B: crate::Backend>(doc_meta: &mut ast::DocumentMeta) {
   // maybe only if not set?
   doc_meta
     .insert_doc_attr("outfilesuffix", B::OUTFILESUFFIX.to_string())
     .unwrap();
+}
+
+#[macro_export]
+macro_rules! num_str {
+  ($n:expr) => {
+    match $n {
+      0 => std::borrow::Cow::Borrowed("0"),
+      1 => std::borrow::Cow::Borrowed("1"),
+      2 => std::borrow::Cow::Borrowed("2"),
+      3 => std::borrow::Cow::Borrowed("3"),
+      4 => std::borrow::Cow::Borrowed("4"),
+      5 => std::borrow::Cow::Borrowed("5"),
+      6 => std::borrow::Cow::Borrowed("6"),
+      _ => std::borrow::Cow::Owned($n.to_string()),
+    }
+  };
 }
