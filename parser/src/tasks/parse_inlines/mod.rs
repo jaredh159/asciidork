@@ -462,7 +462,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Underscore)]);
             self.parse_node(
               span(SpanKind::Italic, inline_attrs.take()),
-              parse_ctx([Kind(Underscore)], &token, &mut acc, line, lines),
+              ctx([Kind(Underscore)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -474,7 +474,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Double([Kind(Underscore); 2]);
             self.parse_node(
               span(SpanKind::Italic, inline_attrs.take()),
-              parse_ctx([Kind(Underscore); 2], &token, &mut acc, line, lines),
+              ctx([Kind(Underscore); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -486,7 +486,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Star)]);
             self.parse_node(
               span(SpanKind::Bold, inline_attrs.take()),
-              parse_ctx([Kind(Star)], &token, &mut acc, line, lines),
+              ctx([Kind(Star)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -498,7 +498,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Double([Kind(Star); 2]);
             self.parse_node(
               span(SpanKind::Bold, inline_attrs.take()),
-              parse_ctx([Kind(Star); 2], &token, &mut acc, line, lines),
+              ctx([Kind(Star); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -552,7 +552,13 @@ impl<'arena> Parser<'arena> {
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_node(
               span(SpanKind::LitMono, inline_attrs.take()),
-              parse_ctx([Len(1, Plus), Kind(Backtick)], &token, &mut acc, line, lines),
+              ctx(
+                [Len(1, Plus), Kind(Backtick)],
+                &token,
+                &mut acc,
+                line,
+                lines,
+              ),
             )?;
             self.ctx.subs = subs;
             break;
@@ -561,7 +567,7 @@ impl<'arena> Parser<'arena> {
           Caret if subs.inline_formatting() && line.no_whitespace_until(Caret) => {
             self.parse_node(
               span(SpanKind::Superscript, inline_attrs.take()),
-              parse_ctx([Kind(Caret)], &token, &mut acc, line, lines),
+              ctx([Kind(Caret)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -573,7 +579,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Backtick)]);
             self.parse_node(
               span(SpanKind::Mono, inline_attrs.take()),
-              parse_ctx([Kind(Backtick)], &token, &mut acc, line, lines),
+              ctx([Kind(Backtick)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -584,7 +590,7 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               span(SpanKind::Mono, inline_attrs.take()),
-              parse_ctx([Kind(Backtick); 2], &token, &mut acc, line, lines),
+              ctx([Kind(Backtick); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -601,7 +607,13 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               |inner| Quote(Double, inner),
-              parse_ctx([Kind(Backtick), Kind(DoubleQuote)], &token, &mut acc, line, lines),
+              ctx(
+                [Kind(Backtick), Kind(DoubleQuote)],
+                &token,
+                &mut acc,
+                line,
+                lines,
+              ),
             )?;
             break;
           }
@@ -618,7 +630,13 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               |inner| Quote(Single, inner),
-              parse_ctx([Kind(Backtick), Kind(SingleQuote)], &token, &mut acc, line, lines),
+              ctx(
+                [Kind(Backtick), Kind(SingleQuote)],
+                &token,
+                &mut acc,
+                line,
+                lines,
+              ),
             )?;
             break;
           }
@@ -626,7 +644,7 @@ impl<'arena> Parser<'arena> {
           Tilde if subs.inline_formatting() && line.no_whitespace_until(Tilde) => {
             self.parse_node(
               span(SpanKind::Subscript, inline_attrs.take()),
-              parse_ctx([Kind(Tilde)], &token, &mut acc, line, lines),
+              ctx([Kind(Tilde)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -667,7 +685,7 @@ impl<'arena> Parser<'arena> {
             let kind = if inline_attrs.is_some() { SpanKind::Text } else { SpanKind::Highlight };
             self.parse_node(
               span(kind, inline_attrs.take()),
-              parse_ctx([Kind(Hash); 2], &token, &mut acc, line, lines),
+              ctx([Kind(Hash); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -680,7 +698,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Hash)]);
             self.parse_node(
               span(kind, inline_attrs.take()),
-              parse_ctx([Kind(Hash)], &token, &mut acc, line, lines),
+              ctx([Kind(Hash)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -957,7 +975,7 @@ struct ParseNodeCtx<'arena, 'a, const N: usize> {
   stop_tokens: [TokenSpec; N],
 }
 
-fn parse_ctx<'arena, 'a, const N: usize>(
+fn ctx<'arena, 'a, const N: usize>(
   stop_tokens: [TokenSpec; N],
   token: &'a Token<'arena>,
   acc: &'a mut Accum<'arena>,
@@ -975,15 +993,15 @@ fn link_macro_blank_window_shorthand(attr_list: &mut AttrList) -> bool {
     attr_list.positional[0] = Some(nodes);
     return false;
   };
-  if let Inline::Text(text) = &node.content {
-    if text.ends_with('^') {
-      let mut shortened = text.clone();
-      shortened.pop();
-      node.content = Inline::Text(shortened);
-      node.loc.end -= 1;
-      attr_list.positional[0] = Some(nodes);
-      return true;
-    }
+  if let Inline::Text(text) = &node.content
+    && text.ends_with('^')
+  {
+    let mut shortened = text.clone();
+    shortened.pop();
+    node.content = Inline::Text(shortened);
+    node.loc.end -= 1;
+    attr_list.positional[0] = Some(nodes);
+    return true;
   };
   attr_list.positional[0] = Some(nodes);
   false

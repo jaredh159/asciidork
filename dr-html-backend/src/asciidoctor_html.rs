@@ -3,12 +3,12 @@ use std::sync::Once;
 
 use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::internal::*;
+use EphemeralState::*;
 use ast::AdjacentNewline;
 use utils::set_backend_attrs;
-use EphemeralState::*;
 
 #[derive(Debug, Default)]
 pub struct AsciidoctorHtml {
@@ -1406,7 +1406,9 @@ impl AsciidoctorHtml {
   fn render_styles(&mut self, meta: &DocumentMeta) {
     if meta.str("stylesheet") == Some("") {
       let family = match meta.str("webfonts") {
-        None | Some("") => "Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700",
+        None | Some("") => {
+          "Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700"
+        }
         Some(custom) => custom,
       };
       self.push([

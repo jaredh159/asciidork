@@ -1,5 +1,5 @@
 use asciidork_ast::variants::{inline::*, r#macro::*};
-use asciidork_ast::{prelude::*, AdjacentNewline, InlineNodes};
+use asciidork_ast::{AdjacentNewline, InlineNodes, prelude::*};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 

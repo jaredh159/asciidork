@@ -163,10 +163,10 @@ fn parse_line_ranges(s: &str) -> Vec<Range<usize>> {
       };
       if high == "-1" || high.is_empty() {
         ranges.push(low_n..usize::MAX);
-      } else if let Ok(high_n) = high.parse::<usize>() {
-        if low_n <= high_n {
-          ranges.push(low_n..high_n + 1);
-        }
+      } else if let Ok(high_n) = high.parse::<usize>()
+        && low_n <= high_n
+      {
+        ranges.push(low_n..high_n + 1);
       }
     } else if let Ok(n) = part.parse::<usize>() {
       ranges.push(n..n + 1);

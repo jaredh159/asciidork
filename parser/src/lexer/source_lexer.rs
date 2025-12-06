@@ -164,7 +164,8 @@ impl<'arena> SourceLexer<'arena> {
     match sequence {
       [Some(b'`'), Some(b'`'), Some(b'`'), b, _] if b != Some(b'`') => Some((3, b'`')),
       [Some(b'-'), Some(b'-'), Some(b'\n' | b'\r') | None, _, _] => Some((2, b'-')),
-      [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n' | b'\r') | None]
+      #[rustfmt::skip]
+        [Some(b'*'), Some(b'*'), Some(b'*'), Some(b'*'), Some(b'\n' | b'\r') | None]
       | [Some(b'_'), Some(b'_'), Some(b'_'), Some(b'_'), Some(b'\n' | b'\r') | None]
       | [Some(b'-'), Some(b'-'), Some(b'-'), Some(b'-'), Some(b'\n' | b'\r') | None]
       | [Some(b'+'), Some(b'+'), Some(b'+'), Some(b'+'), Some(b'\n' | b'\r') | None]
@@ -172,7 +173,7 @@ impl<'arena> SourceLexer<'arena> {
       | [Some(b'/'), Some(b'/'), Some(b'/'), Some(b'/'), Some(b'\n' | b'\r') | None]
       | [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'\n' | b'\r') | None] => {
         Some((4, sequence[0].unwrap()))
-      }
+      },
       [Some(b'='), Some(b'='), Some(b'='), Some(b'='), Some(b'=')] => {
         let mut n = 5;
         while self.nth(n) == Some(b'=') {

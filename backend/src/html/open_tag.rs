@@ -1,5 +1,5 @@
 use crate::html::htmlbuf::HtmlBuf;
-use ast::{prelude::*, AttrValue, DocumentMeta};
+use ast::{AttrValue, DocumentMeta, prelude::*};
 use core::ReadAttr;
 
 // NB: the awkward api here is because we want to make the common path
@@ -39,10 +39,8 @@ impl OpenTag {
     tag.buf.push('<');
     tag.buf.push_str(elem);
 
-    if id {
-      if let Some(id) = attrs.id() {
-        tag.push_html_attr("id", id);
-      }
+    if id && let Some(id) = attrs.id() {
+      tag.push_html_attr("id", id);
     }
 
     let mut roles = attrs.roles();

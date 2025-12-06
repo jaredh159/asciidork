@@ -37,15 +37,13 @@ pub fn push_colgroup(html: &mut String, table: &Table, block: &Block) {
   let autowidth = block.meta.attrs.has_option("autowidth");
   for width in table.col_widths.distribute() {
     html.push_str("<col");
-    if !autowidth {
-      if let DistributedColWidth::Percentage(width) = width {
-        if width.fract() == 0.0 {
-          write!(html, r#" style="width: {width}%;""#).unwrap();
-        } else {
-          let width_s = format!("{width:.4}");
-          let width_s = width_s.trim_end_matches('0');
-          write!(html, r#" style="width: {width_s}%;""#).unwrap();
-        }
+    if !autowidth && let DistributedColWidth::Percentage(width) = width {
+      if width.fract() == 0.0 {
+        write!(html, r#" style="width: {width}%;""#).unwrap();
+      } else {
+        let width_s = format!("{width:.4}");
+        let width_s = width_s.trim_end_matches('0');
+        write!(html, r#" style="width: {width_s}%;""#).unwrap();
       }
     }
     html.push('>');

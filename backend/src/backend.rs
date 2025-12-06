@@ -1,6 +1,6 @@
 use super::admonition::AdmonitionKind;
 use crate::prelude::*;
-use ast::{prelude::*, AdjacentNewline};
+use ast::{AdjacentNewline, prelude::*};
 
 macro_rules! warn_unimplemented {
   ($x:ident) => {

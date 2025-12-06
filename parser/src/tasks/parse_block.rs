@@ -310,12 +310,13 @@ impl<'arena> Parser<'arena> {
         if delim_line.current_is(Whitespace) {
           delim_line.discard(1);
         }
-        if let Some(current) = delim_line.consume_current() {
-          if current.kind == Word && current.lexeme == "numbered" {
-            attr_list
-              .options
-              .push(SourceString::new(current.lexeme, current.loc))
-          }
+        if let Some(current) = delim_line.consume_current()
+          && current.kind == Word
+          && current.lexeme == "numbered"
+        {
+          attr_list
+            .options
+            .push(SourceString::new(current.lexeme, current.loc))
         }
       }
       attr_list.positional.push(None);
@@ -353,10 +354,10 @@ impl<'arena> Parser<'arena> {
         delimiter.map(|d| lines.push(d));
       }
 
-      if context == Context::Listing || context == Context::Literal {
-        if let Some(comment) = meta.attrs.named("line-comment") {
-          self.ctx.custom_line_comment = Some(SmallVec::from_slice(comment.as_bytes()));
-        }
+      if (context == Context::Listing || context == Context::Literal)
+        && let Some(comment) = meta.attrs.named("line-comment")
+      {
+        self.ctx.custom_line_comment = Some(SmallVec::from_slice(comment.as_bytes()));
       }
 
       if context == Context::Comment {
@@ -390,12 +391,12 @@ impl<'arena> Parser<'arena> {
 
     self.ctx.subs = restore_subs;
     let mut end_loc = None;
-    if let Some(mut lines) = self.read_lines()? {
-      if lines.current_satisfies(|l| l.is_delimiter(self.ctx.delimiter.unwrap())) {
-        let token = lines.consume_current_token().unwrap();
-        self.restore_lines(lines);
-        end_loc = Some(token.loc);
-      }
+    if let Some(mut lines) = self.read_lines()?
+      && lines.current_satisfies(|l| l.is_delimiter(self.ctx.delimiter.unwrap()))
+    {
+      let token = lines.consume_current_token().unwrap();
+      self.restore_lines(lines);
+      end_loc = Some(token.loc);
     }
 
     if end_loc.is_none() {

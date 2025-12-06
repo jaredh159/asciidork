@@ -204,11 +204,11 @@ fn parse_style(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) -> b
 }
 
 fn parse_duplication_factor(tokens: &TableTokens, spec: &mut CellSpec, cursor: &mut u32) {
-  if tokens.has_seq_at(&[Kind(Digits), Kind(Star)], *cursor) {
-    if let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>()) {
-      spec.duplication = Some(digits);
-      *cursor += 2;
-    }
+  if tokens.has_seq_at(&[Kind(Digits), Kind(Star)], *cursor)
+    && let Some(Ok(digits)) = tokens.nth(*cursor as usize).map(|t| t.lexeme.parse::<u8>())
+  {
+    spec.duplication = Some(digits);
+    *cursor += 2;
   }
 }
 

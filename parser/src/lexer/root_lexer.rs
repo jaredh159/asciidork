@@ -221,11 +221,11 @@ impl<'arena> RootLexer<'arena> {
   pub fn consume_empty_lines(&mut self) {
     self.maybe_advance_source();
     self.sources[self.idx as usize].consume_empty_lines();
-    if self.sources[self.idx as usize].is_eof() {
-      if let Some(prev_idx) = self.source_stack.pop() {
-        self.idx = prev_idx;
-        self.consume_empty_lines();
-      }
+    if self.sources[self.idx as usize].is_eof()
+      && let Some(prev_idx) = self.source_stack.pop()
+    {
+      self.idx = prev_idx;
+      self.consume_empty_lines();
     }
   }
 
@@ -277,17 +277,17 @@ impl<'arena> RootLexer<'arena> {
   }
 
   pub fn next_token(&mut self) -> Token<'arena> {
-    if let Some((ref mut buf_lexer, ref buf_loc)) = self.tmp_buf {
-      if let Some(mut token) = buf_lexer.next_token() {
-        match buf_loc {
-          BufLoc::Repeat(loc) => token.loc = *loc,
-          BufLoc::Offset(offset) => token.loc = token.loc.offset(*offset),
-        }
-        if buf_lexer.is_eof() {
-          self.tmp_buf = None
-        }
-        return token;
+    if let Some((ref mut buf_lexer, ref buf_loc)) = self.tmp_buf
+      && let Some(mut token) = buf_lexer.next_token()
+    {
+      match buf_loc {
+        BufLoc::Repeat(loc) => token.loc = *loc,
+        BufLoc::Offset(offset) => token.loc = token.loc.offset(*offset),
       }
+      if buf_lexer.is_eof() {
+        self.tmp_buf = None
+      }
+      return token;
     }
     self.maybe_advance_source();
     match self.sources[self.idx as usize].next_token() {
@@ -692,7 +692,9 @@ mod tests {
     ]);
     refute_produces_token!(
       Entity,
-      ["&a;", "&foo", "&#;", "&#x;", "&#XFFF;", "&#x05T;", "&sect 1;"]
+      [
+        "&a;", "&foo", "&#;", "&#x;", "&#XFFF;", "&#x05T;", "&sect 1;"
+      ]
     );
   }
 

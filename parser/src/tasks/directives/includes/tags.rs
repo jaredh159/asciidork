@@ -241,19 +241,19 @@ impl<'arena> Parser<'arena> {
       }
     }
 
-    if let Some((tag, line_idx)) = tag_stack.last() {
-      if selection.expected_tags().contains(tag) {
-        let line = nth_line(src, *line_idx).unwrap().to_string();
-        let underline_start = line.find(tag).unwrap_or(0) as u32;
-        self.err(Diagnostic {
-          line_num: (*line_idx as u32) + 1,
-          line,
-          message: format!("Tag `{tag}` was not closed"),
-          underline_start,
-          underline_width: tag.len() as u32,
-          source_file: SourceFile::Path(src_path.clone()),
-        })?;
-      }
+    if let Some((tag, line_idx)) = tag_stack.last()
+      && selection.expected_tags().contains(tag)
+    {
+      let line = nth_line(src, *line_idx).unwrap().to_string();
+      let underline_start = line.find(tag).unwrap_or(0) as u32;
+      self.err(Diagnostic {
+        line_num: (*line_idx as u32) + 1,
+        line,
+        message: format!("Tag `{tag}` was not closed"),
+        underline_start,
+        underline_width: tag.len() as u32,
+        source_file: SourceFile::Path(src_path.clone()),
+      })?;
     }
 
     if !expected_tags.is_empty() {
@@ -343,10 +343,10 @@ fn tag_directive(tag: &[u8]) -> Option<TagDirective> {
 #[cfg(test)]
 mod test {
   use super::*;
+  use Spec::*;
   use indoc::indoc;
   use pretty_assertions::assert_eq;
   use test_utils::*;
-  use Spec::*;
 
   #[test]
   fn test_selection() {

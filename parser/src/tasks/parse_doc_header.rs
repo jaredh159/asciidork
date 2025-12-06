@@ -156,10 +156,10 @@ impl<'arena> Parser<'arena> {
       header.loc.extend(author_line.last_loc().unwrap());
       self.parse_author_line(author_line)?;
       // revision line can only follow an author line (and requires a doc header)
-      if self.document.meta.is_set("author") {
-        if let Some(end) = self.parse_revision_line(lines) {
-          header.loc.end = end;
-        }
+      if self.document.meta.is_set("author")
+        && let Some(end) = self.parse_revision_line(lines)
+      {
+        header.loc.end = end;
       }
     }
 

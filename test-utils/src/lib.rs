@@ -56,9 +56,7 @@ macro_rules! doc_meta {
 
 #[macro_export]
 macro_rules! test_lexer {
-  ($input:expr) => {{
-    Lexer::from_str(leaked_bump(), SourceFile::Tmp, $input)
-  }};
+  ($input:expr) => {{ Lexer::from_str(leaked_bump(), SourceFile::Tmp, $input) }};
 }
 
 #[macro_export]
@@ -334,9 +332,7 @@ macro_rules! attr_list {
 
 #[macro_export]
 macro_rules! bstr {
-  ($text:expr) => {{
-    bumpalo::collections::String::from_str_in($text, leaked_bump())
-  }};
+  ($text:expr) => {{ bumpalo::collections::String::from_str_in($text, leaked_bump()) }};
 }
 
 #[macro_export]
@@ -594,16 +590,12 @@ macro_rules! parse_single_block_loose {
 
 #[macro_export]
 macro_rules! const_resolver {
-  ($bytes:expr) => {{
-    Box::new(asciidork_parser::includes::ConstResolver(Vec::from($bytes)))
-  }};
+  ($bytes:expr) => {{ Box::new(asciidork_parser::includes::ConstResolver(Vec::from($bytes))) }};
 }
 
 #[macro_export]
 macro_rules! error_resolver {
-  ($error:expr) => {{
-    Box::new(asciidork_parser::includes::ErrorResolver($error))
-  }};
+  ($error:expr) => {{ Box::new(asciidork_parser::includes::ErrorResolver($error)) }};
 }
 
 #[macro_export]
@@ -652,9 +644,7 @@ macro_rules! parse_loose {
 
 #[macro_export]
 macro_rules! parse_warnings {
-  ($input:expr) => {{
-    parse_loose!($input).unwrap().warnings
-  }};
+  ($input:expr) => {{ parse_loose!($input).unwrap().warnings }};
 }
 
 #[macro_export]

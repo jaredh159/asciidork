@@ -1,4 +1,4 @@
-use asciidork_ast::{prelude::*, AttrValue};
+use asciidork_ast::{AttrValue, prelude::*};
 use asciidork_parser::prelude::*;
 use pretty_assertions::assert_eq;
 use test_utils::*;

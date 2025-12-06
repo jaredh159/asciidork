@@ -78,7 +78,6 @@ pub trait HtmlBuf {
       let mut open_tag = OpenTag::new(element, attrs);
       classes.iter().for_each(|c| open_tag.push_class(c));
       self.push_open_tag(open_tag);
-      return;
     } else {
       self.push(["<", element, ">"]);
     }
