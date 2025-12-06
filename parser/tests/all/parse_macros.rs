@@ -296,13 +296,13 @@ fn plugin_inline_macro() {
       meta: chunk_meta!(0),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!(
-        Macro(Plugin(PluginMacro {
+        Macro(Plugin(Box::new(PluginMacro {
           name: bstr!("bob"),
           target: None,
           flow: Flow::Inline,
           attrs: attrs::pos("mustard", 5..12),
           source: src!("bob:[mustard]", 0..13)
-        })),
+        }))),
         0..13
       )]),
       loc: (0..13).into(),
@@ -319,13 +319,13 @@ fn plugin_block_macro() {
       meta: chunk_meta!(0),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!(
-        Macro(Plugin(PluginMacro {
+        Macro(Plugin(Box::new(PluginMacro {
           name: bstr!("bob"),
           target: None,
           flow: Flow::Block,
           attrs: attrs::pos("mustard", 6..13),
           source: src!("bob::[mustard]", 0..14)
-        })),
+        }))),
         0..14
       )]),
       loc: (0..14).into(),
@@ -339,13 +339,13 @@ fn plugin_block_macro() {
       meta: chunk_meta!(0),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!(
-        Macro(Plugin(PluginMacro {
+        Macro(Plugin(Box::new(PluginMacro {
           name: bstr!("bob"),
           target: Some(src!("baz", 5..8)),
           flow: Flow::Block,
           attrs: attr_list!(8..10),
           source: src!("bob::baz[]", 0..10)
-        })),
+        }))),
         0..10
       )]),
       loc: (0..10).into(),

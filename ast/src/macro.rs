@@ -32,7 +32,7 @@ pub enum MacroNode<'arena> {
     linktext: Option<InlineNodes<'arena>>,
     kind: XrefKind,
   },
-  Plugin(PluginMacro<'arena>),
+  Plugin(Box<PluginMacro<'arena>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

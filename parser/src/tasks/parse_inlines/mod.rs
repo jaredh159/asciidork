@@ -287,13 +287,13 @@ impl<'arena> Parser<'arena> {
                 let attrs = self.parse_block_attr_list(&mut line)?;
                 let loc = SourceLocation::spanning(token.loc, attrs.loc);
                 acc.push_node(
-                  Macro(Plugin(PluginMacro {
+                  Macro(Plugin(Box::new(PluginMacro {
                     name,
                     target,
                     flow: Flow::Inline,
                     attrs,
                     source: SourceString::new(source, loc),
-                  })),
+                  }))),
                   loc,
                 );
               }

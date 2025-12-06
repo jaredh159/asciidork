@@ -577,13 +577,13 @@ impl<'arena> Parser<'arena> {
     let attrs = self.parse_block_attr_list(&mut line)?;
     let mut nodes = InlineNodes::new(self.bump);
     nodes.push(InlineNode {
-      content: Inline::Macro(MacroNode::Plugin(PluginMacro {
+      content: Inline::Macro(MacroNode::Plugin(Box::new(PluginMacro {
         name,
         target,
         flow: Flow::Block,
         attrs,
         source: SourceString::new(source, line_loc),
-      })),
+      }))),
       loc: line_loc,
     });
     Ok(Block {
