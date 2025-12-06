@@ -90,11 +90,7 @@ pub trait ReadAttr {
   }
 
   fn true_if(&self, predicate: bool) -> Option<&AttrValue> {
-    if predicate {
-      Some(&AttrValue::Bool(true))
-    } else {
-      None
-    }
+    if predicate { Some(&AttrValue::Bool(true)) } else { None }
   }
 }
 
@@ -125,7 +121,7 @@ impl Attrs {
   }
 
   pub fn defaults() -> Self {
-    let attrs = Self(HashMap::from_iter(
+    Self(HashMap::from_iter(
       [
         ("empty", ""),
         ("blank", ""),
@@ -184,8 +180,7 @@ impl Attrs {
       ]
       .iter()
       .map(|(k, v)| (k.to_string(), (*v).into())),
-    ));
-    attrs
+    ))
   }
 
   pub fn insert(&mut self, key: impl Into<String>, value: AttrValue) -> Result<(), String> {

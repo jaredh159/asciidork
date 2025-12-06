@@ -462,11 +462,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Underscore)]);
             self.parse_node(
               span(SpanKind::Italic, inline_attrs.take()),
-              [Kind(Underscore)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Underscore)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -478,11 +474,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Double([Kind(Underscore); 2]);
             self.parse_node(
               span(SpanKind::Italic, inline_attrs.take()),
-              [Kind(Underscore); 2],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Underscore); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -494,11 +486,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Star)]);
             self.parse_node(
               span(SpanKind::Bold, inline_attrs.take()),
-              [Kind(Star)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Star)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -510,11 +498,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Double([Kind(Star); 2]);
             self.parse_node(
               span(SpanKind::Bold, inline_attrs.take()),
-              [Kind(Star); 2],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Star); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -568,11 +552,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_node(
               span(SpanKind::LitMono, inline_attrs.take()),
-              [Len(1, Plus), Kind(Backtick)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Len(1, Plus), Kind(Backtick)], &token, &mut acc, line, lines),
             )?;
             self.ctx.subs = subs;
             break;
@@ -581,11 +561,7 @@ impl<'arena> Parser<'arena> {
           Caret if subs.inline_formatting() && line.no_whitespace_until(Caret) => {
             self.parse_node(
               span(SpanKind::Superscript, inline_attrs.take()),
-              [Kind(Caret)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Caret)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -597,11 +573,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Backtick)]);
             self.parse_node(
               span(SpanKind::Mono, inline_attrs.take()),
-              [Kind(Backtick)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Backtick)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -612,11 +584,7 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               span(SpanKind::Mono, inline_attrs.take()),
-              [Kind(Backtick); 2],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Backtick); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -633,11 +601,7 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               |inner| Quote(Double, inner),
-              [Kind(Backtick), Kind(DoubleQuote)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Backtick), Kind(DoubleQuote)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -654,11 +618,7 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               |inner| Quote(Single, inner),
-              [Kind(Backtick), Kind(SingleQuote)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Backtick), Kind(SingleQuote)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -666,11 +626,7 @@ impl<'arena> Parser<'arena> {
           Tilde if subs.inline_formatting() && line.no_whitespace_until(Tilde) => {
             self.parse_node(
               span(SpanKind::Subscript, inline_attrs.take()),
-              [Kind(Tilde)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Tilde)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -711,11 +667,7 @@ impl<'arena> Parser<'arena> {
             let kind = if inline_attrs.is_some() { SpanKind::Text } else { SpanKind::Highlight };
             self.parse_node(
               span(kind, inline_attrs.take()),
-              [Kind(Hash); 2],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Hash); 2], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -728,11 +680,7 @@ impl<'arena> Parser<'arena> {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Hash)]);
             self.parse_node(
               span(kind, inline_attrs.take()),
-              [Kind(Hash)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              parse_ctx([Kind(Hash)], &token, &mut acc, line, lines),
             )?;
             break;
           }
@@ -904,14 +852,17 @@ impl<'arena> Parser<'arena> {
   fn parse_node<const N: usize>(
     &mut self,
     wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
-    stop_tokens: [TokenSpec; N],
-    start: &Token<'arena>,
-    state: &mut Accum<'arena>,
-    mut line: Line<'arena>,
-    lines: &mut ContiguousLines<'arena>,
+    ctx: ParseNodeCtx<'arena, '_, N>,
   ) -> Result<()> {
-    let mut loc = start.loc;
-    let mut stop_len = start.len();
+    let ParseNodeCtx {
+      token,
+      acc,
+      mut line,
+      lines,
+      stop_tokens,
+    } = ctx;
+    let mut loc = token.loc;
+    let mut stop_len = token.len();
     stop_tokens.iter().take(N - 1).for_each(|spec| {
       let tok = line.consume_current().unwrap();
       debug_assert!(tok.kind == spec.token_kind().unwrap());
@@ -926,14 +877,14 @@ impl<'arena> Parser<'arena> {
       loc.extend(attr_list.loc);
       had_inline_attrs = true;
     }
-    state.push_node(node, loc);
-    push_newline_if_needed(state, lines);
+    acc.push_node(node, loc);
+    push_newline_if_needed(acc, lines);
     self.ctx.inline_ctx = InlineCtx::None;
     if had_inline_attrs
       && let Some(InlineNode {
         content: Span(SpanKind::Text, Some(attrs), nodes),
         ..
-      }) = state.inlines.last()
+      }) = acc.inlines.last()
       && let Some(id) = &attrs.id
     {
       self.insert_anchor(
@@ -996,6 +947,24 @@ impl<'arena> Parser<'arena> {
       state.push_node(CalloutTuck(tuck), tuck_loc);
     }
   }
+}
+
+struct ParseNodeCtx<'arena, 'a, const N: usize> {
+  token: &'a Token<'arena>,
+  acc: &'a mut Accum<'arena>,
+  line: Line<'arena>,
+  lines: &'a mut ContiguousLines<'arena>,
+  stop_tokens: [TokenSpec; N],
+}
+
+fn parse_ctx<'arena, 'a, const N: usize>(
+  stop_tokens: [TokenSpec; N],
+  token: &'a Token<'arena>,
+  acc: &'a mut Accum<'arena>,
+  line: Line<'arena>,
+  lines: &'a mut ContiguousLines<'arena>,
+) -> ParseNodeCtx<'arena, 'a, N> {
+  ParseNodeCtx { token, acc, line, lines, stop_tokens }
 }
 
 fn link_macro_blank_window_shorthand(attr_list: &mut AttrList) -> bool {
