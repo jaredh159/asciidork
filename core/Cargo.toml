@@ -1,7 +1,7 @@
 [package]
 name = "asciidork-core"
 version = "0.27.0"
-edition = "2021"
+edition = "2024"
 description = "Asciidork core shared utils, types"
 license = "MIT"
 

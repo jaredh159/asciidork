@@ -19,13 +19,13 @@ check:
   @just build-playground
 
 ptest:
-  @cd parser && bacon test
+  @cd parser && CARGO_TARGET_DIR=target_bacon bacon test
 
 btest:
-  @cd dr-html-backend && bacon test
+  @cd dr-html-backend && CARGO_TARGET_DIR=target_bacon bacon test
 
 ktest:
-  @cd tck && bacon test
+  @cd tck && CARGO_TARGET_DIR=target_bacon bacon test
 
 reset-wasm:
   @git restore web-playground/public/wasm/dr_html_wasm_bg.wasm

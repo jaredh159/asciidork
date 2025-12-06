@@ -785,72 +785,72 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_italic(&mut self) {
-    self.push_str("<em>");
+  fn enter_inline_italic(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("em", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_italic(&mut self) {
+  fn exit_inline_italic(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</em>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_mono(&mut self) {
-    self.push_str("<code>");
+  fn enter_inline_mono(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("code", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_mono(&mut self) {
+  fn exit_inline_mono(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</code>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_bold(&mut self) {
-    self.push_str("<strong>");
+  fn enter_inline_bold(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("strong", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_bold(&mut self) {
+  fn exit_inline_bold(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</strong>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_lit_mono(&mut self) {
-    self.push_str("<code>");
+  fn enter_inline_lit_mono(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("code", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_lit_mono(&mut self) {
+  fn exit_inline_lit_mono(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</code>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_highlight(&mut self) {
-    self.push_str("<mark>");
+  fn enter_inline_highlight(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("mark", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_highlight(&mut self) {
+  fn exit_inline_highlight(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</mark>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_subscript(&mut self) {
-    self.push_str("<sub>");
+  fn enter_inline_subscript(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("sub", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_subscript(&mut self) {
+  fn exit_inline_subscript(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</sub>");
   }
 
   #[instrument(skip_all)]
-  fn enter_inline_superscript(&mut self) {
-    self.push_str("<sup>");
+  fn enter_inline_superscript(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("sup", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_inline_superscript(&mut self) {
+  fn exit_inline_superscript(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</sup>");
   }
 
@@ -935,12 +935,12 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_text_span(&mut self, attrs: &AttrList) {
-    self.open_element("span", &[], attrs);
+  fn enter_text_span(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("span", &[], attrs);
   }
 
   #[instrument(skip_all)]
-  fn exit_text_span(&mut self, _attrs: &AttrList) {
+  fn exit_text_span(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</span>");
   }
 

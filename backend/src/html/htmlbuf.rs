@@ -73,6 +73,17 @@ pub trait HtmlBuf {
     self.push_open_tag(open_tag);
   }
 
+  fn open_element_opt(&mut self, element: &str, classes: &[&str], attrs: Option<&impl AttrData>) {
+    if let Some(attrs) = attrs {
+      let mut open_tag = OpenTag::new(element, attrs);
+      classes.iter().for_each(|c| open_tag.push_class(c));
+      self.push_open_tag(open_tag);
+      return;
+    } else {
+      self.push(["<", element, ">"]);
+    }
+  }
+
   fn push_open_tag(&mut self, tag: OpenTag) {
     self.push_str(&tag.finish());
   }

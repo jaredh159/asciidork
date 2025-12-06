@@ -13,16 +13,14 @@ impl<'arena> InlineNodes<'arena> {
   pub fn plain_text(&self) -> Vec<&str> {
     let mut text = Vec::new();
     self.iter().for_each(|node| match &node.content {
-      Inline::Bold(nodes) => text.extend(nodes.plain_text()),
+      Inline::Span(_, _, nodes) => text.extend(nodes.plain_text()),
       Inline::CurlyQuote(RightDouble) => text.push("”"),
       Inline::CurlyQuote(LeftDouble) => text.push("“"),
       Inline::CurlyQuote(LeftSingle) => text.push("‘"),
       Inline::CurlyQuote(RightSingle) => text.push("’"),
       Inline::CurlyQuote(LegacyImplicitApostrophe) => text.push("'"),
       Inline::Discarded => {}
-      Inline::Highlight(nodes) => text.extend(nodes.plain_text()),
       Inline::Macro(_) => {}
-      Inline::Italic(nodes) => text.extend(nodes.plain_text()),
       Inline::InlinePassthru(nodes) => text.extend(nodes.plain_text()),
       Inline::Newline => text.push(" "),
       Inline::InlineAnchor(_) => {}
@@ -30,8 +28,6 @@ impl<'arena> InlineNodes<'arena> {
       Inline::LineBreak => {}
       Inline::LineComment(_) => {}
       Inline::CalloutNum(_) => {}
-      Inline::LitMono(nodes) => text.extend(nodes.plain_text()),
-      Inline::Mono(nodes) => text.extend(nodes.plain_text()),
       Inline::MultiCharWhitespace(_) => text.push(" "),
       Inline::Quote(_, nodes) => text.extend(nodes.plain_text()),
       Inline::SpacedDashes(2, _) => text.push(" — "),
@@ -49,10 +45,7 @@ impl<'arena> InlineNodes<'arena> {
       Inline::Symbol(SymbolKind::DoubleRightArrow) => text.push("=>"),
       Inline::Symbol(SymbolKind::SingleLeftArrow) => text.push("<-"),
       Inline::Symbol(SymbolKind::DoubleLeftArrow) => text.push("<="),
-      Inline::Superscript(nodes) => text.extend(nodes.plain_text()),
-      Inline::Subscript(nodes) => text.extend(nodes.plain_text()),
       Inline::Text(s) => text.push(s.as_str()),
-      Inline::TextSpan(_, nodes) => text.extend(nodes.plain_text()),
       Inline::CalloutTuck(_) => {}
     });
     text
@@ -162,9 +155,15 @@ mod tests {
   #[test]
   fn test_plain_text() {
     let heading: InlineNodes = nodes![
-      node!(Inline::Bold(just!("Document", 1..8)), 0..9),
+      node!(
+        Inline::Span(SpanKind::Bold, None, just!("Document", 1..8)),
+        0..9
+      ),
       node!(" "; 9..10),
-      node!(Inline::Italic(just!("title", 12..18)), 11..19),
+      node!(
+        Inline::Span(SpanKind::Italic, None, just!("title", 12..18)),
+        11..19
+      ),
     ];
     expect_eq!(heading.plain_text(), vec!["Document", " ", "title"]);
   }

@@ -36,7 +36,7 @@ fn test_parse_section_w_reftext() {
     "#},
     reftext: Some(nodes![
       node!("so "; 9..12),
-      node!(Inline::Italic(just!("baz", 13..16)), 12..17),
+      node!(Inline::Span(SpanKind::Italic, None, just!("baz", 13..16)), 12..17),
     ]),
     Section {
       meta: ChunkMeta {
@@ -45,7 +45,7 @@ fn test_parse_section_w_reftext() {
           named: Named::from(vecb![
              (src!("reftext", 1..8), nodes![
                node!("so "; 9..12),
-               node!(Inline::Italic(just!("baz", 13..16)), 12..17),
+               node!(Inline::Span(SpanKind::Italic, None, just!("baz", 13..16)), 12..17),
              ])
           ]),
           ..attr_list!(0..18)

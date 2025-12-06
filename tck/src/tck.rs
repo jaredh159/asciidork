@@ -1,7 +1,7 @@
 use serde_json::{Map, Value};
 
-use asciidork_ast::prelude::*;
 use asciidork_ast::InlineNodes;
+use asciidork_ast::prelude::*;
 use asciidork_parser::prelude::*;
 
 use crate::loc::*;
@@ -74,7 +74,7 @@ impl<'arena> Tck<'arena> {
     };
     assert_eq!(blocks.len(), 1);
     let block = &mut blocks[0];
-    let Value::Object(ref mut block) = block else {
+    let Value::Object(block) = block else {
       panic!("expected block object");
     };
     block.remove("inlines").unwrap()
@@ -174,7 +174,7 @@ impl<'arena> Tck<'arena> {
         node.set("type", "string");
         node.set("value", text.as_str());
       }
-      Inline::Bold(nodes) => {
+      Inline::Span(SpanKind::Bold, _, nodes) => {
         node.set("name", "span");
         node.set("type", "inline");
         node.set("variant", "strong");
@@ -200,11 +200,11 @@ impl<'arena> Tck<'arena> {
     for node in nodes.iter() {
       if let Some(last) = consolidated.last_mut() {
         match (&mut last.content, &node.content) {
-          (Inline::Text(ref mut prev), Inline::Text(current)) => {
+          (Inline::Text(prev), Inline::Text(current)) => {
             prev.push_str(current.as_str());
             last.loc.end = node.loc.end;
           }
-          (Inline::Text(ref mut prev), Inline::Newline) => {
+          (Inline::Text(prev), Inline::Newline) => {
             prev.push('\n');
             last.loc.end = node.loc.end;
           }

@@ -1278,7 +1278,10 @@ mod tests {
           id: src!("step-2", 2..8),
           reftext: Some(nodes![
             node!("be "; 9..12),
-            node!(Inline::Italic(just!("sure", 13..17)), 12..18),
+            node!(
+              Inline::Span(SpanKind::Italic, None, just!("sure", 13..17)),
+              12..18
+            ),
           ]),
           loc: loc!(0..20),
         }),
@@ -1332,7 +1335,10 @@ mod tests {
           id: src!("step-2", 2..8),
           reftext: Some(nodes![
             node!("be "; 9..12),
-            node!(Inline::Italic(just!("sure", 13..17)), 12..18),
+            node!(
+              Inline::Span(SpanKind::Italic, None, just!("sure", 13..17)),
+              12..18
+            ),
           ]),
           loc: loc!(0..20),
         }),

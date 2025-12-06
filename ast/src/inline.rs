@@ -15,12 +15,9 @@ impl<'arena> InlineNode<'arena> {
 // https://docs.asciidoctor.org/asciidoc/latest/key-concepts/#elements
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Inline<'arena> {
-  Bold(InlineNodes<'arena>),
   CurlyQuote(CurlyKind),
   Discarded,
-  Highlight(InlineNodes<'arena>),
   Macro(MacroNode<'arena>),
-  Italic(InlineNodes<'arena>),
   InlinePassthru(InlineNodes<'arena>),
   Newline,
   CalloutNum(Callout),
@@ -29,17 +26,25 @@ pub enum Inline<'arena> {
   BiblioAnchor(BumpString<'arena>),
   LineBreak,
   LineComment(BumpString<'arena>),
-  LitMono(InlineNodes<'arena>),
-  Mono(InlineNodes<'arena>),
   MultiCharWhitespace(BumpString<'arena>),
   Quote(QuoteKind, InlineNodes<'arena>),
   SpecialChar(SpecialCharKind),
-  Superscript(InlineNodes<'arena>),
-  Subscript(InlineNodes<'arena>),
   Symbol(SymbolKind),
   Text(BumpString<'arena>),
-  TextSpan(AttrList<'arena>, InlineNodes<'arena>),
   SpacedDashes(u8, AdjacentNewline),
+  Span(SpanKind, Option<AttrList<'arena>>, InlineNodes<'arena>),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum SpanKind {
+  Bold,
+  Italic,
+  LitMono,
+  Mono,
+  Highlight,
+  Superscript,
+  Subscript,
+  Text,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

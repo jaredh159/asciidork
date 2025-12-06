@@ -1,10 +1,16 @@
 use asciidork_core::{JobAttr, JobSettings};
-use asciidork_dr_html_backend::{css, AsciidoctorHtml};
+use asciidork_dr_html_backend::{AsciidoctorHtml, css};
 use asciidork_eval::eval;
 use asciidork_parser::prelude::*;
 use test_utils::*;
 
 use regex::Regex;
+
+assert_inline_html!(
+  inline_attr_list_bold,
+  "[#free-world.goals]*free the world*",
+  r#"<strong id="free-world" class="goals">free the world</strong>"#
+);
 
 assert_inline_html!(
   simple_inline_w_newline,

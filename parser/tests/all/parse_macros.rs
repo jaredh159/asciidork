@@ -28,11 +28,12 @@ test_inlines_loose!(
       target: src!("http://foo.com", 0..14),
       attrs: Some(AttrList {
         positional: vecb![Some(nodes![node!(
-          TextSpan(
-            AttrList {
+          Span(
+            SpanKind::Text,
+            Some(AttrList {
               roles: vecb![src!("role", 17..21)],
               ..attr_list!(15..22)
-            },
+            }),
             just!("bar", 23..26)
           ),
           15..27
@@ -141,7 +142,10 @@ test_inlines_loose!(
       target: src!("foo", 5..8),
       linktext: Some(nodes![
         node!("bar "; 9..13),
-        node!(Inline::Italic(just!("baz", 14..17)), 13..18)
+        node!(
+          Inline::Span(SpanKind::Italic, None, just!("baz", 14..17)),
+          13..18
+        )
       ]),
       kind: XrefKind::Macro
     }),
@@ -231,7 +235,10 @@ test_inlines_loose!(
         target: src!("foo-rofl", 6..14),
         linktext: Some(nodes![
           node!("so "; 15..18),
-          node!(Inline::Italic(just!("cool", 19..23)), 18..24),
+          node!(
+            Inline::Span(SpanKind::Italic, None, just!("cool", 19..23)),
+            18..24
+          ),
           node!(" wow"; 24..28)
         ]),
         kind: XrefKind::Shorthand

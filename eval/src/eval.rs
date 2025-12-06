@@ -404,16 +404,48 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
 
 fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
   match &inline.content {
-    Bold(children) => {
-      backend.enter_inline_bold();
-      children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_bold();
-    }
-    Mono(children) => {
-      backend.enter_inline_mono();
-      children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_mono();
-    }
+    Span(kind, attrs, children) => match kind {
+      SpanKind::Text => {
+        backend.enter_text_span(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_text_span(attrs.as_ref());
+      }
+      SpanKind::Bold => {
+        backend.enter_inline_bold(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_inline_bold(attrs.as_ref());
+      }
+      SpanKind::Mono => {
+        backend.enter_inline_mono(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_inline_mono(attrs.as_ref());
+      }
+      SpanKind::Italic => {
+        backend.enter_inline_italic(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_inline_italic(attrs.as_ref());
+      }
+      SpanKind::Highlight => {
+        backend.enter_inline_highlight(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_inline_highlight(attrs.as_ref());
+      }
+      SpanKind::Subscript => {
+        backend.enter_inline_subscript(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_inline_subscript(attrs.as_ref());
+      }
+      SpanKind::Superscript => {
+        backend.enter_inline_superscript(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_inline_superscript(attrs.as_ref());
+      }
+      SpanKind::LitMono => {
+        backend.enter_inline_lit_mono(attrs.as_ref());
+        children.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_inline_lit_mono(attrs.as_ref());
+      }
+    },
     InlinePassthru(children) => {
       backend.enter_inline_passthrough();
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
@@ -422,35 +454,10 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     SpecialChar(char) => backend.visit_inline_specialchar(char),
     Text(text) => backend.visit_inline_text(text.as_str()),
     Newline => backend.visit_joining_newline(),
-    Italic(children) => {
-      backend.enter_inline_italic();
-      children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_italic();
-    }
-    Highlight(children) => {
-      backend.enter_inline_highlight();
-      children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_highlight();
-    }
-    Subscript(children) => {
-      backend.enter_inline_subscript();
-      children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_subscript();
-    }
-    Superscript(children) => {
-      backend.enter_inline_superscript();
-      children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_superscript();
-    }
     Quote(kind, children) => {
       backend.enter_inline_quote(*kind);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
       backend.exit_inline_quote(*kind);
-    }
-    LitMono(text) => {
-      backend.enter_inline_lit_mono();
-      text.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_inline_lit_mono();
     }
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws),
@@ -524,11 +531,6 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     LineBreak => backend.visit_linebreak(),
     CalloutNum(callout) => backend.visit_callout(*callout),
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),
-    TextSpan(attrs, nodes) => {
-      backend.enter_text_span(attrs);
-      nodes.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_text_span(attrs);
-    }
     Symbol(kind) => backend.visit_symbol(*kind),
     SpacedDashes(len, adjacent_newline) => backend.visit_spaced_dashes(*len, *adjacent_newline),
     LineComment(_) | Discarded => {}
