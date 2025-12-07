@@ -771,7 +771,10 @@ impl<'arena> Parser<'arena> {
             }
           }
 
-          _ if subs.macros() && token.kind(UriScheme) => {
+          _ if token.kind(UriScheme)
+            && subs.macros()
+            && self.ctx.inline_ctx != InlineCtx::LinkMacroAttrs =>
+          {
             let mut loc = token.loc;
             let line_end = line.last_loc().unwrap();
             let target = line.consume_url(Some(&token), None, self.bump);

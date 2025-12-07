@@ -511,3 +511,13 @@ assert_html!(
   "\u{00A0}http://asciidoc.org[AsciiDoc] project page.",
   contains: "\u{00A0}<a href=\"http://asciidoc.org\">AsciiDoc</a> project page.</p>"
 );
+
+assert_html!(
+  no_nested_link,
+  "http://example.com/test1[http://example.com/test1]",
+  html! {r#"
+    <div class="paragraph">
+      <p><a href="http://example.com/test1">http://example.com/test1</a></p>
+    </div>
+  "#}
+);

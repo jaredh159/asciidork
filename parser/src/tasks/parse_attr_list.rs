@@ -120,8 +120,12 @@ impl<'arena> Parser<'arena> {
       }
       last_kind = token.kind;
     }
+
     if parse_as_attr_list {
-      return self._parse_attr_list(line, false, false);
+      self.ctx.inline_ctx = InlineCtx::LinkMacroAttrs;
+      let result = self._parse_attr_list(line, false, false);
+      self.ctx.inline_ctx = InlineCtx::None;
+      return result;
     }
 
     let mut attrs = AttrList::new(line.first_loc().unwrap().decr_start(), self.bump);
@@ -136,7 +140,9 @@ impl<'arena> Parser<'arena> {
       tokens.push(line.consume_current().unwrap());
     }
     let attr_line = Line::new(unquote(tokens));
+    self.ctx.inline_ctx = InlineCtx::LinkMacroAttrs;
     let nodes = self.parse_inlines(&mut attr_line.into_lines())?;
+    self.ctx.inline_ctx = InlineCtx::None;
     attrs.positional.push(Some(nodes));
     debug_assert!(line.current_is(CloseBracket));
     let close_bracket = line.consume_current().expect("attr list close bracket");
