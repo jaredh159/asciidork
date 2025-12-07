@@ -465,7 +465,7 @@ impl<'arena> Parser<'arena> {
           Some(Kind::Shorthand)
         }
         Dots | Hash | Percent if token.len() == 1 => {
-          saw_shorthand_symbol = true;
+          saw_shorthand_symbol = tokens.get(i + 1).is_none_or(|t| t.kind != Whitespace);
           acc
         }
         DoubleQuote | SingleQuote => Some(Kind::Positional),
@@ -1102,6 +1102,13 @@ mod tests {
             just!("value of named", 19..33),
           )]),
           ..attr_list!(0..35)
+        },
+      ),
+      (
+        "[Dr. Foo]", // `. ` can't trigger option
+        AttrList {
+          positional: vecb![Some(just!("Dr. Foo", 1..8))],
+          ..attr_list!(0..9)
         },
       ),
       (
