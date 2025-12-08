@@ -233,11 +233,7 @@ impl<'arena> ContiguousLines<'arena> {
       let line = self.consume_current().unwrap();
       loc.extend(line.last_loc().unwrap());
     }
-    if loc.is_empty() {
-      None
-    } else {
-      Some(loc)
-    }
+    if loc.is_empty() { None } else { Some(loc) }
   }
 
   pub fn discard_leading_empty_lines(&mut self) {
@@ -283,11 +279,7 @@ impl<'arena> ContiguousLines<'arena> {
         indent = line_indent;
       }
     }
-    if indent == usize::MAX {
-      0
-    } else {
-      indent
-    }
+    if indent == usize::MAX { 0 } else { indent }
   }
 
   pub fn set_indentation(&mut self, indent: usize) {

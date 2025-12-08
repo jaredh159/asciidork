@@ -1,4 +1,4 @@
-use super::{context::*, TableTokens};
+use super::{TableTokens, context::*};
 use crate::internal::*;
 
 impl<'arena> Parser<'arena> {
@@ -144,9 +144,9 @@ impl<'arena> Parser<'arena> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use ColWidth::*;
   use pretty_assertions::assert_eq;
   use test_utils::*;
-  use ColWidth::*;
 
   const fn w(width: u8) -> ColWidth {
     Proportional(width)

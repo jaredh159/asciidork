@@ -1,6 +1,6 @@
 use super::admonition::AdmonitionKind;
 use crate::prelude::*;
-use ast::{prelude::*, AdjacentNewline};
+use ast::{AdjacentNewline, prelude::*};
 
 macro_rules! warn_unimplemented {
   ($x:ident) => {
@@ -193,29 +193,29 @@ pub trait Backend {
 
   fn visit_callout(&mut self, callout: Callout);
   fn visit_callout_tuck(&mut self, comment: &str);
-  fn enter_inline_italic(&mut self);
-  fn exit_inline_italic(&mut self);
-  fn enter_inline_mono(&mut self);
-  fn exit_inline_mono(&mut self);
-  fn enter_inline_bold(&mut self);
-  fn exit_inline_bold(&mut self);
-  fn enter_inline_lit_mono(&mut self);
-  fn exit_inline_lit_mono(&mut self);
+  fn enter_inline_italic(&mut self, attrs: Option<&AttrList>);
+  fn exit_inline_italic(&mut self, attrs: Option<&AttrList>);
+  fn enter_inline_mono(&mut self, attrs: Option<&AttrList>);
+  fn exit_inline_mono(&mut self, attrs: Option<&AttrList>);
+  fn enter_inline_bold(&mut self, attrs: Option<&AttrList>);
+  fn exit_inline_bold(&mut self, attrs: Option<&AttrList>);
+  fn enter_inline_lit_mono(&mut self, attrs: Option<&AttrList>);
+  fn exit_inline_lit_mono(&mut self, attrs: Option<&AttrList>);
   fn visit_inline_specialchar(&mut self, char: &SpecialCharKind);
   fn enter_inline_passthrough(&mut self) {}
   fn exit_inline_passthrough(&mut self) {}
-  fn enter_inline_highlight(&mut self);
-  fn exit_inline_highlight(&mut self);
-  fn enter_inline_subscript(&mut self);
-  fn exit_inline_subscript(&mut self);
-  fn enter_inline_superscript(&mut self);
-  fn exit_inline_superscript(&mut self);
+  fn enter_inline_highlight(&mut self, attrs: Option<&AttrList>);
+  fn exit_inline_highlight(&mut self, attrs: Option<&AttrList>);
+  fn enter_inline_subscript(&mut self, attrs: Option<&AttrList>);
+  fn exit_inline_subscript(&mut self, attrs: Option<&AttrList>);
+  fn enter_inline_superscript(&mut self, attrs: Option<&AttrList>);
+  fn exit_inline_superscript(&mut self, attrs: Option<&AttrList>);
   fn enter_inline_quote(&mut self, kind: QuoteKind);
   fn exit_inline_quote(&mut self, kind: QuoteKind);
   fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool);
   fn exit_footnote(&mut self, id: Option<&SourceString>, has_content: bool);
-  fn enter_text_span(&mut self, attrs: &AttrList);
-  fn exit_text_span(&mut self, attrs: &AttrList);
+  fn enter_text_span(&mut self, attrs: Option<&AttrList>);
+  fn exit_text_span(&mut self, attrs: Option<&AttrList>);
   fn enter_xref(&mut self, target: &SourceString, has_reftext: bool, kind: XrefKind);
   fn exit_xref(&mut self, target: &SourceString, has_reftext: bool, kind: XrefKind);
   fn visit_missing_xref(

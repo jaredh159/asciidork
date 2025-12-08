@@ -238,11 +238,15 @@ fn test_parse_delimited_passthrough_block_subs_normal() {
       node!(SpecialChar(SpecialCharKind::Ampersand), 23..24),
       node!(" "; 24..25),
       node!(
-        Italic(nodes![
-          node!(SpecialChar(SpecialCharKind::LessThan), 26..27),
-          node!("bar"; 27..30),
-          node!(SpecialChar(SpecialCharKind::GreaterThan), 30..31),
-        ]),
+        Span(
+          SpanKind::Italic,
+          None,
+          nodes![
+            node!(SpecialChar(SpecialCharKind::LessThan), 26..27),
+            node!("bar"; 27..30),
+            node!(SpecialChar(SpecialCharKind::GreaterThan), 30..31),
+          ]
+        ),
         25..32,
       ),
       node!(Newline, 32..33),

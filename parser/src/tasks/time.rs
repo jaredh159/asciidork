@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use jiff::civil::Date;
-use jiff::{tz::TimeZone, Timestamp, Zoned};
+use jiff::{Timestamp, Zoned, tz::TimeZone};
 
 use crate::internal::*;
 

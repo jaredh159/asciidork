@@ -404,7 +404,7 @@ assert_html!(
     ....
     anotherterm:: def
   "#},
-   "<div class=\"dlist\"><dl><dt class=\"hdlist1\">term</dt><dd><div class=\"literalblock\"><div class=\"content\"><pre>literal, line 1\n\nliteral, line 2</pre></div></div></dd><dt class=\"hdlist1\">anotherterm</dt><dd><p>def</p></dd></dl></div>"
+  "<div class=\"dlist\"><dl><dt class=\"hdlist1\">term</dt><dd><div class=\"literalblock\"><div class=\"content\"><pre>literal, line 1\n\nliteral, line 2</pre></div></div></dd><dt class=\"hdlist1\">anotherterm</dt><dd><p>def</p></dd></dl></div>"
 );
 
 assert_html!(

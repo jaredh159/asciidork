@@ -1,6 +1,6 @@
 use asciidork_ast::short::block::*;
 use asciidork_ast::variants::inline::*;
-use asciidork_ast::{prelude::*, Inline};
+use asciidork_ast::{Inline, prelude::*};
 use asciidork_core::{DocType, DocumentMeta, JobAttr};
 use asciidork_parser::prelude::*;
 use test_utils::*;

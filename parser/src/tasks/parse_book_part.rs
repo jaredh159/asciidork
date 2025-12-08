@@ -58,11 +58,13 @@ impl<'arena> Parser<'arena> {
     // asciidoctor wraps the part intro in an open block, so if it is manually
     // wrapped already in a single open block, transpose it to be the preamble
     if let Some(
-      [Block {
-        content: BlockContent::Compound(blocks),
-        context: BlockContext::Open,
-        ..
-      }],
+      [
+        Block {
+          content: BlockContent::Compound(blocks),
+          context: BlockContext::Open,
+          ..
+        },
+      ],
     ) = preamble.as_deref_mut()
     {
       preamble = Some(blocks.drain(..).collect_in(self.bump));

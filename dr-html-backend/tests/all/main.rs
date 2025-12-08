@@ -21,6 +21,7 @@ mod eval_links;
 mod eval_lists;
 mod eval_macros;
 mod eval_markdown;
+mod eval_quotes;
 mod eval_sections;
 mod eval_source;
 mod eval_special_sects;

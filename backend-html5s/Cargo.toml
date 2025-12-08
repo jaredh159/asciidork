@@ -1,7 +1,7 @@
 [package]
 name = "asciidork-backend-html5s"
 version = "0.27.0"
-edition = "2021"
+edition = "2024"
 description = "Asciidork Semantic HTML backend, based on jirutka/asciidoctor-html5s"
 license = "MIT"
 

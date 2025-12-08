@@ -62,11 +62,7 @@ impl Parser<'_> {
   ) -> Result<()> {
     let key: &String = &key.into();
     let loc = self.ctx.attr_defs.iter().find_map(|def| {
-      if def.in_header && def.name == *key {
-        Some(def.loc)
-      } else {
-        None
-      }
+      if def.in_header && def.name == *key { Some(def.loc) } else { None }
     });
     let Some(loc) = loc else {
       debug_assert!(false, "doc attr not found");

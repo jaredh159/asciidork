@@ -55,9 +55,5 @@ const fn adjusted_leveloffset(leveloffset: i8, heading_level: u8) -> u8 {
     return heading_level;
   }
   let new_level = (heading_level as i8) + leveloffset;
-  if new_level < 0 {
-    0
-  } else {
-    new_level as u8
-  }
+  if new_level < 0 { 0 } else { new_level as u8 }
 }

@@ -3,7 +3,7 @@ use std::ops::Range;
 
 use bumpalo::collections::CollectIn;
 
-use super::{context::*, DataFormat, TableTokens};
+use super::{DataFormat, TableTokens, context::*};
 use crate::internal::*;
 use crate::variants::token::*;
 

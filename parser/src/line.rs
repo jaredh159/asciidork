@@ -502,11 +502,9 @@ impl<'arena> Line<'arena> {
           None
         } else {
           match ctx.specs() {
-            Some(specs) => {
-              self
-                .index_of_seq(specs)
-                .map_or(Some(n), |m| if m < n { None } else { Some(n) })
-            }
+            Some(specs) => self
+              .index_of_seq(specs)
+              .map_or(Some(n), |m| if m < n { None } else { Some(n) }),
             None => Some(n),
           }
         }
@@ -827,7 +825,10 @@ impl<'arena> Line<'arena> {
     if !self.current_satisfies(NotOneOf(&[OpenBracket, CloseBracket])) {
       return false;
     }
-    let Some(idx) = self.index_of_seq(&[Kind(CloseBracket), Kind(Hash)]) else {
+    let Some(idx) = self.index_of_seq(&[
+      Kind(CloseBracket),
+      OneOf(&[Hash, Star, Underscore, Backtick, Tilde, Caret]),
+    ]) else {
       return false;
     };
     idx != 0 && self.first_nonescaped(CloseBracket).map(|(_, i)| i) == Some(idx)

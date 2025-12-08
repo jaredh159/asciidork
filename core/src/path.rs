@@ -119,11 +119,7 @@ impl Path {
 
   pub fn extension(&self) -> &str {
     let filename = self.file_name();
-    if let Some(idx) = filename.rfind('.') {
-      &filename[idx..]
-    } else {
-      ""
-    }
+    if let Some(idx) = filename.rfind('.') { &filename[idx..] } else { "" }
   }
 
   pub fn dirname(&self) -> String {

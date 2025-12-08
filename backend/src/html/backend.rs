@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use roman_numerals_fn::to_roman_numeral;
 
-use asciidork_core::{file, DocType, JobAttr, Path, SafeMode};
-use ast::{prelude::*, AttrValue, ReadAttr, SpecialSection};
+use asciidork_core::{DocType, JobAttr, Path, SafeMode, file};
+use ast::{AttrValue, ReadAttr, SpecialSection, prelude::*};
 
 use crate::{
   html::{HtmlBuf, OpenTag},
@@ -414,10 +414,11 @@ pub trait HtmlBackend: HtmlBuf {
 
   fn push_section_heading_prefix(&mut self, level: u8, special_sect: Option<SpecialSection>) {
     if self.should_number_section(level, special_sect) {
-      if level == 1 && self.doc_meta().get_doctype() == DocType::Book {
-        if let Some(chapter_signifier) = self.doc_meta().string("chapter-signifier") {
-          self.push([&chapter_signifier, " "]);
-        }
+      if level == 1
+        && self.doc_meta().get_doctype() == DocType::Book
+        && let Some(chapter_signifier) = self.doc_meta().string("chapter-signifier")
+      {
+        self.push([&chapter_signifier, " "]);
       }
       self.push_section_number_prefix(level);
     }

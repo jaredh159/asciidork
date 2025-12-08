@@ -1,6 +1,6 @@
 use crate::attrs;
 use asciidork_ast::short::block::*;
-use asciidork_ast::{prelude::*, Inline::Newline};
+use asciidork_ast::{Inline::Newline, prelude::*};
 use asciidork_parser::prelude::*;
 use test_utils::*;
 

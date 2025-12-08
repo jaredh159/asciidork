@@ -27,13 +27,13 @@ mod internal {
     pub use crate::doc_content::*;
     pub use crate::document::{DocHeader, DocTitle, Document};
     pub use crate::inline::{AdjacentNewline, CurlyKind::*, QuoteKind::*, SymbolKind};
-    pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind};
+    pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpanKind, SpecialCharKind};
     pub use crate::inline_nodes::InlineNodes;
     pub use crate::list::*;
+    pub use crate::r#macro::{Flow, MacroNode, PluginMacro, UrlScheme, XrefKind};
     pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
     pub use crate::multi_source_location::MultiSourceLocation;
     pub use crate::node::{Anchor, Callout};
-    pub use crate::r#macro::{Flow, MacroNode, PluginMacro, UrlScheme, XrefKind};
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
     pub use crate::table::*;
@@ -45,10 +45,10 @@ mod internal {
   pub use types::*;
 
   // bump helpers
+  pub use bumpalo::Bump;
   pub use bumpalo::collections::String as BumpString;
   pub use bumpalo::collections::Vec as BumpVec;
   pub use bumpalo::vec as bvec;
-  pub use bumpalo::Bump;
 }
 
 pub mod prelude {
@@ -58,12 +58,13 @@ pub mod prelude {
   pub use crate::col_widths::*;
   pub use crate::doc_content::*;
   pub use crate::document::{DocHeader, DocTitle, Document};
+  pub use crate::inline::SpanKind;
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind, SymbolKind};
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};
+  pub use crate::r#macro::{PluginMacro, UrlScheme, XrefKind};
   pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
   pub use crate::multi_source_location::MultiSourceLocation;
   pub use crate::node::{Anchor, Callout};
-  pub use crate::r#macro::{PluginMacro, UrlScheme, XrefKind};
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
   pub use crate::table::*;

@@ -17,7 +17,7 @@ pub fn section_class(section: &Section) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-  use crate::html::{backend::*, HtmlBuf};
+  use crate::html::{HtmlBuf, backend::*};
 
   struct TestBackend {
     html: String,

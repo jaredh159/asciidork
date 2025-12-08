@@ -28,12 +28,13 @@ impl<'arena> Parser<'arena> {
     let text = CollectText::new_in(span_loc, self.bump);
     let subs = self.ctx.subs;
     let mut acc = Accum::new(inlines, text);
+    let mut inline_attrs: Option<AttrList> = None;
 
     while let Some(mut line) = lines.consume_current() {
       if self.should_stop_at(&line) {
         acc.inlines.remove_trailing_newline();
         lines.restore_if_nonempty(line);
-        return Ok(acc.trimmed_inlines());
+        return self.finish_inlines(acc, inline_attrs);
       }
 
       if line.is_comment() && !subs.callouts() {
@@ -60,7 +61,7 @@ impl<'arena> Parser<'arena> {
           line.discard(stop_tokens.len());
           acc.commit();
           lines.restore_if_nonempty(line);
-          return Ok(acc.trimmed_inlines());
+          return self.finish_inlines(acc, inline_attrs);
         }
 
         if line.may_contain_inline_pass() {
@@ -79,6 +80,10 @@ impl<'arena> Parser<'arena> {
         }
 
         match token.kind {
+          OpenBracket if subs.inline_formatting() && line.continues_formatted_text_attr_list() => {
+            inline_attrs = Some(self.parse_formatted_text_attr_list(&mut line)?);
+          }
+
           OpenParens
             if subs.char_replacement()
               && token.is_len(1)
@@ -282,13 +287,13 @@ impl<'arena> Parser<'arena> {
                 let attrs = self.parse_block_attr_list(&mut line)?;
                 let loc = SourceLocation::spanning(token.loc, attrs.loc);
                 acc.push_node(
-                  Macro(Plugin(PluginMacro {
+                  Macro(Plugin(Box::new(PluginMacro {
                     name,
                     target,
                     flow: Flow::Inline,
                     attrs,
                     source: SourceString::new(source, loc),
-                  })),
+                  }))),
                   loc,
                 );
               }
@@ -455,7 +460,10 @@ impl<'arena> Parser<'arena> {
               && self.starts_constrained(&[Kind(Underscore)], &token, &line, lines) =>
           {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Underscore)]);
-            self.parse_node(Italic, [Kind(Underscore)], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(SpanKind::Italic, inline_attrs.take()),
+              ctx([Kind(Underscore)], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -464,7 +472,10 @@ impl<'arena> Parser<'arena> {
               && self.starts_unconstrained(&[Kind(Underscore); 2], &token, &line, lines) =>
           {
             self.ctx.inline_ctx = InlineCtx::Double([Kind(Underscore); 2]);
-            self.parse_node(Italic, [Kind(Underscore); 2], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(SpanKind::Italic, inline_attrs.take()),
+              ctx([Kind(Underscore); 2], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -473,7 +484,10 @@ impl<'arena> Parser<'arena> {
               && self.starts_constrained(&[Kind(Star)], &token, &line, lines) =>
           {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Star)]);
-            self.parse_node(Bold, [Kind(Star)], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(SpanKind::Bold, inline_attrs.take()),
+              ctx([Kind(Star)], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -482,32 +496,10 @@ impl<'arena> Parser<'arena> {
               && self.starts_unconstrained(&[Kind(Star); 2], &token, &line, lines) =>
           {
             self.ctx.inline_ctx = InlineCtx::Double([Kind(Star); 2]);
-            self.parse_node(Bold, [Kind(Star); 2], &token, &mut acc, line, lines)?;
-            break;
-          }
-
-          OpenBracket if subs.inline_formatting() && line.continues_formatted_text_attr_list() => {
-            let mut parse_token = token.clone();
-            let attr_list = self.parse_formatted_text_attr_list(&mut line)?;
-            debug_assert!(line.current_is(Hash));
-            line.discard_assert(Hash);
-            parse_token.kind = Hash;
-            let span = |inner| TextSpan(attr_list, inner);
-            self.parse_node(span, [Kind(Hash)], &parse_token, &mut acc, line, lines)?;
-            if let Some(InlineNode { content: TextSpan(attrs, nodes), .. }) = acc.inlines.last() {
-              if let Some(id) = &attrs.id {
-                self.insert_anchor(
-                  id,
-                  Anchor {
-                    reftext: None,
-                    title: nodes.clone(),
-                    source_idx: self.lexer.source_idx(),
-                    source_loc: Some(id.loc),
-                    is_biblio: false,
-                  },
-                )?;
-              }
-            }
+            self.parse_node(
+              span(SpanKind::Bold, inline_attrs.take()),
+              ctx([Kind(Star); 2], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -559,19 +551,24 @@ impl<'arena> Parser<'arena> {
             self.ctx.subs.remove(Subs::InlineFormatting);
             self.ctx.subs.remove(Subs::AttrRefs);
             self.parse_node(
-              LitMono,
-              [Len(1, Plus), Kind(Backtick)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              span(SpanKind::LitMono, inline_attrs.take()),
+              ctx(
+                [Len(1, Plus), Kind(Backtick)],
+                &token,
+                &mut acc,
+                line,
+                lines,
+              ),
             )?;
             self.ctx.subs = subs;
             break;
           }
 
           Caret if subs.inline_formatting() && line.no_whitespace_until(Caret) => {
-            self.parse_node(Superscript, [Kind(Caret)], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(SpanKind::Superscript, inline_attrs.take()),
+              ctx([Kind(Caret)], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -580,7 +577,10 @@ impl<'arena> Parser<'arena> {
               && self.starts_constrained(&[Kind(Backtick)], &token, &line, lines) =>
           {
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Backtick)]);
-            self.parse_node(Mono, [Kind(Backtick)], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(SpanKind::Mono, inline_attrs.take()),
+              ctx([Kind(Backtick)], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -588,7 +588,10 @@ impl<'arena> Parser<'arena> {
             if subs.inline_formatting()
               && self.starts_unconstrained(&[Kind(Backtick); 2], &token, &line, lines) =>
           {
-            self.parse_node(Mono, [Kind(Backtick); 2], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(SpanKind::Mono, inline_attrs.take()),
+              ctx([Kind(Backtick); 2], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -604,11 +607,13 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               |inner| Quote(Double, inner),
-              [Kind(Backtick), Kind(DoubleQuote)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              ctx(
+                [Kind(Backtick), Kind(DoubleQuote)],
+                &token,
+                &mut acc,
+                line,
+                lines,
+              ),
             )?;
             break;
           }
@@ -625,17 +630,22 @@ impl<'arena> Parser<'arena> {
           {
             self.parse_node(
               |inner| Quote(Single, inner),
-              [Kind(Backtick), Kind(SingleQuote)],
-              &token,
-              &mut acc,
-              line,
-              lines,
+              ctx(
+                [Kind(Backtick), Kind(SingleQuote)],
+                &token,
+                &mut acc,
+                line,
+                lines,
+              ),
             )?;
             break;
           }
 
           Tilde if subs.inline_formatting() && line.no_whitespace_until(Tilde) => {
-            self.parse_node(Subscript, [Kind(Tilde)], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(SpanKind::Subscript, inline_attrs.take()),
+              ctx([Kind(Tilde)], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -672,7 +682,11 @@ impl<'arena> Parser<'arena> {
               && self.starts_unconstrained(&[Kind(Hash); 2], &token, &line, lines) =>
           {
             self.ctx.inline_ctx = InlineCtx::Double([Kind(Hash); 2]);
-            self.parse_node(Highlight, [Kind(Hash); 2], &token, &mut acc, line, lines)?;
+            let kind = if inline_attrs.is_some() { SpanKind::Text } else { SpanKind::Highlight };
+            self.parse_node(
+              span(kind, inline_attrs.take()),
+              ctx([Kind(Hash); 2], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -680,8 +694,12 @@ impl<'arena> Parser<'arena> {
             if subs.inline_formatting()
               && self.starts_constrained(&[Kind(Hash)], &token, &line, lines) =>
           {
+            let kind = if inline_attrs.is_some() { SpanKind::Text } else { SpanKind::Highlight };
             self.ctx.inline_ctx = InlineCtx::Single([Kind(Hash)]);
-            self.parse_node(Highlight, [Kind(Hash)], &token, &mut acc, line, lines)?;
+            self.parse_node(
+              span(kind, inline_attrs.take()),
+              ctx([Kind(Hash)], &token, &mut acc, line, lines),
+            )?;
             break;
           }
 
@@ -753,7 +771,10 @@ impl<'arena> Parser<'arena> {
             }
           }
 
-          _ if subs.macros() && token.kind(UriScheme) => {
+          _ if token.kind(UriScheme)
+            && subs.macros()
+            && self.ctx.inline_ctx != InlineCtx::LinkMacroAttrs =>
+          {
             let mut loc = token.loc;
             let line_end = line.last_loc().unwrap();
             let target = line.consume_url(Some(&token), None, self.bump);
@@ -780,11 +801,29 @@ impl<'arena> Parser<'arena> {
             acc.push_node(InlinePassthru(content), token.loc);
           }
 
-          _ => acc.push_text_token(&token),
+          _ => {
+            self.push_unused_inline_attrs(&mut acc, &mut inline_attrs);
+            acc.push_text_token(&token);
+          }
         }
       }
     }
 
+    self.finish_inlines(acc, inline_attrs)
+  }
+
+  fn push_unused_inline_attrs(&self, acc: &mut Accum<'arena>, inline_attrs: &mut Option<AttrList>) {
+    if let Some(unused_attrs) = inline_attrs.take() {
+      acc.text.push_str(self.lexer.str_from_loc(unused_attrs.loc));
+    }
+  }
+
+  fn finish_inlines(
+    &self,
+    mut acc: Accum<'arena>,
+    mut inline_attrs: Option<AttrList>,
+  ) -> Result<InlineNodes<'arena>> {
+    self.push_unused_inline_attrs(&mut acc, &mut inline_attrs);
     acc.commit();
     Ok(acc.trimmed_inlines())
   }
@@ -834,14 +873,17 @@ impl<'arena> Parser<'arena> {
   fn parse_node<const N: usize>(
     &mut self,
     wrap: impl FnOnce(InlineNodes<'arena>) -> Inline<'arena>,
-    stop_tokens: [TokenSpec; N],
-    start: &Token<'arena>,
-    state: &mut Accum<'arena>,
-    mut line: Line<'arena>,
-    lines: &mut ContiguousLines<'arena>,
+    ctx: ParseNodeCtx<'arena, '_, N>,
   ) -> Result<()> {
-    let mut loc = start.loc;
-    let mut stop_len = start.len();
+    let ParseNodeCtx {
+      token,
+      acc,
+      mut line,
+      lines,
+      stop_tokens,
+    } = ctx;
+    let mut loc = token.loc;
+    let mut stop_len = token.len();
     stop_tokens.iter().take(N - 1).for_each(|spec| {
       let tok = line.consume_current().unwrap();
       debug_assert!(tok.kind == spec.token_kind().unwrap());
@@ -850,9 +892,33 @@ impl<'arena> Parser<'arena> {
     lines.restore_if_nonempty(line);
     let inner = self.parse_inlines_until(lines, &stop_tokens)?;
     extend(&mut loc, &inner, stop_len);
-    state.push_node(wrap(inner), loc);
-    push_newline_if_needed(state, lines);
+    let node = wrap(inner);
+    let mut had_inline_attrs = false;
+    if let Inline::Span(_, Some(ref attr_list), _) = node {
+      loc.extend(attr_list.loc);
+      had_inline_attrs = true;
+    }
+    acc.push_node(node, loc);
+    push_newline_if_needed(acc, lines);
     self.ctx.inline_ctx = InlineCtx::None;
+    if had_inline_attrs
+      && let Some(InlineNode {
+        content: Span(SpanKind::Text, Some(attrs), nodes),
+        ..
+      }) = acc.inlines.last()
+      && let Some(id) = &attrs.id
+    {
+      self.insert_anchor(
+        id,
+        Anchor {
+          reftext: None,
+          title: nodes.clone(),
+          source_idx: self.lexer.source_idx(),
+          source_loc: Some(id.loc),
+          is_biblio: false,
+        },
+      )?;
+    }
     Ok(())
   }
 
@@ -904,6 +970,24 @@ impl<'arena> Parser<'arena> {
   }
 }
 
+struct ParseNodeCtx<'arena, 'a, const N: usize> {
+  token: &'a Token<'arena>,
+  acc: &'a mut Accum<'arena>,
+  line: Line<'arena>,
+  lines: &'a mut ContiguousLines<'arena>,
+  stop_tokens: [TokenSpec; N],
+}
+
+fn ctx<'arena, 'a, const N: usize>(
+  stop_tokens: [TokenSpec; N],
+  token: &'a Token<'arena>,
+  acc: &'a mut Accum<'arena>,
+  line: Line<'arena>,
+  lines: &'a mut ContiguousLines<'arena>,
+) -> ParseNodeCtx<'arena, 'a, N> {
+  ParseNodeCtx { token, acc, line, lines, stop_tokens }
+}
+
 fn link_macro_blank_window_shorthand(attr_list: &mut AttrList) -> bool {
   let Some(mut nodes) = attr_list.take_positional(0) else {
     return false;
@@ -912,15 +996,15 @@ fn link_macro_blank_window_shorthand(attr_list: &mut AttrList) -> bool {
     attr_list.positional[0] = Some(nodes);
     return false;
   };
-  if let Inline::Text(text) = &node.content {
-    if text.ends_with('^') {
-      let mut shortened = text.clone();
-      shortened.pop();
-      node.content = Inline::Text(shortened);
-      node.loc.end -= 1;
-      attr_list.positional[0] = Some(nodes);
-      return true;
-    }
+  if let Inline::Text(text) = &node.content
+    && text.ends_with('^')
+  {
+    let mut shortened = text.clone();
+    shortened.pop();
+    node.content = Inline::Text(shortened);
+    node.loc.end -= 1;
+    attr_list.positional[0] = Some(nodes);
+    return true;
   };
   attr_list.positional[0] = Some(nodes);
   false
@@ -980,6 +1064,13 @@ fn push_simple<'arena>(
   lines.restore_if_nonempty(line);
   state.push_node(inline_node, loc);
   push_newline_if_needed(state, lines);
+}
+
+fn span<'arena>(
+  kind: SpanKind,
+  attrs: Option<AttrList<'arena>>,
+) -> impl FnOnce(InlineNodes<'arena>) -> Inline<'arena> {
+  move |nodes| Span(kind, attrs, nodes)
 }
 
 #[cfg(test)]

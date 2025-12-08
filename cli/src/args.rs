@@ -65,16 +65,16 @@ pub enum Output {
 }
 
 lazy_static! {
-  pub static ref ATTR_RE: Regex = Regex::new(r"(\w(?:[\w-]*))(!)?(@)?(?:=(.+))?").unwrap();
+  pub static ref ATTR_RE: Regex = Regex::new(r"(!)?(@)?(\w(?:[\w-]*))(!)?(@)?(?:=(.+))?").unwrap();
 }
 
 fn parse_attr(input: &str) -> Result<(String, JobAttr), &'static str> {
   let captures = ATTR_RE.captures(input).ok_or("Invalid attribute")?;
-  let key = captures.get(1).unwrap().as_str().to_lowercase().to_string();
+  let key = captures.get(3).unwrap().as_str().to_lowercase().to_string();
   match (
-    captures.get(2).is_some(),
-    captures.get(3).is_some(),
-    captures.get(4).map(|m| m.as_str()),
+    captures.get(1).is_some() || captures.get(4).is_some(),
+    captures.get(2).is_some() || captures.get(5).is_some(),
+    captures.get(6).map(|m| m.as_str()),
   ) {
     // ! ,   @
     (false, false, None) => Ok((key, JobAttr::readonly(true))),

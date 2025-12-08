@@ -66,7 +66,7 @@ impl CliResolver {
         // only send back the filename so we don't accidentally expose
         // full system filepaths in error messages for security reasons
         (Some(pfn), Some(cfn)) if pfn != cfn => {
-          return Err(CaseMismatch(Some(cfn.to_string_lossy().to_string())))
+          return Err(CaseMismatch(Some(cfn.to_string_lossy().to_string())));
         }
         _ => return Err(CaseMismatch(None)),
       }

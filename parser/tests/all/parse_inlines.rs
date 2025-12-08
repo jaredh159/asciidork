@@ -1,7 +1,35 @@
 use asciidork_ast::variants::{inline::*, r#macro::*};
-use asciidork_ast::{prelude::*, AdjacentNewline, InlineNodes};
+use asciidork_ast::{AdjacentNewline, InlineNodes, prelude::*};
 use asciidork_parser::prelude::*;
 use test_utils::*;
+
+test_inlines_loose!(
+  span_attr,
+  "[#foo]_foo_",
+  nodes![node!(
+    Span(
+      SpanKind::Italic,
+      Some(AttrList {
+        id: Some(src!("foo", 2..5)),
+        ..attr_list!(0..6)
+      }),
+      nodes![node!("foo"; 7..10)]
+    ),
+    0..11
+  )]
+);
+
+test_inlines_loose!(
+  span_attr_not_sub,
+  "[#foo]~foo bar~",
+  just!("[#foo]~foo bar~", 0..15)
+);
+
+test_inlines_loose!(
+  span_attr_not_sub2,
+  "[#foo]_foo barx",
+  just!("[#foo]_foo barx", 0..15)
+);
 
 test_inlines_loose!(
   char_replacements,
@@ -264,7 +292,10 @@ fn test_inline_passthrus() {
       "pass:q[_foo_] bar", // subs=quotes
       nodes![
         node!(
-          InlinePassthru(nodes![node!(Italic(just!("foo", 8..11)), 7..12)]),
+          InlinePassthru(nodes![node!(
+            Span(SpanKind::Italic, None, just!("foo", 8..11)),
+            7..12
+          )]),
           0..13
         ),
         node!(" bar"; 13..17),
@@ -313,7 +344,10 @@ fn test_joining_newlines() {
     (
       "_foo_\nbar",
       nodes![
-        node!(Italic(nodes![node!("foo"; 1..4)]), 0..5),
+        node!(
+          Span(SpanKind::Italic, None, nodes![node!("foo"; 1..4)]),
+          0..5
+        ),
         node!(Inline::Newline, 5..6),
         node!("bar"; 6..9),
       ],
@@ -321,7 +355,10 @@ fn test_joining_newlines() {
     (
       "__foo__\nbar",
       nodes![
-        node!(Italic(nodes![node!("foo"; 2..5)]), 0..7),
+        node!(
+          Span(SpanKind::Italic, None, nodes![node!("foo"; 2..5)]),
+          0..7
+        ),
         node!(Inline::Newline, 7..8),
         node!("bar"; 8..11),
       ],
@@ -365,7 +402,10 @@ fn test_joining_newlines() {
     (
       "^foo^\nbar",
       nodes![
-        node!(Superscript(nodes![node!("foo"; 1..4)]), 0..5),
+        node!(
+          Span(SpanKind::Superscript, None, nodes![node!("foo"; 1..4)]),
+          0..5
+        ),
         node!(Inline::Newline, 5..6),
         node!("bar"; 6..9),
       ],
@@ -373,7 +413,10 @@ fn test_joining_newlines() {
     (
       "~foo~\nbar",
       nodes![
-        node!(Subscript(nodes![node!("foo"; 1..4)]), 0..5),
+        node!(
+          Span(SpanKind::Subscript, None, nodes![node!("foo"; 1..4)]),
+          0..5
+        ),
         node!(Inline::Newline, 5..6),
         node!("bar"; 6..9),
       ],
@@ -436,30 +479,40 @@ fn test_lit_mono() {
     (
       "`++a`b`++`",
       nodes![node!(
-        LitMono(nodes![node!(InlinePassthru(just!("a`b`", 3..7)), 2..8)]),
+        Span(
+          SpanKind::LitMono,
+          None,
+          nodes![node!(InlinePassthru(just!("a`b`", 3..7)), 2..8)]
+        ),
         0..10
       )],
     ),
     (
       "`+{name}+`\nbar",
       nodes![
-        node!(LitMono(just!("{name}", 2..8)), 0..10),
+        node!(Span(SpanKind::LitMono, None, just!("{name}", 2..8)), 0..10),
         node!(Inline::Newline, 10..11),
         node!("bar"; 11..14),
       ],
     ),
     (
       "`+{name}+`",
-      nodes![node!(LitMono(just!("{name}", 2..8)), 0..10)],
+      nodes![node!(
+        Span(SpanKind::LitMono, None, just!("{name}", 2..8)),
+        0..10
+      )],
     ),
     (
       "`+_foo_+`",
-      nodes![node!(LitMono(just!("_foo_", 2..7)), 0..9)],
+      nodes![node!(
+        Span(SpanKind::LitMono, None, just!("_foo_", 2..7)),
+        0..9
+      )],
     ),
     (
       "`++f` bar +` baz", // <-- NOT lit mono
       nodes![
-        node!(Mono(just!("++f", 1..4)), 0..5),
+        node!(Span(SpanKind::Mono, None, just!("++f", 1..4)), 0..5),
         node!(" bar +` baz"; 5..16),
       ],
     ),
@@ -487,7 +540,7 @@ fn test_mono() {
       "foo `*` bar",
       nodes![
         node!("foo "; 0..4),
-        node!(Mono(just!("*", 5..6)), 4..7),
+        node!(Span(SpanKind::Mono, None, just!("*", 5..6)), 4..7),
         node!(" bar"; 7..11),
       ],
     ),
@@ -495,16 +548,27 @@ fn test_mono() {
       "foo `bar`",
       nodes![
         node!("foo "; 0..4),
-        node!(Mono(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(Span(SpanKind::Mono, None, nodes![node!("bar"; 5..8)]), 4..9),
       ],
     ),
     (
       "`*_foo_*`",
       nodes![node!(
-        Mono(nodes![node!(
-          Bold(nodes![node!(Italic(nodes![node!("foo"; 3..6)]), 2..7)]),
-          1..8,
-        )]),
+        Span(
+          SpanKind::Mono,
+          None,
+          nodes![node!(
+            Span(
+              SpanKind::Bold,
+              None,
+              nodes![node!(
+                Span(SpanKind::Italic, None, nodes![node!("foo"; 3..6)]),
+                2..7
+              )]
+            ),
+            1..8,
+          )]
+        ),
         0..9,
       )],
     ),
@@ -512,28 +576,34 @@ fn test_mono() {
       "foo `bar`",
       nodes![
         node!("foo "; 0..4),
-        node!(Mono(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(Span(SpanKind::Mono, None, nodes![node!("bar"; 5..8)]), 4..9),
       ],
     ),
     (
       "foo b``ar``",
       nodes![
         node!("foo b"; 0..5),
-        node!(Mono(nodes![node!("ar"; 7..9)]), 5..11),
+        node!(Span(SpanKind::Mono, None, nodes![node!("ar"; 7..9)]), 5..11),
       ],
     ),
     (
       "foo `\"bar\"`",
       nodes![
         node!("foo "; 0..4),
-        node!(Mono(nodes![node!("\"bar\""; 5..10)]), 4..11),
+        node!(
+          Span(SpanKind::Mono, None, nodes![node!("\"bar\""; 5..10)]),
+          4..11
+        ),
       ],
     ),
     (
       "foo `'bar'`",
       nodes![
         node!("foo "; 0..4),
-        node!(Mono(nodes![node!("'bar'"; 5..10)]), 4..11),
+        node!(
+          Span(SpanKind::Mono, None, nodes![node!("'bar'"; 5..10)]),
+          4..11
+        ),
       ],
     ),
     ("`not`mono", just!("`not`mono", 0..9)),
@@ -549,49 +619,49 @@ fn test_confusing_patterns() {
       // v---------v
       "__*__ bar __*__",
       nodes![
-        node!(Italic(just!("*", 2..3)), 0..5),
+        node!(Span(SpanKind::Italic, None, just!("*", 2..3)), 0..5),
         node!(" bar "; 5..10),
-        node!(Italic(just!("*", 12..13)), 10..15),
+        node!(Span(SpanKind::Italic, None, just!("*", 12..13)), 10..15),
       ],
     ),
     (
       "**_** bar **_**",
       nodes![
-        node!(Bold(just!("_", 2..3)), 0..5),
+        node!(Span(SpanKind::Bold, None, just!("_", 2..3)), 0..5),
         node!(" bar "; 5..10),
-        node!(Bold(just!("_", 12..13)), 10..15),
+        node!(Span(SpanKind::Bold, None, just!("_", 12..13)), 10..15),
       ],
     ),
     (
       "`*` bar `*`",
       nodes![
-        node!(Mono(just!("*", 1..2)), 0..3),
+        node!(Span(SpanKind::Mono, None, just!("*", 1..2)), 0..3),
         node!(" bar "; 3..8),
-        node!(Mono(just!("*", 9..10)), 8..11),
+        node!(Span(SpanKind::Mono, None, just!("*", 9..10)), 8..11),
       ],
     ),
     (
       "_*_ bar _*_",
       nodes![
-        node!(Italic(just!("*", 1..2)), 0..3),
+        node!(Span(SpanKind::Italic, None, just!("*", 1..2)), 0..3),
         node!(" bar "; 3..8),
-        node!(Italic(just!("*", 9..10)), 8..11),
+        node!(Span(SpanKind::Italic, None, just!("*", 9..10)), 8..11),
       ],
     ),
     (
       "*_* bar *_*",
       nodes![
-        node!(Bold(just!("_", 1..2)), 0..3),
+        node!(Span(SpanKind::Bold, None, just!("_", 1..2)), 0..3),
         node!(" bar "; 3..8),
-        node!(Bold(just!("_", 9..10)), 8..11),
+        node!(Span(SpanKind::Bold, None, just!("_", 9..10)), 8..11),
       ],
     ),
     (
       "#_# bar #_#",
       nodes![
-        node!(Highlight(just!("_", 1..2)), 0..3),
+        node!(Span(SpanKind::Highlight, None, just!("_", 1..2)), 0..3),
         node!(" bar "; 3..8),
-        node!(Highlight(just!("_", 9..10)), 8..11),
+        node!(Span(SpanKind::Highlight, None, just!("_", 9..10)), 8..11),
       ],
     ),
     (
@@ -621,32 +691,50 @@ fn test_constrained_pairs() {
       "foo _bar_",
       nodes![
         node!("foo "; 0..4),
-        node!(Italic(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(
+          Span(SpanKind::Italic, None, nodes![node!("bar"; 5..8)]),
+          4..9
+        ),
       ],
     ),
     (
       "foo _bar_!",
       nodes![
         node!("foo "; 0..4),
-        node!(Italic(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(
+          Span(SpanKind::Italic, None, nodes![node!("bar"; 5..8)]),
+          4..9
+        ),
         node!("!"; 9..10),
       ],
     ),
     (
       "_bar_,",
-      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!(","; 5..6),],
+      nodes![
+        node!(Span(SpanKind::Italic, None, just!("bar", 1..4)), 0..5),
+        node!(","; 5..6),
+      ],
     ),
     (
       "_bar_;",
-      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!(";"; 5..6),],
+      nodes![
+        node!(Span(SpanKind::Italic, None, just!("bar", 1..4)), 0..5),
+        node!(";"; 5..6),
+      ],
     ),
     (
       "_bar_.",
-      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!("."; 5..6),],
+      nodes![
+        node!(Span(SpanKind::Italic, None, just!("bar", 1..4)), 0..5),
+        node!("."; 5..6),
+      ],
     ),
     (
       "_bar_?",
-      nodes![node!(Italic(just!("bar", 1..4)), 0..5), node!("?"; 5..6)],
+      nodes![
+        node!(Span(SpanKind::Italic, None, just!("bar", 1..4)), 0..5),
+        node!("?"; 5..6)
+      ],
     ),
   ]);
 }
@@ -703,7 +791,6 @@ fn test_parse_inlines() {
         node!(" lol"; 12..16),
       ],
     ),
-    // here
     (
       "++_foo_++bar",
       nodes![
@@ -722,14 +809,20 @@ fn test_parse_inlines() {
       "foo #bar#",
       nodes![
         node!("foo "; 0..4),
-        node!(Highlight(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(
+          Span(SpanKind::Highlight, None, nodes![node!("bar"; 5..8)]),
+          4..9
+        ),
       ],
     ),
     (
       "foo ##bar##baz",
       nodes![
         node!("foo "; 0..4),
-        node!(Highlight(nodes![node!("bar"; 6..9)]), 4..11),
+        node!(
+          Span(SpanKind::Highlight, None, nodes![node!("bar"; 6..9)]),
+          4..11
+        ),
         node!("baz"; 11..14),
       ],
     ),
@@ -737,21 +830,24 @@ fn test_parse_inlines() {
       "foo *bar*",
       nodes![
         node!("foo "; 0..4),
-        node!(Bold(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(Span(SpanKind::Bold, None, nodes![node!("bar"; 5..8)]), 4..9),
       ],
     ),
     (
       "foo b**ar**",
       nodes![
         node!("foo b"; 0..5),
-        node!(Bold(nodes![node!("ar"; 7..9)]), 5..11),
+        node!(Span(SpanKind::Bold, None, nodes![node!("ar"; 7..9)]), 5..11),
       ],
     ),
     (
       "foo ~bar~ baz",
       nodes![
         node!("foo "; 0..4),
-        node!(Subscript(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(
+          Span(SpanKind::Subscript, None, nodes![node!("bar"; 5..8)]),
+          4..9
+        ),
         node!(" baz"; 9..13),
       ],
     ),
@@ -760,11 +856,15 @@ fn test_parse_inlines() {
       nodes![
         node!("foo "; 0..4),
         node!(
-          Italic(nodes![
-            node!("bar"; 5..8),
-            node!(Inline::Newline, 8..9),
-            node!("baz"; 9..12),
-          ]),
+          Span(
+            SpanKind::Italic,
+            None,
+            nodes![
+              node!("bar"; 5..8),
+              node!(Inline::Newline, 8..9),
+              node!("baz"; 9..12),
+            ]
+          ),
           4..13,
         ),
       ],
@@ -774,21 +874,30 @@ fn test_parse_inlines() {
       "foo _bar baz_",
       nodes![
         node!("foo "; 0..4),
-        node!(Italic(nodes![node!("bar baz"; 5..12)]), 4..13),
+        node!(
+          Span(SpanKind::Italic, None, nodes![node!("bar baz"; 5..12)]),
+          4..13
+        ),
       ],
     ),
     (
       "foo _bar_",
       nodes![
         node!("foo "; 0..4),
-        node!(Italic(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(
+          Span(SpanKind::Italic, None, nodes![node!("bar"; 5..8)]),
+          4..9
+        ),
       ],
     ),
     (
       "foo b__ar__",
       nodes![
         node!("foo b"; 0..5),
-        node!(Italic(nodes![node!("ar"; 7..9)]), 5..11),
+        node!(
+          Span(SpanKind::Italic, None, nodes![node!("ar"; 7..9)]),
+          5..11
+        ),
       ],
     ),
     ("foo 'bar'", nodes![node!("foo 'bar'"; 0..9)]),
@@ -864,11 +973,17 @@ fn test_parse_inlines() {
     ),
     (
       "^bar^",
-      nodes![node!(Superscript(nodes![node!("bar"; 1..4)]), 0..5)],
+      nodes![node!(
+        Span(SpanKind::Superscript, None, nodes![node!("bar"; 1..4)]),
+        0..5
+      )],
     ),
     (
       "^bar^",
-      nodes![node!(Superscript(nodes![node!("bar"; 1..4)]), 0..5)],
+      nodes![node!(
+        Span(SpanKind::Superscript, None, nodes![node!("bar"; 1..4)]),
+        0..5
+      )],
     ),
     ("foo ^bar", nodes![node!("foo ^bar"; 0..8)]),
     ("foo bar^", nodes![node!("foo bar^"; 0..8)]),
@@ -876,18 +991,22 @@ fn test_parse_inlines() {
       "foo ^bar^ foo",
       nodes![
         node!("foo "; 0..4),
-        node!(Superscript(nodes![node!("bar"; 5..8)]), 4..9),
+        node!(
+          Span(SpanKind::Superscript, None, nodes![node!("bar"; 5..8)]),
+          4..9
+        ),
         node!(" foo"; 9..13),
       ],
     ),
     (
       "[.role]#bar#",
       nodes![node!(
-        TextSpan(
-          AttrList {
+        Span(
+          SpanKind::Text,
+          Some(AttrList {
             roles: vecb![src!("role", 2..6)],
             ..attr_list!(0..7)
-          },
+          }),
           just!("bar", 8..11),
         ),
         0..12

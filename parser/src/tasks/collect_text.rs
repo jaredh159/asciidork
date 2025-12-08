@@ -71,13 +71,7 @@ impl<'arena> CollectText<'arena> {
 
   pub fn commit_inlines(&mut self, inlines: &mut InlineNodes<'arena>) {
     match (self.is_empty(), inlines.last_mut()) {
-      (
-        false,
-        Some(InlineNode {
-          content: Inline::Text(ref mut text),
-          loc,
-        }),
-      ) => {
+      (false, Some(InlineNode { content: Inline::Text(text), loc })) => {
         text.push_str(&self.take());
         loc.extend(self.loc);
       }

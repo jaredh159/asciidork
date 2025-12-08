@@ -120,8 +120,12 @@ impl<'arena> Parser<'arena> {
       }
       last_kind = token.kind;
     }
+
     if parse_as_attr_list {
-      return self._parse_attr_list(line, false, false);
+      self.ctx.inline_ctx = InlineCtx::LinkMacroAttrs;
+      let result = self._parse_attr_list(line, false, false);
+      self.ctx.inline_ctx = InlineCtx::None;
+      return result;
     }
 
     let mut attrs = AttrList::new(line.first_loc().unwrap().decr_start(), self.bump);
@@ -136,7 +140,9 @@ impl<'arena> Parser<'arena> {
       tokens.push(line.consume_current().unwrap());
     }
     let attr_line = Line::new(unquote(tokens));
+    self.ctx.inline_ctx = InlineCtx::LinkMacroAttrs;
     let nodes = self.parse_inlines(&mut attr_line.into_lines())?;
+    self.ctx.inline_ctx = InlineCtx::None;
     attrs.positional.push(Some(nodes));
     debug_assert!(line.current_is(CloseBracket));
     let close_bracket = line.consume_current().expect("attr list close bracket");
@@ -459,7 +465,7 @@ impl<'arena> Parser<'arena> {
           Some(Kind::Shorthand)
         }
         Dots | Hash | Percent if token.len() == 1 => {
-          saw_shorthand_symbol = true;
+          saw_shorthand_symbol = tokens.get(i + 1).is_none_or(|t| t.kind != Whitespace);
           acc
         }
         DoubleQuote | SingleQuote => Some(Kind::Positional),
@@ -1099,6 +1105,13 @@ mod tests {
         },
       ),
       (
+        "[Dr. Foo]", // `. ` can't trigger option
+        AttrList {
+          positional: vecb![Some(just!("Dr. Foo", 1..8))],
+          ..attr_list!(0..9)
+        },
+      ),
+      (
         "[,bar]",
         AttrList {
           positional: vecb![None, Some(nodes![node!("bar"; 2..5)])],
@@ -1278,7 +1291,10 @@ mod tests {
           id: src!("step-2", 2..8),
           reftext: Some(nodes![
             node!("be "; 9..12),
-            node!(Inline::Italic(just!("sure", 13..17)), 12..18),
+            node!(
+              Inline::Span(SpanKind::Italic, None, just!("sure", 13..17)),
+              12..18
+            ),
           ]),
           loc: loc!(0..20),
         }),
@@ -1332,7 +1348,10 @@ mod tests {
           id: src!("step-2", 2..8),
           reftext: Some(nodes![
             node!("be "; 9..12),
-            node!(Inline::Italic(just!("sure", 13..17)), 12..18),
+            node!(
+              Inline::Span(SpanKind::Italic, None, just!("sure", 13..17)),
+              12..18
+            ),
           ]),
           loc: loc!(0..20),
         }),

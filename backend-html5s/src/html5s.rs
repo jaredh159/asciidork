@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::internal::*;
-use ast::AdjacentNewline;
 use EphemeralState::*;
+use ast::AdjacentNewline;
 
 #[derive(Debug, Default)]
 pub struct Html5s {
@@ -752,59 +752,59 @@ impl Backend for Html5s {
     }
   }
 
-  fn enter_inline_italic(&mut self) {
-    self.push_str("<em>");
+  fn enter_inline_italic(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("em", &[], attrs);
   }
 
-  fn exit_inline_italic(&mut self) {
+  fn exit_inline_italic(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</em>");
   }
 
-  fn enter_inline_mono(&mut self) {
-    self.push_str("<code>");
+  fn enter_inline_mono(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("code", &[], attrs);
   }
 
-  fn exit_inline_mono(&mut self) {
+  fn exit_inline_mono(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</code>");
   }
 
-  fn enter_inline_bold(&mut self) {
-    self.push_str("<strong>");
+  fn enter_inline_bold(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("strong", &[], attrs);
   }
 
-  fn exit_inline_bold(&mut self) {
+  fn exit_inline_bold(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</strong>");
   }
 
-  fn enter_inline_lit_mono(&mut self) {
-    self.push_str("<code>");
+  fn enter_inline_lit_mono(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("code", &[], attrs);
   }
 
-  fn exit_inline_lit_mono(&mut self) {
+  fn exit_inline_lit_mono(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</code>");
   }
 
-  fn enter_inline_highlight(&mut self) {
-    self.push_str("<mark>");
+  fn enter_inline_highlight(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("mark", &[], attrs);
   }
 
-  fn exit_inline_highlight(&mut self) {
+  fn exit_inline_highlight(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</mark>");
   }
 
-  fn enter_inline_subscript(&mut self) {
-    self.push_str("<sub>");
+  fn enter_inline_subscript(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("sub", &[], attrs);
   }
 
-  fn exit_inline_subscript(&mut self) {
+  fn exit_inline_subscript(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</sub>");
   }
 
-  fn enter_inline_superscript(&mut self) {
-    self.push_str("<sup>");
+  fn enter_inline_superscript(&mut self, attrs: Option<&AttrList>) {
+    self.open_element_opt("sup", &[], attrs);
   }
 
-  fn exit_inline_superscript(&mut self) {
+  fn exit_inline_superscript(&mut self, _attrs: Option<&AttrList>) {
     self.push_str("</sup>");
   }
 
@@ -878,33 +878,37 @@ impl Backend for Html5s {
     }
   }
 
-  fn enter_text_span(&mut self, attrs: &AttrList) {
-    match attrs.roles.first().map(|r| r.src.as_str()) {
-      Some("line-through" | "strike") => {
-        let mut attrs = attrs.clone();
-        attrs
-          .roles
-          .retain(|r| r.src != "line-through" && r.src != "strike");
-        self.open_element("s", &[], &attrs);
+  fn enter_text_span(&mut self, attrs: Option<&AttrList>) {
+    if let Some(attrs) = attrs {
+      match attrs.roles.first().map(|r| r.src.as_str()) {
+        Some("line-through" | "strike") => {
+          let mut attrs = attrs.clone();
+          attrs
+            .roles
+            .retain(|r| r.src != "line-through" && r.src != "strike");
+          self.open_element("s", &[], &attrs);
+        }
+        Some("del") => {
+          let mut attrs = attrs.clone();
+          attrs.roles.retain(|r| r.src != "del");
+          self.open_element("del", &[], &attrs);
+        }
+        Some("ins") => {
+          let mut attrs = attrs.clone();
+          attrs.roles.retain(|r| r.src != "ins");
+          self.open_element("ins", &[], &attrs);
+        }
+        _ => {
+          self.open_element("span", &[], attrs);
+        }
       }
-      Some("del") => {
-        let mut attrs = attrs.clone();
-        attrs.roles.retain(|r| r.src != "del");
-        self.open_element("del", &[], &attrs);
-      }
-      Some("ins") => {
-        let mut attrs = attrs.clone();
-        attrs.roles.retain(|r| r.src != "ins");
-        self.open_element("ins", &[], &attrs);
-      }
-      _ => {
-        self.open_element("span", &[], attrs);
-      }
+    } else {
+      self.push_str("<span>");
     }
   }
 
-  fn exit_text_span(&mut self, attrs: &AttrList) {
-    match attrs.roles.first().map(|r| r.src.as_str()) {
+  fn exit_text_span(&mut self, attrs: Option<&AttrList>) {
+    match attrs.and_then(|a| a.roles.first().map(|r| r.src.as_str())) {
       Some("line-through" | "strike") => self.push_str("</s>"),
       Some("del") => self.push_str("</del>"),
       Some("ins") => self.push_str("</ins>"),

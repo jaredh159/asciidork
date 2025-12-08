@@ -41,6 +41,7 @@ pub struct AttrDef {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InlineCtx {
   None,
+  LinkMacroAttrs,
   Single([TokenSpec; 1]),
   Double([TokenSpec; 2]),
 }
@@ -48,9 +49,9 @@ pub enum InlineCtx {
 impl InlineCtx {
   pub const fn specs(&self) -> Option<&[TokenSpec]> {
     match self {
-      InlineCtx::None => None,
       InlineCtx::Single(specs) => Some(specs),
       InlineCtx::Double(specs) => Some(specs),
+      _ => None,
     }
   }
 }

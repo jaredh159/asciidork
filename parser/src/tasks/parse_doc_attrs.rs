@@ -66,7 +66,7 @@ impl<'arena> Parser<'arena> {
           return Ok(());
         }
         (State::AfterName, Some(b'\r')) if self.lexer.byte_at(pos + 1, depth) == Some(b'\n') => {
-          break
+          break;
         }
         (State::AfterName, Some(b'\n') | None) => break,
         (State::AfterName, Some(b'{')) => has_lbrace = true,
@@ -159,10 +159,10 @@ impl<'arena> Parser<'arena> {
       Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &value);
     }
 
-    if self.ctx.in_header {
-      if let Err(err) = self.document.meta.insert_header_attr(name, value) {
-        self.err_at(err, attr_def_loc)?;
-      }
+    if self.ctx.in_header
+      && let Err(err) = self.document.meta.insert_header_attr(name, value)
+    {
+      self.err_at(err, attr_def_loc)?;
     }
 
     // the token now represents the entire attr def

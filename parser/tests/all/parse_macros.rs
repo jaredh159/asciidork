@@ -28,11 +28,12 @@ test_inlines_loose!(
       target: src!("http://foo.com", 0..14),
       attrs: Some(AttrList {
         positional: vecb![Some(nodes![node!(
-          TextSpan(
-            AttrList {
+          Span(
+            SpanKind::Text,
+            Some(AttrList {
               roles: vecb![src!("role", 17..21)],
               ..attr_list!(15..22)
-            },
+            }),
             just!("bar", 23..26)
           ),
           15..27
@@ -141,7 +142,10 @@ test_inlines_loose!(
       target: src!("foo", 5..8),
       linktext: Some(nodes![
         node!("bar "; 9..13),
-        node!(Inline::Italic(just!("baz", 14..17)), 13..18)
+        node!(
+          Inline::Span(SpanKind::Italic, None, just!("baz", 14..17)),
+          13..18
+        )
       ]),
       kind: XrefKind::Macro
     }),
@@ -231,7 +235,10 @@ test_inlines_loose!(
         target: src!("foo-rofl", 6..14),
         linktext: Some(nodes![
           node!("so "; 15..18),
-          node!(Inline::Italic(just!("cool", 19..23)), 18..24),
+          node!(
+            Inline::Span(SpanKind::Italic, None, just!("cool", 19..23)),
+            18..24
+          ),
           node!(" wow"; 24..28)
         ]),
         kind: XrefKind::Shorthand
@@ -289,13 +296,13 @@ fn plugin_inline_macro() {
       meta: chunk_meta!(0),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!(
-        Macro(Plugin(PluginMacro {
+        Macro(Plugin(Box::new(PluginMacro {
           name: bstr!("bob"),
           target: None,
           flow: Flow::Inline,
           attrs: attrs::pos("mustard", 5..12),
           source: src!("bob:[mustard]", 0..13)
-        })),
+        }))),
         0..13
       )]),
       loc: (0..13).into(),
@@ -312,13 +319,13 @@ fn plugin_block_macro() {
       meta: chunk_meta!(0),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!(
-        Macro(Plugin(PluginMacro {
+        Macro(Plugin(Box::new(PluginMacro {
           name: bstr!("bob"),
           target: None,
           flow: Flow::Block,
           attrs: attrs::pos("mustard", 6..13),
           source: src!("bob::[mustard]", 0..14)
-        })),
+        }))),
         0..14
       )]),
       loc: (0..14).into(),
@@ -332,13 +339,13 @@ fn plugin_block_macro() {
       meta: chunk_meta!(0),
       context: BlockContext::Paragraph,
       content: BlockContent::Simple(nodes![node!(
-        Macro(Plugin(PluginMacro {
+        Macro(Plugin(Box::new(PluginMacro {
           name: bstr!("bob"),
           target: Some(src!("baz", 5..8)),
           flow: Flow::Block,
           attrs: attr_list!(8..10),
           source: src!("bob::baz[]", 0..10)
-        })),
+        }))),
         0..10
       )]),
       loc: (0..10).into(),
