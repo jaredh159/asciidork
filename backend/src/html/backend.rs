@@ -712,6 +712,7 @@ pub trait HtmlBackend: HtmlBuf {
 pub enum EphemeralState {
   VisitingSimpleTermDescription,
   InTableOfContents,
+  InHorizontalDescList,
   InDescListDesc,
   IsSourceBlock,
   InBibliography,

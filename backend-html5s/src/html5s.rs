@@ -502,9 +502,14 @@ impl Backend for Html5s {
 
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
     self.state.desc_list_depth += 1;
-    let mut tag = OpenTag::new("div", &block.meta.attrs);
+    let el = if block.has_title() { "section" } else { "div" };
+    let mut tag = OpenTag::new(el, &block.meta.attrs);
     if depth == 1 {
       tag.push_class("dlist");
+    }
+    let is_horizontal = block.meta.attrs.has_str_positional("horizontal");
+    if is_horizontal {
+      tag.push_class("horizontal");
     }
     if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
       self.state.ephemeral.insert(InGlossaryList);
@@ -513,19 +518,21 @@ impl Backend for Html5s {
     if depth == 1 {
       self.push_open_tag(tag);
     }
-    self.render_buffered_block_title(block, false);
+    self.render_buffered_block_title(block, true);
     self.push_str("<dl");
     if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
       self.push_str(r#" class="glossary""#);
+    } else if is_horizontal {
+      self.push_str(r#" class="horizontal""#);
     }
     self.push_ch('>');
   }
 
-  fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], depth: u8) {
+  fn exit_description_list(&mut self, block: &Block, _items: &[ListItem], depth: u8) {
     self.state.ephemeral.remove(&InGlossaryList);
     self.push_str("</dl>");
     if depth == 1 {
-      self.push_str("</div>");
+      self.push_str(if block.has_title() { "</section>" } else { "</div>" });
     }
     self.state.desc_list_depth -= 1;
   }

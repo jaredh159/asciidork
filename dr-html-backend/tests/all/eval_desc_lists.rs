@@ -764,3 +764,48 @@ assert_html!(
     </div>
   "##}
 );
+
+assert_html!(
+  horizontal_desc_list,
+  adoc! {r#"
+    [horizontal.properties%step]
+    property 1:: does stuff
+    property 2:: does different stuff
+  "#},
+  html! {r##"
+    <div class="hdlist properties">
+      <table>
+        <tr>
+          <td class="hdlist1">property 1</td>
+          <td class="hdlist2"><p>does stuff</p></td>
+        </tr>
+        <tr>
+          <td class="hdlist1">property 2</td>
+          <td class="hdlist2"><p>does different stuff</p></td>
+        </tr>
+      </table>
+    </div>
+  "##}
+);
+
+assert_html!(
+  horizontal_desc_list_widths,
+  adoc! {r#"
+    [horizontal.properties%step,labelwidth=25,itemwidth="75%"]
+    property 1:: does stuff
+  "#},
+  html! {r##"
+    <div class="hdlist properties">
+      <table>
+        <colgroup>
+          <col style="width: 25%;">
+          <col style="width: 75%;">
+        </colgroup>
+        <tr>
+          <td class="hdlist1">property 1</td>
+          <td class="hdlist2"><p>does stuff</p></td>
+        </tr>
+      </table>
+    </div>
+  "##}
+);

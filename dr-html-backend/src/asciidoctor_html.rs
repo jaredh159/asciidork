@@ -538,20 +538,53 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.state.desc_list_depth += 1;
-    if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
+    if block.meta.attrs.has_str_positional("horizontal") {
+      self.state.ephemeral.insert(InHorizontalDescList);
+      self.open_element("div", &["hdlist"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str("<table>");
+      let labelwidth = block.meta.attrs.named("labelwidth");
+      let itemwidth = block.meta.attrs.named("itemwidth");
+      if labelwidth.is_some() || itemwidth.is_some() {
+        self.push_str("<colgroup>");
+        if let Some(labelwidth) = labelwidth {
+          self.push_str(&format!(
+            r#"<col style="width: {}%;">"#,
+            labelwidth.trim_end_matches('%')
+          ));
+        } else {
+          self.push_str("<col>");
+        }
+        if let Some(itemwidth) = itemwidth {
+          self.push_str(&format!(
+            r#"<col style="width: {}%;">"#,
+            itemwidth.trim_end_matches('%')
+          ));
+        } else {
+          self.push_str("<col>");
+        }
+        self.push_str("</colgroup>");
+      }
+    } else if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
       self.state.ephemeral.insert(InGlossaryList);
       self.open_element("div", &["dlist", "glossary"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str("<dl>");
     } else {
       self.open_element("div", &["dlist"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str("<dl>");
     }
-    self.render_buffered_block_title(block);
-    self.push_str("<dl>");
   }
 
   #[instrument(skip_all)]
   fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
     self.state.ephemeral.remove(&InGlossaryList);
-    self.push_str("</dl></div>");
+    if self.state.ephemeral.remove(&InHorizontalDescList) {
+      self.push_str("</table></div>");
+    } else {
+      self.push_str("</dl></div>");
+    }
     self.state.desc_list_depth -= 1;
   }
 
@@ -559,6 +592,8 @@ impl Backend for AsciidoctorHtml {
   fn enter_description_list_term(&mut self, _item: &ListItem) {
     if self.state.ephemeral.contains(&InGlossaryList) {
       self.push_str(r#"<dt>"#);
+    } else if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str(r#"<tr><td class="hdlist1">"#);
     } else {
       self.push_str(r#"<dt class="hdlist1">"#);
     }
@@ -566,17 +601,29 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_description_list_term(&mut self, _item: &ListItem) {
-    self.push_str("</dt>");
+    if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str("</td>");
+    } else {
+      self.push_str("</dt>");
+    }
   }
 
   #[instrument(skip_all)]
   fn enter_description_list_description(&mut self, _item: &ListItem) {
-    self.push_str("<dd>");
+    if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str(r#"<td class="hdlist2">"#);
+    } else {
+      self.push_str("<dd>");
+    }
   }
 
   #[instrument(skip_all)]
   fn exit_description_list_description(&mut self, _item: &ListItem) {
-    self.push_str("</dd>");
+    if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str("</td></tr>");
+    } else {
+      self.push_str("</dd>");
+    }
   }
 
   #[instrument(skip_all)]
