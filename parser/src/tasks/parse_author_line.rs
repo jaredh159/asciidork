@@ -14,10 +14,15 @@ impl<'arena> Parser<'arena> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
 
-    // https://regexr.com/7m8ni
-    let pattern =
-      r"([^\s<]+\b)(\s+([^<;]+\b))*(\s*([^\s<;]+))(?:\s+<([^\s>@]+@[^\s>]+)>)?(\s*;\s*)?";
-    let re = Regex::new(pattern).unwrap();
+    let pattern = [
+      r"([^\s<.]+\.?)",                // first
+      r"(\s+([^<;]+\b))*",             // middles
+      r"(\s*([^\s<;]+))",              // last
+      r"(?:\s+<([^\s>@]+@[^\s>]+)>)?", // email
+      r"(\s*;\s*)?",                   // trailing ;
+    ]
+    .concat();
+    let re = Regex::new(&pattern).unwrap();
 
     let mut first_start = usize::MAX;
     let mut last_end = 0;

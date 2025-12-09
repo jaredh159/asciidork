@@ -175,6 +175,52 @@ assert_standalone_body!(
   "##}
 );
 
+assert_standalone_body!(
+  multiple_complex_authors,
+  adoc! {r#"
+    = The Intrepid Chronicles
+    Kismet R. Lee <kismet@asciidoctor.org>; B. Steppenwolf; Pax Draeke <pax@asciidoctor.org>
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>The Intrepid Chronicles</h1>
+        <div class="details">
+          <span id="author" class="author">Kismet R. Lee</span><br>
+          <span id="email" class="email"><a href="mailto:kismet@asciidoctor.org">kismet@asciidoctor.org</a></span><br>
+          <span id="author2" class="author">B. Steppenwolf</span><br>
+          <span id="author3" class="author">Pax Draeke</span><br>
+          <span id="email3" class="email"><a href="mailto:pax@asciidoctor.org">pax@asciidoctor.org</a></span><br>
+        </div>
+      </div>
+      <div id="content"></div>
+      <div id="footer"></div>
+    </body>
+  "#}
+);
+
+assert_standalone_body!(
+  author_attr,
+  adoc! {r#"
+    = The Intrepid Chronicles
+    :author: Kismet R. Lee
+    :email: kismet@asciidoctor.org
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>The Intrepid Chronicles</h1>
+        <div class="details">
+          <span id="author" class="author">Kismet R. Lee</span><br>
+          <span id="email" class="email"><a href="mailto:kismet@asciidoctor.org">kismet@asciidoctor.org</a></span><br>
+        </div>
+      </div>
+      <div id="content"></div>
+      <div id="footer"></div>
+    </body>
+  "#}
+);
+
 test_non_embedded_contains!(
   webfonts_css_default,
   adoc! {"
