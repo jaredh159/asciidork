@@ -218,8 +218,36 @@ assert_standalone_body!(
           <span id="email" class="email"><a href="mailto:kismet@asciidoctor.org">kismet@asciidoctor.org</a></span><br>
         </div>
       </div>
-      <div id="content"></div>
+      <div id="content">
+        <div class="paragraph"><p>hi Ann Marie R. Lee</p></div>
+      </div>
       <div id="footer"></div>
+    </body>
+  "#}
+);
+
+assert_standalone_body!(
+  revision_marks,
+  adoc! {r#"
+    = The Intrepid Chronicles
+    Kismet Lee
+    2.9, October 31, 2021: Fall incarnation
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>The Intrepid Chronicles</h1>
+        <div class="details">
+          <span id="author" class="author">Kismet Lee</span><br>
+          <span id="revnumber">version 2.9,</span>
+          <span id="revdate">October 31, 2021</span><br>
+          <span id="revremark">Fall incarnation</span>
+        </div>
+      </div>
+      <div id="content"></div>
+      <div id="footer">
+        <div id="footer-text">Version 2.9<br></div>
+      </div>
     </body>
   "#}
 );
