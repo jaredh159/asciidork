@@ -1301,6 +1301,10 @@ impl Backend for Html5s {
         self.default_newlines = Newlines::default();
         self.newlines = Newlines::default();
       }
+    } else if name == "sectnumlevels"
+      && let Some(level) = value.isize()
+    {
+      self.state.section_num_levels = level;
     }
     _ = self.doc_meta.insert_doc_attr(name, value.clone());
   }

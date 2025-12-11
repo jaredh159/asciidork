@@ -24,6 +24,13 @@ impl AttrValue {
       AttrValue::Bool(false) => None,
     }
   }
+
+  pub fn isize(&self) -> Option<isize> {
+    match self {
+      AttrValue::String(s) => s.parse().ok(),
+      _ => None,
+    }
+  }
 }
 
 pub trait ReadAttr {
@@ -68,10 +75,7 @@ pub trait ReadAttr {
   }
 
   fn isize(&self, key: &str) -> Option<isize> {
-    match self.get(key) {
-      Some(AttrValue::String(s)) => s.parse().ok(),
-      _ => None,
-    }
+    self.get(key).and_then(|v| v.isize())
   }
 
   fn str_or(&self, key: &str, default: &'static str) -> &str {
