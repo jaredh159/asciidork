@@ -253,6 +253,53 @@ assert_standalone_body!(
 );
 
 test_non_embedded_contains!(
+  version_label_attribute,
+  adoc! {"
+    = The Intrepid Chronicles
+    Kismet Lee
+    v3: An icy winter incarnation
+    :version-label: Edition
+  "},
+  [
+    r#"<span id="revnumber">edition 3</span>"#,
+    r#"<div id="footer-text">Edition 3<br></div>"#
+  ]
+);
+
+test_non_embedded_contains!(
+  version_label_attribute_unset,
+  adoc! {"
+    = The Intrepid Chronicles
+    Kismet Lee
+    v3: An icy winter incarnation
+    :!version-label:
+  "},
+  [
+    r#"<span id="revnumber"> 3</span>"#,
+    r#"<div id="footer-text"> 3<br></div>"#
+  ]
+);
+
+test_non_embedded_contains!(
+  doc_metadata,
+  adoc! {"
+    = The Intrepid Chronicles
+    Kismet Lee; Lazarus Draeke
+    :keywords: team, obstacles, journey, victory
+    :description: Multi \
+    line \
+    description.
+
+    This journey begins on a bleary Monday morning.
+  "},
+  [
+    r#"<meta name="keywords" content="team, obstacles, journey, victory">"#,
+    r#"<meta name="description" content="Multi line description.">"#,
+    r#"<title>The Intrepid Chronicles</title>"#
+  ]
+);
+
+test_non_embedded_contains!(
   webfonts_css_default,
   adoc! {"
     hello world

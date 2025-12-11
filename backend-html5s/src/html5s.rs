@@ -256,7 +256,7 @@ impl Backend for Html5s {
   }
 
   fn enter_section_heading(&mut self, section: &Section) {
-    HtmlBackend::enter_section_heading(self, section);
+    HtmlBackend::enter_section_heading(self, section, true);
   }
 
   fn exit_section_heading(&mut self, section: &Section) {
