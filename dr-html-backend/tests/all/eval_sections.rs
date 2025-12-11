@@ -711,3 +711,28 @@ assert_html!(
     </div>
   "##}
 );
+
+assert_html!(
+  idprefix_idseparator,
+  adoc! {r#"
+    = Title
+    :sectlinks
+    :idprefix: custom_
+    :idseparator: -
+
+    == Section 2
+  "#},
+  contains: r#"<h2 id="custom_section-2">"#
+);
+
+assert_html!(
+  idprefix_empty,
+  adoc! {r#"
+    = Title
+    :sectlinks
+    :idprefix:
+
+    == Section
+  "#},
+  contains: r#"<h2 id="section">"#
+);

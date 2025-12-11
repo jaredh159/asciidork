@@ -313,13 +313,13 @@ assert_html!(
     <div id="toc" class="toc">
       <div id="toctitle">Table of Contents</div>
       <ul class="sectlevel1">
-        <li><a href="#_unsection_one">Section <em>One</em></a></li>
-        <li><a href="#_twodeuxsection_two">Section Two</a></li>
+        <li><a href="#_section_one">Section <em>One</em></a></li>
+        <li><a href="#_section_two">Section Two</a></li>
         <li><a href="#_httpswww_cvut_czctu_in_prague"><strong>CTU</strong> in Prague</a></li>
       </ul>
     </div>
     <div class="sect1">
-      <h2 id="_unsection_one">
+      <h2 id="_section_one">
         <a id="un"></a>Section <em>One</em>
       </h2>
       <div class="sectionbody">
@@ -327,7 +327,7 @@ assert_html!(
       </div>
     </div>
     <div class="sect1">
-      <h2 id="_twodeuxsection_two"><a id="two"></a><a id="deux"></a>Section Two</h2>
+      <h2 id="_section_two"><a id="two"></a><a id="deux"></a>Section Two</h2>
       <div class="sectionbody">
         <div class="paragraph"><p>content two</p></div>
       </div>

@@ -389,17 +389,17 @@ assert_html!(
     <nav id="toc" class="toc" role="doc-toc">
       <h2 id="toc-title">Table of Contents</h2>
       <ol class="toc-list level-1">
-        <li><a href="#_unsection_one">Section <em>One</em></a></li>
-        <li><a href="#_twodeuxsection_two">Section Two</a></li>
+        <li><a href="#_section_one">Section <em>One</em></a></li>
+        <li><a href="#_section_two">Section Two</a></li>
         <li><a href="#_httpswww_cvut_czctu_in_prague"><strong>CTU</strong> in Prague</a></li>
       </ol>
     </nav>
     <section class="doc-section level-1">
-      <h2 id="_unsection_one"><a id="un" aria-hidden="true"></a>Section <em>One</em></h2>
+      <h2 id="_section_one"><a id="un" aria-hidden="true"></a>Section <em>One</em></h2>
       <p>content one</p>
     </section>
     <section class="doc-section level-1">
-      <h2 id="_twodeuxsection_two">
+      <h2 id="_section_two">
         <a id="two" aria-hidden="true"></a>
         <a id="deux" aria-hidden="true"></a>Section Two
       </h2>
