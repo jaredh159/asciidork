@@ -43,6 +43,7 @@ assert_inline_html!(inline_passthrough, "+++_<foo>&_+++ bar", r#"_<foo>&_ bar"#)
 assert_inline_html!(subscript, "foo ~bar~ baz", r#"foo <sub>bar</sub> baz"#);
 assert_inline_html!(superscript, "foo ^bar^ baz", r#"foo <sup>bar</sup> baz"#);
 assert_inline_html!(not_quotes, "foo `'bar'`", r#"foo <code>'bar'</code>"#);
+assert_inline_html!(not_mono, "foo `'00s bar`'", r#"foo &#8217;00s bar&#8217;"#);
 assert_inline_html!(curly_quotes, "foo \"`bar`\"", r#"foo &#8220;bar&#8221;"#);
 assert_inline_html!(implicit_apos, "Olaf's wrench", r#"Olaf&#8217;s wrench"#);
 assert_inline_html!(multichar_whitespace, "foo   bar", r#"foo bar"#);
