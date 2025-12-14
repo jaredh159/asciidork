@@ -49,6 +49,7 @@ assert_inline_html!(implicit_apos, "Olaf's wrench", r#"Olaf&#8217;s wrench"#);
 assert_inline_html!(multichar_whitespace, "foo   bar", r#"foo bar"#);
 assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
+assert_inline_html!(curvy_end, "a `foo`’ b", "a <code>foo</code>’ b");
 
 assert_inline_html!(
   email_w_dot,
