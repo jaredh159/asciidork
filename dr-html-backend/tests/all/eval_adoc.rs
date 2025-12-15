@@ -52,6 +52,12 @@ assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
 assert_inline_html!(curvy_end, "a `foo`’ b", "a <code>foo</code>’ b");
 
 assert_inline_html!(
+  attr_replace_edge_case,
+  "Deep Creek Lake.^[citation{sp}needed]^",
+  r#"Deep Creek Lake.<sup>[citation needed]</sup>"#
+);
+
+assert_inline_html!(
   email_w_dot,
   "email a.b@c.com",
   r#"email <a href="mailto:a.b@c.com">a.b@c.com</a>"#

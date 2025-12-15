@@ -632,14 +632,14 @@ pub trait HtmlBackend: HtmlBuf {
     if let Some(id) = &section.id {
       self.push(["<h", &level_str, r#" id=""#, id, "\">"]);
       if self.doc_meta().is_true("sectanchors") {
-        self.push([r##"<a class="anchor" href="#"##, &id]);
+        self.push([r##"<a class="anchor" href="#"##, id]);
         if accessible {
           self.push_str(r#"" aria-hidden="true"#);
         }
         self.push_str("\"></a>");
       }
       if self.doc_meta().is_true("sectlinks") {
-        self.push([r##"<a class="link" href="#"##, &id, "\">"]);
+        self.push([r##"<a class="link" href="#"##, id, "\">"]);
       }
     } else {
       self.push(["<h", &level_str, ">"]);

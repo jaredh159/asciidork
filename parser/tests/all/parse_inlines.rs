@@ -978,13 +978,6 @@ fn test_parse_inlines() {
         0..5
       )],
     ),
-    (
-      "^bar^",
-      nodes![node!(
-        Span(SpanKind::Superscript, None, nodes![node!("bar"; 1..4)]),
-        0..5
-      )],
-    ),
     ("foo ^bar", nodes![node!("foo ^bar"; 0..8)]),
     ("foo bar^", nodes![node!("foo bar^"; 0..8)]),
     (
@@ -997,6 +990,20 @@ fn test_parse_inlines() {
         ),
         node!(" foo"; 9..13),
       ],
+    ),
+    (
+      "^bar{sp}baz^",
+      nodes![node!(
+        Span(SpanKind::Superscript, None, nodes![node!("bar baz"; 1..11)]),
+        0..12
+      )],
+    ),
+    (
+      "~bar{sp}baz~",
+      nodes![node!(
+        Span(SpanKind::Subscript, None, nodes![node!("bar baz"; 1..11)]),
+        0..12
+      )],
     ),
     (
       "[.role]#bar#",

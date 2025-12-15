@@ -167,10 +167,11 @@ impl<'arena> Parser<'arena> {
         && let Some(author) = author_from_attr(&value)
       {
         attr_author = Some(author);
-      } else if name == "email" && self.document.meta.authors.len() == 1 {
-        if let Some(author) = self.document.meta.authors.get_mut(0) {
-          author.email = value.str().map(|s| s.to_string());
-        }
+      } else if name == "email"
+        && self.document.meta.authors.len() == 1
+        && let Some(author) = self.document.meta.authors.get_mut(0)
+      {
+        author.email = value.str().map(|s| s.to_string());
       }
       if let Err(err) = self.document.meta.insert_header_attr(name, value) {
         self.err_at(err, attr_def_loc)?;
@@ -211,7 +212,7 @@ fn author_from_attr(attr: &AttrValue) -> Option<Author> {
   let author_str = attr.str().filter(|s| !s.is_empty())?;
   let parts: Vec<&str> = author_str.split_whitespace().collect();
   Some(Author {
-    first_name: parts.get(0).unwrap_or(&"").replace('_', " ").to_string(),
+    first_name: parts.first().unwrap_or(&"").replace('_', " ").to_string(),
     middle_name: if parts.len() > 2 {
       Some(parts[1..parts.len() - 1].join(" ").replace('_', " "))
     } else {
