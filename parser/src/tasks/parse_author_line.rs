@@ -14,10 +14,15 @@ impl<'arena> Parser<'arena> {
     debug_assert!(!line.is_empty());
     debug_assert!(line.starts(Word));
 
-    // https://regexr.com/7m8ni
-    let pattern =
-      r"([^\s<]+\b)(\s+([^<;]+\b))*(\s*([^\s<;]+))(?:\s+<([^\s>@]+@[^\s>]+)>)?(\s*;\s*)?";
-    let re = Regex::new(pattern).unwrap();
+    let pattern = [
+      r"([^\s<.]+\.?)",                // first
+      r"(\s+([^<;]+\b))*",             // middles
+      r"(\s*([^\s<;]+))",              // last
+      r"(?:\s+<([^\s>@]+@[^\s>]+)>)?", // email
+      r"(\s*;\s*)?",                   // trailing ;
+    ]
+    .concat();
+    let re = Regex::new(&pattern).unwrap();
 
     let mut first_start = usize::MAX;
     let mut last_end = 0;
@@ -30,7 +35,7 @@ impl<'arena> Parser<'arena> {
         }
         last_end = m.end();
       }
-      self.document.meta.add_author(self.author_from(captures));
+      self.document.meta.add_author(author_from(captures));
     }
 
     let num_bytes = src.len();
@@ -48,19 +53,26 @@ impl<'arena> Parser<'arena> {
       Ok(())
     }
   }
+}
 
-  fn author_from(&self, captures: regex::Captures) -> Author {
-    let first_name = captures.get(1).unwrap().as_str().to_string();
-    let middle_name = captures.get(3).map(|m| m.as_str().trim_end().to_string());
-    let last_name = captures.get(5).unwrap().as_str().to_string();
-    let email = captures.get(6).map(|m| m.as_str().to_string());
-    Author {
-      first_name,
-      middle_name,
-      last_name,
-      email,
-    }
+fn author_from(captures: regex::Captures) -> Author {
+  let first_name = de_underscore(captures.get(1).unwrap().as_str());
+  let middle_name = captures
+    .get(3)
+    .map(|m| m.as_str().trim_end())
+    .map(de_underscore);
+  let last_name = de_underscore(captures.get(5).unwrap().as_str());
+  let email = captures.get(6).map(|m| m.as_str().to_string());
+  Author {
+    first_name,
+    middle_name,
+    last_name,
+    email,
   }
+}
+
+fn de_underscore(name: &str) -> String {
+  name.replace('_', " ")
 }
 
 #[cfg(test)]
@@ -96,6 +108,17 @@ mod tests {
         vec![
           ("Bob", None, "Foo", Some("bob@foo.com")),
           ("Bob", Some("Thomas"), "Baz", None),
+        ],
+      ),
+      (
+        "Ann_Marie Jenson", // underscore in first name
+        vec![("Ann Marie", None, "Jenson", None)],
+      ),
+      (
+        "Ann_Marie Jenson; Tomás López_del_Toro", // underscores
+        vec![
+          ("Ann Marie", None, "Jenson", None),
+          ("Tomás", None, "López del Toro", None),
         ],
       ),
     ];

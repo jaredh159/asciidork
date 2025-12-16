@@ -27,7 +27,7 @@ impl<'arena> Parser<'arena> {
       Some(AttrValue::String(s)) => s,
       _ => "_",
     };
-    let auto_gen_id = self.autogen_sect_id(&line.reassemble_src(), id_prefix, id_sep, false);
+    let auto_gen_id = self.autogen_sect_id(&line.reassemble_src(), id_prefix, id_sep);
     self.ctx.anchor_ids.borrow_mut().insert(auto_gen_id.clone());
     Some(auto_gen_id)
   }
@@ -38,7 +38,17 @@ impl<'arena> Parser<'arena> {
     line: &str,
     prefix: &str,
     separator: Option<char>,
+  ) -> BumpString<'arena> {
+    self._autogen_sect_id(line, prefix, separator, false, false)
+  }
+
+  fn _autogen_sect_id(
+    &self,
+    line: &str,
+    prefix: &str,
+    separator: Option<char>,
     removed_entities: bool,
+    removed_aux_ids: bool,
   ) -> BumpString<'arena> {
     let mut id = BumpString::with_capacity_in(line.len() + prefix.len() + 3, self.bump);
     let mut in_html_tag = false;
@@ -48,7 +58,9 @@ impl<'arena> Parser<'arena> {
     let mut chars = line.chars().peekable();
     while let Some(c) = chars.next() {
       match c {
-        '<' if chars.next() == Some('<') => {}
+        '<' if chars.peek() == Some(&'<') => {
+          chars.next();
+        }
         '<' => in_html_tag = true,
         '>' => in_html_tag = false,
         ' ' | '-' | '.' | ',' | '\t' => {
@@ -57,10 +69,14 @@ impl<'arena> Parser<'arena> {
             last_c = separator.unwrap();
           }
         }
-        // only pay the cost of the hairy regex if we encounter an ampersand
+        // only pay the cost of the regex if we need to
+        '[' if chars.peek() == Some(&'[') && !removed_aux_ids => {
+          let sans_aux_ids = AUX_ID_RE.replace_all(line, "$1");
+          return self._autogen_sect_id(&sans_aux_ids, prefix, separator, removed_entities, true);
+        }
         '&' if !removed_entities => {
           let sans_entities = ENTITY_RE.replace_all(line, "");
-          return self.autogen_sect_id(&sans_entities, prefix, separator, true);
+          return self._autogen_sect_id(&sans_entities, prefix, separator, true, removed_aux_ids);
         }
         _ if in_html_tag => {}
         mut c if c.is_ascii_alphanumeric() => {
@@ -122,6 +138,10 @@ lazy_static! {
   .unwrap();
 }
 
+lazy_static! {
+  static ref AUX_ID_RE: Regex = Regex::new(r"\[\[.*?\]\]").unwrap();
+}
+
 // tests
 
 #[cfg(test)]
@@ -141,7 +161,7 @@ mod tests {
     ];
     let parser = test_parser!("");
     for (input, expected) in cases {
-      let id = parser.autogen_sect_id(input, "_", Some('_'), false);
+      let id = parser.autogen_sect_id(input, "_", Some('_'));
       assert_eq!(id, *expected);
     }
   }
@@ -166,6 +186,10 @@ mod tests {
       ("Foo-bar design", "_", Some('-'), &[], "_foo-bar-design"),
       ("Version 5.0.1", "_", Some('.'), &[], "_version.5.0.1"),
       ("<em></em>", "_", Some('_'), &[], "_2"),
+      // ignores auxiliary ids
+      ("[[aux-id]]foo Bar", "_", Some('_'), &[], "_foo_bar"),
+      ("[[aux-id]][[two]]foo Bar", "_", Some('_'), &[], "_foo_bar"),
+      ("foo Bar[[aux-id]][[two]]", "_", Some('_'), &[], "_foo_bar"),
     ];
 
     for (line, id_prefix, id_sep, prev, expected) in cases {
@@ -173,7 +197,7 @@ mod tests {
       for s in prev {
         parser.ctx.anchor_ids.borrow_mut().insert(bstr!(s));
       }
-      let id = parser.autogen_sect_id(line, id_prefix, id_sep, false);
+      let id = parser.autogen_sect_id(line, id_prefix, id_sep);
       assert_eq!(id, *expected);
     }
   }

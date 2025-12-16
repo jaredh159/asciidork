@@ -159,10 +159,26 @@ impl<'arena> Parser<'arena> {
       Parser::adjust_leveloffset(&mut self.ctx.leveloffset, &value);
     }
 
-    if self.ctx.in_header
-      && let Err(err) = self.document.meta.insert_header_attr(name, value)
-    {
-      self.err_at(err, attr_def_loc)?;
+    if self.ctx.in_header {
+      // https://docs.asciidoctor.org/asciidoc/latest/document/author-attribute-entries/
+      let mut attr_author: Option<Author> = None;
+      if name == "author"
+        && self.document.meta.authors.is_empty()
+        && let Some(author) = author_from_attr(&value)
+      {
+        attr_author = Some(author);
+      } else if name == "email"
+        && self.document.meta.authors.len() == 1
+        && let Some(author) = self.document.meta.authors.get_mut(0)
+      {
+        author.email = value.str().map(|s| s.to_string());
+      }
+      if let Err(err) = self.document.meta.insert_header_attr(name, value) {
+        self.err_at(err, attr_def_loc)?;
+      }
+      if let Some(author) = attr_author {
+        self.document.meta.add_author(author);
+      }
     }
 
     // the token now represents the entire attr def
@@ -190,6 +206,25 @@ impl<'arena> Parser<'arena> {
 // https://docs.asciidoctor.org/asciidoc/latest/attributes/names-and-values/#user-defined
 const fn is_attr_word_char(c: u8) -> bool {
   c.is_ascii_alphanumeric() || c == b'_' || c == b'-'
+}
+
+fn author_from_attr(attr: &AttrValue) -> Option<Author> {
+  let author_str = attr.str().filter(|s| !s.is_empty())?;
+  let parts: Vec<&str> = author_str.split_whitespace().collect();
+  Some(Author {
+    first_name: parts.first().unwrap_or(&"").replace('_', " ").to_string(),
+    middle_name: if parts.len() > 2 {
+      Some(parts[1..parts.len() - 1].join(" ").replace('_', " "))
+    } else {
+      None
+    },
+    last_name: parts
+      .get(parts.len().saturating_sub(1))
+      .unwrap_or(&"")
+      .replace('_', " ")
+      .to_string(),
+    email: None,
+  })
 }
 
 #[cfg(test)]

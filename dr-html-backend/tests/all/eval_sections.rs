@@ -682,3 +682,57 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  sectlinks_sectanchors,
+  adoc! {r#"
+    = Title
+    :sectlinks:
+
+    == Chapter 1
+
+    :sectanchors:
+
+    == Chapter 2
+  "#},
+  html! {r##"
+    <div class="sect1">
+      <h2 id="_chapter_1">
+        <a class="link" href="#_chapter_1">Chapter 1</a>
+      </h2>
+      <div class="sectionbody"></div>
+    </div>
+    <div class="sect1">
+      <h2 id="_chapter_2">
+        <a class="anchor" href="#_chapter_2"></a>
+        <a class="link" href="#_chapter_2">Chapter 2</a>
+      </h2>
+      <div class="sectionbody"></div>
+    </div>
+  "##}
+);
+
+assert_html!(
+  idprefix_idseparator,
+  adoc! {r#"
+    = Title
+    :sectlinks
+    :idprefix: custom_
+    :idseparator: -
+
+    == Section 2
+  "#},
+  contains: r#"<h2 id="custom_section-2">"#
+);
+
+assert_html!(
+  idprefix_empty,
+  adoc! {r#"
+    = Title
+    :sectlinks
+    :idprefix:
+
+    == Section
+  "#},
+  contains: r#"<h2 id="section">"#
+);

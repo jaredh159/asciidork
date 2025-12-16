@@ -627,10 +627,20 @@ pub trait HtmlBackend: HtmlBuf {
     };
   }
 
-  fn enter_section_heading(&mut self, section: &Section) {
+  fn enter_section_heading(&mut self, section: &Section, accessible: bool) {
     let level_str = crate::num_str!(section.level + 1);
     if let Some(id) = &section.id {
       self.push(["<h", &level_str, r#" id=""#, id, "\">"]);
+      if self.doc_meta().is_true("sectanchors") {
+        self.push([r##"<a class="anchor" href="#"##, id]);
+        if accessible {
+          self.push_str(r#"" aria-hidden="true"#);
+        }
+        self.push_str("\"></a>");
+      }
+      if self.doc_meta().is_true("sectlinks") {
+        self.push([r##"<a class="link" href="#"##, id, "\">"]);
+      }
     } else {
       self.push(["<h", &level_str, ">"]);
     }
@@ -643,6 +653,9 @@ pub trait HtmlBackend: HtmlBuf {
 
   fn exit_section_heading(&mut self, section: &Section) {
     let level_str = crate::num_str!(section.level + 1);
+    if self.doc_meta().is_true("sectlinks") && section.id.is_some() {
+      self.push_str("</a>");
+    }
     self.push(["</h", &level_str, ">"]);
   }
 
@@ -712,6 +725,7 @@ pub trait HtmlBackend: HtmlBuf {
 pub enum EphemeralState {
   VisitingSimpleTermDescription,
   InTableOfContents,
+  InHorizontalDescList,
   InDescListDesc,
   IsSourceBlock,
   InBibliography,

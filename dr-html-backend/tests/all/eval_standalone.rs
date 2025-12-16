@@ -175,6 +175,130 @@ assert_standalone_body!(
   "##}
 );
 
+assert_standalone_body!(
+  multiple_complex_authors,
+  adoc! {r#"
+    = The Intrepid Chronicles
+    Kismet R. Lee <kismet@asciidoctor.org>; B. Steppenwolf; Pax Draeke <pax@asciidoctor.org>; Ann_Marie Jenson
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>The Intrepid Chronicles</h1>
+        <div class="details">
+          <span id="author" class="author">Kismet R. Lee</span><br>
+          <span id="email" class="email"><a href="mailto:kismet@asciidoctor.org">kismet@asciidoctor.org</a></span><br>
+          <span id="author2" class="author">B. Steppenwolf</span><br>
+          <span id="author3" class="author">Pax Draeke</span><br>
+          <span id="email3" class="email"><a href="mailto:pax@asciidoctor.org">pax@asciidoctor.org</a></span><br>
+          <span id="author4" class="author">Ann Marie Jenson</span><br>
+        </div>
+      </div>
+      <div id="content"></div>
+      <div id="footer"></div>
+    </body>
+  "#}
+);
+
+assert_standalone_body!(
+  author_attr,
+  adoc! {r#"
+    = The Intrepid Chronicles
+    :author: Ann_Marie R. Lee
+    :email: kismet@asciidoctor.org
+
+    hi {author}
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>The Intrepid Chronicles</h1>
+        <div class="details">
+          <span id="author" class="author">Ann Marie R. Lee</span><br>
+          <span id="email" class="email"><a href="mailto:kismet@asciidoctor.org">kismet@asciidoctor.org</a></span><br>
+        </div>
+      </div>
+      <div id="content">
+        <div class="paragraph"><p>hi Ann Marie R. Lee</p></div>
+      </div>
+      <div id="footer"></div>
+    </body>
+  "#}
+);
+
+assert_standalone_body!(
+  revision_marks,
+  adoc! {r#"
+    = The Intrepid Chronicles
+    Kismet Lee
+    2.9, October 31, 2021: Fall incarnation
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>The Intrepid Chronicles</h1>
+        <div class="details">
+          <span id="author" class="author">Kismet Lee</span><br>
+          <span id="revnumber">version 2.9,</span>
+          <span id="revdate">October 31, 2021</span><br>
+          <span id="revremark">Fall incarnation</span>
+        </div>
+      </div>
+      <div id="content"></div>
+      <div id="footer">
+        <div id="footer-text">Version 2.9<br></div>
+      </div>
+    </body>
+  "#}
+);
+
+test_non_embedded_contains!(
+  version_label_attribute,
+  adoc! {"
+    = The Intrepid Chronicles
+    Kismet Lee
+    v3: An icy winter incarnation
+    :version-label: Edition
+  "},
+  [
+    r#"<span id="revnumber">edition 3</span>"#,
+    r#"<div id="footer-text">Edition 3<br></div>"#
+  ]
+);
+
+test_non_embedded_contains!(
+  version_label_attribute_unset,
+  adoc! {"
+    = The Intrepid Chronicles
+    Kismet Lee
+    v3: An icy winter incarnation
+    :!version-label:
+  "},
+  [
+    r#"<span id="revnumber"> 3</span>"#,
+    r#"<div id="footer-text"> 3<br></div>"#
+  ]
+);
+
+test_non_embedded_contains!(
+  doc_metadata,
+  adoc! {"
+    = The Intrepid Chronicles
+    Kismet Lee; Lazarus Draeke
+    :keywords: team, obstacles, journey, victory
+    :description: Multi \
+    line \
+    description.
+
+    This journey begins on a bleary Monday morning.
+  "},
+  [
+    r#"<meta name="keywords" content="team, obstacles, journey, victory">"#,
+    r#"<meta name="description" content="Multi line description.">"#,
+    r#"<title>The Intrepid Chronicles</title>"#
+  ]
+);
+
 test_non_embedded_contains!(
   webfonts_css_default,
   adoc! {"

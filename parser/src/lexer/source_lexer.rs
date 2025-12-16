@@ -94,12 +94,19 @@ impl<'arena> SourceLexer<'arena> {
       Some(b'\r') if self.peek_is(b'\n') => Some(self.codepoint(2, Newline)),
       Some(b) if b.is_ascii_digit() => Some(self.digits()),
       Some(b) if b == b';' || b == b':' => Some(self.maybe_term_delimiter(b, at_line_start)),
-      Some(0xC2) if self.peek_is(0xA0) => Some(self.codepoint(2, NoBreakSpace)), // non-breaking space
-      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\xAF") => Some(self.codepoint(3, Word)), // narrow no-break space
-      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x80\x87") => Some(self.codepoint(3, Word)), // figure space
-      Some(0xE2) if self.peek_bytes::<2>() == Some(b"\x81\xA0") => Some(self.codepoint(3, Word)), // word joiner
-      Some(0xE3) if self.peek_bytes::<2>() == Some(b"\x80\x80") => Some(self.codepoint(3, Word)), // ideographic space
-      Some(0xEF) if self.peek_bytes::<2>() == Some(b"\xBB\xBF") => Some(self.codepoint(3, Word)), // zero-width no-break space
+      Some(0xC2) if self.peek_is(0xA0) => Some(self.codepoint(2, Punctuation)), // non-breaking space
+      Some(b @ (0xE3 | 0xEF | 0xE2)) => match (b, self.peek_bytes::<2>().unwrap_or(&[])) {
+        (0xE2, b"\x80\xAF") => Some(self.codepoint(3, Punctuation)), // narrow no-break space
+        (0xE2, b"\x80\x87") => Some(self.codepoint(3, Punctuation)), // figure space
+        (0xE2, b"\x80\x98") => Some(self.codepoint(3, Punctuation)), // left single quote
+        (0xE2, b"\x80\x99") => Some(self.codepoint(3, Punctuation)), // right single quote
+        (0xE2, b"\x80\x9C") => Some(self.codepoint(3, Punctuation)), // left double quote
+        (0xE2, b"\x80\x9D") => Some(self.codepoint(3, Punctuation)), // right double quote
+        (0xE2, b"\x81\xA0") => Some(self.codepoint(3, Punctuation)), // word joiner
+        (0xE3, b"\x80\x80") => Some(self.codepoint(3, Punctuation)), // ideographic space
+        (0xEF, b"\xBB\xBF") => Some(self.codepoint(3, Punctuation)), // zero-width no-break space
+        _ => Some(self.word()),
+      },
       Some(_) => Some(self.word()),
       None => None,
     }

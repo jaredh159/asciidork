@@ -757,7 +757,9 @@ impl<'arena> Parser<'arena> {
 
           TokenKind::Newline => acc.push_node(Inline::Newline, token.loc),
 
-          Discard | AttrRef => acc.text.loc = token.loc.clamp_end(),
+          Discard => acc.text.loc = token.loc.clamp_end(),
+
+          AttrRef => {}
 
           Backslash => {
             match line.current_token().map(|t| t.kind) {
@@ -814,7 +816,8 @@ impl<'arena> Parser<'arena> {
 
   fn push_unused_inline_attrs(&self, acc: &mut Accum<'arena>, inline_attrs: &mut Option<AttrList>) {
     if let Some(unused_attrs) = inline_attrs.take() {
-      acc.text.push_str(self.lexer.str_from_loc(unused_attrs.loc));
+      let text = self.lexer.str_from_loc(unused_attrs.loc);
+      acc.text.push_str(&self.replace_attr_vals(text));
     }
   }
 

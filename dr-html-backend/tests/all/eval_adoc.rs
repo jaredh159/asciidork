@@ -43,11 +43,19 @@ assert_inline_html!(inline_passthrough, "+++_<foo>&_+++ bar", r#"_<foo>&_ bar"#)
 assert_inline_html!(subscript, "foo ~bar~ baz", r#"foo <sub>bar</sub> baz"#);
 assert_inline_html!(superscript, "foo ^bar^ baz", r#"foo <sup>bar</sup> baz"#);
 assert_inline_html!(not_quotes, "foo `'bar'`", r#"foo <code>'bar'</code>"#);
+assert_inline_html!(not_mono, "foo `'00s bar`'", r#"foo &#8217;00s bar&#8217;"#);
 assert_inline_html!(curly_quotes, "foo \"`bar`\"", r#"foo &#8220;bar&#8221;"#);
 assert_inline_html!(implicit_apos, "Olaf's wrench", r#"Olaf&#8217;s wrench"#);
 assert_inline_html!(multichar_whitespace, "foo   bar", r#"foo bar"#);
 assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
+assert_inline_html!(curvy_end, "a `foo`’ b", "a <code>foo</code>’ b");
+
+assert_inline_html!(
+  attr_replace_edge_case,
+  "Deep Creek Lake.^[citation{sp}needed]^",
+  r#"Deep Creek Lake.<sup>[citation needed]</sup>"#
+);
 
 assert_inline_html!(
   email_w_dot,

@@ -76,6 +76,13 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn exit_header(&mut self) {
     if !self.doc_meta.embedded && !self.doc_meta.is_true("noheader") {
+      if !self.doc_meta.authors().is_empty()
+        || self.doc_meta.get("revnumber").is_some()
+        || self.doc_meta.get("revdate").is_some()
+        || self.doc_meta.get("revremark").is_some()
+      {
+        self.render_header_details();
+      }
       self.push_str("</div>")
     }
   }
@@ -101,6 +108,12 @@ impl Backend for AsciidoctorHtml {
     }
     if !self.doc_meta.embedded && !self.doc_meta.is_true("nofooter") {
       self.render_division_start("footer");
+      if let Some(rev) = self.doc_meta.string("revnumber") {
+        let label = self.doc_meta.string_or("version-label", "");
+        self.push([r#"<div id="footer-text">"#, &label, " ", &rev, "<br></div>"]);
+      }
+      // TODO: last-update-label
+      // TODO: docinfo
     }
   }
 
@@ -127,7 +140,6 @@ impl Backend for AsciidoctorHtml {
     } else {
       self.swap_take_buffer(); // discard
     }
-    self.render_document_authors();
   }
 
   #[instrument(skip_all)]
@@ -266,7 +278,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_section_heading(&mut self, section: &Section) {
-    HtmlBackend::enter_section_heading(self, section);
+    HtmlBackend::enter_section_heading(self, section, false);
   }
 
   #[instrument(skip_all)]
@@ -538,20 +550,53 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_description_list(&mut self, block: &Block, _items: &[ListItem], _depth: u8) {
     self.state.desc_list_depth += 1;
-    if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
+    if block.meta.attrs.has_str_positional("horizontal") {
+      self.state.ephemeral.insert(InHorizontalDescList);
+      self.open_element("div", &["hdlist"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str("<table>");
+      let labelwidth = block.meta.attrs.named("labelwidth");
+      let itemwidth = block.meta.attrs.named("itemwidth");
+      if labelwidth.is_some() || itemwidth.is_some() {
+        self.push_str("<colgroup>");
+        if let Some(labelwidth) = labelwidth {
+          self.push_str(&format!(
+            r#"<col style="width: {}%;">"#,
+            labelwidth.trim_end_matches('%')
+          ));
+        } else {
+          self.push_str("<col>");
+        }
+        if let Some(itemwidth) = itemwidth {
+          self.push_str(&format!(
+            r#"<col style="width: {}%;">"#,
+            itemwidth.trim_end_matches('%')
+          ));
+        } else {
+          self.push_str("<col>");
+        }
+        self.push_str("</colgroup>");
+      }
+    } else if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
       self.state.ephemeral.insert(InGlossaryList);
       self.open_element("div", &["dlist", "glossary"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str("<dl>");
     } else {
       self.open_element("div", &["dlist"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str("<dl>");
     }
-    self.render_buffered_block_title(block);
-    self.push_str("<dl>");
   }
 
   #[instrument(skip_all)]
   fn exit_description_list(&mut self, _block: &Block, _items: &[ListItem], _depth: u8) {
     self.state.ephemeral.remove(&InGlossaryList);
-    self.push_str("</dl></div>");
+    if self.state.ephemeral.remove(&InHorizontalDescList) {
+      self.push_str("</table></div>");
+    } else {
+      self.push_str("</dl></div>");
+    }
     self.state.desc_list_depth -= 1;
   }
 
@@ -559,6 +604,8 @@ impl Backend for AsciidoctorHtml {
   fn enter_description_list_term(&mut self, _item: &ListItem) {
     if self.state.ephemeral.contains(&InGlossaryList) {
       self.push_str(r#"<dt>"#);
+    } else if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str(r#"<tr><td class="hdlist1">"#);
     } else {
       self.push_str(r#"<dt class="hdlist1">"#);
     }
@@ -566,17 +613,29 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn exit_description_list_term(&mut self, _item: &ListItem) {
-    self.push_str("</dt>");
+    if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str("</td>");
+    } else {
+      self.push_str("</dt>");
+    }
   }
 
   #[instrument(skip_all)]
   fn enter_description_list_description(&mut self, _item: &ListItem) {
-    self.push_str("<dd>");
+    if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str(r#"<td class="hdlist2">"#);
+    } else {
+      self.push_str("<dd>");
+    }
   }
 
   #[instrument(skip_all)]
   fn exit_description_list_description(&mut self, _item: &ListItem) {
-    self.push_str("</dd>");
+    if self.state.ephemeral.contains(&InHorizontalDescList) {
+      self.push_str("</td></tr>");
+    } else {
+      self.push_str("</dd>");
+    }
   }
 
   #[instrument(skip_all)]
@@ -1249,6 +1308,10 @@ impl Backend for AsciidoctorHtml {
         self.default_newlines = Newlines::default();
         self.newlines = Newlines::default();
       }
+    } else if name == "sectnumlevels"
+      && let Some(level) = value.isize()
+    {
+      self.state.section_num_levels = level;
     }
     // TODO: consider warning?
     _ = self.doc_meta.insert_doc_attr(name, value.clone());
@@ -1441,36 +1504,6 @@ impl AsciidoctorHtml {
     self.push([r#"" alt=""#, kind.str(), r#"">"#]);
   }
 
-  fn render_document_authors(&mut self) {
-    let authors = self.doc_meta.authors();
-    if self.doc_meta.embedded || authors.is_empty() {
-      return;
-    }
-    let mut buffer = String::with_capacity(authors.len() * 100);
-    buffer.push_str(r#"<div class="details">"#);
-    for (idx, author) in authors.iter().enumerate() {
-      buffer.push_str(r#"<span id="author"#);
-      if idx > 0 {
-        buffer.push_str(&num_str!(idx + 1));
-      }
-      buffer.push_str(r#"" class="author">"#);
-      buffer.push_str(&author.fullname());
-      buffer.push_str(r#"</span><br>"#);
-      if let Some(email) = &author.email {
-        buffer.push_str(r#"<span id="email"#);
-        if idx > 0 {
-          buffer.push_str(&num_str!(idx + 1));
-        }
-        buffer.push_str(r#"" class="email"><a href="mailto:"#);
-        buffer.push_str(email);
-        buffer.push_str(r#"">"#);
-        buffer.push_str(email);
-        buffer.push_str(r#"</a></span><br>"#);
-      }
-    }
-    self.push([&buffer, "</div>"]);
-  }
-
   fn render_division_start(&mut self, id: &str) {
     self.push([r#"<div id=""#, id, "\""]);
     if let Some(max_width) = self.doc_meta.string("max-width") {
@@ -1512,6 +1545,56 @@ impl AsciidoctorHtml {
     let n_str = &num_str!(num);
     self.push([r#"<i class="conum" data-value=""#, n_str, r#""></i>"#]);
     self.push([r#"<b>("#, n_str, ")</b>"]);
+  }
+
+  fn render_header_details(&mut self) {
+    self.push_str("<div class=\"details\">");
+    if !self.doc_meta.authors().is_empty() {
+      let authors = std::mem::take(&mut self.doc_meta.authors);
+      for (index, author) in authors.iter().enumerate() {
+        self.render_author_detail(author, index);
+      }
+      self.doc_meta.authors = authors;
+    }
+
+    if let Some(revnumber) = self.doc_meta.string("revnumber") {
+      let label = self.doc_meta.string_or("version-label", "").to_lowercase();
+      self.push([r#"<span id="revnumber">"#, &label, " ", &revnumber]);
+      if self.doc_meta.get("revdate").is_some() {
+        self.push_str(",</span>");
+      } else {
+        self.push_str("</span>");
+      }
+    }
+    if let Some(revdate) = self.doc_meta.string("revdate") {
+      self.push([r#"<span id="revdate">"#, &revdate, "</span>"]);
+    }
+    if let Some(revremark) = self.doc_meta.string("revremark") {
+      self.push([r#"<br><span id="revremark">"#, &revremark, "</span>"]);
+    }
+    self.push_str("</div>");
+  }
+
+  fn render_author_detail(&mut self, author: &Author, index: usize) {
+    self.push_str(r#"<span id="author"#);
+    if index > 0 {
+      self.push_str(&(index + 1).to_string());
+    }
+    self.push_str(r#"" class="author">"#);
+    self.push_str(&author.fullname());
+    self.push_str("</span><br>");
+
+    if let Some(email) = &author.email {
+      self.push_str(r#"<span id="email"#);
+      if index > 0 {
+        self.push_str(&(index + 1).to_string());
+      }
+      self.push_str(r#"" class="email"><a href="mailto:"#);
+      self.push_str(email);
+      self.push_str(r#"">"#);
+      self.push_str(email);
+      self.push_str("</a></span><br>");
+    }
   }
 }
 

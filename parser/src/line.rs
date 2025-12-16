@@ -474,9 +474,17 @@ impl<'arena> Line<'arena> {
 
   /// `true` if no whitespace until token type *and* token type is found
   pub fn no_whitespace_until(&self, kind: TokenKind) -> bool {
+    let mut skip_next = false;
     for token in self.iter() {
-      if token.kind(kind) {
+      if skip_next {
+        skip_next = false;
+        continue;
+      } else if token.kind(kind) {
         return true;
+        // {sp} is the documented way to add spaces when space not allowed
+      } else if token.kind(AttrRef) && token.lexeme == "{sp}" {
+        skip_next = true;
+        continue;
       } else if token.kind(Whitespace) {
         return false;
       } else {
@@ -498,7 +506,10 @@ impl<'arena> Line<'arena> {
     match self.index_of_seq(stop_tokens) {
       Some(0) => None,
       Some(n) => {
-        if self.nth_token(n + 1).kind(Word) || self.nth_token(n - 1).is_whitespaceish() {
+        let next = self.nth_token(n + 1);
+        if next.kind(Word) || self.nth_token(n - 1).is_whitespaceish() {
+          None
+        } else if next.kind(SingleQuote) && stop_tokens == [Kind(Backtick)] {
           None
         } else {
           match ctx.specs() {
