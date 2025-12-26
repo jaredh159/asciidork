@@ -533,7 +533,38 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     CalloutTuck(comment) => backend.visit_callout_tuck(comment),
     Symbol(kind) => backend.visit_symbol(*kind),
     SpacedDashes(len, adjacent_newline) => backend.visit_spaced_dashes(*len, *adjacent_newline),
+    IndexTerm(index_term) => eval_index_term(index_term, ctx, backend),
     LineComment(_) | Discarded => {}
+  }
+}
+
+fn eval_index_term(index_term: &asciidork_ast::IndexTerm, ctx: &Ctx, backend: &mut impl Backend) {
+  match &index_term.term_type {
+    asciidork_ast::IndexTermType::Visible { term } => {
+      if backend.enter_visible_index_term() {
+        term.iter().for_each(|n| eval_inline(n, ctx, backend));
+      }
+    }
+    asciidork_ast::IndexTermType::Concealed { primary, secondary, tertiary } => {
+      let num_terms =
+        1 + if secondary.is_some() { 1 } else { 0 } + if tertiary.is_some() { 1 } else { 0 };
+      if backend.enter_concealed_index_term(num_terms) {
+        backend.enter_concealed_index_term_primary();
+        primary.iter().for_each(|n| eval_inline(n, ctx, backend));
+        backend.exit_concealed_index_term_primary();
+        if let Some(secondary) = secondary {
+          backend.enter_concealed_index_term_secondary();
+          secondary.iter().for_each(|n| eval_inline(n, ctx, backend));
+          backend.exit_concealed_index_term_secondary();
+        }
+        if let Some(tertiary) = tertiary {
+          backend.enter_concealed_index_term_tertiary();
+          tertiary.iter().for_each(|n| eval_inline(n, ctx, backend));
+          backend.exit_concealed_index_term_tertiary();
+        }
+      }
+      backend.exit_concealed_index_term(num_terms);
+    }
   }
 }
 

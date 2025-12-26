@@ -350,6 +350,9 @@ impl<'arena> SourceLexer<'arena> {
         } else if lexeme.last() == Some(&b'e') && lexeme.ends_with(b"footnote") {
           self.reverse_by(8);
           return self.token(Word, start, end - 8);
+        } else if lexeme.last() == Some(&b'm') && lexeme.ends_with(b"indexterm") {
+          self.reverse_by(9);
+          return self.token(Word, start, end - 9);
         }
       }
       // maybe email

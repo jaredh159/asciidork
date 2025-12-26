@@ -823,6 +823,14 @@ impl Backend for Html5s {
     }
   }
 
+  fn enter_visible_index_term(&mut self) -> bool {
+    true
+  }
+
+  fn enter_concealed_index_term(&mut self, _num_terms: u8) -> bool {
+    false
+  }
+
   fn visit_inline_specialchar(&mut self, char: &SpecialCharKind) {
     HtmlBackend::visit_inline_specialchar(self, char);
   }

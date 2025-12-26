@@ -71,6 +71,15 @@ impl<'arena> ContiguousLines<'arena> {
     self.current().and_then(|line| line.current_token())
   }
 
+  pub fn consume_current_token(&mut self) -> Option<Token<'arena>> {
+    let current_line = self.current_mut()?;
+    let maybe_token = current_line.consume_current();
+    if current_line.is_empty() {
+      self.consume_current();
+    }
+    maybe_token
+  }
+
   pub fn nth_token(&self, n: usize) -> Option<&Token<'arena>> {
     self.current().and_then(|line| line.nth_token(n))
   }
@@ -83,7 +92,7 @@ impl<'arena> ContiguousLines<'arena> {
     self.lines.pop_front()
   }
 
-  pub fn consume_current_token(&mut self) -> Option<Token<'arena>> {
+  pub fn consume_current_line_with_token(&mut self) -> Option<Token<'arena>> {
     self
       .consume_current()
       .and_then(|mut line| line.consume_current())
@@ -96,7 +105,7 @@ impl<'arena> ContiguousLines<'arena> {
 
   pub fn restore_if_nonempty(&mut self, line: Line<'arena>) {
     if !line.is_empty() {
-      self.lines.push_front(line);
+      self.lines.restore_front(line);
     }
   }
 
@@ -117,6 +126,13 @@ impl<'arena> ContiguousLines<'arena> {
       .lines
       .iter()
       .any(|line| line.terminates_constrained(stop_tokens, ctx))
+  }
+
+  pub fn terminates_index_term(&self) -> Option<usize> {
+    self
+      .lines
+      .iter()
+      .find_map(|line| line.terminates_index_term())
   }
 
   pub fn is_block_macro(&self) -> bool {

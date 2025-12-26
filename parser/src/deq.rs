@@ -114,10 +114,11 @@ impl<'arena, T> Deq<'arena, T> {
 
   // this is not meant to be a general-purpose method, rather
   // should only be called when we know we have a slot to overwrite
-  // which is why there is a debug_assert! to catch misuse
-  pub fn push_front(&mut self, item: T) {
+  // which is why there is a assert! to catch misuse
+  pub fn restore_front(&mut self, item: T) {
     assert!(self.pos != 0, "unexpected O(n) push_front in Deq");
-    self.slowly_push_front(item); // not actually slow if assert didn't fire
+    self.pos -= 1;
+    self.buf[self.pos] = item;
   }
 
   pub fn slowly_push_front(&mut self, item: T) {

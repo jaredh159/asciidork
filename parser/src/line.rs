@@ -71,6 +71,10 @@ impl<'arena> Line<'arena> {
     self.orig_len += 1;
   }
 
+  pub fn restore_front(&mut self, token: Token<'arena>) {
+    self.tokens.restore_front(token);
+  }
+
   fn finalize_email(&mut self, mut token: Token<'arena>) {
     if self.tokens.is_empty() {
       if regx::EMAIL_RE.is_match(&token.lexeme) {
@@ -446,6 +450,7 @@ impl<'arena> Line<'arena> {
     true
   }
 
+  // TODO: inline macros can span multiple lines, not currently accounted for
   pub fn continues_inline_macro(&self, prev: &Token) -> bool {
     if self.current_is(Whitespace) {
       return false;
@@ -521,6 +526,21 @@ impl<'arena> Line<'arena> {
         }
       }
       _ => None,
+    }
+  }
+
+  pub fn terminates_index_term(&self) -> Option<usize> {
+    if let Some(n) = self.index_of_seq(&[Kind(CloseParens)]) {
+      let close_parens = self.nth_token(n).unwrap();
+      if close_parens.len() < 2 {
+        None
+      } else if n > 0 && self.nth_token(n - 1).not_kind(Backslash) {
+        Some(close_parens.len())
+      } else {
+        Some(close_parens.len())
+      }
+    } else {
+      None
     }
   }
 

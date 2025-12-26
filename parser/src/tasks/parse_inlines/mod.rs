@@ -1,3 +1,4 @@
+mod index_term;
 mod inline_preproc;
 mod inline_utils;
 
@@ -103,6 +104,17 @@ impl<'arena> Parser<'arena> {
                 );
               }
               _ => acc.push_text_token(&token),
+            }
+          }
+          OpenParens if token.len() >= 2 && subs.macros() => {
+            if let Some(end_len) = index_term::terminates(&line, lines) {
+              let (node, loc) =
+                self.parse_index_term_shorthand(end_len, &token, line, lines, &mut acc)?;
+              acc.push_node(node, loc);
+              break;
+            } else {
+              self.push_unused_inline_attrs(&mut acc, &mut inline_attrs);
+              acc.push_text_token(&token);
             }
           }
           Dashes if subs.char_replacement() && (token.is_len(2) || token.is_len(3)) => {
@@ -271,6 +283,14 @@ impl<'arena> Parser<'arena> {
                   },
                 )?;
                 acc.push_node(InlineAnchor(id.src), id.loc);
+              }
+              "indexterm:" => {
+                let (node, loc) = self.parse_index_term_macro(false, &token, &mut line)?;
+                acc.push_node(node, loc);
+              }
+              "indexterm2:" => {
+                let (node, loc) = self.parse_index_term_macro(true, &token, &mut line)?;
+                acc.push_node(node, loc);
               }
               _ => {
                 let mut name = token.lexeme;
@@ -762,8 +782,14 @@ impl<'arena> Parser<'arena> {
           AttrRef => {}
 
           Backslash => {
-            match line.current_token().map(|t| t.kind) {
-              Some(Word) | None => acc.push_text_token(&token),
+            match line.current_token().map(|t| (t.kind, t.len())) {
+              Some((Word, _)) | None => acc.push_text_token(&token),
+              Some((OpenParens, len))
+                if len > 2 && index_term::terminates(&line, lines).is_some() =>
+              {
+                self.parse_escaped_index_term_shorthand(&token, line, lines, &mut acc)?;
+                break;
+              }
               _ => {
                 acc.push_node(Discarded, token.loc);
                 // pushing the next token as text prevents recognizing the pattern

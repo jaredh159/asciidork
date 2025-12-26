@@ -22,6 +22,7 @@ pub enum Inline<'arena> {
   Newline,
   CalloutNum(Callout),
   CalloutTuck(BumpString<'arena>),
+  IndexTerm(IndexTerm<'arena>),
   InlineAnchor(BumpString<'arena>),
   BiblioAnchor(BumpString<'arena>),
   LineBreak,
@@ -88,6 +89,31 @@ pub enum SymbolKind {
   DoubleRightArrow,
   SingleLeftArrow,
   DoubleLeftArrow,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IndexTerm<'arena> {
+  pub term_type: IndexTermType<'arena>,
+  pub term_ref: IndexTermReference<'arena>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum IndexTermType<'arena> {
+  Visible {
+    term: InlineNodes<'arena>,
+  },
+  Concealed {
+    primary: InlineNodes<'arena>,
+    secondary: Option<InlineNodes<'arena>>,
+    tertiary: Option<InlineNodes<'arena>>,
+  },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum IndexTermReference<'arena> {
+  None,
+  See(BumpString<'arena>),
+  SeeAlso(Vec<BumpString<'arena>>),
 }
 
 #[test]
