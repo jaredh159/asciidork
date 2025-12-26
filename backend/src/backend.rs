@@ -149,6 +149,20 @@ pub trait Backend {
   fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList);
   fn visit_spaced_dashes(&mut self, len: u8, adjacent_newline: AdjacentNewline);
 
+  // index
+  /// return true if the backend wants to visit the contents of the visible index term
+  fn enter_visible_index_term(&mut self) -> bool;
+  fn exit_visible_index_term(&mut self) {}
+  /// return true if the backend wants to visit the contents of the concealed index term
+  fn enter_concealed_index_term(&mut self, num_terms: u8) -> bool;
+  fn exit_concealed_index_term(&mut self, _num_terms: u8) {}
+  fn enter_concealed_index_term_primary(&mut self) {}
+  fn exit_concealed_index_term_primary(&mut self) {}
+  fn enter_concealed_index_term_secondary(&mut self) {}
+  fn exit_concealed_index_term_secondary(&mut self) {}
+  fn enter_concealed_index_term_tertiary(&mut self) {}
+  fn exit_concealed_index_term_tertiary(&mut self) {}
+
   fn visit_plugin_macro(&mut self, plugin_macro: &PluginMacro) {
     _ = plugin_macro;
     warn_unimplemented!(visit_plugin_macro);

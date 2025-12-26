@@ -12,7 +12,6 @@
 - [ ] multi-line shorthand xref `<<tigers,foo\nbar>>`
 - [ ] data-uri embedded images
 - [ ] "embedded" inline svgs, where html is in output, changing size
-- [ ] index: https://docs.asciidoctor.org/asciidoc/latest/sections/user-index
 - [ ] multi-anchors, e.g. `=== [[current]][[latest]]Version 4.9`, see
       https://docs.asciidoctor.org/asciidoc/latest/attributes/id/#add-additional-anchors-to-a-section
 - [ ] resolve include directives starting from stdin

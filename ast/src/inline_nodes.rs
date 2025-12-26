@@ -24,6 +24,11 @@ impl<'arena> InlineNodes<'arena> {
       Inline::InlinePassthru(nodes) => text.extend(nodes.plain_text()),
       Inline::Newline => text.push(" "),
       Inline::InlineAnchor(_) => {}
+      Inline::IndexTerm(IndexTerm {
+        term_type: IndexTermType::Visible { term },
+        ..
+      }) => text.extend(term.plain_text()),
+      Inline::IndexTerm(..) => {}
       Inline::BiblioAnchor(..) => {}
       Inline::LineBreak => {}
       Inline::LineComment(_) => {}
@@ -125,6 +130,24 @@ impl<'arena> InlineNodes<'arena> {
 
   pub fn last_is(&self, kind: &Inline) -> bool {
     self.last().is_some_and(|node| &node.content == kind)
+  }
+
+  pub fn trim_trailing_whitespace(&mut self) {
+    let Some(last) = self.last_mut() else {
+      return;
+    };
+    match &mut last.content {
+      Inline::Text(s) => {
+        while s.ends_with(char::is_whitespace) {
+          s.pop();
+          last.loc.end -= 1;
+        }
+      }
+      Inline::MultiCharWhitespace(_) => {
+        self.pop();
+      }
+      _ => {}
+    }
   }
 }
 

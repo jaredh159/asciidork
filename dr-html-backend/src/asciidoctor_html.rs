@@ -1358,6 +1358,16 @@ impl Backend for AsciidoctorHtml {
       .push((id.map(|id| id.to_string()), footnote));
   }
 
+  #[instrument(skip_all)]
+  fn enter_visible_index_term(&mut self) -> bool {
+    true
+  }
+
+  #[instrument(skip_all)]
+  fn enter_concealed_index_term(&mut self, _num_terms: u8) -> bool {
+    false
+  }
+
   fn into_result(self) -> Result<Self::Output, Self::Error> {
     Ok(self.html)
   }

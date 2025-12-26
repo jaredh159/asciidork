@@ -394,7 +394,7 @@ impl<'arena> Parser<'arena> {
     if let Some(mut lines) = self.read_lines()?
       && lines.current_satisfies(|l| l.is_delimiter(self.ctx.delimiter.unwrap()))
     {
-      let token = lines.consume_current_token().unwrap();
+      let token = lines.consume_current_line_with_token().unwrap();
       self.restore_lines(lines);
       end_loc = Some(token.loc);
     }

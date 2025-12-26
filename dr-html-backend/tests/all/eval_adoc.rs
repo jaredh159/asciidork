@@ -52,6 +52,18 @@ assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
 assert_inline_html!(curvy_end, "a `foo`’ b", "a <code>foo</code>’ b");
 
 assert_inline_html!(
+  visible_index_term_shorthand,
+  "foo ((bar)) baz",
+  "foo bar baz"
+);
+
+assert_inline_html!(
+  concealed_index_term_shorthand,
+  "foo(((bar))) baz",
+  "foo baz"
+);
+
+assert_inline_html!(
   attr_replace_edge_case,
   "Deep Creek Lake.^[citation{sp}needed]^",
   r#"Deep Creek Lake.<sup>[citation needed]</sup>"#

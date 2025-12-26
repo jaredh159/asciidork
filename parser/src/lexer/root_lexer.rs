@@ -62,6 +62,8 @@ impl<'arena> RootLexer<'arena> {
       lexeme,
       b"footnote"
         | b"image"
+        | b"indexterm"
+        | b"indexterm2"
         | b"anchor"
         | b"icon"
         | b"kbd"

@@ -9,6 +9,7 @@ mod parse_doc_content;
 mod parse_ifdefs;
 mod parse_ifevals;
 mod parse_includes;
+mod parse_index_terms;
 mod parse_inlines;
 mod parse_macros;
 mod parse_ordered_lists;
