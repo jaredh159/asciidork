@@ -50,6 +50,7 @@ assert_inline_html!(multichar_whitespace, "foo   bar", r#"foo bar"#);
 assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
 assert_inline_html!(curvy_end, "a `foo`’ b", "a <code>foo</code>’ b");
+assert_inline_html!(dash_before_bold, "-*5*", "-<strong>5</strong>");
 
 assert_inline_html!(
   visible_index_term_shorthand,

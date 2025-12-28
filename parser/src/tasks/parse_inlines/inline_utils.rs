@@ -40,7 +40,20 @@ impl<'arena> Parser<'arena> {
       c.is_ascii_whitespace()
         || matches!(
           c,
-          b']' | b'`' | b'*' | b'_' | b'[' | b'#' | b'+' | b'|' | b'\'' | b'=' | b'"' | b',' | b'('
+          b']'
+            | b'`'
+            | b'*'
+            | b'_'
+            | b'['
+            | b'#'
+            | b'+'
+            | b'|'
+            | b'\''
+            | b'='
+            | b'"'
+            | b','
+            | b'('
+            | b'-'
         )
     }) && !line.starts(Whitespace)
       && token.kind(stop_tokens.last().unwrap().token_kind().unwrap())
