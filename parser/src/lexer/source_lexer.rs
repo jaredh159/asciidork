@@ -383,6 +383,7 @@ impl<'arena> SourceLexer<'arena> {
       kind,
       loc: SourceLocation::new(start + self.offset, end + self.offset, TMP_DEPTH),
       lexeme: BumpString::from_str_in(str, self.bump),
+      attr_replacement: false,
     }
   }
 

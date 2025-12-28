@@ -256,6 +256,26 @@ assert_html!(
 );
 
 assert_html!(
+  attr_ref_order_edge_cases,
+  adoc! {r#"
+    :scores: __
+    :hash3: ###
+
+    {scores}foo bar{scores}
+
+    #`CB{hash3}2`#
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>__foo bar__</p>
+    </div>
+    <div class="paragraph">
+      <p><mark><code>CB###2</code></mark></p>
+    </div>
+  "#}
+);
+
+assert_html!(
   para_w_attrs,
   adoc! {r#"
     [#custom-id.custom-class]
@@ -320,10 +340,7 @@ assert_html!(
 
     foo {doctitle}
   "#},
-   // TODO: asciidoctor produces `foo Doc _Title_`
-   // here, not sure if it matters though
-   // might be a manifestation of ORDER of subs
-   contains: "foo Doc <em>Title</em>"
+   contains: "foo Doc _Title_"
 );
 
 assert_html!(

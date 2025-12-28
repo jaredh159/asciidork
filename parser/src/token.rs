@@ -8,6 +8,7 @@ pub struct Token<'arena> {
   pub kind: TokenKind,
   pub loc: SourceLocation,
   pub lexeme: BumpString<'arena>,
+  pub attr_replacement: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -94,7 +95,12 @@ impl From<TokenKind> for TokenSpec {
 
 impl<'arena> Token<'arena> {
   pub fn new(kind: TokenKind, loc: impl Into<SourceLocation>, lexeme: BumpString<'arena>) -> Self {
-    Self { kind, loc: loc.into(), lexeme }
+    Self {
+      kind,
+      loc: loc.into(),
+      lexeme,
+      attr_replacement: false,
+    }
   }
 
   pub fn into_source_string(self) -> SourceString<'arena> {
@@ -183,6 +189,7 @@ pub trait TokenIs {
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool;
   fn satisfies(&self, spec: TokenSpec) -> bool;
   fn can_start_block_macro(&self) -> bool;
+  fn is_attr_replacement(&self) -> bool;
   fn not_kind(&self, kind: TokenKind) -> bool {
     !self.kind(kind)
   }
@@ -206,6 +213,7 @@ impl<'arena> DefaultIn<'arena> for Token<'arena> {
       kind: TokenKind::Eof,
       loc: SourceLocation::default(),
       lexeme: BumpString::from_str_in("", bump),
+      attr_replacement: false,
     }
   }
 }
@@ -235,6 +243,10 @@ impl TokenIs for Token<'_> {
 
   fn matches(&self, kind: TokenKind, lexeme: &'static str) -> bool {
     self.kind == kind && self.lexeme == lexeme
+  }
+
+  fn is_attr_replacement(&self) -> bool {
+    self.attr_replacement
   }
 
   fn can_start_block_macro(&self) -> bool {
@@ -276,6 +288,10 @@ impl TokenIs for Option<&Token<'_>> {
   fn can_start_block_macro(&self) -> bool {
     self.is_some_and(|t| t.can_start_block_macro())
   }
+
+  fn is_attr_replacement(&self) -> bool {
+    self.is_some_and(|t| t.is_attr_replacement())
+  }
 }
 
 impl std::fmt::Debug for Token<'_> {
@@ -291,4 +307,9 @@ impl std::fmt::Debug for Token<'_> {
       self.kind, lexeme, self.loc
     )
   }
+}
+
+#[test]
+fn test_size_of_token() {
+  assert!(std::mem::size_of::<Token>() == 48);
 }

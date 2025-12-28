@@ -105,6 +105,10 @@ impl<'arena> RootLexer<'arena> {
     self.tmp_buf = Some((SourceLexer::from_str(buf, SourceFile::Tmp, self.bump), loc));
   }
 
+  pub fn tmp_buf_is_empty(&self) -> bool {
+    self.tmp_buf.is_none()
+  }
+
   pub fn adjust_offset(&mut self, offset_adjustment: u32) {
     self.sources[self.idx as usize].offset = offset_adjustment;
   }
@@ -363,6 +367,7 @@ mod tests {
             kind: token_type,
             loc: SourceLocation::new(start as u32, end as u32, 0),
             lexeme: bstr!(lexeme),
+            attr_replacement: false,
           };
           let actual = lexer.next_token();
           assert_eq!(actual, expected_token);
@@ -843,6 +848,7 @@ mod tests {
         kind: TokenKind::Ampersand,
         loc: SourceLocation::new(0, 1, 0),
         lexeme: bstr!("&"),
+        attr_replacement: false,
       }
     );
     assert_eq!(
@@ -851,6 +857,7 @@ mod tests {
         kind: TokenKind::Caret,
         loc: SourceLocation::new(1, 2, 0),
         lexeme: bstr!("^"),
+        attr_replacement: false,
       }
     );
     assert_eq!(
@@ -859,6 +866,7 @@ mod tests {
         kind: TokenKind::Word,
         loc: SourceLocation::new(2, 8, 0),
         lexeme: bstr!("foobar"),
+        attr_replacement: false,
       }
     );
     assert_eq!(
@@ -867,6 +875,7 @@ mod tests {
         kind: TokenKind::OpenBracket,
         loc: SourceLocation::new(8, 9, 0),
         lexeme: bstr!("["),
+        attr_replacement: false,
       }
     );
     assert_eq!(
@@ -875,6 +884,7 @@ mod tests {
         kind: TokenKind::ForwardSlashes,
         loc: SourceLocation::new(9, 11, 0),
         lexeme: bstr!("//"),
+        attr_replacement: false,
       }
     );
     assert_eq!(
@@ -883,6 +893,7 @@ mod tests {
         kind: TokenKind::Eof,
         loc: SourceLocation::new(12, 12, 0),
         lexeme: bstr!(""),
+        attr_replacement: false,
       }
     );
   }
