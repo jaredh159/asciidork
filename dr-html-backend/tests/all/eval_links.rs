@@ -1,6 +1,20 @@
 use test_utils::*;
 
 assert_html!(
+  url_escaping,
+  "Use http://example.com?menu=<value>[] to open to the menu named `<value>`.",
+  html! {r#"
+    <div class="paragraph">
+      <p>
+        Use <a href="http://example.com?menu=&lt;value&gt;" class="bare">
+          http://example.com?menu=&lt;value&gt;
+        </a> to open to the menu named <code>&lt;value&gt;</code>.
+      </p>
+    </div>
+  "#}
+);
+
+assert_html!(
   link_macros,
   adoc! {r#"
     Visit https://site.com for more.

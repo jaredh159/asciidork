@@ -301,7 +301,7 @@ pub trait HtmlBackend: HtmlBuf {
     if matches!(scheme, Some(UrlScheme::Mailto)) {
       tag.push_str("mailto:");
     }
-    tag.push_str(target);
+    tag.push_specialchar_escaped(target);
     tag.push_ch('"');
 
     if let Some(attrs) = attrs {
@@ -329,9 +329,9 @@ pub trait HtmlBackend: HtmlBuf {
       return;
     }
     if self.doc_meta().is_true("hide-uri-scheme") {
-      self.push_str(file::remove_uri_scheme(target));
+      self.push_specialchar_escaped(file::remove_uri_scheme(target));
     } else {
-      self.push_str(target);
+      self.push_specialchar_escaped(target);
     }
     self.push_str("</a>");
   }

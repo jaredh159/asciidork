@@ -18,7 +18,17 @@ pub trait HtmlBuf {
     }
   }
 
-  #[allow(unused)]
+  fn push_specialchar_escaped(&mut self, s: &str) {
+    for c in s.chars() {
+      match c {
+        '&' => self.htmlbuf().push_str("&amp;"),
+        '<' => self.htmlbuf().push_str("&lt;"),
+        '>' => self.htmlbuf().push_str("&gt;"),
+        _ => self.htmlbuf().push(c),
+      }
+    }
+  }
+
   fn push_url_encoded(&mut self, s: &str) {
     push_url_encoded(self.htmlbuf(), s);
   }

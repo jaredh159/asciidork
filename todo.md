@@ -58,6 +58,9 @@
 - asciidork parses monos in both of the following lines, but asciidoc doesn't because of
   it's regex-based approach, but per the discussion on zulip, our approach is preferred:
 - we don't strip the trailing hashes from markdown-style symmetric headers: `## title ##`
+- we don't handle "Description Lists With Marker", which is described as "experimental"
+  with a warning in the docs, and only supported by Asciidoctor PDF:
+  https://docs.asciidoctor.org/asciidoc/latest/lists/description-with-marker/
 - we don't currently support the newline-based ancestor list continuation method, which is
   discouraged and described as fragile:
   https://docs.asciidoctor.org/asciidoc/latest/lists/continuation/#ancestor-list-continuation
