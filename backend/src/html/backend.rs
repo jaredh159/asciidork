@@ -726,6 +726,7 @@ pub enum EphemeralState {
   VisitingSimpleTermDescription,
   InTableOfContents,
   InHorizontalDescList,
+  InQandaDescList,
   InDescListDesc,
   IsSourceBlock,
   InBibliography,

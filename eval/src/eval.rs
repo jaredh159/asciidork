@@ -297,16 +297,17 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
         let ListItemTypeMeta::DescList { extra_terms, description } = &item.type_meta else {
           unreachable!("eval description list extract meta");
         };
-        backend.enter_description_list_term(item);
+        let total = 1 + extra_terms.len();
+        backend.enter_description_list_term(item, 1, total);
         item
           .principle
           .iter()
           .for_each(|node| eval_inline(node, ctx, backend));
-        backend.exit_description_list_term(item);
-        extra_terms.iter().for_each(|(term, _)| {
-          backend.enter_description_list_term(item);
+        backend.exit_description_list_term(item, 1, total);
+        extra_terms.iter().enumerate().for_each(|(i, (term, _))| {
+          backend.enter_description_list_term(item, i + 2, total);
           term.iter().for_each(|node| eval_inline(node, ctx, backend));
-          backend.exit_description_list_term(item);
+          backend.exit_description_list_term(item, i + 2, total);
         });
         if description.is_some() || !item.blocks.is_empty() {
           backend.enter_description_list_description(item);

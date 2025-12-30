@@ -101,8 +101,8 @@ pub trait Backend {
   fn exit_callout_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn enter_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn exit_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
-  fn enter_description_list_term(&mut self, item: &ListItem);
-  fn exit_description_list_term(&mut self, item: &ListItem);
+  fn enter_description_list_term(&mut self, item: &ListItem, num: usize, total: usize);
+  fn exit_description_list_term(&mut self, item: &ListItem, num: usize, total: usize);
   fn enter_description_list_description(&mut self, item: &ListItem);
   fn exit_description_list_description(&mut self, item: &ListItem);
   fn enter_description_list_description_text(&mut self, text: &Block, item: &ListItem);
