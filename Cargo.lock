@@ -92,6 +92,8 @@ dependencies = [
  "asciidork-ast",
  "asciidork-core",
  "dateparser",
+ "lazy_static",
+ "regex",
  "roman_numerals_fn",
 ]
 

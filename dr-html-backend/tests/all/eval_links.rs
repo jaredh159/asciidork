@@ -2,7 +2,16 @@ use test_utils::*;
 
 assert_html!(
   url_escaping,
-  "Use http://example.com?menu=<value>[] to open to the menu named `<value>`.",
+  adoc! {r#"
+    //                          v-----v -- these get encoded
+    Use http://example.com?menu=<value>[] to open to the menu named `<value>`.
+   
+    //     vvvvv -- valid entity, no double encoding
+    link:My&#32;Documents/report.pdf[Get Report]
+
+    //        vvv -- not a valid entity, & -> &amp;
+    link:Docum&#x;ents/report.pdf[Get Report]
+  "#},
   html! {r#"
     <div class="paragraph">
       <p>
@@ -10,6 +19,12 @@ assert_html!(
           http://example.com?menu=&lt;value&gt;
         </a> to open to the menu named <code>&lt;value&gt;</code>.
       </p>
+    </div>
+    <div class="paragraph">
+      <p><a href="My&#32;Documents/report.pdf">Get Report</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a href="Docum&amp;#x;ents/report.pdf">Get Report</a></p>
     </div>
   "#}
 );
