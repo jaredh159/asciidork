@@ -142,33 +142,28 @@ impl OpenTag {
     if !has_link_text {
       self.push_class("bare");
     }
+    self.finish_classes();
     if let Some(title) = attrs.named("title") {
       self.push_html_attr("title", title)
     }
     if let Some(window) = attrs.named("window") {
-      if !has_link_text {
-        self.push_ch('"');
-      }
       self.push_html_attr("target", window);
       if window == "_blank" || attrs.has_option("noopener") {
         self.push_str(" rel=\"noopener");
         if attrs.has_option("nofollow") {
           self.push_str(" nofollow\"");
-          self.opened_classes = false;
         } else {
           self.push_ch('"');
         }
       }
     } else if blank_window_shorthand {
       self.push_str(" target=\"_blank\" rel=\"noopener\"");
-      self.opened_classes = false;
     } else if attrs.has_option("nofollow") {
       self.push_str(" rel=\"nofollow\"");
-      self.opened_classes = false;
     }
   }
 
-  pub fn finish(mut self) -> String {
+  pub fn finish_classes(&mut self) {
     if let Some(append_classes) = self.append_classes.take() {
       if !self.opened_classes {
         self.buf.push_str(" class=\"");
@@ -181,6 +176,11 @@ impl OpenTag {
     if self.opened_classes {
       self.buf.push('"');
     }
+    self.opened_classes = false;
+  }
+
+  pub fn finish(mut self) -> String {
+    self.finish_classes();
     if let Some(styles) = self.styles.take() {
       self.push_html_attr("style", &styles);
     }
