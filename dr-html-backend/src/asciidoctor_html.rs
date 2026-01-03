@@ -1239,6 +1239,30 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
+  fn enter_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  ) {
+    HtmlBackend::enter_mailto_macro(self, address, subject, body, attrs, has_link_text);
+  }
+
+  #[instrument(skip_all)]
+  fn exit_mailto_macro(
+    &mut self,
+    _address: &SourceString,
+    _subject: Option<&SourceString>,
+    _body: Option<&SourceString>,
+    _attrs: Option<&AttrList>,
+    _has_link_text: bool,
+  ) {
+    self.push_str("</a>");
+  }
+
+  #[instrument(skip_all)]
   fn visit_menu_macro(&mut self, items: &[SourceString]) {
     HtmlBackend::visit_menu_macro(self, items);
   }

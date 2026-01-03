@@ -1176,6 +1176,28 @@ impl Backend for Html5s {
     HtmlBackend::exit_link_macro(self, target, resolving_xref, has_link_text);
   }
 
+  fn enter_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  ) {
+    HtmlBackend::enter_mailto_macro(self, address, subject, body, attrs, has_link_text);
+  }
+
+  fn exit_mailto_macro(
+    &mut self,
+    _address: &SourceString,
+    _subject: Option<&SourceString>,
+    _body: Option<&SourceString>,
+    _attrs: Option<&AttrList>,
+    _has_link_text: bool,
+  ) {
+    self.push_str("</a>");
+  }
+
   fn visit_menu_macro(&mut self, items: &[SourceString]) {
     HtmlBackend::visit_menu_macro(self, items);
   }

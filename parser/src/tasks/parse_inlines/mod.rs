@@ -201,6 +201,30 @@ impl<'arena> Parser<'arena> {
                 );
                 break;
               }
+              "mailto:" => {
+                let target = line.consume_macro_target(self.bump);
+                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                macro_loc.end = attrs.loc.end;
+                let linktext = attrs.take_positional(0);
+                let subject_loc = attrs
+                  .take_positional(1)
+                  .and_then(|nodes| nodes.loc())
+                  .and_then(|ml| ml.coalesce());
+                let body_loc = attrs
+                  .take_positional(2)
+                  .and_then(|nodes| nodes.loc())
+                  .and_then(|ml| ml.coalesce());
+                acc.push_node(
+                  Macro(Mailto {
+                    address: target,
+                    linktext,
+                    subject: subject_loc.map(|loc| self.lexer.src_string_from_loc(loc)),
+                    body: body_loc.map(|loc| self.lexer.src_string_from_loc(loc)),
+                    attrs: if attrs.is_empty() { None } else { Some(Box::new(attrs)) },
+                  }),
+                  macro_loc,
+                );
+              }
               "link:" => {
                 if !line.no_whitespace_until(OpenBracket) {
                   // turns out we didn't have a valid uri target here

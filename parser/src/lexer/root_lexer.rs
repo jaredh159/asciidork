@@ -71,6 +71,7 @@ impl<'arena> RootLexer<'arena> {
         | b"pass"
         | b"btn"
         | b"menu"
+        | b"mailto"
         | b"toc"
         | b"xref"
     )
@@ -105,7 +106,7 @@ impl<'arena> RootLexer<'arena> {
     self.tmp_buf = Some((SourceLexer::from_str(buf, SourceFile::Tmp, self.bump), loc));
   }
 
-  pub fn tmp_buf_is_empty(&self) -> bool {
+  pub const fn tmp_buf_is_empty(&self) -> bool {
     self.tmp_buf.is_none()
   }
 

@@ -517,6 +517,31 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     }
     Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
     Macro(Plugin(plugin_macro)) => backend.visit_plugin_macro(plugin_macro),
+    Macro(Mailto {
+      address,
+      linktext,
+      subject,
+      body,
+      attrs,
+    }) => {
+      backend.enter_mailto_macro(
+        address,
+        subject.as_ref(),
+        body.as_ref(),
+        attrs.as_deref(),
+        linktext.is_some(),
+      );
+      if let Some(text) = linktext {
+        text.iter().for_each(|n| eval_inline(n, ctx, backend));
+      }
+      backend.exit_mailto_macro(
+        address,
+        subject.as_ref(),
+        body.as_ref(),
+        attrs.as_deref(),
+        linktext.is_some(),
+      );
+    }
     InlineAnchor(id) => backend.visit_inline_anchor(id),
     BiblioAnchor(id) => {
       backend.visit_biblio_anchor(

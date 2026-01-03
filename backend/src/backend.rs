@@ -205,6 +205,24 @@ pub trait Backend {
     warn_unimplemented!(exit_link_macro);
   }
 
+  fn enter_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  );
+
+  fn exit_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  );
+
   fn visit_callout(&mut self, callout: Callout);
   fn visit_callout_tuck(&mut self, comment: &str);
   fn enter_inline_italic(&mut self, attrs: Option<&AttrList>);

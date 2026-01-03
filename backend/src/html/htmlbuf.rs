@@ -148,6 +148,7 @@ fn push_url_encoded(buf: &mut String, s: &str) {
   for c in s.chars() {
     match c {
       ' ' => buf.push_str("%20"),
+      ',' => buf.push_str("%2C"),
       _ => buf.push(c),
     }
   }

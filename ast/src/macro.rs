@@ -21,6 +21,13 @@ pub enum MacroNode<'arena> {
     attrs: Option<AttrList<'arena>>,
     caret: bool,
   },
+  Mailto {
+    address: SourceString<'arena>,
+    linktext: Option<InlineNodes<'arena>>,
+    subject: Option<SourceString<'arena>>,
+    body: Option<SourceString<'arena>>,
+    attrs: Option<Box<AttrList<'arena>>>,
+  },
   Icon {
     target: SourceString<'arena>,
     attrs: AttrList<'arena>,
