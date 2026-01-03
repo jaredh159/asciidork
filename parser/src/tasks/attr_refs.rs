@@ -40,6 +40,12 @@ impl<'arena> Parser<'arena> {
     line: &mut Line<'arena>,
     drop_line: &mut bool,
   ) -> Result<()> {
+    if self.ctx.replacing_attr {
+      token.attr_replacement = true;
+      if self.lexer.tmp_buf_is_empty() {
+        self.ctx.replacing_attr = false;
+      }
+    }
     if token.kind(TokenKind::AttrRef) && self.ctx.subs.attr_refs() {
       match self.document.meta.get(&token.lowercase_attr_name()) {
         Some(AttrValue::String(attr_val)) => {
@@ -51,6 +57,7 @@ impl<'arena> Parser<'arena> {
             self.lexer.set_tmp_buf(attr_val, BufLoc::Repeat(token.loc));
           }
           line.push(token);
+          self.ctx.replacing_attr = true;
         }
         _ => {
           #[cfg(feature = "attr_ref_observation")]

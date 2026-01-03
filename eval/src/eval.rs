@@ -297,16 +297,17 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
         let ListItemTypeMeta::DescList { extra_terms, description } = &item.type_meta else {
           unreachable!("eval description list extract meta");
         };
-        backend.enter_description_list_term(item);
+        let total = 1 + extra_terms.len();
+        backend.enter_description_list_term(item, 1, total);
         item
           .principle
           .iter()
           .for_each(|node| eval_inline(node, ctx, backend));
-        backend.exit_description_list_term(item);
-        extra_terms.iter().for_each(|(term, _)| {
-          backend.enter_description_list_term(item);
+        backend.exit_description_list_term(item, 1, total);
+        extra_terms.iter().enumerate().for_each(|(i, (term, _))| {
+          backend.enter_description_list_term(item, i + 2, total);
           term.iter().for_each(|node| eval_inline(node, ctx, backend));
-          backend.exit_description_list_term(item);
+          backend.exit_description_list_term(item, i + 2, total);
         });
         if description.is_some() || !item.blocks.is_empty() {
           backend.enter_description_list_description(item);
@@ -516,6 +517,31 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     }
     Macro(Icon { target, attrs }) => backend.visit_icon_macro(target, attrs),
     Macro(Plugin(plugin_macro)) => backend.visit_plugin_macro(plugin_macro),
+    Macro(Mailto {
+      address,
+      linktext,
+      subject,
+      body,
+      attrs,
+    }) => {
+      backend.enter_mailto_macro(
+        address,
+        subject.as_ref(),
+        body.as_ref(),
+        attrs.as_deref(),
+        linktext.is_some(),
+      );
+      if let Some(text) = linktext {
+        text.iter().for_each(|n| eval_inline(n, ctx, backend));
+      }
+      backend.exit_mailto_macro(
+        address,
+        subject.as_ref(),
+        body.as_ref(),
+        attrs.as_deref(),
+        linktext.is_some(),
+      );
+    }
     InlineAnchor(id) => backend.visit_inline_anchor(id),
     BiblioAnchor(id) => {
       backend.visit_biblio_anchor(

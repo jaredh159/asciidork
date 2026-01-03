@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use roman_numerals_fn::to_roman_numeral;
 
-use asciidork_core::{DocType, JobAttr, Path, SafeMode, file};
+use asciidork_core::{DocType, JobAttr, Path, SafeMode, file, iff};
 use ast::{AttrValue, ReadAttr, SpecialSection, prelude::*};
 
 use crate::{
@@ -301,7 +301,7 @@ pub trait HtmlBackend: HtmlBuf {
     if matches!(scheme, Some(UrlScheme::Mailto)) {
       tag.push_str("mailto:");
     }
-    tag.push_str(target);
+    tag.push_specialchar_escaped(target);
     tag.push_ch('"');
 
     if let Some(attrs) = attrs {
@@ -329,11 +329,40 @@ pub trait HtmlBackend: HtmlBuf {
       return;
     }
     if self.doc_meta().is_true("hide-uri-scheme") {
-      self.push_str(file::remove_uri_scheme(target));
+      self.push_specialchar_escaped(file::remove_uri_scheme(target));
     } else {
-      self.push_str(target);
+      self.push_specialchar_escaped(target);
     }
     self.push_str("</a>");
+  }
+
+  fn enter_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  ) {
+    let mut a_tag = if let Some(attrs) = attrs {
+      OpenTag::new("a", attrs)
+    } else {
+      OpenTag::new("a", &NoAttrs)
+    };
+    a_tag.push([" href=\"mailto:", address]);
+    if let Some(subject) = subject {
+      a_tag.push_str("?subject=");
+      a_tag.push_url_encoded(subject);
+    }
+    if let Some(body) = body {
+      a_tag.push_str(iff!(subject.is_some(), "&amp;body=", "?body="));
+      a_tag.push_url_encoded(body);
+    }
+    a_tag.push_ch('"');
+    self.push_open_tag(a_tag);
+    if !has_link_text {
+      self.push_str(address);
+    }
   }
 
   fn visit_menu_macro(&mut self, items: &[SourceString]) {
@@ -726,6 +755,7 @@ pub enum EphemeralState {
   VisitingSimpleTermDescription,
   InTableOfContents,
   InHorizontalDescList,
+  InQandaDescList,
   InDescListDesc,
   IsSourceBlock,
   InBibliography,

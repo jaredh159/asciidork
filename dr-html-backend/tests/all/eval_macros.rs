@@ -1,6 +1,18 @@
 use test_utils::*;
 
 assert_html!(
+  mailto_macro,
+  adoc! {r#"
+    mailto:join@discuss.example.org[Subscribe, Subscribe me,id=foo,role=bar]
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p><a id="foo" href="mailto:join@discuss.example.org?subject=Subscribe%20me" class="bar">Subscribe</a></p>
+    </div>
+  "#}
+);
+
+assert_html!(
   icon_macro_icons_disabled,
   adoc! {r#"
     :!icons:

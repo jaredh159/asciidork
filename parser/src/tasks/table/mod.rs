@@ -118,6 +118,7 @@ impl<'arena> TableTokens<'arena> {
         kind: TokenKind::Word,
         lexeme,
         loc: SourceLocation::new(loc.start, loc.start + before_len, loc.include_depth),
+        attr_replacement: false,
       })
     } else {
       self.consume_current()

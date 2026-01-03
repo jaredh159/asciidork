@@ -577,6 +577,11 @@ impl Backend for AsciidoctorHtml {
         }
         self.push_str("</colgroup>");
       }
+    } else if block.meta.attrs.has_str_positional("qanda") {
+      self.state.ephemeral.insert(InQandaDescList);
+      self.open_element("div", &["qlist", "qanda"], &block.meta.attrs);
+      self.render_buffered_block_title(block);
+      self.push_str("<ol>");
     } else if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
       self.state.ephemeral.insert(InGlossaryList);
       self.open_element("div", &["dlist", "glossary"], &block.meta.attrs);
@@ -594,6 +599,8 @@ impl Backend for AsciidoctorHtml {
     self.state.ephemeral.remove(&InGlossaryList);
     if self.state.ephemeral.remove(&InHorizontalDescList) {
       self.push_str("</table></div>");
+    } else if self.state.ephemeral.remove(&InQandaDescList) {
+      self.push_str("</ol></div>");
     } else {
       self.push_str("</dl></div>");
     }
@@ -601,20 +608,27 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_description_list_term(&mut self, _item: &ListItem) {
+  fn enter_description_list_term(&mut self, _item: &ListItem, num: usize, _total: usize) {
     if self.state.ephemeral.contains(&InGlossaryList) {
       self.push_str(r#"<dt>"#);
     } else if self.state.ephemeral.contains(&InHorizontalDescList) {
       self.push_str(r#"<tr><td class="hdlist1">"#);
+    } else if self.state.ephemeral.contains(&InQandaDescList) {
+      if num == 1 {
+        self.push_str(r#"<li>"#);
+      }
+      self.push_str(r#"<p><em>"#);
     } else {
       self.push_str(r#"<dt class="hdlist1">"#);
     }
   }
 
   #[instrument(skip_all)]
-  fn exit_description_list_term(&mut self, _item: &ListItem) {
+  fn exit_description_list_term(&mut self, _item: &ListItem, _num: usize, _total: usize) {
     if self.state.ephemeral.contains(&InHorizontalDescList) {
       self.push_str("</td>");
+    } else if self.state.ephemeral.contains(&InQandaDescList) {
+      self.push_str(r#"</em></p>"#);
     } else {
       self.push_str("</dt>");
     }
@@ -624,7 +638,7 @@ impl Backend for AsciidoctorHtml {
   fn enter_description_list_description(&mut self, _item: &ListItem) {
     if self.state.ephemeral.contains(&InHorizontalDescList) {
       self.push_str(r#"<td class="hdlist2">"#);
-    } else {
+    } else if !self.state.ephemeral.contains(&InQandaDescList) {
       self.push_str("<dd>");
     }
   }
@@ -633,6 +647,8 @@ impl Backend for AsciidoctorHtml {
   fn exit_description_list_description(&mut self, _item: &ListItem) {
     if self.state.ephemeral.contains(&InHorizontalDescList) {
       self.push_str("</td></tr>");
+    } else if self.state.ephemeral.contains(&InQandaDescList) {
+      self.push_str("</li>");
     } else {
       self.push_str("</dd>");
     }
@@ -1220,6 +1236,30 @@ impl Backend for AsciidoctorHtml {
     has_link_text: bool,
   ) {
     HtmlBackend::exit_link_macro(self, target, resolving_xref, has_link_text);
+  }
+
+  #[instrument(skip_all)]
+  fn enter_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  ) {
+    HtmlBackend::enter_mailto_macro(self, address, subject, body, attrs, has_link_text);
+  }
+
+  #[instrument(skip_all)]
+  fn exit_mailto_macro(
+    &mut self,
+    _address: &SourceString,
+    _subject: Option<&SourceString>,
+    _body: Option<&SourceString>,
+    _attrs: Option<&AttrList>,
+    _has_link_text: bool,
+  ) {
+    self.push_str("</a>");
   }
 
   #[instrument(skip_all)]

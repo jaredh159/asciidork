@@ -1,3 +1,6 @@
+use lazy_static::lazy_static;
+use regex::Regex;
+
 use ast::prelude::*;
 
 use crate::html::OpenTag;
@@ -6,19 +9,13 @@ pub trait HtmlBuf {
   fn htmlbuf(&mut self) -> &mut String;
 
   fn push_str_attr_escaped(&mut self, s: &str) {
-    for c in s.chars() {
-      match c {
-        '"' => self.htmlbuf().push_str("&quot;"),
-        '\'' => self.htmlbuf().push_str("&#8217;"),
-        '&' => self.htmlbuf().push_str("&amp;"),
-        '<' => self.htmlbuf().push_str("&lt;"),
-        '>' => self.htmlbuf().push_str("&gt;"),
-        _ => self.htmlbuf().push(c),
-      }
-    }
+    push_escaped(s, self.htmlbuf(), true);
   }
 
-  #[allow(unused)]
+  fn push_specialchar_escaped(&mut self, s: &str) {
+    push_escaped(s, self.htmlbuf(), false);
+  }
+
   fn push_url_encoded(&mut self, s: &str) {
     push_url_encoded(self.htmlbuf(), s);
   }
@@ -88,15 +85,6 @@ pub trait HtmlBuf {
   }
 }
 
-fn push_url_encoded(buf: &mut String, s: &str) {
-  for c in s.chars() {
-    match c {
-      ' ' => buf.push_str("%20"),
-      _ => buf.push(c),
-    }
-  }
-}
-
 pub trait AltHtmlBuf: HtmlBuf {
   fn alt_htmlbuf(&mut self) -> &mut String;
   /// (htmlbuf, alt_htmlbuf)
@@ -129,4 +117,43 @@ pub trait AltHtmlBuf: HtmlBuf {
     let (html, alt_html) = self.buffers();
     std::mem::swap(html, alt_html);
   }
+}
+
+fn push_escaped(src: &str, dest: &mut String, escape_quotes: bool) {
+  let mut it = src.chars().peekable();
+  let mut pos = 0;
+  while let Some(c) = it.next() {
+    match c {
+      '&' if it.peek() == Some(&'#') => {
+        if let Some(peek) = src.get(pos..src.len().min(pos + 6)) {
+          if NUMERIC_CHAR_REF.is_match(peek) {
+            dest.push(c);
+          } else {
+            dest.push_str("&amp;");
+          }
+        }
+      }
+      '&' => dest.push_str("&amp;"),
+      '<' => dest.push_str("&lt;"),
+      '>' => dest.push_str("&gt;"),
+      '"' if escape_quotes => dest.push_str("&quot;"),
+      '\'' if escape_quotes => dest.push_str("&#8217;"),
+      _ => dest.push(c),
+    }
+    pos += c.len_utf8();
+  }
+}
+
+fn push_url_encoded(buf: &mut String, s: &str) {
+  for c in s.chars() {
+    match c {
+      ' ' => buf.push_str("%20"),
+      ',' => buf.push_str("%2C"),
+      _ => buf.push(c),
+    }
+  }
+}
+
+lazy_static! {
+  pub static ref NUMERIC_CHAR_REF: Regex = Regex::new(r"&#[0-9]+;|&#x[0-9a-fA-F]+;").unwrap();
 }

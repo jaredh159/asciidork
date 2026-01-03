@@ -26,6 +26,7 @@ pub struct ParseContext<'arena> {
   pub in_header: bool,
   pub in_markdown_blockquote: bool,
   pub attr_defs: BumpVec<'arena, AttrDef>,
+  pub replacing_attr: bool,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
 }
 
@@ -94,6 +95,7 @@ impl<'arena> ParseContext<'arena> {
       attr_defs: BumpVec::new_in(bump),
       in_header: false,
       in_markdown_blockquote: false,
+      replacing_attr: false,
     }
   }
 
@@ -120,6 +122,7 @@ impl<'arena> ParseContext<'arena> {
       attr_defs: BumpVec::new_in(bump),
       in_header: false,
       in_markdown_blockquote: false,
+      replacing_attr: false,
     }
   }
 
@@ -218,4 +221,9 @@ impl<'arena> ParseContext<'arena> {
         .as_ref()
         .is_some_and(|d| d.kind == DelimiterKind::Comment)
   }
+}
+
+#[test]
+fn test_size_of_parse_ctx() {
+  assert!(std::mem::size_of::<ParseContext>() <= 256);
 }

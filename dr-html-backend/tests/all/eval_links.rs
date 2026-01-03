@@ -1,6 +1,35 @@
 use test_utils::*;
 
 assert_html!(
+  url_escaping,
+  adoc! {r#"
+    //                          v-----v -- these get encoded
+    Use http://example.com?menu=<value>[] to open to the menu named `<value>`.
+   
+    //     vvvvv -- valid entity, no double encoding
+    link:My&#32;Documents/report.pdf[Get Report]
+
+    //        vvv -- not a valid entity, & -> &amp;
+    link:Docum&#x;ents/report.pdf[Get Report]
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>
+        Use <a href="http://example.com?menu=&lt;value&gt;" class="bare">
+          http://example.com?menu=&lt;value&gt;
+        </a> to open to the menu named <code>&lt;value&gt;</code>.
+      </p>
+    </div>
+    <div class="paragraph">
+      <p><a href="My&#32;Documents/report.pdf">Get Report</a></p>
+    </div>
+    <div class="paragraph">
+      <p><a href="Docum&amp;#x;ents/report.pdf">Get Report</a></p>
+    </div>
+  "#}
+);
+
+assert_html!(
   link_macros,
   adoc! {r#"
     Visit https://site.com for more.
@@ -23,6 +52,8 @@ assert_html!(
     https://example.com[window=_blank,opts=nofollow]
 
     link:post.html[My Post,opts=nofollow]
+
+    https://chat.asciidoc.org[role=button,window=_blank,opts=nofollow]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -49,13 +80,20 @@ assert_html!(
       <p>Not processed: https://site.com</p>
     </div>
     <div class="paragraph">
-      <p><a href="https://chat.asciidoc.org" target="_blank" rel="noopener" class="resource">Discuss AsciiDoc</a></p>
+      <p><a href="https://chat.asciidoc.org" class="resource" target="_blank" rel="noopener">Discuss AsciiDoc</a></p>
     </div>
     <div class="paragraph">
       <p><a href="https://example.com" class="bare" target="_blank" rel="noopener nofollow">https://example.com</a></p>
     </div>
     <div class="paragraph">
       <p><a href="post.html" rel="nofollow">My Post</a></p>
+    </div>
+    <div class="paragraph">
+      <p>
+        <a href="https://chat.asciidoc.org" class="bare button" target="_blank" rel="noopener nofollow">
+          https://chat.asciidoc.org
+        </a>
+      </p>
     </div>
   "#}
 );
@@ -74,7 +112,7 @@ assert_html!(
       <p>View html: <a href="view-source:asciidoctor.org" target="_blank" rel="noopener">Asciidoctor homepage</a>.</p>
     </div>
     <div class="paragraph">
-      <p><a href="https://example.org" target="_blank" rel="noopener" class="btn">Google, DuckDuckGo, Ecosia</a></p>
+      <p><a href="https://example.org" class="btn" target="_blank" rel="noopener">Google, DuckDuckGo, Ecosia</a></p>
     </div>
     <div class="paragraph">
       <p><a href="https://example.org" target="_blank" rel="noopener">Google, DuckDuckGo, Ecosia</a></p>
@@ -446,7 +484,7 @@ assert_html!(
       <p><a href="https://example.com"><span class="role">Foo Bar</span></a></p>
     </div>
     <div class="paragraph">
-      <p><a href="http://google.com" target="_blank" rel="noopener" class="external">Google</a></p>
+      <p><a href="http://google.com" class="external" target="_blank" rel="noopener">Google</a></p>
     </div>
     <div class="paragraph">
       <p><a href="http://a.com?b=c:1,2b," class="bare">http://a.com?b=c:1,2b,</a></p>

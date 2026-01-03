@@ -11,6 +11,13 @@ mod validate;
 
 pub use internal::types::*;
 
+#[macro_export]
+macro_rules! iff {
+  ($condition:expr,  $_true:expr, $_false:expr) => {
+    if $condition { $_true } else { $_false }
+  };
+}
+
 mod internal {
   pub(crate) mod types {
     pub use crate::attrs::*;

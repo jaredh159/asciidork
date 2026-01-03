@@ -809,3 +809,31 @@ assert_html!(
     </div>
   "##}
 );
+
+assert_html!(
+  qanda_desc_list,
+  adoc! {r#"
+    [qanda]
+    What is the answer?::
+    This is the answer.
+
+    Are cameras allowed?::
+    Are backpacks allowed?::
+    No.
+  "#},
+  html! {r##"
+    <div class="qlist qanda">
+      <ol>
+        <li>
+          <p><em>What is the answer?</em></p>
+          <p>This is the answer.</p>
+        </li>
+        <li>
+          <p><em>Are cameras allowed?</em></p>
+          <p><em>Are backpacks allowed?</em></p>
+          <p>No.</p>
+        </li>
+      </ol>
+    </div>
+  "##}
+);

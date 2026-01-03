@@ -36,11 +36,27 @@ impl<'arena> Parser<'arena> {
       stop_tokens.iter().all(|t| t.token_kind().is_some()),
       "all stop tokens must have a token kind"
     );
+    if token.attr_replacement {
+      return false;
+    }
     self.lexer.byte_before(token.loc).is_none_or(|c| {
       c.is_ascii_whitespace()
         || matches!(
           c,
-          b']' | b'`' | b'*' | b'_' | b'[' | b'#' | b'+' | b'|' | b'\'' | b'=' | b'"' | b',' | b'('
+          b']'
+            | b'`'
+            | b'*'
+            | b'_'
+            | b'['
+            | b'#'
+            | b'+'
+            | b'|'
+            | b'\''
+            | b'='
+            | b'"'
+            | b','
+            | b'('
+            | b'-'
         )
     }) && !line.starts(Whitespace)
       && token.kind(stop_tokens.last().unwrap().token_kind().unwrap())
@@ -60,7 +76,8 @@ impl<'arena> Parser<'arena> {
       stop_tokens.iter().all(|t| t.token_kind().is_some()),
       "all stop tokens must have a token kind"
     );
-    token.kind(stop_tokens[0].token_kind().unwrap())
+    !token.attr_replacement
+      && token.kind(stop_tokens[0].token_kind().unwrap())
       && (stop_tokens.len() < 2 || line.current_is(stop_tokens[1].token_kind().unwrap()))
       && contains_seq(stop_tokens, line, lines)
   }

@@ -472,9 +472,24 @@ mod tests {
         // these are inserted as an inline preprocessing step
         // NB: we will use the source loc of the attr ref token to know how
         // to skip over the resolve attribute in no-attr-ref subs contexts
-        Token::new(TokenKind::Underscore, loc!(6..11), bstr!("_")),
-        Token::new(TokenKind::Word, loc!(6..11), bstr!("bar")),
-        Token::new(TokenKind::Underscore, loc!(6..11), bstr!("_")),
+        Token {
+          kind: TokenKind::Underscore,
+          loc: loc!(6..11),
+          lexeme: bstr!("_"),
+          attr_replacement: true
+        },
+        Token {
+          kind: TokenKind::Word,
+          loc: loc!(6..11),
+          lexeme: bstr!("bar"),
+          attr_replacement: true
+        },
+        Token {
+          kind: TokenKind::Underscore,
+          loc: loc!(6..11),
+          lexeme: bstr!("_"),
+          attr_replacement: true
+        },
         // end inserted.
         Token::new(TokenKind::Whitespace, loc!(11..12), bstr!(" ")),
         Token::new(TokenKind::Word, loc!(12..17), bstr!("world")),

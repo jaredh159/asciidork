@@ -101,8 +101,8 @@ pub trait Backend {
   fn exit_callout_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn enter_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
   fn exit_description_list(&mut self, block: &Block, items: &[ListItem], depth: u8);
-  fn enter_description_list_term(&mut self, item: &ListItem);
-  fn exit_description_list_term(&mut self, item: &ListItem);
+  fn enter_description_list_term(&mut self, item: &ListItem, num: usize, total: usize);
+  fn exit_description_list_term(&mut self, item: &ListItem, num: usize, total: usize);
   fn enter_description_list_description(&mut self, item: &ListItem);
   fn exit_description_list_description(&mut self, item: &ListItem);
   fn enter_description_list_description_text(&mut self, text: &Block, item: &ListItem);
@@ -204,6 +204,24 @@ pub trait Backend {
     _ = (target, attrs, scheme, resolving_xref, has_link_text);
     warn_unimplemented!(exit_link_macro);
   }
+
+  fn enter_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  );
+
+  fn exit_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  );
 
   fn visit_callout(&mut self, callout: Callout);
   fn visit_callout_tuck(&mut self, comment: &str);

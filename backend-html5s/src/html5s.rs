@@ -511,15 +511,26 @@ impl Backend for Html5s {
     if is_horizontal {
       tag.push_class("horizontal");
     }
+    let is_qanda = block.meta.attrs.has_str_positional("qanda");
+    if is_qanda {
+      tag.push_class("qanda");
+    }
     if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
       self.state.ephemeral.insert(InGlossaryList);
       tag.push_class("glossary");
     }
     if depth == 1 {
       self.push_open_tag(tag);
+      if is_qanda {
+        self.html.pop();
+        self.push_str(r#" role="doc-qna">"#);
+      }
     }
     self.render_buffered_block_title(block, true);
     self.push_str("<dl");
+    if is_qanda {
+      self.push_str(r#" class="qanda""#);
+    }
     if block.meta.attrs.special_sect() == Some(SpecialSection::Glossary) {
       self.push_str(r#" class="glossary""#);
     } else if is_horizontal {
@@ -537,11 +548,11 @@ impl Backend for Html5s {
     self.state.desc_list_depth -= 1;
   }
 
-  fn enter_description_list_term(&mut self, _item: &ListItem) {
+  fn enter_description_list_term(&mut self, _item: &ListItem, _num: usize, _total: usize) {
     self.push_str(r#"<dt>"#);
   }
 
-  fn exit_description_list_term(&mut self, _item: &ListItem) {
+  fn exit_description_list_term(&mut self, _item: &ListItem, _num: usize, _total: usize) {
     self.push_str("</dt>");
   }
 
@@ -1163,6 +1174,28 @@ impl Backend for Html5s {
     has_link_text: bool,
   ) {
     HtmlBackend::exit_link_macro(self, target, resolving_xref, has_link_text);
+  }
+
+  fn enter_mailto_macro(
+    &mut self,
+    address: &SourceString,
+    subject: Option<&SourceString>,
+    body: Option<&SourceString>,
+    attrs: Option<&AttrList>,
+    has_link_text: bool,
+  ) {
+    HtmlBackend::enter_mailto_macro(self, address, subject, body, attrs, has_link_text);
+  }
+
+  fn exit_mailto_macro(
+    &mut self,
+    _address: &SourceString,
+    _subject: Option<&SourceString>,
+    _body: Option<&SourceString>,
+    _attrs: Option<&AttrList>,
+    _has_link_text: bool,
+  ) {
+    self.push_str("</a>");
   }
 
   fn visit_menu_macro(&mut self, items: &[SourceString]) {

@@ -518,9 +518,13 @@ impl<'arena> Line<'arena> {
           None
         } else {
           match ctx.specs() {
-            Some(specs) => self
-              .index_of_seq(specs)
-              .map_or(Some(n), |m| if m < n { None } else { Some(n) }),
+            Some(specs) => self.index_of_seq(specs).map_or(Some(n), |m| {
+              if m < n && !self.nth_token(m).is_attr_replacement() {
+                None
+              } else {
+                Some(n)
+              }
+            }),
             None => Some(n),
           }
         }
