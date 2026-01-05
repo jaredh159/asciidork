@@ -463,11 +463,11 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
     CurlyQuote(kind) => backend.visit_curly_quote(*kind),
     MultiCharWhitespace(ws) => backend.visit_multichar_whitespace(ws),
     Macro(Footnote { id, text }) => {
-      backend.enter_footnote(id.as_ref(), text.is_some());
+      backend.enter_footnote(id.as_ref());
       if let Some(text) = text {
         text.iter().for_each(|node| eval_inline(node, ctx, backend));
       }
-      backend.exit_footnote(id.as_ref(), text.is_some());
+      backend.exit_footnote(id.as_ref());
     }
     Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
     Macro(Button(text)) => backend.visit_button_macro(text),

@@ -44,6 +44,35 @@ assert_html!(
 );
 
 assert_html!(
+  duplicate_content_externalized_footnote,
+  adoc! {r#"
+    :fn-foo: footnote:thing[foo]
+
+    one.{fn-foo}
+
+    two.{fn-foo}
+"#},
+  html! {r##"
+    <div class="paragraph">
+      <p>
+        one.<sup class="footnote" id="_footnote_thing">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup>
+      </p>
+    </div>
+    <div class="paragraph">
+      <p>
+        two.<sup class="footnoteref">[<a class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup>
+      </p>
+    </div>
+    <div id="footnotes">
+      <hr>
+      <div class="footnote" id="_footnotedef_1">
+        <a href="#_footnoteref_1">1</a>. foo
+      </div>
+    </div>
+  "##}
+);
+
+assert_html!(
   two_footnotes_w_cust,
   adoc! {r#"
     foo.footnote:[bar _baz_]

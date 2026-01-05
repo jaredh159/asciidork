@@ -176,6 +176,11 @@ impl<'arena> Parser<'arena> {
                 let note = self.parse_inlines_until(lines, &[Kind(CloseBracket)])?;
                 extend(&mut macro_loc, &note, 1);
                 let note = if note.is_empty() { None } else { Some(note) };
+                if id.is_none() && note.is_none() {
+                  let mut err_loc = macro_loc.incr_end();
+                  err_loc.start += 9;
+                  self.err_at("Empty footnote content", err_loc)?;
+                }
                 acc.push_node(Macro(Footnote { id, text: note }), macro_loc);
                 break;
               }

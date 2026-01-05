@@ -635,3 +635,16 @@ assert_error!(
       | ^^ This delimiter was never closed
   "}
 );
+
+assert_error!(
+  empty_footnote_err,
+  adoc! {"
+    Hi.footnote:[]
+  "},
+  error! {"
+     --> test.adoc:1:13
+      |
+    1 | Hi.footnote:[]
+      |             ^^ Empty footnote content
+  "}
+);

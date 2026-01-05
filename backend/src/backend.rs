@@ -244,8 +244,8 @@ pub trait Backend {
   fn exit_inline_superscript(&mut self, attrs: Option<&AttrList>);
   fn enter_inline_quote(&mut self, kind: QuoteKind);
   fn exit_inline_quote(&mut self, kind: QuoteKind);
-  fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool);
-  fn exit_footnote(&mut self, id: Option<&SourceString>, has_content: bool);
+  fn enter_footnote(&mut self, id: Option<&SourceString>);
+  fn exit_footnote(&mut self, id: Option<&SourceString>);
   fn enter_text_span(&mut self, attrs: Option<&AttrList>);
   fn exit_text_span(&mut self, attrs: Option<&AttrList>);
   fn enter_xref(&mut self, target: &SourceString, has_reftext: bool, kind: XrefKind);

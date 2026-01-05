@@ -95,14 +95,20 @@ pub trait AltHtmlBuf: HtmlBuf {
     self.push_str(&buffer);
   }
 
+  #[must_use]
   fn take_buffer(&mut self) -> String {
     std::mem::take(self.alt_htmlbuf())
   }
 
+  #[must_use]
   fn swap_take_buffer(&mut self) -> String {
     let (html, alt_html) = self.buffers();
     std::mem::swap(alt_html, html);
     std::mem::take(alt_html)
+  }
+
+  fn discard_buffer(&mut self) {
+    _ = self.swap_take_buffer();
   }
 
   fn start_buffering(&mut self) {

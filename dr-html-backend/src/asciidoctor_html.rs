@@ -138,7 +138,7 @@ impl Backend for AsciidoctorHtml {
     if self.render_doc_title() {
       self.push_str("</h1>");
     } else {
-      self.swap_take_buffer(); // discard
+      self.discard_buffer();
     }
   }
 
@@ -1358,11 +1358,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    if has_content {
-      self.start_buffering();
-      return;
-    }
+  fn enter_footnote(&mut self, id: Option<&SourceString>) {
     if let Some(prev_ref_num) = self.prev_footnote_ref_num(id) {
       self.push([
         r##"<sup class="footnoteref">[<a class="footnote" href="#_footnotedef_"##,
@@ -1371,15 +1367,16 @@ impl Backend for AsciidoctorHtml {
         &prev_ref_num,
         "</a>]</sup>",
       ]);
-    } else {
-      // TODO: maybe warn?
     }
+    self.start_buffering();
   }
 
   #[instrument(skip_all)]
-  fn exit_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    if !has_content {
-      return; // this means the footnore was referring to a previously defined fn by id
+  fn exit_footnote(&mut self, id: Option<&SourceString>) {
+    if self.prev_footnote_ref_num(id).is_some() {
+      // discard duplicate content, common when "externalizing" footnotes by attr ref
+      self.discard_buffer();
+      return;
     }
     let num = self.state.footnotes.borrow().len() + 1;
     let footnote = self.swap_take_buffer();

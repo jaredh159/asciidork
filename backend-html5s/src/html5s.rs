@@ -130,7 +130,7 @@ impl Backend for Html5s {
     if self.render_doc_title() {
       self.push_str("</h1>");
     } else {
-      self.swap_take_buffer(); // discard
+      self.discard_buffer();
     }
   }
 
@@ -1350,11 +1350,7 @@ impl Backend for Html5s {
     _ = self.doc_meta.insert_doc_attr(name, value.clone());
   }
 
-  fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    if has_content {
-      self.start_buffering();
-      return;
-    }
+  fn enter_footnote(&mut self, id: Option<&SourceString>) {
     if let Some(prev_ref_num) = self.prev_footnote_ref_num(id) {
       self.push([
         r##"<a class="footnote-ref" href="#_footnote_"##,
@@ -1365,14 +1361,15 @@ impl Backend for Html5s {
         &prev_ref_num,
         r#"]</a>"#,
       ]);
-    } else {
-      // TODO: maybe warn?
     }
+    self.start_buffering();
   }
 
-  fn exit_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    if !has_content {
-      return; // this means the footnore was referring to a previously defined fn by id
+  fn exit_footnote(&mut self, id: Option<&SourceString>) {
+    if self.prev_footnote_ref_num(id).is_some() {
+      // discard duplicate content, common when "externalizing" footnotes by attr ref
+      self.discard_buffer();
+      return;
     }
     let num = self.state.footnotes.borrow().len() + 1;
     let footnote = self.swap_take_buffer();
