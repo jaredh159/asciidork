@@ -43,6 +43,9 @@
       https://docs.asciidoctor.org/asciidoc/latest/directives/include-with-indent/#the-indent-attribute
 - [ ] asciidoctor seems to resolve attr refs case-insensitive, grep `ifdef::showScript[]`
       (is it only for ifdef?) - not sure i want to replicate this, seems undocumented...
+- [ ] decide, get clarity on our failure to handle issue described here:
+      https://gist.github.com/jaredh159/3e64c04403fd08a3438be20b204f22f0 -- double-macro
+      footnote, but without pass macro specifying allowing macros
 
 ## differences from asciidoctor
 
