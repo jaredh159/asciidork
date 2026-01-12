@@ -107,6 +107,10 @@ impl<'arena> SourceLexer<'arena> {
         (0xEF, b"\xBB\xBF") => Some(self.codepoint(3, Punctuation)), // zero-width no-break space
         _ => Some(self.word()),
       },
+      // we overwrite first byte of `pass:` attr w/ ESC `x1B` as a special sentinal byte
+      // when we're handling the special case of two-pass attr ref replacements
+      // see fn -> mark_pass_footnote_dbl_attr for more documentation
+      Some(0x1B) if self.peek_bytes::<4>() == Some(b"ass:") => Some(self.codepoint(5, AttrPassDbl)),
       Some(_) => Some(self.word()),
       None => None,
     }
@@ -466,7 +470,8 @@ impl<'arena> SourceLexer<'arena> {
         Some(
           b' ' | b'\t' | b'\n' | b'\r' | b'\x0B' | b'\x0C' | b':' | b';' | b'<' | b'>' | b','
           | b'^' | b'_' | b'~' | b'*' | b'!' | b'?' | b'`' | b'+' | b'.' | b'[' | b']' | b'{'
-          | b'}' | b'(' | b')' | b'=' | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&' | b'-',
+          | b'}' | b'(' | b')' | b'=' | b'|' | b'"' | b'\'' | b'\\' | b'%' | b'#' | b'&' | b'-'
+          | b'\x1B',
         ) => break,
         None => break,
         _ => {

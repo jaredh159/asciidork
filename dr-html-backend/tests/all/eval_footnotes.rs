@@ -21,6 +21,28 @@ assert_html!(
 );
 
 assert_html!(
+  pass_macro_wrapping_formatted_footnote_content_special_case,
+  adoc! {r#"
+    :fn-foo: pass:c,q[footnote:foo[formatted _text_]]
+
+    Hi.{fn-foo}
+  "#},
+  html! {r##"
+    <div class="paragraph">
+      <p>
+        Hi.<sup class="footnote" id="_footnote_foo">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup>
+      </p>
+    </div>
+    <div id="footnotes">
+      <hr>
+      <div class="footnote" id="_footnotedef_1">
+        <a href="#_footnoteref_1">1</a>. formatted <em>text</em>
+      </div>
+    </div>
+  "##}
+);
+
+assert_html!(
   footnote_ref_prev,
   adoc! {r#"
     foo footnote:thing[bar] baz.

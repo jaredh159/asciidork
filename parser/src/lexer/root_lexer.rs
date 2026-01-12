@@ -18,6 +18,7 @@ pub struct RootLexer<'arena> {
 pub enum BufLoc {
   Repeat(SourceLocation),
   Offset(u32),
+  From(SourceLocation),
 }
 
 impl<'arena> RootLexer<'arena> {
@@ -290,6 +291,13 @@ impl<'arena> RootLexer<'arena> {
       match buf_loc {
         BufLoc::Repeat(loc) => token.loc = *loc,
         BufLoc::Offset(offset) => token.loc = token.loc.offset(*offset),
+        BufLoc::From(src_loc) => {
+          token.loc = SourceLocation::new(
+            src_loc.start + token.loc.start,
+            src_loc.start + token.loc.end,
+            src_loc.include_depth,
+          );
+        }
       }
       if buf_lexer.is_eof() {
         self.tmp_buf = None

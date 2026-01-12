@@ -237,7 +237,7 @@ fn pass_macro_subs<'arena>(
     target.push_str(&line.consume_current().unwrap().lexeme);
   }
   line.discard_assert(OpenBracket);
-  Substitutions::from_pass_macro_target(target)
+  Substitutions::from_pass_macro_target(&target)
 }
 
 #[inline(always)]

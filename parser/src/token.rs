@@ -15,6 +15,7 @@ pub struct Token<'arena> {
 pub enum TokenKind {
   Ampersand,
   AttrDef,
+  AttrPassDbl,
   AttrRef,
   Backtick,
   Backslash,
@@ -296,15 +297,13 @@ impl TokenIs for Option<&Token<'_>> {
 
 impl std::fmt::Debug for Token<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let lexeme = if &self.lexeme == "\n" {
-      "\\n".to_string()
-    } else {
-      self.lexeme.to_string()
-    };
     write!(
       f,
-      "Token {{ {:?}, \"{}\", {:?} }}",
-      self.kind, lexeme, self.loc
+      "Token {{ {:?}, \"{}\", {:?}{} }}",
+      self.kind,
+      iff!(&self.lexeme == "\n", "\\n", &self.lexeme),
+      self.loc,
+      iff!(self.attr_replacement, ", attr_repl=true", "")
     )
   }
 }

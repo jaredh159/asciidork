@@ -43,6 +43,7 @@ impl<'arena> Parser<'arena> {
 
     let mut state = State::InName;
     let mut has_lbrace = false;
+    let mut def_start = u32::MAX;
     loop {
       match (state, self.lexer.byte_at(pos, depth)) {
         (State::InName, Some(b)) if is_attr_word_char(b) => {}
@@ -70,12 +71,19 @@ impl<'arena> Parser<'arena> {
         }
         (State::AfterName, Some(b'\n') | None) => break,
         (State::AfterName, Some(b'{')) => has_lbrace = true,
+        (State::AfterName, Some(b)) if def_start == u32::MAX && !b.is_ascii_whitespace() => {
+          def_start = pos
+        }
         (State::AfterName, _) => {}
       }
       pos += 1;
     }
 
-    let mut val_string = self
+    if def_start == u32::MAX {
+      def_start = name_end;
+    }
+
+    let mut attr_def_string = self
       .lexer
       .src_string_from_loc(SourceLocation::new(start_loc, pos, depth))
       .src;
@@ -86,13 +94,13 @@ impl<'arena> Parser<'arena> {
 
     // gather line continuations
     loop {
-      if val_string.ends_with(" \\") {
-        val_string.pop();
+      if attr_def_string.ends_with(" \\") {
+        attr_def_string.pop();
 
         // https://docs.asciidoctor.org/asciidoc/latest/attributes/wrap-values/#hard
-        if val_string.ends_with(" + ") {
-          val_string.pop();
-          val_string.push('\n');
+        if attr_def_string.ends_with(" + ") {
+          attr_def_string.pop();
+          attr_def_string.push('\n');
         }
 
         if self.lexer.byte_at(pos + 1, depth) == Some(b'\r') {
@@ -116,7 +124,7 @@ impl<'arena> Parser<'arena> {
         let next_line = self
           .lexer
           .str_from_loc(SourceLocation::new(line_start, pos, depth));
-        val_string.push_str(next_line);
+        attr_def_string.push_str(next_line);
       } else {
         break;
       }
@@ -127,18 +135,20 @@ impl<'arena> Parser<'arena> {
       val_start += 1;
     }
 
-    let value_str = val_string.as_str()[(val_start as usize)..].trim();
+    let value_str = attr_def_string.as_str()[(val_start as usize)..].trim();
     let value = if value_str.is_empty() {
       AttrValue::Bool(negated == Negation::None)
     } else {
       if negated != Negation::None {
         self.err_line_starting("Cannot unset attr with `!` AND provide value", token.loc)?;
       }
-      if has_lbrace && self.ctx.in_header {
-        AttrValue::String(self.replace_attr_vals(value_str).into_owned())
+      let mut value_string = if has_lbrace && self.ctx.in_header {
+        self.replace_attr_vals(value_str).into_owned()
       } else {
-        AttrValue::String(value_str.to_string())
-      }
+        value_str.to_string()
+      };
+      self.mark_pass_footnote_dbl_attr(&mut value_string);
+      AttrValue::String(value_string)
     };
 
     #[cfg(feature = "attr_ref_observation")]
@@ -150,6 +160,7 @@ impl<'arena> Parser<'arena> {
     self.ctx.attr_defs.push(AttrDef {
       name: name.clone(),
       loc: attr_def_loc,
+      val_loc: SourceLocation::new(def_start, pos, depth),
       value: value.clone(),
       has_lbrace,
       in_header: self.ctx.in_header,
@@ -188,6 +199,32 @@ impl<'arena> Parser<'arena> {
     self.lexer.set_pos(pos);
 
     Ok(())
+  }
+
+  // mark a special case with a sentinal byte, so the lexer can easily recognize it.
+  // this helps us work around a place where the implementation and semantics
+  // of asciidoctor are basically fundamentally incompatible with our approach
+  // of parse -> AST -> eval. asciidoctor documents externalizing footnotes
+  // with ininline substitutions like this:
+  // ```adoc
+  // :fn-disclaimer2: pass:c,q[footnote:disclaimer2[Opinions are _mine_, and mine *alone*.]]
+  // A bold statement!{fn-disclaimer2}
+  // ```
+  // but this implies transforming the text inside the footnote attr into html first and
+  // holding it as the attr ref, so the footnote can be dropped into context and expanded.
+  // asciidoctor special-cases pass-macros surrounding attr defs to support this, so we
+  // are doing something similar, though for now only supporting nested footnote macros, as
+  // they are the most likely to appear in this trick, as most other macros a) aren't put in
+  // attr refs, and b) don't tend to have inline formatting within the attr list brackets
+  fn mark_pass_footnote_dbl_attr(&self, value: &mut String) {
+    if !value.starts_with("pass:") || !regx::PASS_DBL_MACRO_ATTR.is_match(value) {
+      return;
+    }
+    // SAFETY: we just checked that the string starts with `pass:`
+    // so we're fine to overwrite the first ascii byte with another
+    unsafe {
+      value.as_mut_vec()[0] = b'\x1b';
+    }
   }
 
   pub(crate) fn replace_attr_vals<'h>(&self, haystack: &'h str) -> Cow<'h, str> {

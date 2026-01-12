@@ -36,7 +36,7 @@ impl<'arena> Parser<'arena> {
       stop_tokens.iter().all(|t| t.token_kind().is_some()),
       "all stop tokens must have a token kind"
     );
-    if token.attr_replacement {
+    if token.attr_replacement && self.ctx.attr_pass_subs.is_none() {
       return false;
     }
     self.lexer.byte_before(token.loc).is_none_or(|c| {
@@ -189,7 +189,7 @@ impl<'arena> Accum<'arena> {
 
 impl Substitutions {
   /// https://docs.asciidoctor.org/asciidoc/latest/pass/pass-macro/#custom-substitutions
-  pub fn from_pass_macro_target(target: BumpString) -> Self {
+  pub fn from_pass_macro_target(target: &str) -> Self {
     if target.is_empty() {
       return Substitutions::none();
     };
