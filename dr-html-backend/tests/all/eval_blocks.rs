@@ -83,3 +83,19 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  block_macro_followed_by_comment,
+  adoc! {r#"
+    //
+    image::b.png[B,240,180]
+    //
+  "#},
+  html! {r#"
+    <div class="imageblock">
+      <div class="content">
+        <img src="b.png" alt="B" width="240" height="180">
+      </div>
+    </div>
+  "#}
+);
