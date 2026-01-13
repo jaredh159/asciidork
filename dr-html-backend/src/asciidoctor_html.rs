@@ -138,7 +138,7 @@ impl Backend for AsciidoctorHtml {
     if self.render_doc_title() {
       self.push_str("</h1>");
     } else {
-      self.discard_buffer();
+      self.swap_discard_alt_buffer();
     }
   }
 
@@ -1331,6 +1331,9 @@ impl Backend for AsciidoctorHtml {
   fn exit_image_block(&mut self, _target: &SourceString, attrs: &AttrList, block: &Block) {
     if let Some(title) = attrs.named("title") {
       self.render_block_title(title, block);
+      if block.has_title() {
+        self.discard_alt_buffer();
+      }
     } else if block.has_title() {
       let title = self.take_buffer();
       self.render_block_title(&title, block);
@@ -1375,7 +1378,7 @@ impl Backend for AsciidoctorHtml {
   fn exit_footnote(&mut self, id: Option<&SourceString>) {
     if self.prev_footnote_ref_num(id).is_some() {
       // discard duplicate content, common when "externalizing" footnotes by attr ref
-      self.discard_buffer();
+      self.swap_discard_alt_buffer();
       return;
     }
     let num = self.state.footnotes.borrow().len() + 1;

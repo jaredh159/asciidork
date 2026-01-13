@@ -107,11 +107,16 @@ pub trait AltHtmlBuf: HtmlBuf {
     std::mem::take(alt_html)
   }
 
-  fn discard_buffer(&mut self) {
+  fn swap_discard_alt_buffer(&mut self) {
     _ = self.swap_take_buffer();
   }
 
+  fn discard_alt_buffer(&mut self) {
+    self.alt_htmlbuf().clear();
+  }
+
   fn start_buffering(&mut self) {
+    debug_assert!(self.alt_htmlbuf().is_empty());
     self.swap_buffers();
   }
 

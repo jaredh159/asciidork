@@ -130,7 +130,7 @@ impl Backend for Html5s {
     if self.render_doc_title() {
       self.push_str("</h1>");
     } else {
-      self.discard_buffer();
+      self.swap_discard_alt_buffer();
     }
   }
 
@@ -1322,6 +1322,9 @@ impl Backend for Html5s {
   fn exit_image_block(&mut self, _img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
     if let Some(title) = img_attrs.named("title") {
       self.render_block_title(title, block, false);
+      if block.has_title() {
+        self.discard_alt_buffer();
+      }
     } else if block.has_title() {
       let title = self.take_buffer();
       self.render_block_title(&title, block, false);
@@ -1368,7 +1371,7 @@ impl Backend for Html5s {
   fn exit_footnote(&mut self, id: Option<&SourceString>) {
     if self.prev_footnote_ref_num(id).is_some() {
       // discard duplicate content, common when "externalizing" footnotes by attr ref
-      self.discard_buffer();
+      self.swap_discard_alt_buffer();
       return;
     }
     let num = self.state.footnotes.borrow().len() + 1;

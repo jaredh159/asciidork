@@ -99,3 +99,31 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  img_macro_double_title_prefers_attr,
+  adoc! {r#"
+    [.left]
+    .Image A
+    image::a.png[A,240,180]
+
+    // this image block macro has two titles
+    [.left]
+    .Image B-Title
+    image::b.png[B,240,180,title=Image B-Attr]
+
+    [.float-group]
+    --
+    [.left]
+    .Image A
+    image::a.png[A,240,180]
+
+    [.left]
+    .Image B
+    image::b.png[B,240,180]
+    --
+  "#},
+ contains:
+   r#"<div class="title">Figure 2. Image B-Attr</div>"#,
+   r#"<div class="title">Figure 3. Image A</div>"#,
+);
