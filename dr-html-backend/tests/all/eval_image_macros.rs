@@ -444,3 +444,28 @@ assert_html!(
     </div>
   "##}
 );
+
+assert_html!(
+  attr_ref_and_merging_edge_cases,
+  adoc! {r#"
+    :half-width: role=half-width
+    :weird-id: id=weird-id
+
+    image::image.jpg[{weird-id},{half-width}]
+
+    [id=block-meta-id-loses]
+    image::cat.jpg[id=attr-id-wins]
+  "#},
+  html! {r#"
+    <div id="weird-id" class="imageblock half-width">
+      <div class="content">
+        <img src="image.jpg" alt="image">
+      </div>
+    </div>
+    <div id="attr-id-wins" class="imageblock">
+      <div class="content">
+        <img src="cat.jpg" alt="cat">
+      </div>
+    </div>
+  "#}
+);

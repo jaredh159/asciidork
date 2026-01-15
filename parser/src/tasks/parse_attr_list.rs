@@ -137,7 +137,7 @@ impl<'arena> Parser<'arena> {
 
     let mut tokens = Deq::with_capacity(line.len() - 1, self.bump);
     for _ in 0..num_tokens {
-      tokens.push(line.consume_current().unwrap());
+      tokens.push_non_attr(line.consume_current().unwrap());
     }
     let attr_line = Line::new(unquote(tokens));
     self.ctx.inline_ctx = InlineCtx::LinkMacroAttrs;
@@ -169,7 +169,7 @@ impl<'arena> Parser<'arena> {
     for num_tokens in delimiters.into_iter() {
       let mut tokens = Deq::with_capacity(num_tokens, self.bump);
       for _ in 0..num_tokens {
-        tokens.push(line.consume_current().unwrap());
+        tokens.push_non_attr(line.consume_current().unwrap());
       }
       self.parse_attr(tokens, formatted_text, &mut attrs)?;
       line.discard_assert(Comma);
@@ -177,16 +177,15 @@ impl<'arena> Parser<'arena> {
 
     // last attr
     let mut tokens = Deq::with_capacity(line.len() - 1, self.bump);
-
     if full_line {
       while line.peek_token().is_some() {
-        tokens.push(line.consume_current().unwrap());
+        tokens.push_non_attr(line.consume_current().unwrap());
       }
     } else if !line.current_is(CloseBracket) {
       while !line.peek_token().kind(CloseBracket) || line.current_is(Backslash) {
-        tokens.push(line.consume_current().unwrap());
+        tokens.push_non_attr(line.consume_current().unwrap());
       }
-      tokens.push(line.consume_current().unwrap());
+      tokens.push_non_attr(line.consume_current().unwrap());
     }
 
     if !formatted_text || tokens.iter().any(|t| t.kind == Word) {
@@ -261,7 +260,7 @@ impl<'arena> Parser<'arena> {
         if with_shorthand {
           let mut pos_tokens = Deq::new(self.bump);
           while !matches!(tokens.first().unwrap().kind, Hash | Percent | Dots) {
-            pos_tokens.push(tokens.pop_front().unwrap());
+            pos_tokens.push_non_attr(tokens.pop_front().unwrap());
           }
           if pos_tokens.is_empty() {
             self.err_at("Invalid attr list", tokens.first().unwrap().loc)?;
@@ -439,7 +438,7 @@ impl<'arena> Parser<'arena> {
         }
         current = Deq::new(self.bump);
       } else {
-        current.push(token);
+        current.push_non_attr(token);
       }
     }
     let trimmed = trim(current);
@@ -546,6 +545,18 @@ fn trim<'a>(mut tokens: Deq<'a, Token<'a>>) -> Deq<'a, Token<'a>> {
     tokens.pop();
   }
   tokens
+}
+
+trait DeqTokenExt<'a> {
+  fn push_non_attr(&mut self, token: Token<'a>);
+}
+
+impl<'a> DeqTokenExt<'a> for Deq<'a, Token<'a>> {
+  fn push_non_attr(&mut self, token: Token<'a>) {
+    if token.kind != AttrRef {
+      self.push(token);
+    }
+  }
 }
 
 const ONLY_SHORTHAND_ERR: &str = "Formatted text only supports single role or attribute shorthand";

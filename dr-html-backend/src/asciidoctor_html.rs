@@ -7,7 +7,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::internal::*;
 use EphemeralState::*;
-use ast::AdjacentNewline;
+use ast::{AdjacentNewline, PriorityAttrList};
 use utils::set_backend_attrs;
 
 #[derive(Debug, Default)]
@@ -1296,7 +1296,8 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
-    let mut open_tag = OpenTag::new("div", &block.meta.attrs);
+    let merged_attrs = PriorityAttrList::new(img_attrs, &block.meta.attrs);
+    let mut open_tag = OpenTag::new("div", &merged_attrs);
     open_tag.push_class("imageblock");
     open_tag.push_opt_class(img_attrs.named("float"));
     open_tag.push_opt_prefixed_class(img_attrs.named("align"), Some("text-"));

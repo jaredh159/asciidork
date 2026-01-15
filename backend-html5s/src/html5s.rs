@@ -1249,7 +1249,8 @@ impl Backend for Html5s {
     } else {
       "div"
     };
-    let mut open_tag = OpenTag::new(el, &block.meta.attrs);
+    let merged_attrs = PriorityAttrList::new(img_attrs, &block.meta.attrs);
+    let mut open_tag = OpenTag::new(el, &merged_attrs);
     open_tag.push_class("image-block");
     if let Some(align) = img_attrs.named("align") {
       open_tag.push_style(format!("text-align: {align}"));
