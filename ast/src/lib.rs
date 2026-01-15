@@ -11,6 +11,7 @@ mod r#macro;
 mod multi_attr_list;
 mod multi_source_location;
 mod node;
+mod priority_attr_list;
 mod source_location;
 mod source_string;
 mod table;
@@ -35,6 +36,7 @@ mod internal {
     pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
     pub use crate::multi_source_location::MultiSourceLocation;
     pub use crate::node::{Anchor, Callout};
+    pub use crate::priority_attr_list::PriorityAttrList;
     pub use crate::source_location::SourceLocation;
     pub use crate::source_string::SourceString;
     pub use crate::table::*;
@@ -66,6 +68,7 @@ pub mod prelude {
   pub use crate::multi_attr_list::{MultiAttrList, NoAttrs};
   pub use crate::multi_source_location::MultiSourceLocation;
   pub use crate::node::{Anchor, Callout};
+  pub use crate::priority_attr_list::PriorityAttrList;
   pub use crate::source_location::SourceLocation;
   pub use crate::source_string::SourceString;
   pub use crate::table::*;

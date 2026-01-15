@@ -27,12 +27,14 @@ pub struct ParseContext<'arena> {
   pub in_markdown_blockquote: bool,
   pub attr_defs: BumpVec<'arena, AttrDef>,
   pub replacing_attr: bool,
+  pub attr_pass_subs: Option<Substitutions>,
   callouts: Rc<RefCell<BumpVec<'arena, Callout>>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AttrDef {
   pub loc: SourceLocation,
+  pub val_loc: SourceLocation,
   pub name: String,
   pub value: AttrValue,
   pub has_lbrace: bool,
@@ -96,6 +98,7 @@ impl<'arena> ParseContext<'arena> {
       in_header: false,
       in_markdown_blockquote: false,
       replacing_attr: false,
+      attr_pass_subs: None,
     }
   }
 
@@ -123,6 +126,7 @@ impl<'arena> ParseContext<'arena> {
       in_header: false,
       in_markdown_blockquote: false,
       replacing_attr: false,
+      attr_pass_subs: None,
     }
   }
 
@@ -225,5 +229,5 @@ impl<'arena> ParseContext<'arena> {
 
 #[test]
 fn test_size_of_parse_ctx() {
-  assert!(std::mem::size_of::<ParseContext>() <= 256);
+  assert!(std::mem::size_of::<ParseContext>() <= 264);
 }

@@ -57,8 +57,8 @@ mod internal {
   pub use crate::tasks::parse_section::PeekedSection;
   pub use crate::token::*;
   pub use crate::utils::bump::*;
-  pub use asciidork_core::file;
   pub use asciidork_core::{Author, DocType, JobAttr, JobSettings, Path, ReadAttr, SafeMode};
+  pub use asciidork_core::{file, iff};
   pub use ast::*;
   pub use smallvec::SmallVec;
   pub type Result<T> = std::result::Result<T, Diagnostic>;

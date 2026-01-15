@@ -424,6 +424,7 @@ impl<'arena> Parser<'arena> {
     line.discard_assert(Colon);
     let target = line.consume_macro_target(self.bump);
     let attrs = self.parse_block_attr_list(&mut line)?;
+    self.restore_lines(lines);
     Ok(Block {
       meta,
       context: Context::Image,

@@ -173,9 +173,25 @@ impl<'arena> Parser<'arena> {
               "footnote:" => {
                 let id = line.consume_optional_macro_target(self.bump);
                 lines.restore_if_nonempty(line);
+                let restore = self.ctx.subs;
+                if let Some(attr_pass_subs) = self.ctx.attr_pass_subs {
+                  self.ctx.subs = attr_pass_subs;
+                }
                 let note = self.parse_inlines_until(lines, &[Kind(CloseBracket)])?;
+                if self.ctx.attr_pass_subs.take().is_some() {
+                  self.ctx.subs = restore;
+                  let close_bracket = lines
+                    .consume_current_token()
+                    .expect("attr ref pass macro end");
+                  assert!(close_bracket.kind == CloseBracket);
+                }
                 extend(&mut macro_loc, &note, 1);
                 let note = if note.is_empty() { None } else { Some(note) };
+                if id.is_none() && note.is_none() {
+                  let mut err_loc = macro_loc.incr_end();
+                  err_loc.start += 9;
+                  self.err_at("Empty footnote content", err_loc)?;
+                }
                 acc.push_node(Macro(Footnote { id, text: note }), macro_loc);
                 break;
               }
@@ -370,6 +386,13 @@ impl<'arena> Parser<'arena> {
               }
             }
             acc.push_text_token(&token);
+          }
+
+          AttrPassDbl => {
+            let pass_subs = line.consume_to_string_until(OpenBracket, self.bump);
+            line.discard_assert(OpenBracket);
+            // inner footnote macro processing will take/remove this value
+            self.ctx.attr_pass_subs = Some(Substitutions::from_pass_macro_target(&pass_subs.src));
           }
 
           // if we're in a table cell, and we have a blank attr ref

@@ -137,11 +137,17 @@ impl<'arena> Parser<'arena> {
 
     let mut n = 1;
     let mut last = OpenBracket;
+    let mut unclosed_open_brackets = 1;
     while num_target_tokens + n < line.num_tokens() {
       let token = line.nth_token(num_target_tokens + n).unwrap();
       if token.kind == CloseBracket && last != Backslash {
-        let subs = pass_macro_subs(line, num_target_tokens, self.bump);
-        return Some((n - 1, subs));
+        unclosed_open_brackets -= 1;
+        if unclosed_open_brackets == 0 {
+          let subs = pass_macro_subs(line, num_target_tokens, self.bump);
+          return Some((n - 1, subs));
+        }
+      } else if token.kind == OpenBracket && last != Backslash {
+        unclosed_open_brackets += 1;
       }
       last = token.kind;
       n += 1;
@@ -231,7 +237,7 @@ fn pass_macro_subs<'arena>(
     target.push_str(&line.consume_current().unwrap().lexeme);
   }
   line.discard_assert(OpenBracket);
-  Substitutions::from_pass_macro_target(target)
+  Substitutions::from_pass_macro_target(&target)
 }
 
 #[inline(always)]

@@ -316,7 +316,12 @@ impl<'arena> Line<'arena> {
 
   pub fn discard_assert(&mut self, kind: TokenKind) -> Token<'arena> {
     let token = self.consume_current().unwrap();
-    assert!(token.kind == kind);
+    assert!(
+      token.kind == kind,
+      "expected token kind {:?}, found {:?}",
+      kind,
+      token.kind
+    );
     token
   }
 

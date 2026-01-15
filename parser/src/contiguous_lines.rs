@@ -136,7 +136,7 @@ impl<'arena> ContiguousLines<'arena> {
   }
 
   pub fn is_block_macro(&self) -> bool {
-    self.lines.len() == 1 && self.current().unwrap().is_block_macro()
+    self.current().is_some_and(Line::is_block_macro)
   }
 
   pub fn loc(&self) -> Option<SourceLocation> {

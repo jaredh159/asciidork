@@ -7,7 +7,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::internal::*;
 use EphemeralState::*;
-use ast::AdjacentNewline;
+use ast::{AdjacentNewline, PriorityAttrList};
 use utils::set_backend_attrs;
 
 #[derive(Debug, Default)]
@@ -138,7 +138,7 @@ impl Backend for AsciidoctorHtml {
     if self.render_doc_title() {
       self.push_str("</h1>");
     } else {
-      self.swap_take_buffer(); // discard
+      self.swap_discard_alt_buffer();
     }
   }
 
@@ -1296,7 +1296,8 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
-    let mut open_tag = OpenTag::new("div", &block.meta.attrs);
+    let merged_attrs = PriorityAttrList::new(img_attrs, &block.meta.attrs);
+    let mut open_tag = OpenTag::new("div", &merged_attrs);
     open_tag.push_class("imageblock");
     open_tag.push_opt_class(img_attrs.named("float"));
     open_tag.push_opt_prefixed_class(img_attrs.named("align"), Some("text-"));
@@ -1331,6 +1332,9 @@ impl Backend for AsciidoctorHtml {
   fn exit_image_block(&mut self, _target: &SourceString, attrs: &AttrList, block: &Block) {
     if let Some(title) = attrs.named("title") {
       self.render_block_title(title, block);
+      if block.has_title() {
+        self.discard_alt_buffer();
+      }
     } else if block.has_title() {
       let title = self.take_buffer();
       self.render_block_title(&title, block);
@@ -1358,11 +1362,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    if has_content {
-      self.start_buffering();
-      return;
-    }
+  fn enter_footnote(&mut self, id: Option<&SourceString>) {
     if let Some(prev_ref_num) = self.prev_footnote_ref_num(id) {
       self.push([
         r##"<sup class="footnoteref">[<a class="footnote" href="#_footnotedef_"##,
@@ -1371,15 +1371,16 @@ impl Backend for AsciidoctorHtml {
         &prev_ref_num,
         "</a>]</sup>",
       ]);
-    } else {
-      // TODO: maybe warn?
     }
+    self.start_buffering();
   }
 
   #[instrument(skip_all)]
-  fn exit_footnote(&mut self, id: Option<&SourceString>, has_content: bool) {
-    if !has_content {
-      return; // this means the footnore was referring to a previously defined fn by id
+  fn exit_footnote(&mut self, id: Option<&SourceString>) {
+    if self.prev_footnote_ref_num(id).is_some() {
+      // discard duplicate content, common when "externalizing" footnotes by attr ref
+      self.swap_discard_alt_buffer();
+      return;
     }
     let num = self.state.footnotes.borrow().len() + 1;
     let footnote = self.swap_take_buffer();

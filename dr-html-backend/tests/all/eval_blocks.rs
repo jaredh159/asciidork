@@ -83,3 +83,47 @@ assert_html!(
     </div>
   "#}
 );
+
+assert_html!(
+  block_macro_followed_by_comment,
+  adoc! {r#"
+    //
+    image::b.png[B,240,180]
+    //
+  "#},
+  html! {r#"
+    <div class="imageblock">
+      <div class="content">
+        <img src="b.png" alt="B" width="240" height="180">
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
+  img_macro_double_title_prefers_attr,
+  adoc! {r#"
+    [.left]
+    .Image A
+    image::a.png[A,240,180]
+
+    // this image block macro has two titles
+    [.left]
+    .Image B-Title
+    image::b.png[B,240,180,title=Image B-Attr]
+
+    [.float-group]
+    --
+    [.left]
+    .Image A
+    image::a.png[A,240,180]
+
+    [.left]
+    .Image B
+    image::b.png[B,240,180]
+    --
+  "#},
+ contains:
+   r#"<div class="title">Figure 2. Image B-Attr</div>"#,
+   r#"<div class="title">Figure 3. Image A</div>"#,
+);

@@ -15,6 +15,12 @@ lazy_static! {
   .unwrap();
 }
 
+// attr def with pass macro wrapping footnote macro
+lazy_static! {
+  pub static ref PASS_DBL_MACRO_ATTR: Regex =
+    Regex::new(r#"^pass:([a-z]+(?:,[a-z-]+)*)?\[footnote:(.*)\]\]$"#).unwrap();
+}
+
 // directives
 lazy_static! {
   pub static ref DIRECTIVE_INCLUDE: Regex =

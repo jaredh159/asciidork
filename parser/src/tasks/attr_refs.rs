@@ -54,7 +54,19 @@ impl<'arena> Parser<'arena> {
             observer.attr_ref_replaced(token.attr_name(), token.loc);
           }
           if !attr_val.is_empty() {
-            self.lexer.set_tmp_buf(attr_val, BufLoc::Repeat(token.loc));
+            let mut buf_loc = BufLoc::Repeat(token.loc);
+            // special case: attr def macro wrapped in pass macro, we need
+            // the replaced attr to have real locs for formatting
+            if attr_val.starts_with("\x1Bass:")
+              && let Some(def) = self
+                .ctx
+                .attr_defs
+                .iter()
+                .find(|d| d.name == token.attr_name())
+            {
+              buf_loc = BufLoc::From(def.val_loc);
+            }
+            self.lexer.set_tmp_buf(attr_val, buf_loc);
           }
           line.push(token);
           self.ctx.replacing_attr = true;
