@@ -674,7 +674,8 @@ macro_rules! parse_errors {
 #[macro_export]
 macro_rules! parse_error {
   ($input:expr) => {{
-    let parser = test_parser!($input);
+    let mut parser = test_parser!($input);
+    parser.apply_job_settings(asciidork_core::JobSettings::r#unsafe());
     let mut diagnostics = parser.parse().err().expect(&format!(
       indoc::indoc! {"
         expected PARSE ERROR, but got none. input was:

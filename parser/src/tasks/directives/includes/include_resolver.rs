@@ -40,6 +40,7 @@ pub trait IncludeResolver: Any {
     &mut self,
     target: IncludeTarget,
     buffer: &mut dyn IncludeBuffer,
+    safe_mode: SafeMode,
   ) -> std::result::Result<usize, ResolveError>;
 
   fn get_base_dir(&self) -> Option<String> {
@@ -82,6 +83,7 @@ pub enum ResolveError {
   UriReadNotSupported,
   UriRead(String),
   BaseDirRequired,
+  RestrictedPath,
   CaseMismatch(Option<String>),
 }
 
@@ -105,6 +107,9 @@ impl fmt::Display for ResolveError {
           "Include resolvers must supply a base_dir for relative includes from primary document"
         )
       }
+      ResolveError::RestrictedPath => {
+        write!(f, "Include path outside docdir restricted by safe mode")
+      }
     }
   }
 }
@@ -126,6 +131,7 @@ impl IncludeResolver for ConstResolver {
     &mut self,
     _: IncludeTarget,
     buffer: &mut dyn IncludeBuffer,
+    _: SafeMode,
   ) -> std::result::Result<usize, ResolveError> {
     buffer.initialize(self.0.len());
     let bytes = buffer.as_bytes_mut();
@@ -150,6 +156,7 @@ impl IncludeResolver for ErrorResolver {
     &mut self,
     _: IncludeTarget,
     _: &mut dyn IncludeBuffer,
+    _: SafeMode,
   ) -> std::result::Result<usize, ResolveError> {
     Err(self.0.clone())
   }

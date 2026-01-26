@@ -118,5 +118,5 @@ pub enum IndexTermReference<'arena> {
 
 #[test]
 fn test_size_of_inline() {
-  assert!(std::mem::size_of::<Inline>() <= 248);
+  assert!(std::mem::size_of::<Inline>() <= 280);
 }

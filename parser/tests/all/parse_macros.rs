@@ -87,10 +87,10 @@ test_inlines_loose!(
   inline_image_macro,
   "image:play.png[]",
   nodes![node!(
-    Macro(Image {
-      flow: Flow::Inline,
+    Macro(InlineImage {
       target: src!("play.png", 6..14),
-      attrs: attr_list!(14..16)
+      attrs: attr_list!(14..16),
+      kind: ImageKind::Standard,
     }),
     0..16
   )]
@@ -100,10 +100,10 @@ test_inlines_loose!(
   inline_image_macro_attr,
   "image:{note-caption}.png[]",
   nodes![node!(
-    Macro(Image {
-      flow: Flow::Inline,
+    Macro(InlineImage {
       target: src!("Note.png", 6..24),
-      attrs: attr_list!(24..26)
+      attrs: attr_list!(24..26),
+      kind: ImageKind::Standard,
     }),
     0..26
   )]
@@ -113,10 +113,10 @@ test_inlines_loose!(
   inline_image_macro_w_space_target,
   "image:p ay.png[]",
   nodes![node!(
-    Macro(Image {
-      flow: Flow::Inline,
+    Macro(InlineImage {
       target: src!("p ay.png", 6..14),
-      attrs: attr_list!(14..16)
+      attrs: attr_list!(14..16),
+      kind: ImageKind::Standard,
     }),
     0..16
   )]
@@ -273,6 +273,29 @@ assert_error!(
       |
     4 | See <<test.adoc#foobaz>>.
       |       ^^^^^^^^^^^^^^^^ Invalid cross reference, no anchor found for `test.adoc#foobaz`
+  "}
+);
+
+assert_error!(
+  inline_svg_no_resolver,
+  "image::cat.svg[opts=inline]",
+  error! {r"
+     --> test.adoc:1:8
+      |
+    1 | image::cat.svg[opts=inline]
+      |        ^^^^^^^ No include resolver supplied for inline svg
+  "}
+);
+
+assert_error!(
+  inline_svg_no_uri_read,
+  resolving: b"theoretical network bytes",
+  "image::https://site.com/cat.svg[opts=inline]",
+  error! {r"
+     --> test.adoc:1:8
+      |
+    1 | image::https://site.com/cat.svg[opts=inline]
+      |        ^^^^^^^^^^^^^^^^^^^^^^^^ Cannot include URL contents (allow-uri-read not enabled)
   "}
 );
 

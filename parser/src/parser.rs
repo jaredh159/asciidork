@@ -428,6 +428,7 @@ mod tests {
         &mut self,
         _: IncludeTarget,
         buffer: &mut dyn IncludeBuffer,
+        _: SafeMode,
       ) -> std::result::Result<usize, ResolveError> {
         buffer.initialize(self.0.len());
         let bytes = buffer.as_bytes_mut();

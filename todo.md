@@ -11,7 +11,6 @@
       `link:https://example.com[foo\nbar]`
 - [ ] multi-line shorthand xref `<<tigers,foo\nbar>>`
 - [ ] data-uri embedded images
-- [ ] "embedded" inline svgs, where html is in output, changing size
 - [ ] multi-anchors, e.g. `=== [[current]][[latest]]Version 4.9`, see
       https://docs.asciidoctor.org/asciidoc/latest/attributes/id/#add-additional-anchors-to-a-section
 - [ ] resolve include directives starting from stdin
@@ -39,6 +38,8 @@
       `{docdate}` example, see also
       https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/#note-docdatetime
 - [ ] h1 subtitle
+- [ ] `cache-uri`, not sure if we want to do this, though, see:
+      https://docs.asciidoctor.org/asciidoc/latest/directives/include-uri/#caching-uri-content
 - [ ] `tabsize`, see
       https://docs.asciidoctor.org/asciidoc/latest/directives/include-with-indent/#the-indent-attribute
 - [ ] asciidoctor seems to resolve attr refs case-insensitive, grep `ifdef::showScript[]`

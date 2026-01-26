@@ -38,11 +38,13 @@ pub enum BlockContent<'arena> {
   },
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum EmptyMetadata<'arena> {
   Image {
     target: SourceString<'arena>,
     attrs: AttrList<'arena>,
+    kind: ImageKind<'arena>,
   },
   DiscreteHeading {
     level: u8,
@@ -51,6 +53,12 @@ pub enum EmptyMetadata<'arena> {
   },
   Comment(SourceString<'arena>),
   None,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ImageKind<'arena> {
+  Standard,
+  InlineSvg(Option<BumpString<'arena>>),
 }
 
 #[derive(Copy, Debug, PartialEq, Eq, Clone)]

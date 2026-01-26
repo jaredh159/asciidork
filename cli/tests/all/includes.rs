@@ -151,6 +151,66 @@ fn test_url_includes() {
   );
 }
 
+// run on linux (CI) only for speed in local dev
+#[cfg(target_os = "linux")]
+#[test]
+fn test_svg_uri() {
+  let stdout = run_file(
+    &[
+      "--embedded",
+      "--strict",
+      "--safe-mode",
+      "unsafe",
+      "--attribute",
+      "allow-uri-read",
+    ],
+    "tests/all/fixtures/remote-svg.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+    <div class="imageblock">
+      <div class="content">
+        <svg width="200" xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
+      </div>
+    </div>
+    "#}
+  );
+}
+
+#[test]
+fn test_404_svg() {
+  let stdout = run_file(
+    &["--embedded", "--safe-mode", "safe"],
+    "tests/all/fixtures/inline-svg.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+    <div class="imageblock">
+      <div class="content">
+        <svg width="200" xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
+      </div>
+    </div>
+    <div class="imageblock">
+      <div class="content">
+        <span class="alt">Panchito</span>
+      </div>
+    </div>
+    <div class="imageblock">
+      <div class="content">
+        <span class="alt">restricted</span>
+      </div>
+    </div>
+    <div class="imageblock">
+      <div class="content">
+        <svg height="150" xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
+      </div>
+    </div>
+    "#}
+  );
+}
+
 #[cfg(unix)]
 #[test]
 fn test_cli_app_doc_attrs() {

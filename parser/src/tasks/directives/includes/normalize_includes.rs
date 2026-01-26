@@ -68,7 +68,7 @@ impl<'arena> Parser<'arena> {
     std::mem::swap(bytes, &mut selected);
   }
 
-  fn normalize_encoding(
+  pub(crate) fn normalize_encoding(
     &mut self,
     encoding: Option<&str>,
     bytes: &mut BumpVec<u8>,

@@ -79,8 +79,20 @@ pub trait Backend {
   fn exit_literal_block(&mut self, block: &Block);
   fn enter_passthrough_block(&mut self, _block: &Block) {}
   fn exit_passthrough_block(&mut self, _block: &Block) {}
-  fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block);
-  fn exit_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block);
+  fn enter_image_block(
+    &mut self,
+    img_target: &SourceString,
+    img_attrs: &AttrList,
+    img_kind: &ImageKind,
+    block: &Block,
+  );
+  fn exit_image_block(
+    &mut self,
+    img_target: &SourceString,
+    img_attrs: &AttrList,
+    img_kind: &ImageKind,
+    block: &Block,
+  );
   fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
   fn enter_quote_attribution(&mut self, block: &Block, has_cite: bool);
@@ -145,7 +157,7 @@ pub trait Backend {
   fn visit_multichar_whitespace(&mut self, whitespace: &str);
   fn visit_button_macro(&mut self, text: &SourceString);
   fn visit_menu_macro(&mut self, items: &[SourceString]);
-  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList);
+  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList, kind: &ImageKind);
   fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList);
   fn visit_spaced_dashes(&mut self, len: u8, adjacent_newline: AdjacentNewline);
 
