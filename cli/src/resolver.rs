@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::PathBuf;
 
+use asciidork_core::SafeMode;
 use asciidork_parser::includes::*;
 
 use IncludeTarget as Target;
@@ -18,9 +19,10 @@ impl IncludeResolver for CliResolver {
     &mut self,
     target: IncludeTarget,
     buffer: &mut dyn IncludeBuffer,
+    safe_mode: SafeMode,
   ) -> std::result::Result<usize, ResolveError> {
     match target {
-      Target::FilePath(target) => self.resolve_filepath(target, buffer),
+      Target::FilePath(target) => self.resolve_filepath(target, buffer, safe_mode),
       Target::Uri(uri) => match minreq::get(uri).send() {
         Ok(response) => {
           let adoc = response.as_bytes();
@@ -55,11 +57,21 @@ impl CliResolver {
     &self,
     path: String,
     buffer: &mut dyn IncludeBuffer,
+    safe_mode: SafeMode,
   ) -> std::result::Result<usize, ResolveError> {
     let pathb = PathBuf::from(path);
     let Ok(pathc) = dunce::canonicalize(&pathb) else {
       return Err(NotFound);
     };
+
+    if safe_mode != SafeMode::Unsafe {
+      let Some(Ok(base_dirc)) = self.get_base_dir().map(dunce::canonicalize) else {
+        return Err(BaseDirRequired);
+      };
+      if !pathc.starts_with(base_dirc) {
+        return Err(RestrictedPath);
+      }
+    }
 
     if self.strict && pathb != pathc {
       match (pathb.file_name(), pathc.file_name()) {

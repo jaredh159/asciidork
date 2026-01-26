@@ -1,0 +1,11 @@
+[%inline]
+image::mini.svg[width=200]
+
+image::not-found.svg[Panchito,opts=inline]
+
+image::../restricted.svg[,opts=inline]
+
+:imagesdir: images
+
+[%inline]
+image::subdir.SVG[height=150]

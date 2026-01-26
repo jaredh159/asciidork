@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use regex::Regex;
+use regex::{Regex, bytes::Regex as BytesRegex};
 
 // attrs
 lazy_static! {
@@ -45,4 +45,17 @@ lazy_static! {
 // inlines
 lazy_static! {
   pub static ref KBD_MACRO_KEYS: Regex = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
+}
+
+// image
+lazy_static! {
+  pub static ref SVG_TARGET: Regex = Regex::new(r"(?i)\.svg(\[|\?|$)").unwrap();
+}
+
+// inline svg
+lazy_static! {
+  pub static ref SVG_PREAMBLE: BytesRegex = BytesRegex::new(r"(?s)^(.*)<svg").unwrap();
+  pub static ref SVG_START_TAG: BytesRegex = BytesRegex::new(r"<svg").unwrap();
+  pub static ref SVG_STRIP_ATTRS: BytesRegex =
+    BytesRegex::new(r#"(?s)\s(?:width|height|style)=("([^"]*)"|'([^']*)')"#).unwrap();
 }

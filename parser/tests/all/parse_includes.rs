@@ -1,4 +1,5 @@
 use asciidork_ast::prelude::*;
+use asciidork_core::SafeMode;
 use asciidork_core::{JobAttr, JobSettings};
 use asciidork_parser::includes::*;
 use asciidork_parser::prelude::*;
@@ -632,6 +633,7 @@ impl IncludeResolver for AssertResolver {
     &mut self,
     target: IncludeTarget,
     _: &mut dyn IncludeBuffer,
+    _: SafeMode,
   ) -> std::result::Result<usize, ResolveError> {
     self.resolve_called = true;
     assert_eq!(target, IncludeTarget::FilePath(self.expected.clone()));
@@ -664,6 +666,7 @@ impl IncludeResolver for InfiniteResolver {
     &mut self,
     _: IncludeTarget,
     buffer: &mut dyn IncludeBuffer,
+    _: SafeMode,
   ) -> std::result::Result<usize, ResolveError> {
     self.0 += 1;
     let file = format!("file-{}\n\ninclude::file-{}.adoc[]\n", self.0, self.0 + 1);
@@ -688,6 +691,7 @@ impl IncludeResolver for NestedResolver {
     &mut self,
     _: IncludeTarget,
     buffer: &mut dyn IncludeBuffer,
+    _: SafeMode,
   ) -> std::result::Result<usize, ResolveError> {
     let file_bytes = self.0.remove(0).as_bytes();
     buffer.initialize(file_bytes.len());

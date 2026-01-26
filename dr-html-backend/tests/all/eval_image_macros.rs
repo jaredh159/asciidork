@@ -197,8 +197,6 @@ assert_html!(
     :imagesdir: images
 
     image:tiger.svg[Tiger,fallback=tiger.png,opts=interactive]
-
-    // image::sample.svg[Embedded,300,opts=inline]
   "#},
   html! {r#"
     <div class="imageblock">

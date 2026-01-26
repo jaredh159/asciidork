@@ -401,6 +401,7 @@ fn test_parse_image_block() {
       content: Content::Empty(EmptyMetadata::Image {
         target: src!("name.png", 7..15),
         attrs: attr_list!(15..17),
+        kind: ImageKind::Standard,
       }),
       ..empty_block!(0, 17)
     }
@@ -608,6 +609,7 @@ fn test_parse_multi_para_delimited_sidebar_block() {
           content: Content::Empty(EmptyMetadata::Image {
             target: src!("name.png", 49..57),
             attrs: attr_list!(57..59),
+            kind: ImageKind::Standard,
           }),
           ..empty_block!(42, 59)
         },

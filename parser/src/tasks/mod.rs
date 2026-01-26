@@ -12,6 +12,7 @@ mod parse_book;
 mod parse_book_part;
 mod parse_doc_attrs;
 mod parse_doc_header;
+mod parse_image_block;
 mod parse_inlines;
 mod parse_list;
 mod parse_revision_line;

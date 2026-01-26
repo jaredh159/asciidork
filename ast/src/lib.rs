@@ -22,7 +22,7 @@ pub use internal::types::*;
 mod internal {
   pub(crate) mod types {
     pub use crate::attr_list::{AttrData, AttrList, Named};
-    pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
+    pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata, ImageKind};
     pub use crate::chunk_meta::ChunkMeta;
     pub use crate::col_widths::*;
     pub use crate::doc_content::*;
@@ -56,7 +56,7 @@ mod internal {
 
 pub mod prelude {
   pub use crate::attr_list::{AttrData, AttrList, Named};
-  pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata};
+  pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata, ImageKind};
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::col_widths::*;
   pub use crate::doc_content::*;

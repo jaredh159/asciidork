@@ -1,0 +1,2 @@
+[%inline]
+image::https://gist.githubusercontent.com/jaredh159/be5b7f2292b044681264cadc68bb0b42/raw/1ea10ecfbe1153a9c37d04fe69b3f112a04558cf/mini.svg[width=200]

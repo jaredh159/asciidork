@@ -1069,7 +1069,7 @@ impl Backend for Html5s {
     }
   }
 
-  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList) {
+  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList, kind: &ImageKind) {
     let with_link = if let Some(link_href) = attrs.named("link") {
       let mut a_tag = OpenTag::new("a", &NoAttrs);
       a_tag.push_class("image");
@@ -1091,7 +1091,7 @@ impl Backend for Html5s {
       false
     };
 
-    self.render_image(target, attrs, false);
+    self.render_image(target, attrs, kind, false);
     let mut style = String::new();
     if let Some(align) = attrs.named("align") {
       style.push_str("text-align: ");
@@ -1243,7 +1243,13 @@ impl Backend for Html5s {
     }
   }
 
-  fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
+  fn enter_image_block(
+    &mut self,
+    img_target: &SourceString,
+    img_attrs: &AttrList,
+    img_kind: &ImageKind,
+    block: &Block,
+  ) {
     let el = if block.has_title() || img_attrs.named("title").is_some() {
       "figure"
     } else {
@@ -1310,7 +1316,7 @@ impl Backend for Html5s {
       }
       has_link = true;
     }
-    self.render_image(img_target, img_attrs, true);
+    self.render_image(img_target, img_attrs, img_kind, true);
     if img_attrs.named("loading") == Some("lazy") {
       self.html.pop();
       self.push_str(r#" loading="lazy">"#);
@@ -1320,7 +1326,13 @@ impl Backend for Html5s {
     }
   }
 
-  fn exit_image_block(&mut self, _img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
+  fn exit_image_block(
+    &mut self,
+    _img_target: &SourceString,
+    img_attrs: &AttrList,
+    _img_kind: &ImageKind,
+    block: &Block,
+  ) {
     if let Some(title) = img_attrs.named("title") {
       self.render_block_title(title, block, false);
       if block.has_title() {

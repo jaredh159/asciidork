@@ -413,26 +413,6 @@ impl<'arena> Parser<'arena> {
     }))
   }
 
-  fn parse_image_block(
-    &mut self,
-    mut lines: ContiguousLines<'arena>,
-    meta: ChunkMeta<'arena>,
-  ) -> Result<Block<'arena>> {
-    let mut line = lines.consume_current().unwrap();
-    let loc = line.loc().unwrap();
-    line.discard_assert(MacroName);
-    line.discard_assert(Colon);
-    let target = line.consume_macro_target(self.bump);
-    let attrs = self.parse_block_attr_list(&mut line)?;
-    self.restore_lines(lines);
-    Ok(Block {
-      meta,
-      context: Context::Image,
-      content: Content::Empty(EmptyMetadata::Image { target, attrs }),
-      loc: loc.into(),
-    })
-  }
-
   fn parse_paragraph(
     &mut self,
     mut lines: ContiguousLines<'arena>,

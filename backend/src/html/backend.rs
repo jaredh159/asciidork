@@ -198,32 +198,50 @@ pub trait HtmlBackend: HtmlBuf {
     self.push([&icondir, "/", prefix.unwrap_or(""), name, ".", &ext]);
   }
 
-  fn render_image(&mut self, target: &str, attrs: &AttrList, is_block: bool) {
-    let format = attrs.named("format").or_else(|| file::ext(target));
-    let is_svg = matches!(format, Some("svg" | "SVG"));
-    if is_svg && attrs.has_option("interactive") && self.doc_meta().safe_mode != SafeMode::Secure {
-      self.render_interactive_svg(target, attrs);
-    }
-    self.push_str(r#"<img src=""#);
-    self.push_img_path(target);
-    self.push_str(r#"" alt=""#);
-    if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
-      self.push_str_attr_escaped(alt);
-    } else if let Some(Some(nodes)) = attrs.positional.first() {
-      for s in nodes.plain_text() {
-        self.push_str_attr_escaped(s);
+  fn render_image(&mut self, target: &str, attrs: &AttrList, img_kind: &ImageKind, is_block: bool) {
+    match img_kind {
+      ImageKind::Standard => {
+        let format = attrs.named("format").or_else(|| file::ext(target));
+        let is_svg = matches!(format, Some("svg" | "SVG"));
+        if is_svg
+          && attrs.has_option("interactive")
+          && self.doc_meta().safe_mode != SafeMode::Secure
+        {
+          return self.render_interactive_svg(target, attrs);
+        }
+        self.push_str(r#"<img src=""#);
+        self.push_img_path(target);
+        self.push_str(r#"" alt=""#);
+        if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
+          self.push_str_attr_escaped(alt);
+        } else if let Some(Some(nodes)) = attrs.positional.first() {
+          for s in nodes.plain_text() {
+            self.push_str_attr_escaped(s);
+          }
+        } else {
+          let alt = file::stem(target).replace(['-', '_'], " ");
+          self.push_str_attr_escaped(&alt);
+        }
+        self.push_ch('"');
+        self.push_named_or_pos_attr("width", 1, attrs);
+        self.push_named_or_pos_attr("height", 2, attrs);
+        if !is_block {
+          self.push_named_attr("title", attrs);
+        }
+        self.push_ch('>');
       }
-    } else {
-      let alt = file::stem(target).replace(['-', '_'], " ");
-      self.push_str_attr_escaped(&alt);
+      ImageKind::InlineSvg(Some(inline_svg)) => self.push_str(inline_svg),
+      ImageKind::InlineSvg(None) => {
+        self.push_str(r#"<span class="alt">"#);
+        if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
+          self.push_str(alt);
+        } else {
+          let stem = asciidork_core::file::stem(target);
+          self.push_str(&stem.replace(['_', '-'], " "));
+        }
+        self.push_str(r#"</span>"#);
+      }
     }
-    self.push_ch('"');
-    self.push_named_or_pos_attr("width", 1, attrs);
-    self.push_named_or_pos_attr("height", 2, attrs);
-    if !is_block {
-      self.push_named_attr("title", attrs);
-    }
-    self.push_ch('>');
   }
 
   fn render_interactive_svg(&mut self, target: &str, attrs: &AttrList) {

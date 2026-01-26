@@ -71,7 +71,6 @@ Known **unfinished or unimplemented** areas include:
 
 - [ ] STEM
 - [ ] Source highlighting
-- [ ] Inline SVGs
 - [ ] Embedded data-uri images
 - [ ] Docinfo files
 

@@ -1153,7 +1153,7 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList) {
+  fn visit_image_macro(&mut self, target: &SourceString, attrs: &AttrList, kind: &ImageKind) {
     let mut open_tag = OpenTag::new("span", &NoAttrs);
     open_tag.push_class("image");
     open_tag.push_opt_class(attrs.named("float"));
@@ -1161,7 +1161,9 @@ impl Backend for AsciidoctorHtml {
     open_tag.push_classes(attrs.roles.iter());
     self.push_open_tag(open_tag);
 
-    let with_link = if let Some(link_href) = attrs.named("link") {
+    let with_link = if let Some(link_href) = attrs.named("link")
+      && (*kind == ImageKind::Standard || link_href != "self")
+    {
       let mut a_tag = OpenTag::new("a", &NoAttrs);
       a_tag.push_class("image");
       a_tag.push_str("\" href=\"");
@@ -1182,7 +1184,7 @@ impl Backend for AsciidoctorHtml {
       false
     };
 
-    self.render_image(target, attrs, false);
+    self.render_image(target, attrs, kind, false);
     if with_link {
       self.push_str("</a>");
     }
@@ -1295,7 +1297,13 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_image_block(&mut self, img_target: &SourceString, img_attrs: &AttrList, block: &Block) {
+  fn enter_image_block(
+    &mut self,
+    img_target: &SourceString,
+    img_attrs: &AttrList,
+    img_kind: &ImageKind,
+    block: &Block,
+  ) {
     let merged_attrs = PriorityAttrList::new(img_attrs, &block.meta.attrs);
     let mut open_tag = OpenTag::new("div", &merged_attrs);
     open_tag.push_class("imageblock");
@@ -1310,6 +1318,7 @@ impl Backend for AsciidoctorHtml {
       .attrs
       .named("link")
       .or_else(|| img_attrs.named("link"))
+      && (*img_kind == ImageKind::Standard || *href != "self")
     {
       let mut a_tag = OpenTag::new("a", &NoAttrs);
       a_tag.push_class("image");
@@ -1321,7 +1330,7 @@ impl Backend for AsciidoctorHtml {
       self.push_open_tag(a_tag);
       has_link = true;
     }
-    self.render_image(img_target, img_attrs, true);
+    self.render_image(img_target, img_attrs, img_kind, true);
     if has_link {
       self.push_str("</a>");
     }
@@ -1329,7 +1338,13 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_image_block(&mut self, _target: &SourceString, attrs: &AttrList, block: &Block) {
+  fn exit_image_block(
+    &mut self,
+    _target: &SourceString,
+    attrs: &AttrList,
+    _img_kind: &ImageKind,
+    block: &Block,
+  ) {
     if let Some(title) = attrs.named("title") {
       self.render_block_title(title, block);
       if block.has_title() {
@@ -1562,34 +1577,6 @@ impl AsciidoctorHtml {
     } else {
       self.push_str(">");
     }
-  }
-
-  fn render_image(&mut self, target: &str, attrs: &AttrList, is_block: bool) {
-    let format = attrs.named("format").or_else(|| file::ext(target));
-    let is_svg = matches!(format, Some("svg" | "SVG"));
-    if is_svg && attrs.has_option("interactive") && self.doc_meta.safe_mode != SafeMode::Secure {
-      return self.render_interactive_svg(target, attrs);
-    }
-    self.push_str(r#"<img src=""#);
-    self.push_img_path(target);
-    self.push_str(r#"" alt=""#);
-    if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
-      self.push_str_attr_escaped(alt);
-    } else if let Some(Some(nodes)) = attrs.positional.first() {
-      for s in nodes.plain_text() {
-        self.push_str_attr_escaped(s);
-      }
-    } else {
-      let alt = file::stem(target).replace(['-', '_'], " ");
-      self.push_str_attr_escaped(&alt);
-    }
-    self.push_ch('"');
-    self.push_named_or_pos_attr("width", 1, attrs);
-    self.push_named_or_pos_attr("height", 2, attrs);
-    if !is_block {
-      self.push_named_attr("title", attrs);
-    }
-    self.push_ch('>');
   }
 
   fn push_callout_number_font(&mut self, num: u8) {

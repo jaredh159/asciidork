@@ -787,3 +787,21 @@ assert_standalone_body!(
     </body>
   "#}
 );
+
+assert_html!(
+  inline_svgs,
+  resolving: br#"<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>"#,
+  adoc! {r#"
+    image:mini.svg[%inline]
+
+    image::mini.svg[%inline]
+  "#},
+  html! {r#"
+    <p>
+      <svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
+    </p>
+    <div class="image-block">
+      <svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
+    </div>
+  "#}
+);

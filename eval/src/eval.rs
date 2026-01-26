@@ -254,9 +254,9 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       backend.exit_compound_block_content(blocks, block);
       backend.exit_admonition_block(kind, block);
     }
-    (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs })) => {
-      backend.enter_image_block(target, attrs, block);
-      backend.exit_image_block(target, attrs, block);
+    (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs, kind })) => {
+      backend.enter_image_block(target, attrs, kind, block);
+      backend.exit_image_block(target, attrs, kind, block);
     }
     (Context::DocumentAttributeDecl, Content::DocumentAttribute(name, entry)) => {
       backend.visit_document_attribute_decl(name, entry);
@@ -469,7 +469,7 @@ fn eval_inline(inline: &InlineNode, ctx: &Ctx, backend: &mut impl Backend) {
       }
       backend.exit_footnote(id.as_ref());
     }
-    Macro(Image { target, attrs, .. }) => backend.visit_image_macro(target, attrs),
+    Macro(InlineImage { target, attrs, kind }) => backend.visit_image_macro(target, attrs, kind),
     Macro(Button(text)) => backend.visit_button_macro(text),
     Macro(Link { target, attrs, scheme, caret }) => {
       let in_xref = *ctx.resolving_xref.borrow();

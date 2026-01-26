@@ -17,6 +17,7 @@ mod eval_desc_lists;
 mod eval_footnotes;
 mod eval_image_macros;
 mod eval_includes;
+mod eval_inline_svg;
 mod eval_links;
 mod eval_lists;
 mod eval_macros;

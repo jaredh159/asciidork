@@ -77,7 +77,7 @@ impl<'arena> Parser<'arena> {
 
     let target_abspath = target.path();
     let mut buffer = BumpVec::new_in(self.bump);
-    match resolver.resolve(target, &mut buffer) {
+    match resolver.resolve(target, &mut buffer, self.document.meta.safe_mode) {
       Ok(_) => {
         if let Err(msg) =
           self.normalize_include_bytes(&target_abspath, &directive.attrs, &mut buffer)

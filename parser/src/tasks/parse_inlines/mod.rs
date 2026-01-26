@@ -150,13 +150,12 @@ impl<'arena> Parser<'arena> {
             acc.commit();
             match token.lexeme.as_str() {
               "image:" => {
+                let is_uri = line.current_token().kind(UriScheme);
                 let target = line.consume_macro_target(self.bump);
                 let attrs = self.parse_inline_attr_list(&mut line)?;
+                let kind = self.parse_image_kind(&target, is_uri, &attrs, None)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
-                acc.push_node(
-                  Macro(Image { flow: Flow::Inline, target, attrs }),
-                  macro_loc,
-                );
+                acc.push_node(Macro(InlineImage { target, attrs, kind }), macro_loc);
               }
               "kbd:" if line.current_is(OpenBracket) => {
                 line.discard_assert(OpenBracket);

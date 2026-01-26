@@ -6,10 +6,10 @@ pub enum MacroNode<'arena> {
     id: Option<SourceString<'arena>>,
     text: Option<InlineNodes<'arena>>,
   },
-  Image {
-    flow: Flow,
+  InlineImage {
     target: SourceString<'arena>,
     attrs: AttrList<'arena>,
+    kind: ImageKind<'arena>,
   },
   Keyboard {
     keys: BumpVec<'arena, BumpString<'arena>>,

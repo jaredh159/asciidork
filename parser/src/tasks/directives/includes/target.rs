@@ -10,10 +10,10 @@ pub fn prepare(
   src_is_primary: bool,
   base_dir: Option<Path>,
 ) -> std::result::Result<IncludeTarget, ResolveError> {
-  let target = Path::new(target_str);
   if target_is_uri {
     return Ok(Target::Uri(target_str.to_string()));
   }
+  let target = Path::new(target_str);
   if src_is_primary && target.is_relative() {
     let Some(base_dir) = base_dir else {
       return Err(Err::BaseDirRequired);
