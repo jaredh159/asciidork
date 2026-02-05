@@ -23,11 +23,7 @@ Dockerfile
 *.swp
 *.swo
 
-# Crates not needed for server build
-cli/
-dr-html-wasm/
-tck/
-test-utils/
+# Non-Rust directories not needed for build
 web-playground/
 
 # Local development

@@ -20,16 +20,20 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy workspace files
+# Copy workspace files (all members required for Cargo to parse workspace)
 COPY Cargo.toml Cargo.lock ./
 COPY ast ./ast
-COPY core ./core
 COPY backend ./backend
 COPY backend-html5s ./backend-html5s
+COPY cli ./cli
+COPY core ./core
 COPY dr-html-backend ./dr-html-backend
 COPY dr-html-server ./dr-html-server
+COPY dr-html-wasm ./dr-html-wasm
 COPY eval ./eval
 COPY parser ./parser
+COPY tck ./tck
+COPY test-utils ./test-utils
 
 # Build release binary
 RUN cargo build --release -p asciidork-server
