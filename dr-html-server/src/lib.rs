@@ -69,6 +69,8 @@ pub fn app(config: Config) -> Router {
 }
 
 /// Start the server with the given configuration.
+///
+/// The server will gracefully shutdown on SIGINT (Ctrl+C) or SIGTERM signals.
 pub async fn serve(config: Config) -> Result<(), std::io::Error> {
     let addr = SocketAddr::from((
         config
@@ -81,5 +83,40 @@ pub async fn serve(config: Config) -> Result<(), std::io::Error> {
     tracing::info!("Starting asciidork server on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app(config)).await
+
+    axum::serve(listener, app(config))
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+}
+
+/// Wait for shutdown signals (SIGINT or SIGTERM).
+///
+/// This function returns when either signal is received, allowing
+/// the server to gracefully shutdown.
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            tracing::info!("Received SIGINT, shutting down gracefully...");
+        }
+        _ = terminate => {
+            tracing::info!("Received SIGTERM, shutting down gracefully...");
+        }
+    }
 }

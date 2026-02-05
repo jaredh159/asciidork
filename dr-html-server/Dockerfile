@@ -80,21 +80,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Run server
 ENTRYPOINT ["asciidork-server"]
 
-# -----------------------------------------------------------------------------
-# Stage 3: Runtime with Prettier (optional)
-# -----------------------------------------------------------------------------
-FROM runtime AS with-prettier
-
-USER root
-
-# Install Node.js and prettier for prettier output formats
-RUN apt-get update && apt-get install -y \
-    nodejs \
-    npm \
-    && npm install -g prettier \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-USER asciidork
-
-ENV ASCIIDORK_PRETTIER_PATH=/usr/bin/prettier
