@@ -1,0 +1,39 @@
+# Build artifacts
+target/
+**/*.rs.bk
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Documentation
+*.md
+LICENSE*
+docs/
+tmp_docs/
+
+# Docker (avoid infinite recursion)
+Dockerfile
+.dockerignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Crates not needed for server build
+cli/
+dr-html-wasm/
+tck/
+test-utils/
+web-playground/
+
+# Local development
+.env
+.env.*
+
+# Justfile
+justfile
+Justfile

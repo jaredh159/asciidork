@@ -1,0 +1,61 @@
+# =============================================================================
+# Asciidork Server Docker Compose
+# =============================================================================
+#
+# Usage:
+#   cd dr-html-server
+#   docker-compose up -d
+#
+# Or from workspace root:
+#   docker-compose -f dr-html-server/docker-compose.yml up -d
+#
+# =============================================================================
+
+services:
+  asciidork-server:
+    build:
+      context: ..
+      dockerfile: dr-html-server/Dockerfile
+      target: runtime  # Use 'with-prettier' for prettier support
+    ports:
+      - "${ASCIIDORK_PORT:-3000}:3000"
+    environment:
+      - ASCIIDORK_HOST=0.0.0.0
+      - ASCIIDORK_PORT=3000
+      - ASCIIDORK_LOG_LEVEL=${ASCIIDORK_LOG_LEVEL:-info}
+      - ASCIIDORK_MAX_CONTENT_SIZE=${ASCIIDORK_MAX_CONTENT_SIZE:-10485760}
+      - ASCIIDORK_REQUEST_TIMEOUT_SECS=${ASCIIDORK_REQUEST_TIMEOUT_SECS:-30}
+      - ASCIIDORK_ALLOW_UNSAFE=${ASCIIDORK_ALLOW_UNSAFE:-false}
+      - ASCIIDORK_CORS_ORIGINS=${ASCIIDORK_CORS_ORIGINS:-*}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+
+  # Optional: with prettier support for formatted output
+  asciidork-server-prettier:
+    build:
+      context: ..
+      dockerfile: dr-html-server/Dockerfile
+      target: with-prettier
+    ports:
+      - "${ASCIIDORK_PRETTIER_PORT:-3001}:3000"
+    environment:
+      - ASCIIDORK_HOST=0.0.0.0
+      - ASCIIDORK_PORT=3000
+      - ASCIIDORK_LOG_LEVEL=${ASCIIDORK_LOG_LEVEL:-info}
+      - ASCIIDORK_PRETTIER_PATH=/usr/bin/prettier
+    profiles:
+      - prettier
+    restart: unless-stopped
