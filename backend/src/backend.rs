@@ -1,4 +1,3 @@
-use super::admonition::AdmonitionKind;
 use crate::prelude::*;
 use ast::{AdjacentNewline, prelude::*};
 
@@ -93,8 +92,8 @@ pub trait Backend {
     img_kind: &ImageKind,
     block: &Block,
   );
-  fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
-  fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block);
+  fn enter_admonition_block(&mut self, kind: AdmonitionKind, icon_uri: Option<&str>, block: &Block);
+  fn exit_admonition_block(&mut self, kind: AdmonitionKind, icon_uri: Option<&str>, block: &Block);
   fn enter_quote_attribution(&mut self, block: &Block, has_cite: bool);
   fn exit_quote_attribution(&mut self, block: &Block, has_cite: bool);
   fn enter_quote_cite(&mut self, block: &Block, has_attribution: bool);

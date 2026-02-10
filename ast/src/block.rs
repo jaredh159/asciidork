@@ -59,6 +59,7 @@ pub enum EmptyMetadata<'arena> {
 pub enum ImageKind<'arena> {
   Standard,
   InlineSvg(Option<BumpString<'arena>>),
+  DataUri(Option<BumpString<'arena>>),
 }
 
 #[derive(Copy, Debug, PartialEq, Eq, Clone)]

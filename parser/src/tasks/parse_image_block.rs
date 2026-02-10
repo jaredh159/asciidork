@@ -34,8 +34,82 @@ impl<'arena> Parser<'arena> {
   ) -> Result<ImageKind<'arena>> {
     if self.should_resolve_as_inline_svg(target, macro_attrs, block_attrs) {
       self.parse_inline_svg(target, target_is_uri, macro_attrs)
+    } else if self.document.meta.is_true("data-uri")
+      && !target.starts_with("data:")
+      && (!target_is_uri || self.document.meta.is_true("allow-uri-read"))
+    {
+      self.parse_data_uri(target, target_is_uri)
     } else {
       Ok(ImageKind::Standard)
+    }
+  }
+
+  pub(crate) fn maybe_set_admonition_icon_uri(
+    &mut self,
+    context: BlockContext,
+    meta: &ChunkMeta<'arena>,
+  ) -> Result<()> {
+    let Ok(admonition_kind) = AdmonitionKind::try_from(context) else {
+      return Ok(());
+    };
+    if !self.document.meta.is_true("data-uri") {
+      return Ok(());
+    }
+    if !self.document.meta.is_true("icons") || self.document.meta.str("icons") == Some("font") {
+      return Ok(());
+    }
+
+    let mut filename = BumpString::with_capacity_in(12, self.bump);
+    if let Some(custom) = meta.attrs.named("icon") {
+      filename.push_str(custom);
+    } else {
+      filename.push_str(admonition_kind.lowercase_str());
+    }
+    filename.push('.');
+    let mut ext = if let Some(icon_type) = self.document.meta.str("icontype") {
+      icon_type
+    } else {
+      self.document.meta.str_or("icons", "png")
+    };
+    ext = iff!(ext.is_empty(), "png", ext);
+    filename.push_str(ext);
+
+    let mut data_uri = String::with_capacity(32);
+    data_uri.push_str("data:image/");
+    data_uri.push_str(iff!(ext == "svg", "svg+xml", ext));
+    data_uri.push_str(";base64,");
+
+    if let Some(bytes) = self.get_image_bytes(
+      &filename,
+      false,
+      meta.start_loc,
+      IncludeKind::AdmonitionIcon,
+    )? {
+      data_uri.reserve(bytes.len());
+      let encoded = crate::base64::encode_in(&bytes, self.bump);
+      data_uri.push_str(&encoded);
+    }
+    self
+      .document
+      .meta
+      .data_admonition_icons
+      .insert(meta.start_loc.uid(), data_uri);
+    Ok(())
+  }
+
+  fn parse_data_uri(
+    &mut self,
+    target: &SourceString<'arena>,
+    target_is_uri: bool,
+  ) -> Result<ImageKind<'arena>> {
+    if let Some(bytes) =
+      self.get_image_bytes(&target.src, target_is_uri, target.loc, IncludeKind::DataUri)?
+    {
+      Ok(ImageKind::DataUri(Some(crate::base64::encode_in(
+        &bytes, self.bump,
+      ))))
+    } else {
+      Ok(ImageKind::DataUri(None))
     }
   }
 
@@ -45,53 +119,15 @@ impl<'arena> Parser<'arena> {
     target_is_uri: bool,
     attrs: &AttrList<'arena>,
   ) -> Result<ImageKind<'arena>> {
-    let Some(resolver) = self.include_resolver.as_mut() else {
-      self.err_at("No include resolver supplied for inline svg", target.loc)?;
+    let Some(buffer) = self.get_image_bytes(
+      &target.src,
+      target_is_uri,
+      target.loc,
+      IncludeKind::InlineSvg,
+    )?
+    else {
       return Ok(ImageKind::InlineSvg(None));
     };
-
-    if target_is_uri && !self.document.meta.is_true("allow-uri-read") {
-      self.err_at(
-        "Cannot include URL contents (allow-uri-read not enabled)",
-        target.loc,
-      )?;
-      return Ok(ImageKind::InlineSvg(None));
-    }
-
-    let include_target = if target_is_uri {
-      IncludeTarget::Uri(target.src.to_string())
-    } else if let Some(base_dir) = resolver.get_base_dir().map(Path::new) {
-      let mut path = base_dir;
-      if let Some(imagesdir) = self.document.meta.str("imagesdir") {
-        path = path.join(imagesdir);
-      }
-      path = path.join(&*target.src);
-      IncludeTarget::FilePath(path.to_string())
-    } else {
-      self.err_at(
-        "Base dir required to resolve relative-path inline svg for include",
-        target.loc,
-      )?;
-      return Ok(ImageKind::InlineSvg(None));
-    };
-
-    let mut buffer = BumpVec::new_in(self.bump);
-    match resolver.resolve(include_target, &mut buffer, self.document.meta.safe_mode) {
-      Ok(_) => {
-        if let Err(msg) = self.normalize_encoding(None, &mut buffer) {
-          self.err_at(
-            format!("Error resolving file contents for inline svg: {msg}"),
-            target.loc,
-          )?;
-          return Ok(ImageKind::InlineSvg(None));
-        }
-      }
-      Err(msg) => {
-        self.err_at(format!("Error including inline svg: {msg}"), target.loc)?;
-        return Ok(ImageKind::InlineSvg(None));
-      }
-    }
-
     let mut buf = &buffer[..];
     if let Some(caps) = regx::SVG_PREAMBLE.captures(buf) {
       buf = &buffer[(caps[0].len() - 4)..];
@@ -146,5 +182,92 @@ impl<'arena> Parser<'arena> {
       return false;
     }
     true
+  }
+
+  fn get_image_bytes(
+    &mut self,
+    target: &str,
+    target_is_uri: bool,
+    err_loc: SourceLocation,
+    kind: IncludeKind,
+  ) -> Result<Option<BumpVec<'arena, u8>>> {
+    let err_str = kind.err_str();
+    let Some(resolver) = self.include_resolver.as_mut() else {
+      self.err_at(
+        format!("No include resolver supplied for {err_str}"),
+        err_loc,
+      )?;
+      return Ok(None);
+    };
+
+    if target_is_uri && !self.document.meta.is_true("allow-uri-read") {
+      self.err_at(
+        "Cannot include URL contents (allow-uri-read not enabled)",
+        err_loc,
+      )?;
+      return Ok(None);
+    }
+
+    let include_target = if target_is_uri {
+      IncludeTarget::Uri(target.to_string())
+    } else if let Some(base_dir) = resolver.get_base_dir().map(Path::new) {
+      let mut path = base_dir;
+      if let Some(imagesdir) = self.document.meta.str(kind.image_dir_attr()) {
+        path = path.join(imagesdir);
+      }
+      path = path.join(target);
+      IncludeTarget::FilePath(path.to_string())
+    } else {
+      self.err_at(
+        format!("Base dir required to resolve relative-path {err_str} for include"),
+        err_loc,
+      )?;
+      return Ok(None);
+    };
+
+    let mut buffer = BumpVec::new_in(self.bump);
+    match resolver.resolve(include_target, &mut buffer, self.document.meta.safe_mode) {
+      Ok(_) => {
+        if kind == IncludeKind::InlineSvg
+          && let Err(msg) = self.normalize_encoding(None, &mut buffer)
+        {
+          self.err_at(
+            format!("Error resolving file contents for {err_str}: {msg}"),
+            err_loc,
+          )?;
+          return Ok(None);
+        }
+      }
+      Err(msg) => {
+        self.err_at(format!("Error including {err_str}: {msg}"), err_loc)?;
+        return Ok(None);
+      }
+    }
+    Ok(Some(buffer))
+  }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IncludeKind {
+  InlineSvg,
+  DataUri,
+  AdmonitionIcon,
+}
+
+impl IncludeKind {
+  const fn err_str(&self) -> &'static str {
+    match self {
+      IncludeKind::InlineSvg => "inline svg",
+      IncludeKind::DataUri => "data uri image",
+      IncludeKind::AdmonitionIcon => "data uri admonition icon",
+    }
+  }
+
+  const fn image_dir_attr(&self) -> &'static str {
+    match self {
+      IncludeKind::InlineSvg => "imagesdir",
+      IncludeKind::DataUri => "imagesdir",
+      IncludeKind::AdmonitionIcon => "iconsdir",
+    }
   }
 }

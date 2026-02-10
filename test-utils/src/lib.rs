@@ -48,8 +48,13 @@ macro_rules! doc_meta {
     _ = m.insert_job_attr("docname", JobAttr::readonly("test"));
     _ = m.insert_job_attr("docdir", JobAttr::readonly(""));
     _ = m.insert_job_attr("docfilesuffix", JobAttr::readonly(".adoc"));
-    _ = m.insert_job_attr("docfile", JobAttr::readonly(""));
+    _ = m.insert_job_attr("docfile", JobAttr::readonly("test.adoc"));
     _ = m.insert_job_attr("asciidork-docfilename", JobAttr::readonly("test.adoc"));
+    _ = m.insert_job_attr("data-uri", JobAttr::readonly(false));
+    _ = m.insert_job_attr("max-attribute-value-size", JobAttr::readonly("4096"));
+    _ = m.insert_job_attr("linkcss", JobAttr::readonly(""));
+    _ = m.insert_job_attr("icons", JobAttr::readonly(false));
+    _ = m.insert_job_attr("user-home", JobAttr::readonly("."));
     m
   }};
 }

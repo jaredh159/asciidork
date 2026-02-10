@@ -65,6 +65,10 @@ impl MultiSourceLocation {
       None
     }
   }
+
+  pub const fn uid(&self) -> u64 {
+    ((self.start_depth as u64) << 32) | (self.start_pos as u64)
+  }
 }
 
 impl From<SourceLocation> for MultiSourceLocation {

@@ -16,17 +16,22 @@ impl<'arena> Parser<'arena> {
       SourceFile::Path(path) => {
         let file_stem = path.file_stem();
         let ext = path.extension();
+        let filename = format!("{file_stem}{ext}");
         self.insert_job_attr("docfilesuffix", ext.to_string());
         self.insert_job_attr("docname", file_stem.to_string());
-        self.insert_job_attr("asciidork-docfilename", format!("{file_stem}{ext}"));
+        self.insert_job_attr("asciidork-docfilename", filename.clone());
         match self.document.meta.safe_mode {
           SafeMode::Server | SafeMode::Secure => {
             self.insert_job_attr("docdir", "");
-            self.insert_job_attr("docfile", "");
+            self.insert_job_attr("docfile", filename);
+            self.insert_job_attr("user-home", ".");
           }
           SafeMode::Safe | SafeMode::Unsafe => {
             self.insert_job_attr("docfile", path.to_string());
             self.insert_job_attr("docdir", path.dirname().to_string());
+            if let Some(home) = std::env::home_dir() {
+              self.insert_job_attr("user-home", home.to_str().unwrap_or("."));
+            }
           }
         }
       }

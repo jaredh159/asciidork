@@ -1270,29 +1270,53 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
+  fn enter_admonition_block(
+    &mut self,
+    kind: AdmonitionKind,
+    icon_uri: Option<&str>,
+    block: &Block,
+  ) {
     let classes = &["admonitionblock", kind.lowercase_str()];
     self.open_element("div", classes, &block.meta.attrs);
     self.push_str(r#"<table><tr><td class="icon">"#);
-    match self.doc_meta.icon_mode() {
-      IconMode::Text => {
-        self.push([r#"<div class="title">"#, kind.str()]);
-        self.push_str(r#"</div></td><td class="content">"#);
+    let icon_mode = self.doc_meta.icon_mode();
+
+    // custom icons trump the iconmode, so test first
+    if let Some(custom_icon) = block.meta.attrs.named("icon")
+      && (icon_mode != IconMode::Image || icon_uri.is_none())
+    {
+      self.push_str(r#"<img src=""#);
+      self.push_icon_img_path();
+      self.push_str(custom_icon);
+      if !file::has_ext(custom_icon) {
+        self.push_icon_inferred_img_ext();
       }
-      IconMode::Image => {
-        self.push_admonition_img(kind);
-        self.push_str(r#"</td><td class="content">"#);
-      }
-      IconMode::Font => {
-        self.push([r#"<i class="fa icon-"#, kind.lowercase_str(), "\" title=\""]);
-        self.push([kind.str(), r#""></i></td><td class="content">"#]);
+      self.push([r#"" alt=""#, kind.str(), r#"">"#]);
+    } else {
+      match icon_mode {
+        IconMode::Text => {
+          self.push([r#"<div class="title">"#, kind.str(), "</div>"]);
+        }
+        IconMode::Image => {
+          self.push_admonition_img(kind, icon_uri);
+        }
+        IconMode::Font => {
+          self.push([r#"<i class="fa icon-"#, kind.lowercase_str(), "\" title=\""]);
+          self.push([kind.str(), r#""></i>"#]);
+        }
       }
     }
+    self.push_str(r#"</td><td class="content">"#);
     self.render_buffered_block_title(block);
   }
 
   #[instrument(skip_all)]
-  fn exit_admonition_block(&mut self, _kind: AdmonitionKind, _block: &Block) {
+  fn exit_admonition_block(
+    &mut self,
+    _kind: AdmonitionKind,
+    _icon_uri: Option<&str>,
+    _block: &Block,
+  ) {
     self.push_str(r#"</td></tr></table></div>"#);
   }
 
@@ -1437,6 +1461,9 @@ impl HtmlBuf for AsciidoctorHtml {
   fn htmlbuf(&mut self) -> &mut String {
     &mut self.html
   }
+  fn swapbuf(&mut self, s: &mut String) {
+    std::mem::swap(&mut self.html, s);
+  }
 }
 
 impl AltHtmlBuf for AsciidoctorHtml {
@@ -1564,9 +1591,13 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn push_admonition_img(&mut self, kind: AdmonitionKind) {
+  fn push_admonition_img(&mut self, kind: AdmonitionKind, data_uri: Option<&str>) {
     self.push_str(r#"<img src=""#);
-    self.push_icon_uri(kind.lowercase_str(), None);
+    if let Some(data_uri) = data_uri {
+      self.push_str(data_uri);
+    } else {
+      self.push_icon_uri(kind.lowercase_str(), None);
+    }
     self.push([r#"" alt=""#, kind.str(), r#"">"#]);
   }
 

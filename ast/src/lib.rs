@@ -1,3 +1,4 @@
+mod admonition;
 mod attr_list;
 mod block;
 mod chunk_meta;
@@ -21,6 +22,7 @@ pub use internal::types::*;
 
 mod internal {
   pub(crate) mod types {
+    pub use crate::admonition::AdmonitionKind;
     pub use crate::attr_list::{AttrData, AttrList, Named};
     pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata, ImageKind};
     pub use crate::chunk_meta::ChunkMeta;
@@ -55,6 +57,7 @@ mod internal {
 }
 
 pub mod prelude {
+  pub use crate::admonition::AdmonitionKind;
   pub use crate::attr_list::{AttrData, AttrList, Named};
   pub use crate::block::{Block, BlockContent, BlockContext, EmptyMetadata, ImageKind};
   pub use crate::chunk_meta::ChunkMeta;
