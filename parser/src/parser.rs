@@ -255,6 +255,7 @@ impl<'arena> Parser<'arena> {
   }
 
   pub fn parse(mut self) -> std::result::Result<ParseResult<'arena>, Vec<Diagnostic>> {
+    self.lockdown_secure_mode();
     self.parse_document_header()?;
     self.prepare_toc();
 
@@ -345,6 +346,22 @@ impl<'arena> Parser<'arena> {
 
   pub(crate) fn string(&self, s: &str) -> BumpString<'arena> {
     BumpString::from_str_in(s, self.bump)
+  }
+
+  fn lockdown_secure_mode(&mut self) {
+    let meta = &mut self.document.meta;
+    if meta.safe_mode == SafeMode::Secure {
+      _ = meta.insert_job_attr("data-uri", JobAttr::readonly(false));
+      if meta.is_unset("max-attribute-value-size") {
+        _ = meta.insert_job_attr("max-attribute-value-size", JobAttr::readonly("4096"));
+      }
+      if meta.is_unset("linkcss") {
+        _ = meta.insert_job_attr("linkcss", JobAttr::readonly(""));
+      }
+      if meta.is_unset("icons") {
+        _ = meta.insert_job_attr("icons", JobAttr::readonly(false));
+      }
+    }
   }
 }
 

@@ -9,3 +9,29 @@ image::../restricted.svg[,opts=inline]
 
 [%inline]
 image::subdir.SVG[height=150]
+
+:data-uri:
+:!imagesdir:
+
+image::mini.svg[]
+
+image::../restricted.svg[]
+
+:icons:
+
+// image not found
+TIP: a tip
+
+// honors icontype
+:icontype: gif
+
+NOTE: a note
+
+// passing custom icon overrides, should still resolve
+[WARNING,icon=custom]
+Be careful!
+
+:!data-uri:
+
+[WARNING,icon=custom]
+Be careful!

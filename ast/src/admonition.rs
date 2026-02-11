@@ -1,4 +1,4 @@
-use ast::short::block::*;
+use crate::short::block::*;
 
 #[derive(Copy, Debug, PartialEq, Eq, Clone)]
 pub enum AdmonitionKind {

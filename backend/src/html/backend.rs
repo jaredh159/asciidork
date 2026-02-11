@@ -191,15 +191,104 @@ pub trait HtmlBackend: HtmlBuf {
   }
 
   fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
-    // PERF: we could work to prevent all these allocations w/ some caching
-    // these might get rendered many times in a given document
-    let icondir = self.doc_meta().string_or("iconsdir", "./images/icons");
-    let ext = self.doc_meta().string_or("icontype", "png");
-    self.push([&icondir, "/", prefix.unwrap_or(""), name, ".", &ext]);
+    self.push_icon_img_path();
+    self.push([prefix.unwrap_or(""), name]);
+    self.push_icon_inferred_img_ext();
+  }
+
+  fn push_icon_img_path(&mut self) {
+    let mut s = String::new();
+    self.swapbuf(&mut s);
+    if let Some(iconsdir) = self.doc_meta().str("iconsdir")
+      && !iconsdir.is_empty()
+    {
+      s.push_str(iconsdir);
+    } else if let Some(imagesdir) = self.doc_meta().str("imagesdir")
+      && !imagesdir.is_empty()
+    {
+      s.push_str(imagesdir);
+    } else {
+      s.push_str("./images/icons")
+    }
+    s.push('/');
+    self.swapbuf(&mut s);
+  }
+
+  fn push_icon_inferred_img_ext(&mut self) {
+    let mut s = String::new();
+    self.swapbuf(&mut s);
+    s.push('.');
+    if let Some(icontype) = self.doc_meta().str("icontype")
+      && !icontype.is_empty()
+    {
+      s.push_str(icontype);
+    } else if let Some(icons) = self.doc_meta().str("icons")
+      && icons != "font"
+      && icons != "image"
+      && !icons.is_empty()
+    {
+      s.push_str(icons);
+    } else {
+      s.push_str("png")
+    }
+    self.swapbuf(&mut s);
+  }
+
+  fn _render_inner_image(
+    &mut self,
+    target: &str,
+    data_uri: Option<Option<&str>>,
+    attrs: &AttrList,
+    is_block: bool,
+  ) {
+    self.push_str(r#"<img src=""#);
+    match data_uri {
+      Some(data_uri) => {
+        self.push_str("data:image/");
+        if let Some(ext) = file::ext(target) {
+          let mimetype = iff!(ext == "svg", "svg+xml", ext);
+          self.push_str(mimetype);
+        } else {
+          self.push_str("application/octet-stream");
+        }
+        self.push_str(";base64,");
+        if let Some(data) = data_uri {
+          self.push_str(data);
+        }
+      }
+      None => {
+        if target.starts_with("data:") {
+          self.push_str(target);
+        } else {
+          self.push_img_path(target);
+        }
+      }
+    }
+    self.push_str(r#"" alt=""#);
+    if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
+      self.push_str_attr_escaped(alt);
+    } else if let Some(Some(nodes)) = attrs.positional.first() {
+      for s in nodes.plain_text() {
+        self.push_str_attr_escaped(s);
+      }
+    } else {
+      let alt = file::stem(target).replace(['-', '_'], " ");
+      self.push_str_attr_escaped(&alt);
+    }
+    self.push_ch('"');
+    self.push_named_or_pos_attr("width", 1, attrs);
+    self.push_named_or_pos_attr("height", 2, attrs);
+    if !is_block {
+      self.push_named_attr("title", attrs);
+    }
+    self.push_ch('>');
   }
 
   fn render_image(&mut self, target: &str, attrs: &AttrList, img_kind: &ImageKind, is_block: bool) {
     match img_kind {
+      ImageKind::DataUri(data_uri) => {
+        self._render_inner_image(target, Some(data_uri.as_deref()), attrs, is_block);
+      }
       ImageKind::Standard => {
         let format = attrs.named("format").or_else(|| file::ext(target));
         let is_svg = matches!(format, Some("svg" | "SVG"));
@@ -209,26 +298,7 @@ pub trait HtmlBackend: HtmlBuf {
         {
           return self.render_interactive_svg(target, attrs);
         }
-        self.push_str(r#"<img src=""#);
-        self.push_img_path(target);
-        self.push_str(r#"" alt=""#);
-        if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
-          self.push_str_attr_escaped(alt);
-        } else if let Some(Some(nodes)) = attrs.positional.first() {
-          for s in nodes.plain_text() {
-            self.push_str_attr_escaped(s);
-          }
-        } else {
-          let alt = file::stem(target).replace(['-', '_'], " ");
-          self.push_str_attr_escaped(&alt);
-        }
-        self.push_ch('"');
-        self.push_named_or_pos_attr("width", 1, attrs);
-        self.push_named_or_pos_attr("height", 2, attrs);
-        if !is_block {
-          self.push_named_attr("title", attrs);
-        }
-        self.push_ch('>');
+        self._render_inner_image(target, None, attrs, is_block);
       }
       ImageKind::InlineSvg(Some(inline_svg)) => self.push_str(inline_svg),
       ImageKind::InlineSvg(None) => {

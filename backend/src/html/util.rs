@@ -29,6 +29,9 @@ mod tests {
     fn htmlbuf(&mut self) -> &mut String {
       &mut self.html
     }
+    fn swapbuf(&mut self, s: &mut String) {
+      std::mem::swap(&mut self.html, s);
+    }
   }
 
   impl HtmlBackend for TestBackend {

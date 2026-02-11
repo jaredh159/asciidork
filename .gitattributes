@@ -1,0 +1,2 @@
+# prevent windows git checkouts from breaking tests
+cli/tests/all/fixtures/*.svg binary

@@ -91,6 +91,11 @@ impl SourceLocation {
   pub const fn is_empty(&self) -> bool {
     self.start == self.end
   }
+
+  #[must_use]
+  pub const fn uid(&self) -> u64 {
+    ((self.include_depth as u64) << 32) | (self.start as u64)
+  }
 }
 
 impl Debug for SourceLocation {
