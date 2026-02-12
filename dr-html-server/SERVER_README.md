@@ -224,7 +224,7 @@ Health check endpoint for load balancers and orchestration.
 ```json
 {
   "status": "healthy",
-  "version": "0.33.0"
+  "version": "0.34.0"
 }
 ```
 
@@ -238,7 +238,7 @@ Server capabilities and configuration.
 
 ```json
 {
-  "version": "0.33.0",
+  "version": "0.34.0",
   "formats": ["dr-html", "dr-html-prettier", "html5", "html5-prettier"],
   "doctypes": ["article", "book", "manpage", "inline"],
   "safe_modes": ["unsafe", "safe", "server", "secure"],
@@ -393,31 +393,58 @@ func main() {
 
 ## Docker
 
-### Using Pre-built Image
+### Building the Docker Container
+
+The Dockerfile uses a multi-stage build. The build context **must** be the
+workspace root (not the `dr-html-server/` directory) because the build copies
+all workspace crates required by Cargo.
 
 ```bash
-docker pull ghcr.io/jaredh159/asciidork-server:latest
+# From the workspace root:
+docker build -t asciidork-server -f dr-html-server/Dockerfile .
 
-docker run -p 3000:3000 ghcr.io/jaredh159/asciidork-server:latest
-```
-
-### Building Locally
-
-```bash
-cd dr-html-server
-docker build -t asciidork-server .
-
+# Run the container
 docker run -p 3000:3000 asciidork-server
+
+# Run with custom configuration
+docker run -p 8080:8080 \
+  -e ASCIIDORK_PORT=8080 \
+  -e ASCIIDORK_LOG_LEVEL=debug \
+  asciidork-server
 ```
 
 ### Docker Compose
 
-```yaml
-version: '3.8'
+A `docker-compose.yml` is provided in the `dr-html-server/` directory. It
+already sets the correct build context (`..`, i.e. the workspace root):
 
+```bash
+# From the workspace root:
+docker compose -f dr-html-server/docker-compose.yml up -d
+
+# Or from the dr-html-server directory:
+cd dr-html-server
+docker compose up -d
+
+# Stop the server:
+docker compose -f dr-html-server/docker-compose.yml down
+```
+
+Override settings with environment variables or a `.env` file:
+
+```bash
+ASCIIDORK_LOG_LEVEL=debug ASCIIDORK_PORT=8080 \
+  docker compose -f dr-html-server/docker-compose.yml up -d
+```
+
+### Docker Compose (Custom)
+
+```yaml
 services:
   asciidork:
-    build: ./dr-html-server
+    build:
+      context: .           # workspace root
+      dockerfile: dr-html-server/Dockerfile
     ports:
       - "3000:3000"
     environment:

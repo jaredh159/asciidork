@@ -95,7 +95,7 @@ Health check endpoint.
 ```json
 {
   "status": "healthy",
-  "version": "0.33.0"
+  "version": "0.34.0"
 }
 ```
 
@@ -105,7 +105,7 @@ Server capabilities and configuration.
 
 ```json
 {
-  "version": "0.33.0",
+  "version": "0.34.0",
   "formats": ["dr-html", "dr-html-prettier", "html5", "html5-prettier"],
   "doctypes": ["article", "book", "manpage", "inline"],
   "safe_modes": ["unsafe", "safe", "server", "secure"],

@@ -206,7 +206,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-server"
-version = "0.33.0"
+version = "0.34.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend-html5s",
