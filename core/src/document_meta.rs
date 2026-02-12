@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::internal::*;
 
@@ -13,6 +13,7 @@ pub struct DocumentMeta {
   pub safe_mode: SafeMode,
   pub embedded: bool,
   pub included_files: HashSet<String>,
+  pub data_admonition_icons: HashMap<u64, String>,
 }
 
 impl Default for DocumentMeta {
@@ -27,6 +28,7 @@ impl Default for DocumentMeta {
       authors: Vec::new(),
       embedded: false,
       included_files: HashSet::new(),
+      data_admonition_icons: HashMap::new(),
     }
   }
 }
@@ -59,12 +61,7 @@ impl DocumentMeta {
       safe_mode,
       doctype: DocType::Article,
       job_attrs,
-      header_attrs: Attrs::empty(),
-      doc_attrs: Attrs::empty(),
-      default_attrs: Attrs::defaults(),
-      authors: Vec::new(),
-      embedded: false,
-      included_files: HashSet::new(),
+      ..Default::default()
     }
   }
 

@@ -17,6 +17,9 @@ impl HtmlBuf for OpenTag {
   fn htmlbuf(&mut self) -> &mut String {
     &mut self.buf
   }
+  fn swapbuf(&mut self, s: &mut String) {
+    std::mem::swap(&mut self.buf, s);
+  }
 }
 
 impl OpenTag {

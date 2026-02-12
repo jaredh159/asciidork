@@ -714,6 +714,15 @@ assert_html!(
     :icons: font
 
     NOTE: Tip #3
+
+    // icon={file} overrides `:icons: font`
+    [NOTE,icon=tip.jpg]
+    Tip #4
+
+    // supplies ext if not supplied
+    [NOTE,icon=warning]
+    Tip #5
+
   "#},
   html! {r#"
     <div class="admonitionblock note">
@@ -737,6 +746,45 @@ assert_html!(
         <tr>
           <td class="icon"><i class="fa icon-note" title="Note"></i></td>
           <td class="content">Tip #3</td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><img src="./images/icons/tip.jpg" alt="Note"></td>
+          <td class="content">Tip #4</td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><img src="./images/icons/warning.png" alt="Note"></td>
+          <td class="content">Tip #5</td>
+        </tr>
+      </table>
+    </div>
+  "#}
+);
+
+assert_html!(
+  custom_icon_data_uri,
+  resolving: b"a",
+  adoc! {r#"
+    :icons:
+    :data-uri:
+
+    [NOTE,icon=warning]
+    A Note.
+
+  "#},
+  html! {r#"
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><img src="data:image/png;base64,YQ==" alt="Note"></td>
+          <td class="content">A Note.</td>
         </tr>
       </table>
     </div>

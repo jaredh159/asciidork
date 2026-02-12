@@ -235,9 +235,15 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       Content::Simple(children),
     ) => {
       let kind = AdmonitionKind::try_from(block.context).unwrap();
-      backend.enter_admonition_block(kind, block);
+      let data_uri: Option<&str> = ctx
+        .doc
+        .meta
+        .data_admonition_icons
+        .get(&block.meta.start_loc.uid())
+        .map(|o| o.as_str());
+      backend.enter_admonition_block(kind, data_uri, block);
       children.iter().for_each(|n| eval_inline(n, ctx, backend));
-      backend.exit_admonition_block(kind, block);
+      backend.exit_admonition_block(kind, data_uri, block);
     }
     (
       Context::AdmonitionTip
@@ -247,12 +253,18 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       | Context::AdmonitionImportant,
       Content::Compound(blocks),
     ) => {
+      let data_uri: Option<&str> = ctx
+        .doc
+        .meta
+        .data_admonition_icons
+        .get(&block.meta.start_loc.uid())
+        .map(|o| o.as_str());
       let kind = AdmonitionKind::try_from(block.context).unwrap();
-      backend.enter_admonition_block(kind, block);
+      backend.enter_admonition_block(kind, data_uri, block);
       backend.enter_compound_block_content(blocks, block);
       blocks.iter().for_each(|b| eval_block(b, ctx, backend));
       backend.exit_compound_block_content(blocks, block);
-      backend.exit_admonition_block(kind, block);
+      backend.exit_admonition_block(kind, data_uri, block);
     }
     (Context::Image, Content::Empty(EmptyMetadata::Image { target, attrs, kind })) => {
       backend.enter_image_block(target, attrs, kind, block);

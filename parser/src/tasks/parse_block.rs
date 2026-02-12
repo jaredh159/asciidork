@@ -421,7 +421,10 @@ impl<'arena> Parser<'arena> {
     if self.ctx.parsing_simple_desc_def() {
       lines.current_mut().map(|l| l.discard_leading_whitespace());
     }
+
     let context = meta.block_paragraph_context(&mut lines);
+    self.maybe_set_admonition_icon_uri(context, &meta)?;
+
     // TODO: probably a better stack-like context API is possible here...
     let restore_subs = self.ctx.set_subs_for(context, &meta);
     let inlines = self.parse_inlines(&mut lines)?;

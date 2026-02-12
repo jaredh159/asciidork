@@ -1202,7 +1202,12 @@ impl Backend for Html5s {
     HtmlBackend::visit_menu_macro(self, items);
   }
 
-  fn enter_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
+  fn enter_admonition_block(
+    &mut self,
+    kind: AdmonitionKind,
+    _icon_uri: Option<&str>,
+    block: &Block,
+  ) {
     let classes = &["admonition-block", kind.lowercase_str()];
     if matches!(kind, AdmonitionKind::Note | AdmonitionKind::Tip) {
       self.open_element("aside", classes, &block.meta.attrs);
@@ -1232,7 +1237,12 @@ impl Backend for Html5s {
     self.render_buffered_block_title(block, false);
   }
 
-  fn exit_admonition_block(&mut self, kind: AdmonitionKind, block: &Block) {
+  fn exit_admonition_block(
+    &mut self,
+    kind: AdmonitionKind,
+    _icon_uri: Option<&str>,
+    block: &Block,
+  ) {
     if !matches!(block.content, BlockContent::Compound(_)) {
       self.push_str("</p>");
     }
@@ -1608,6 +1618,9 @@ fn quote_entities(lang: &str) -> [&'static str; 4] {
 impl HtmlBuf for Html5s {
   fn htmlbuf(&mut self) -> &mut String {
     &mut self.html
+  }
+  fn swapbuf(&mut self, s: &mut String) {
+    std::mem::swap(&mut self.html, s);
   }
 }
 

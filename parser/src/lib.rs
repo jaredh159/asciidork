@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+mod base64;
 mod chunk;
 mod contiguous_lines;
 mod delimiter;

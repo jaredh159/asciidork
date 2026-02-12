@@ -7,6 +7,7 @@ use crate::html::OpenTag;
 
 pub trait HtmlBuf {
   fn htmlbuf(&mut self) -> &mut String;
+  fn swapbuf(&mut self, s: &mut String);
 
   fn push_str_attr_escaped(&mut self, s: &str) {
     push_escaped(s, self.htmlbuf(), true);

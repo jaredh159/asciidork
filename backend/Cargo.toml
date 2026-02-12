@@ -1,13 +1,13 @@
 [package]
 name = "asciidork-backend"
-version = "0.33.0"
+version = "0.34.0"
 edition = "2024"
 description = "Asciidork backend"
 license = "MIT"
 
 [dependencies]
-asciidork-ast = { path = "../ast", version = "0.33.0" }
-asciidork-core = { path = "../core", version = "0.31.0" }
+asciidork-ast = { path = "../ast", version = "0.34.0" }
+asciidork-core = { path = "../core", version = "0.34.0" }
 roman_numerals_fn = "1.0.0"
 dateparser = "0.2"
 lazy_static = "1.4.0"

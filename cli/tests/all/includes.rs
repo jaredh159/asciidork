@@ -174,12 +174,17 @@ fn test_svg_uri() {
         <svg width="200" xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
       </div>
     </div>
+    <div class="imageblock">
+      <div class="content">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0wIDAiLz48L3N2Zz4=" alt="mini">
+      </div>
+    </div>
     "#}
   );
 }
 
 #[test]
-fn test_404_svg() {
+fn test_inline_svg_and_data_uri() {
   let stdout = run_file(
     &["--embedded", "--safe-mode", "safe"],
     "tests/all/fixtures/inline-svg.adoc",
@@ -206,6 +211,52 @@ fn test_404_svg() {
       <div class="content">
         <svg height="150" xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
       </div>
+    </div>
+    <div class="imageblock">
+      <div class="content">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0wIDAiLz48L3N2Zz4K" alt="mini">
+      </div>
+    </div>
+    <div class="imageblock">
+      <div class="content">
+        <img src="data:image/svg+xml;base64," alt="restricted">
+      </div>
+    </div>
+    <div class="admonitionblock tip">
+      <table>
+        <tr>
+          <td class="icon"><img src="data:image/png;base64," alt="Tip"></td>
+          <td class="content">a tip</td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon">
+            <img src="data:image/gif;base64,R0lGODdhAQABAIABAAAAACEHbSwAAAAAAQABAAACAkwBADs=" alt="Note">
+          </td>
+          <td class="content">a note</td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock warning">
+      <table>
+        <tr>
+          <td class="icon">
+            <img src="data:image/gif;base64,R0lGODdhAQABAIABAAAAAOYPwSwAAAAAAQABAAACAkwBADs=" alt="Warning">
+          </td>
+          <td class="content">Be careful!</td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock warning">
+      <table>
+        <tr>
+          <td class="icon"><img src="./images/icons/custom.gif" alt="Warning"></td>
+          <td class="content">Be careful!</td>
+        </tr>
+      </table>
     </div>
     "#}
   );
@@ -265,4 +316,92 @@ fn test_cli_runs_on_windows() {
 fn test_cli_doctype() {
   let stdout = run_file(&[], "tests/all/fixtures/book.adoc");
   assert!(stdout.contains("doctype: book"));
+}
+
+#[test]
+fn test_secure_mode_blocks_document_icons_attr() {
+  // In SECURE mode, document-defined :icons: should be BLOCKED (text label fallback)
+  let stdout = run_input(
+    &["--embedded", "--safe-mode", "secure"],
+    adoc! {r#"
+      :icons:
+      :iconsdir: images/icons
+      :icontype: gif
+
+      NOTE: Icons set in document should be blocked in secure mode.
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="admonitionblock note">
+        <table>
+          <tr>
+            <td class="icon"><div class="title">Note</div></td>
+            <td class="content">Icons set in document should be blocked in secure mode.</td>
+          </tr>
+        </table>
+      </div>
+    "#}
+  );
+}
+
+#[test]
+fn test_secure_mode_allows_cli_icons_attr() {
+  let stdout = run_input(
+    &[
+      "--embedded",
+      "--safe-mode",
+      "secure",
+      "--attribute",
+      "icons",
+    ],
+    adoc! {r#"
+      :iconsdir: images/icons
+      :icontype: gif
+      :data-uri:
+
+      NOTE: CLI icons works, but document data-uri is blocked.
+
+      [WARNING,icon=custom]
+      Custom icon also resolves via CLI-enabled icons.
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="admonitionblock note">
+        <table>
+          <tr>
+            <td class="icon"><img src="images/icons/note.gif" alt="Note"></td>
+            <td class="content">CLI icons works, but document data-uri is blocked.</td>
+          </tr>
+        </table>
+      </div>
+      <div class="admonitionblock warning">
+        <table>
+          <tr>
+            <td class="icon"><img src="images/icons/custom.gif" alt="Warning"></td>
+            <td class="content">Custom icon also resolves via CLI-enabled icons.</td>
+          </tr>
+        </table>
+      </div>
+    "#}
+  );
+}
+
+#[test]
+fn test_server_mode_masks_path_attributes() {
+  let stdout = run_file(
+    &["--embedded", "--safe-mode", "server"],
+    "tests/all/fixtures/attr-masking.adoc",
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="paragraph">
+        <p>docdir= docfile=attr-masking.adoc user-home=.</p>
+      </div>
+    "#}
+  );
 }
