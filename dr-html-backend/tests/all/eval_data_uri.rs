@@ -131,7 +131,7 @@ assert_html!(
 );
 
 assert_html!(
-  no_ext,
+  remote_url_not_embedded_without_allow_uri_read,
   resolving: b"a",
   |s: &mut JobSettings| s.strict = false,
   adoc! {r#"

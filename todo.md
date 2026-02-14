@@ -10,8 +10,6 @@
 - [ ] multi-line link macro text (maybe same as above)
       `link:https://example.com[foo\nbar]`
 - [ ] multi-line shorthand xref `<<tigers,foo\nbar>>`
-- [ ] :imagesdir: can be set to a URL, we don't handle this currently
-- [ ] data-uri embedded images
 - [ ] multi-anchors, e.g. `=== [[current]][[latest]]Version 4.9`, see
       https://docs.asciidoctor.org/asciidoc/latest/attributes/id/#add-additional-anchors-to-a-section
 - [ ] resolve include directives starting from stdin
