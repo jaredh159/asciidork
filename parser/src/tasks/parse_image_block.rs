@@ -34,13 +34,13 @@ impl<'arena> Parser<'arena> {
   ) -> Result<ImageKind<'arena>> {
     if self.should_resolve_as_inline_svg(target, macro_attrs, block_attrs) {
       self.parse_inline_svg(target, target_is_uri, macro_attrs)
-    } else if self.document.meta.is_true("data-uri")
-      && !target.starts_with("data:")
-      && (!target_is_uri || self.document.meta.is_true("allow-uri-read"))
+    } else if !self.document.meta.is_true("data-uri")
+      || target.starts_with("data:")
+      || self.is_disallowed_abs_uri(target_is_uri, IncludeKind::DataUri)
     {
-      self.parse_data_uri(target, target_is_uri)
-    } else {
       Ok(ImageKind::Standard)
+    } else {
+      self.parse_data_uri(target, target_is_uri)
     }
   }
 
@@ -56,6 +56,9 @@ impl<'arena> Parser<'arena> {
       return Ok(());
     }
     if !self.document.meta.is_true("icons") || self.document.meta.str("icons") == Some("font") {
+      return Ok(());
+    }
+    if self.is_disallowed_abs_uri(false, IncludeKind::AdmonitionIcon) {
       return Ok(());
     }
 
@@ -184,6 +187,20 @@ impl<'arena> Parser<'arena> {
     true
   }
 
+  fn prepended_target_is_uri(&self, kind: IncludeKind) -> bool {
+    self
+      .document
+      .meta
+      .str(kind.image_dir_attr())
+      .map(|dir| regx::URI_SNIFF.is_match(dir))
+      .unwrap_or(false)
+  }
+
+  fn is_disallowed_abs_uri(&self, unprepended_target_is_uri: bool, kind: IncludeKind) -> bool {
+    (unprepended_target_is_uri || self.prepended_target_is_uri(kind))
+      && !self.document.meta.is_true("allow-uri-read")
+  }
+
   fn get_image_bytes(
     &mut self,
     target: &str,
@@ -213,10 +230,25 @@ impl<'arena> Parser<'arena> {
     } else if let Some(base_dir) = resolver.get_base_dir().map(Path::new) {
       let mut path = base_dir;
       if let Some(imagesdir) = self.document.meta.str(kind.image_dir_attr()) {
-        path = path.join(imagesdir);
-      }
+        let dir_is_uri = regx::URI_SNIFF.is_match(imagesdir);
+        if dir_is_uri && !self.document.meta.is_true("allow-uri-read") {
+          self.err_at(
+            "Cannot include URL contents (allow-uri-read not enabled)",
+            err_loc,
+          )?;
+          return Ok(None);
+        } else if dir_is_uri {
+          path = Path::new(imagesdir);
+        } else {
+          path = path.join(imagesdir);
+        }
+      };
       path = path.join(target);
-      IncludeTarget::FilePath(path.to_string())
+      if path.is_uri() {
+        IncludeTarget::Uri(path.to_string())
+      } else {
+        IncludeTarget::FilePath(path.to_string())
+      }
     } else {
       self.err_at(
         format!("Base dir required to resolve relative-path {err_str} for include"),

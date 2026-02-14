@@ -59,3 +59,8 @@ lazy_static! {
   pub static ref SVG_STRIP_ATTRS: BytesRegex =
     BytesRegex::new(r#"(?s)\s(?:width|height|style)=("([^"]*)"|'([^']*)')"#).unwrap();
 }
+
+// uri detection, matching asciidoctor
+lazy_static! {
+  pub static ref URI_SNIFF: Regex = Regex::new(r"^[a-zA-Z][a-zA-Z0-9.+-]+:/{0,2}").unwrap();
+}

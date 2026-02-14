@@ -405,3 +405,237 @@ fn test_server_mode_masks_path_attributes() {
     "#}
   );
 }
+
+#[test]
+fn test_image_url_resolution_no_data_uri() {
+  let stdout = run_input(
+    &["--embedded", "--safe-mode", "safe"],
+    adoc! {r#"
+      :imagesdir: ./local/images
+
+      // 1. Block image absolute URL ignores imagesdir
+      image::http://example.org/images/tiger.png[Tiger]
+
+      // 2. Inline image absolute URL ignores imagesdir
+      Look at this image:http://example.org/inline/cat.png[Cat] picture.
+
+      // 3. imagesdir as URL, relative target resolves against it
+      :imagesdir: http://cdn.example.org/assets
+
+      image::logo.png[Logo]
+
+      // 4. Video absolute URL ignores imagesdir
+      :imagesdir: assets
+
+      // TODO: not implemented yet
+      // video::http://example.org/videos/demo.mp4[]
+
+      // 5. Audio absolute URL ignores imagesdir
+      // TODO: not implemented yet
+      // audio::http://example.org/audio/podcast.mp3[]
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="imageblock">
+        <div class="content">
+          <img src="http://example.org/images/tiger.png" alt="Tiger">
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>Look at this <span class="image"><img src="http://example.org/inline/cat.png" alt="Cat"></span> picture.</p>
+      </div>
+      <div class="imageblock">
+        <div class="content">
+          <img src="http://cdn.example.org/assets/logo.png" alt="Logo">
+        </div>
+      </div>
+    "#} // <div class="videoblock">
+        //   <div class="content">
+        //     <video src="http://example.org/videos/demo.mp4" controls>Your browser does not support the video tag.</video>
+        //   </div>
+        // </div>
+        // <div class="audioblock">
+        //   <div class="content">
+        //     <audio src="http://example.org/audio/podcast.mp3" controls>Your browser does not support the audio tag.</audio>
+        //   </div>
+        // </div>
+  );
+}
+
+// run on linux (CI) only for speed in local dev
+#[cfg(target_os = "linux")]
+#[test]
+fn test_remote_imagesdir_data_uri() {
+  let stdout = run_input(
+    &[
+      "--embedded",
+      "--safe-mode",
+      "safe",
+      "--attribute",
+      "allow-uri-read",
+    ],
+    adoc! {r#"
+      :imagesdir: https://gist.githubusercontent.com/jaredh159/be5b7f2292b044681264cadc68bb0b42/raw/1ea10ecfbe1153a9c37d04fe69b3f112a04558cf
+      :data-uri:
+
+      // Relative target resolved against URL imagesdir, fetched, embedded as base64
+      image::mini.svg[]
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="imageblock">
+        <div class="content">
+          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0wIDAiLz48L3N2Zz4=" alt="mini">
+        </div>
+      </div>
+    "#}
+  );
+}
+
+#[test]
+fn test_iconsdir_url_no_data_uri() {
+  let stdout = run_input(
+    &["--embedded", "--safe-mode", "safe"],
+    adoc! {r#"
+      :icons:
+      :iconsdir: http://cdn.example.org/icons
+      :icontype: png
+
+      // Icon resolves to URL/name.icontype
+      NOTE: This note has a remote icon URL.
+
+      // Custom icon also resolves against URL iconsdir
+      [TIP,icon=custom-tip]
+      Custom icon resolves to URL too.
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="admonitionblock note">
+        <table>
+          <tr>
+            <td class="icon"><img src="http://cdn.example.org/icons/note.png" alt="Note"></td>
+            <td class="content">This note has a remote icon URL.</td>
+          </tr>
+        </table>
+      </div>
+      <div class="admonitionblock tip">
+        <table>
+          <tr>
+            <td class="icon"><img src="http://cdn.example.org/icons/custom-tip.png" alt="Tip"></td>
+            <td class="content">Custom icon resolves to URL too.</td>
+          </tr>
+        </table>
+      </div>
+    "#}
+  );
+}
+
+#[test]
+fn test_iconsdir_url_data_uri_no_allow_uri_read() {
+  let stdout = run_input(
+    &["--embedded", "--safe-mode", "safe"],
+    adoc! {r#"
+      :icons:
+      :iconsdir: http://cdn.example.org/icons
+      :icontype: gif
+      :data-uri:
+
+      // data-uri set but no allow-uri-read: returns raw URL, no embedding
+      WARNING: Cannot embed without allow-uri-read.
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="admonitionblock warning">
+        <table>
+          <tr>
+            <td class="icon"><img src="http://cdn.example.org/icons/warning.gif" alt="Warning"></td>
+            <td class="content">Cannot embed without allow-uri-read.</td>
+          </tr>
+        </table>
+      </div>
+    "#}
+  );
+}
+
+// run on linux (CI) only for speed in local dev
+#[cfg(target_os = "linux")]
+#[test]
+fn test_iconsdir_url_data_uri_allow_uri_read() {
+  let stdout = run_input(
+    &[
+      "--embedded",
+      "--safe-mode",
+      "safe",
+      "--attribute",
+      "allow-uri-read",
+    ],
+    adoc! {r#"
+      :icons:
+      :iconsdir: https://raw.githubusercontent.com/jaredh159/asciidork/refs/heads/master/cli/tests/all/fixtures/images/icons
+      :icontype: gif
+      :data-uri:
+
+      // Remote icon fetched and embedded as base64
+      NOTE: This icon should be embedded.
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="admonitionblock note">
+        <table>
+          <tr>
+            <td class="icon">
+              <img src="data:image/gif;base64,R0lGODdhAQABAIABAAAAACEHbSwAAAAAAQABAAACAkwBADs=" alt="Note">
+            </td>
+            <td class="content">This icon should be embedded.</td>
+          </tr>
+        </table>
+      </div>
+    "#}
+  );
+}
+
+#[test]
+fn test_iconsdir_url_secure_mode_blocks_data_uri_embed() {
+  let stdout = run_input(
+    &[
+      "--embedded",
+      "--safe-mode",
+      "secure",
+      "--attribute",
+      "icons",
+      "--attribute",
+      "allow-uri-read",
+    ],
+    adoc! {r#"
+      :iconsdir: http://cdn.example.org/icons
+      :icontype: png
+      :data-uri:
+
+      // SECURE mode: data-uri embedding blocked, returns URL path instead
+      CAUTION: In secure mode, no embedding occurs.
+    "#},
+  );
+  expect_eq!(
+    stdout.trim(),
+    html! {r#"
+      <div class="admonitionblock caution">
+        <table>
+          <tr>
+            <td class="icon"><img src="http://cdn.example.org/icons/caution.png" alt="Caution"></td>
+            <td class="content">In secure mode, no embedding occurs.</td>
+          </tr>
+        </table>
+      </div>
+    "#}
+  );
+}
