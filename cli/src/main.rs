@@ -34,7 +34,7 @@ fn run(
   mut stderr: impl Write,
 ) -> Result<(), Box<dyn Error>> {
   let (src, src_file, base_dir, input_mtime) = {
-    if let Some(pathbuf) = &args.input {
+    if let Some(pathbuf) = args.input() {
       let abspath = dunce::canonicalize(pathbuf)?;
       let mut file = fs::File::open(pathbuf.clone())?;
       let mut input_mtime = None;

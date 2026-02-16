@@ -54,6 +54,15 @@ pub struct Args {
   #[clap(short = 't', long, default_value = "false")]
   #[clap(help = "Print timing/perf info\n")]
   pub print_timings: bool,
+
+  #[clap(help = "The file path to parse - omit to read from stdin")]
+  pub file: Option<std::path::PathBuf>,
+}
+
+impl Args {
+  pub fn input(&self) -> Option<&std::path::PathBuf> {
+    self.file.as_ref().or(self.input.as_ref())
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
