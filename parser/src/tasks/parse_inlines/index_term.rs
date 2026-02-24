@@ -11,7 +11,7 @@ impl<'arena> Parser<'arena> {
   ) -> Result<(Inline<'arena>, SourceLocation)> {
     let mut loc = token.loc;
     line.discard_assert(TokenKind::OpenBracket);
-    let mut attr_list = self.parse_inline_attr_list(line)?;
+    let mut attr_list = self.parse_inline_macro_attr_list(line)?;
     loc.end = attr_list.loc.end;
     let Some(term) = attr_list.positional.get_mut(0).and_then(Option::take) else {
       self.err_at("invalid index term macro", attr_list.loc)?;

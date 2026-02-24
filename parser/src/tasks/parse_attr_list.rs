@@ -3,6 +3,41 @@ use crate::token::TokenSpec::*;
 use crate::variants::token::*;
 
 impl<'arena> Parser<'arena> {
+  pub(crate) fn parse_block_attr_list(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<AttrList<'arena>> {
+    self._parse_attr_list(line, true, false, true)
+  }
+
+  pub(crate) fn parse_block_macro_attr_list(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<AttrList<'arena>> {
+    self._parse_attr_list(line, true, false, false)
+  }
+
+  pub(crate) fn parse_inline_macro_attr_list(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<AttrList<'arena>> {
+    self._parse_attr_list(line, false, false, false)
+  }
+
+  pub(super) fn parse_formatted_text_attr_list(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<AttrList<'arena>> {
+    self._parse_attr_list(line, false, true, true)
+  }
+
+  pub(crate) fn parse_link_macro_attr_list(
+    &mut self,
+    line: &mut Line<'arena>,
+  ) -> Result<AttrList<'arena>> {
+    self._parse_link_macro_attr_list(line)
+  }
+
   pub(super) fn parse_inline_anchor(
     &mut self,
     line: &mut Line<'arena>,
@@ -16,6 +51,8 @@ impl<'arena> Parser<'arena> {
   ) -> Result<Option<AnchorSrc<'arena>>> {
     self.parse_anchor(line, true)
   }
+
+  // helpers
 
   fn parse_anchor(
     &mut self,
@@ -70,31 +107,7 @@ impl<'arena> Parser<'arena> {
     Ok(Some(anchor))
   }
 
-  pub(crate) fn parse_block_attr_list(
-    &mut self,
-    line: &mut Line<'arena>,
-  ) -> Result<AttrList<'arena>> {
-    self._parse_attr_list(line, true, false)
-  }
-
-  pub(crate) fn parse_inline_attr_list(
-    &mut self,
-    line: &mut Line<'arena>,
-  ) -> Result<AttrList<'arena>> {
-    self._parse_attr_list(line, false, false)
-  }
-
-  pub(super) fn parse_formatted_text_attr_list(
-    &mut self,
-    line: &mut Line<'arena>,
-  ) -> Result<AttrList<'arena>> {
-    self._parse_attr_list(line, false, true)
-  }
-
-  pub(crate) fn parse_link_macro_attr_list(
-    &mut self,
-    line: &mut Line<'arena>,
-  ) -> Result<AttrList<'arena>> {
+  fn _parse_link_macro_attr_list(&mut self, line: &mut Line<'arena>) -> Result<AttrList<'arena>> {
     let mut in_double_quote = false;
     let mut last_kind = TokenKind::Eof;
     let mut parse_as_attr_list = false;
@@ -123,7 +136,7 @@ impl<'arena> Parser<'arena> {
 
     if parse_as_attr_list {
       self.ctx.inline_ctx = InlineCtx::LinkMacroAttrs;
-      let result = self._parse_attr_list(line, false, false);
+      let result = self._parse_attr_list(line, false, false, false);
       self.ctx.inline_ctx = InlineCtx::None;
       return result;
     }
@@ -155,6 +168,7 @@ impl<'arena> Parser<'arena> {
     line: &mut Line<'arena>,
     full_line: bool,
     formatted_text: bool,
+    supports_shorthand: bool,
   ) -> Result<AttrList<'arena>> {
     let mut attrs = AttrList::new(line.first_loc().unwrap().decr_start(), self.bump);
 
@@ -171,7 +185,7 @@ impl<'arena> Parser<'arena> {
       for _ in 0..num_tokens {
         tokens.push_non_attr(line.consume_current().unwrap());
       }
-      self.parse_attr(tokens, formatted_text, &mut attrs)?;
+      self.parse_attr(tokens, formatted_text, supports_shorthand, &mut attrs)?;
       line.discard_assert(Comma);
     }
 
@@ -189,7 +203,7 @@ impl<'arena> Parser<'arena> {
     }
 
     if !formatted_text || tokens.iter().any(|t| t.kind == Word) {
-      self.parse_attr(tokens, formatted_text, &mut attrs)?;
+      self.parse_attr(tokens, formatted_text, supports_shorthand, &mut attrs)?;
     }
 
     let close_bracket = line.discard_assert(CloseBracket);
@@ -202,6 +216,7 @@ impl<'arena> Parser<'arena> {
     &mut self,
     tokens: Deq<'arena, Token<'arena>>,
     formatted_text: bool,
+    supports_shorthand: bool,
     attr_list: &mut AttrList<'arena>,
   ) -> Result<()> {
     let tokens = trim(tokens);
@@ -209,7 +224,7 @@ impl<'arena> Parser<'arena> {
       attr_list.positional.push(None);
       return Ok(());
     }
-    match self.attr_ir(tokens) {
+    match self.attr_ir(tokens, supports_shorthand) {
       AttrIr::Positional(inner, _) if formatted_text && !attr_list.roles.is_empty() => {
         self.err_at(
           ONLY_SHORTHAND_ERR,
@@ -257,7 +272,7 @@ impl<'arena> Parser<'arena> {
         return Ok(());
       }
       AttrIr::Positional(mut tokens, with_shorthand) => {
-        if with_shorthand {
+        if with_shorthand && supports_shorthand {
           let mut pos_tokens = Deq::new(self.bump);
           while !matches!(tokens.first().unwrap().kind, Hash | Percent | Dots) {
             pos_tokens.push_non_attr(tokens.pop_front().unwrap());
@@ -269,7 +284,7 @@ impl<'arena> Parser<'arena> {
           attr_list
             .positional
             .push(self.parse_attr_nodes(pos_tokens)?);
-          self.parse_attr(tokens, formatted_text, attr_list)?;
+          self.parse_attr(tokens, formatted_text, true, attr_list)?;
         } else {
           attr_list.positional.push(self.parse_attr_nodes(tokens)?);
         }
@@ -448,7 +463,11 @@ impl<'arena> Parser<'arena> {
     groups
   }
 
-  fn attr_ir(&self, tokens: Deq<'arena, Token<'arena>>) -> AttrIr<'arena> {
+  fn attr_ir(
+    &self,
+    tokens: Deq<'arena, Token<'arena>>,
+    context_supports_shorthand: bool,
+  ) -> AttrIr<'arena> {
     enum Kind {
       Shorthand,
       Positional,
@@ -460,7 +479,9 @@ impl<'arena> Parser<'arena> {
         return acc;
       }
       match token.kind {
-        Dots | Hash | Percent if i == 0 && token.len() == 1 && tokens.len() > 1 => {
+        Dots | Hash | Percent
+          if context_supports_shorthand && i == 0 && token.len() == 1 && tokens.len() > 1 =>
+        {
           Some(Kind::Shorthand)
         }
         Dots | Hash | Percent if token.len() == 1 => {
@@ -886,14 +907,16 @@ mod tests {
       let mut inline_parser = test_parser!(&inline_input);
       let mut line = inline_parser.read_line().unwrap().unwrap();
       line.discard_assert(TokenKind::OpenBracket);
-      let attr_list = inline_parser.parse_inline_attr_list(&mut line).unwrap();
+      let attr_list = inline_parser
+        .parse_inline_macro_attr_list(&mut line)
+        .unwrap();
       expect_eq!(attr_list, expected, from: input);
       expect_eq!("foo bar", &line.reassemble_src(), from: input);
     }
   }
 
   #[test]
-  fn test_parse_attr_list_more() {
+  fn test_parse_attr_list_non_shorthand_ctxts() {
     let cases = vec![
       (
         "[ foo bar ]",
@@ -970,13 +993,6 @@ mod tests {
         },
       ),
       (
-        "[#someid]",
-        AttrList {
-          id: Some(src!("someid", 2..8)),
-          ..attr_list!(0..9)
-        },
-      ),
-      (
         "[id=someid]",
         AttrList {
           id: Some(src!("someid", 4..10)),
@@ -992,21 +1008,6 @@ mod tests {
         },
       ),
       (
-        "[#someid.nowrap]",
-        AttrList {
-          id: Some(src!("someid", 2..8)),
-          roles: vecb![src!("nowrap", 9..15)],
-          ..attr_list!(0..16)
-        },
-      ),
-      (
-        "[.nowrap]",
-        AttrList {
-          roles: vecb![src!("nowrap", 2..8)],
-          ..attr_list!(0..9)
-        },
-      ),
-      (
         "[role=nowrap]",
         AttrList {
           roles: vecb![src!("nowrap", 6..12)],
@@ -1019,13 +1020,6 @@ mod tests {
           positional: vecb![None],
           roles: vecb![src!("nowrap", 6..12)],
           ..attr_list!(0..14)
-        },
-      ),
-      (
-        "[.nowrap.underline]",
-        AttrList {
-          roles: vecb![src!("nowrap", 2..8), src!("underline", 9..18)],
-          ..attr_list!(0..19)
         },
       ),
       (
@@ -1104,19 +1098,7 @@ mod tests {
         },
       ),
       (
-        "[#custom-id,named=\"value of named\"]",
-        AttrList {
-          positional: vecb![None],
-          id: Some(src!("custom-id", 2..11)),
-          named: Named::from(vecb![(
-            src!("named", 12..17),
-            just!("value of named", 19..33),
-          )]),
-          ..attr_list!(0..35)
-        },
-      ),
-      (
-        "[Dr. Foo]", // `. ` can't trigger option
+        "[Dr. Foo]", // `. ` can't trigger role
         AttrList {
           positional: vecb![Some(just!("Dr. Foo", 1..8))],
           ..attr_list!(0..9)
@@ -1191,6 +1173,191 @@ mod tests {
           ..attr_list!(0..7)
         },
       ),
+      // below here are shorthand that should not be recognized in this context
+      (
+        "[#someid]",
+        AttrList {
+          positional: vecb![Some(just!("#someid", 1..8))],
+          ..attr_list!(0..9)
+        },
+      ),
+      (
+        "[#someid.nowrap]",
+        AttrList {
+          positional: vecb![Some(just!("#someid.nowrap", 1..15))],
+          ..attr_list!(0..16)
+        },
+      ),
+      (
+        "[.nowrap]",
+        AttrList {
+          positional: vecb![Some(just!(".nowrap", 1..8))],
+          ..attr_list!(0..9)
+        },
+      ),
+      (
+        "[#custom-id,named=\"value of named\"]",
+        AttrList {
+          positional: vecb![Some(just!("#custom-id", 1..11)), None],
+          named: Named::from(vecb![(
+            src!("named", 12..17),
+            just!("value of named", 19..33),
+          )]),
+          ..attr_list!(0..35)
+        },
+      ),
+      (
+        "[%header%footer%autowidth]",
+        AttrList {
+          positional: vecb![Some(just!("%header%footer%autowidth", 1..25))],
+          ..attr_list!(0..26)
+        },
+      ),
+      (
+        "[example%collapsible]",
+        AttrList {
+          positional: vecb![Some(just!("example%collapsible", 1..20))],
+          ..attr_list!(0..21)
+        },
+      ),
+      (
+        "[example#coll_psible.cust-class]",
+        AttrList {
+          positional: vecb![Some(just!("example#coll_psible.cust-class", 1..31))],
+          ..attr_list!(0..32)
+        },
+      ),
+      (
+        "[foo.png]",
+        AttrList {
+          positional: vecb![Some(nodes![node!("foo.png"; 1..8)])],
+          ..attr_list!(0..9)
+        },
+      ),
+    ];
+    for (input, expected) in cases {
+      // parse as block macro
+      let mut block_parser = test_parser!(input);
+      let mut line = block_parser.read_line().unwrap().unwrap();
+      line.discard_assert(TokenKind::OpenBracket);
+      let attr_list = block_parser.parse_block_macro_attr_list(&mut line).unwrap();
+      expect_eq!(attr_list, expected, from: input);
+      // parse as inline macro
+      let mut inline_input = String::from(input);
+      inline_input.push_str("foo bar");
+      let mut inline_parser = test_parser!(&inline_input);
+      let mut line = inline_parser.read_line().unwrap().unwrap();
+      line.discard_assert(TokenKind::OpenBracket);
+      let attr_list = inline_parser
+        .parse_inline_macro_attr_list(&mut line)
+        .unwrap();
+      expect_eq!(attr_list, expected, from: input);
+      expect_eq!("foo bar", &line.reassemble_src(), from: input);
+    }
+  }
+
+  #[test]
+  fn test_parse_attr_list_shorthand_formatted() {
+    let cases = vec![
+      (
+        "[#someid]",
+        AttrList {
+          id: Some(src!("someid", 2..8)),
+          ..attr_list!(0..9)
+        },
+      ),
+      (
+        "[#someid.nowrap]",
+        AttrList {
+          id: Some(src!("someid", 2..8)),
+          roles: vecb![src!("nowrap", 9..15)],
+          ..attr_list!(0..16)
+        },
+      ),
+      (
+        "[.nowrap]",
+        AttrList {
+          roles: vecb![src!("nowrap", 2..8)],
+          ..attr_list!(0..9)
+        },
+      ),
+      (
+        "[.nowrap.underline]",
+        AttrList {
+          roles: vecb![src!("nowrap", 2..8), src!("underline", 9..18)],
+          ..attr_list!(0..19)
+        },
+      ),
+      (
+        "[%header%footer%autowidth]",
+        AttrList {
+          options: vecb![
+            src!("header", 2..8),
+            src!("footer", 9..15),
+            src!("autowidth", 16..25),
+          ],
+          ..attr_list!(0..26)
+        },
+      ),
+    ];
+    for (input, expected) in cases {
+      let mut inline_input = String::from(input);
+      inline_input.push_str("foo bar");
+      let mut inline_parser = test_parser!(&inline_input);
+      let mut line = inline_parser.read_line().unwrap().unwrap();
+      line.discard_assert(TokenKind::OpenBracket);
+      let attr_list = inline_parser
+        .parse_formatted_text_attr_list(&mut line)
+        .unwrap();
+      expect_eq!(attr_list, expected, from: input);
+      expect_eq!("foo bar", &line.reassemble_src(), from: input);
+    }
+  }
+
+  #[test]
+  fn test_parse_attr_list_shorthand_block() {
+    let cases = vec![
+      (
+        "[#someid]",
+        AttrList {
+          id: Some(src!("someid", 2..8)),
+          ..attr_list!(0..9)
+        },
+      ),
+      (
+        "[#someid.nowrap]",
+        AttrList {
+          id: Some(src!("someid", 2..8)),
+          roles: vecb![src!("nowrap", 9..15)],
+          ..attr_list!(0..16)
+        },
+      ),
+      (
+        "[.nowrap]",
+        AttrList {
+          roles: vecb![src!("nowrap", 2..8)],
+          ..attr_list!(0..9)
+        },
+      ),
+      (
+        "[.nowrap.underline]",
+        AttrList {
+          roles: vecb![src!("nowrap", 2..8), src!("underline", 9..18)],
+          ..attr_list!(0..19)
+        },
+      ),
+      (
+        "[#custom-id,named=\"value of named\"]",
+        AttrList {
+          positional: vecb![None],
+          id: Some(src!("custom-id", 2..11)),
+          named: Named::from(vecb![(
+            src!("named", 12..17),
+            just!("value of named", 19..33),
+          )]),
+          ..attr_list!(0..35)
+        },
+      ),
       (
         "[%header%footer%autowidth]",
         AttrList {
@@ -1235,27 +1402,28 @@ mod tests {
       line.discard_assert(TokenKind::OpenBracket);
       let attr_list = block_parser.parse_block_attr_list(&mut line).unwrap();
       expect_eq!(attr_list, expected, from: input);
-      // parse as inline
-      let mut inline_input = String::from(input);
-      inline_input.push_str("foo bar");
-      let mut inline_parser = test_parser!(&inline_input);
-      let mut line = inline_parser.read_line().unwrap().unwrap();
-      line.discard_assert(TokenKind::OpenBracket);
-      let attr_list = inline_parser.parse_inline_attr_list(&mut line).unwrap();
-      expect_eq!(attr_list, expected, from: input);
-      expect_eq!("foo bar", &line.reassemble_src(), from: input);
     }
   }
 
   #[test]
   fn test_parse_attr_list_block_only() {
-    let cases = vec![(
-      "[\"foo]\"]", // invalid for inline
-      AttrList {
-        positional: vecb![Some(nodes![node!("foo]"; 2..6)])],
-        ..attr_list!(0..8)
-      },
-    )];
+    let cases = vec![
+      (
+        "[\"foo]\"]", // invalid for inline
+        AttrList {
+          positional: vecb![Some(nodes![node!("foo]"; 2..6)])],
+          ..attr_list!(0..8)
+        },
+      ),
+      (
+        "[example#collapsible]",
+        AttrList {
+          positional: vecb![Some(just!("example", 1..8))],
+          id: Some(src!("collapsible", 9..20)),
+          ..attr_list!(0..21)
+        },
+      ),
+    ];
     for (input, expected) in cases {
       // parse as block
       let mut block_parser = test_parser!(input);
@@ -1511,7 +1679,7 @@ mod tests {
       let line = parser.read_line().unwrap().unwrap();
       let mut deq = Deq::new(parser.bump);
       deq.extend(line.into_iter());
-      let parse_kind = parser.attr_ir(deq);
+      let parse_kind = parser.attr_ir(deq, true);
       expect_eq!(parse_kind.assert_string(), expected, from: input);
     }
   }
@@ -1681,7 +1849,7 @@ mod tests {
       let mut line = parser.read_line().unwrap().unwrap();
       line.discard(1); // `[`
       let diag = parser
-        ._parse_attr_list(&mut line, true, formatted)
+        ._parse_attr_list(&mut line, true, formatted, true)
         .err()
         .unwrap();
       expect_eq!(diag.plain_text(), expected, from: input);

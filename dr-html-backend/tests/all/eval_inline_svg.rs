@@ -35,7 +35,7 @@ assert_html!(
   w_link,
   resolving: MINI_SVG,
   adoc! {r#"
-    image::mini.svg[link=https://example.org,%inline]
+    image::mini.svg[link=https://example.org,opts=inline]
   "#},
   html! {r#"
     <div class="imageblock">
@@ -52,7 +52,7 @@ assert_html!(
   non_block,
   resolving: MINI_SVG,
   adoc! {r#"
-    image:mini.svg[%inline]
+    image:mini.svg[opts=inline]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -130,7 +130,7 @@ assert_html!(
   w_link_self_does_not_link,
   resolving: MINI_SVG,
   adoc! {r#"
-    image::mini.svg[link=self,%inline]
+    image::mini.svg[link=self,opts=inline]
   "#},
   contains:
    r#"<div class="content"><svg"#,
@@ -141,7 +141,7 @@ assert_html!(
   inline_w_link_self_does_not_link,
   resolving: MINI_SVG,
   adoc! {r#"
-    image:mini.svg[link=self,%inline]
+    image:mini.svg[link=self,opts=inline]
   "#},
   contains:
    r#"<span class="image"><svg"#,
@@ -152,7 +152,7 @@ assert_html!(
   percentage_width,
   resolving: MINI_SVG,
   adoc! {r#"
-    image::mini.svg[width="50%",%inline]
+    image::mini.svg[width="50%",opts=inline]
   "#},
   contains: r#"<svg width="50%""#,
 );

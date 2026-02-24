@@ -14,7 +14,7 @@ impl<'arena> Parser<'arena> {
     line.discard_assert(Colon);
     let is_uri = line.current_token().kind(UriScheme);
     let target = line.consume_macro_target(self.bump);
-    let attrs = self.parse_block_attr_list(&mut line)?;
+    let attrs = self.parse_block_macro_attr_list(&mut line)?;
     self.restore_lines(lines);
     let kind = self.parse_image_kind(&target, is_uri, &attrs, Some(&meta.attrs))?;
     Ok(Block {

@@ -1130,6 +1130,22 @@ impl Backend for Html5s {
     }
   }
 
+  fn visit_audio_macro(&mut self, target: &SourceString, attrs: &AttrList, block: &Block) {
+    let el = if block.has_title() { "figure" } else { "div" };
+    self.open_element(el, &["audio-block"], &block.meta.attrs);
+    self.audio_element(&target.src, attrs);
+    self.render_buffered_block_title(block, false);
+    self.push(["</", el, ">"]);
+  }
+
+  fn visit_video_macro(&mut self, target: &SourceString, attrs: &AttrList, block: &Block) {
+    let el = if block.has_title() { "figure" } else { "div" };
+    self.open_element(el, &["video-block"], &block.meta.attrs);
+    self.video_element(target, attrs);
+    self.render_buffered_block_title(block, false);
+    self.push(["</", el, ">"]);
+  }
+
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
     if keys.len() > 1 {
       self.push_str(r#"<kbd class="keyseq">"#);
@@ -1453,6 +1469,8 @@ impl Html5s {
       BlockContext::Image => ("<figcaption>", "</figcaption>"),
       BlockContext::Example => ("<figcaption>", "</figcaption>"),
       BlockContext::Listing => ("<figcaption>", "</figcaption>"),
+      BlockContext::Audio => ("<figcaption>", "</figcaption>"),
+      BlockContext::Video => ("<figcaption>", "</figcaption>"),
       _ => ("", ""),
     };
     if let Some(custom_caption) = block.meta.attrs.named("caption") {

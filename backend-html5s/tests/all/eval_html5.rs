@@ -792,9 +792,9 @@ assert_html!(
   inline_svgs,
   resolving: br#"<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>"#,
   adoc! {r#"
-    image:mini.svg[%inline]
+    image:mini.svg[opts=inline]
 
-    image::mini.svg[%inline]
+    image::mini.svg[opts=inline]
   "#},
   html! {r#"
     <p>
@@ -803,5 +803,97 @@ assert_html!(
     <div class="image-block">
       <svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>
     </div>
+  "#}
+);
+
+assert_html!(
+  audio_macros,
+  adoc! {r#"
+    // .with-title-uses-figure-figcaption
+    .Ocean waves
+    audio::ocean.wav[]
+
+    // .with-id-and-role
+    [#my-audio.featured]
+    audio::track.mp3[]
+
+    // .with-options
+    audio::podcast.mp3[options="autoplay,nocontrols,loop"]
+
+    // .combined
+    [#intro.highlight]
+    .Introduction segment
+    audio::interview.mp3[opts="autoplay,loop",start=30,end=90]
+  "#},
+  html! {r#"
+    <figure class="audio-block">
+      <audio src="ocean.wav" controls>Your browser does not support the audio tag.</audio>
+      <figcaption>Ocean waves</figcaption>
+    </figure>
+    <div id="my-audio" class="audio-block featured">
+      <audio src="track.mp3" controls>Your browser does not support the audio tag.</audio>
+    </div>
+    <div class="audio-block">
+      <audio src="podcast.mp3" autoplay loop>Your browser does not support the audio tag.</audio>
+    </div>
+    <figure id="intro" class="audio-block highlight">
+      <audio src="interview.mp3#t=30,90" autoplay loop controls>Your browser does not support the audio tag.</audio>
+      <figcaption>Introduction segment</figcaption>
+    </figure>
+  "#}
+);
+
+assert_html!(
+  video_macros,
+  adoc! {r#"
+    // .with-title-uses-figure-figcaption
+    .Product demo
+    video::demo.mp4[]
+
+    // .with-id-and-role
+    [#my-video.featured]
+    video::promo.mp4[]
+
+    // .with-options
+    video::cats.avi[options="autoplay,muted,nocontrols,loop"]
+
+    // .with-time-range
+    video::cats.avi[start=30,end=90]
+
+    // .youtube-with-options
+    video::U8GBXvdmHT4[youtube, 640, 360, start=60, options="autoplay,muted,loop"]
+
+    // .vimeo-with-options
+    video::67480300[vimeo, 400, 300, start=60, options="autoplay,muted"]
+
+    // .combined
+    [#promo.highlight]
+    .Product walkthrough
+    video::demo.mp4[poster=thumb.png,width=800,height=600,start=10,end=300,opts="autoplay,muted,loop"]
+  "#},
+  html! {r#"
+    <figure class="video-block">
+      <video src="demo.mp4" controls>Your browser does not support the video tag.</video>
+      <figcaption>Product demo</figcaption>
+    </figure>
+    <div id="my-video" class="video-block featured">
+      <video src="promo.mp4" controls>Your browser does not support the video tag.</video>
+    </div>
+    <div class="video-block">
+      <video src="cats.avi" autoplay muted loop>Your browser does not support the video tag.</video>
+    </div>
+    <div class="video-block">
+      <video src="cats.avi#t=30,90" controls>Your browser does not support the video tag.</video>
+    </div>
+    <div class="video-block">
+      <iframe width="640" height="360" src="https://www.youtube.com/embed/U8GBXvdmHT4?autoplay=1&amp;mute=1&amp;loop=1&amp;rel=0&amp;playlist=U8GBXvdmHT4&amp;start=60" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <div class="video-block">
+      <iframe width="400" height="300" src="https://player.vimeo.com/video/67480300?autoplay=1&amp;muted=1#at=60" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <figure id="promo" class="video-block highlight">
+      <video src="demo.mp4#t=10,300" width="800" height="600" poster="thumb.png" autoplay muted loop controls>Your browser does not support the video tag.</video>
+      <figcaption>Product walkthrough</figcaption>
+    </figure>
   "#}
 );

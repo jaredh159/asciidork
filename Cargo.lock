@@ -143,6 +143,7 @@ name = "asciidork-core"
 version = "0.34.0"
 dependencies = [
  "lazy_static",
+ "regex",
 ]
 
 [[package]]

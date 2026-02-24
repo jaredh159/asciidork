@@ -35,7 +35,7 @@ pub trait HtmlBuf {
     }
   }
 
-  fn push_html_attr(&mut self, name: &'static str, value: &str) {
+  fn push_html_attr(&mut self, name: &str, value: &str) {
     self.push([" ", name, "=\""]);
     self.push_str_attr_escaped(value);
     self.push_ch('"');

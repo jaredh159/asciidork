@@ -12,7 +12,7 @@ mod list_context;
 mod parse_context;
 mod parse_result;
 pub mod parser;
-pub mod regx;
+pub use asciidork_core::regx;
 mod substitutions;
 mod tasks;
 mod token;
@@ -48,7 +48,6 @@ mod internal {
   pub use crate::parse_context::*;
   pub use crate::parse_result::*;
   pub use crate::parser::*;
-  pub use crate::regx;
   pub use crate::substitutions::*;
   #[cfg(feature = "attr_ref_observation")]
   pub use crate::tasks::attr_refs::AttrRefObserver;
@@ -58,6 +57,7 @@ mod internal {
   pub use crate::tasks::parse_section::PeekedSection;
   pub use crate::token::*;
   pub use crate::utils::bump::*;
+  pub use asciidork_core::regx;
   pub use asciidork_core::{Author, DocType, JobAttr, JobSettings, Path, ReadAttr, SafeMode};
   pub use asciidork_core::{file, iff};
   pub use ast::*;

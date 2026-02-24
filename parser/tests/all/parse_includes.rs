@@ -183,7 +183,7 @@ fn include_with_2_trailing_newlines() {
 
 #[test]
 fn optional_include_not_found() {
-  let mut parser = test_parser!("include::nope.adoc[%optional]");
+  let mut parser = test_parser!("include::nope.adoc[opts=optional]");
   parser.apply_job_settings(JobSettings::r#unsafe());
   parser.set_resolver(Box::new(ErrorResolver(ResolveError::NotFound)));
   assert!(parser.parse().is_ok());
