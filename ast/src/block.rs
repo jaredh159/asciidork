@@ -46,6 +46,10 @@ pub enum EmptyMetadata<'arena> {
     attrs: AttrList<'arena>,
     kind: ImageKind<'arena>,
   },
+  AudioVideo {
+    target: SourceString<'arena>,
+    attrs: AttrList<'arena>,
+  },
   DiscreteHeading {
     level: u8,
     content: InlineNodes<'arena>,
@@ -113,6 +117,7 @@ impl BlockContent<'_> {
       BlockContent::Empty(EmptyMetadata::Comment(src)) => Some(src.loc),
       BlockContent::Empty(EmptyMetadata::DiscreteHeading { content, .. }) => content.last_loc(),
       BlockContent::Empty(EmptyMetadata::Image { attrs, .. }) => Some(attrs.loc),
+      BlockContent::Empty(EmptyMetadata::AudioVideo { attrs, .. }) => Some(attrs.loc),
       BlockContent::Empty(EmptyMetadata::None) => None,
       BlockContent::Table(table) => table.last_loc(),
       BlockContent::DocumentAttribute(_, _) => None,

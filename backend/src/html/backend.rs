@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use roman_numerals_fn::to_roman_numeral;
 
-use asciidork_core::{DocType, JobAttr, Path, SafeMode, file, iff};
+use asciidork_core::{DocType, JobAttr, Path, SafeMode, file, iff, regx};
 use ast::{AttrValue, ReadAttr, SpecialSection, prelude::*};
 
 use crate::{
@@ -190,6 +190,38 @@ pub trait HtmlBackend: HtmlBuf {
     state.book_part_num = 0;
   }
 
+  fn video_element(&mut self, target: &str, attrs: &AttrList) {
+    crate::html::video::element(self, target, attrs);
+  }
+
+  fn audio_element(&mut self, target: &str, attrs: &AttrList) {
+    self.push_str(r#"<audio src=""#);
+    if !regx::URI_SNIFF.is_match(target)
+      && let Some(imagesdir) = self.doc_meta().string("imagesdir")
+    {
+      self.push([&imagesdir, "/"]);
+    }
+    self.push_str(target);
+    let start = attrs.named("start");
+    let end = attrs.named("end");
+    match (start, end) {
+      (None, Some(end)) => self.push(["#t=,", end, "\""]),
+      (Some(start), None) => self.push(["#t=", start, "\""]),
+      (Some(start), Some(end)) => self.push(["#t=", start, ",", end, "\""]),
+      (None, None) => self.push_ch('"'),
+    }
+    if attrs.has_option("autoplay") {
+      self.push_str(" autoplay");
+    }
+    if attrs.has_option("loop") {
+      self.push_str(" loop");
+    }
+    if !attrs.has_option("nocontrols") {
+      self.push_str(" controls");
+    }
+    self.push_str(">Your browser does not support the audio tag.</audio>");
+  }
+
   fn push_icon_uri(&mut self, name: &str, prefix: Option<&str>) {
     self.push_icon_img_path();
     self.push([prefix.unwrap_or(""), name]);
@@ -234,60 +266,10 @@ pub trait HtmlBackend: HtmlBuf {
     self.swapbuf(&mut s);
   }
 
-  fn _render_inner_image(
-    &mut self,
-    target: &str,
-    data_uri: Option<Option<&str>>,
-    attrs: &AttrList,
-    is_block: bool,
-  ) {
-    self.push_str(r#"<img src=""#);
-    match data_uri {
-      Some(data_uri) => {
-        self.push_str("data:image/");
-        if let Some(ext) = file::ext(target) {
-          let mimetype = iff!(ext == "svg", "svg+xml", ext);
-          self.push_str(mimetype);
-        } else {
-          self.push_str("application/octet-stream");
-        }
-        self.push_str(";base64,");
-        if let Some(data) = data_uri {
-          self.push_str(data);
-        }
-      }
-      None => {
-        if target.starts_with("data:") {
-          self.push_str(target);
-        } else {
-          self.push_img_path(target);
-        }
-      }
-    }
-    self.push_str(r#"" alt=""#);
-    if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
-      self.push_str_attr_escaped(alt);
-    } else if let Some(Some(nodes)) = attrs.positional.first() {
-      for s in nodes.plain_text() {
-        self.push_str_attr_escaped(s);
-      }
-    } else {
-      let alt = file::stem(target).replace(['-', '_'], " ");
-      self.push_str_attr_escaped(&alt);
-    }
-    self.push_ch('"');
-    self.push_named_or_pos_attr("width", 1, attrs);
-    self.push_named_or_pos_attr("height", 2, attrs);
-    if !is_block {
-      self.push_named_attr("title", attrs);
-    }
-    self.push_ch('>');
-  }
-
   fn render_image(&mut self, target: &str, attrs: &AttrList, img_kind: &ImageKind, is_block: bool) {
     match img_kind {
       ImageKind::DataUri(data_uri) => {
-        self._render_inner_image(target, Some(data_uri.as_deref()), attrs, is_block);
+        render_inner_image(self, target, Some(data_uri.as_deref()), attrs, is_block);
       }
       ImageKind::Standard => {
         let format = attrs.named("format").or_else(|| file::ext(target));
@@ -298,7 +280,7 @@ pub trait HtmlBackend: HtmlBuf {
         {
           return self.render_interactive_svg(target, attrs);
         }
-        self._render_inner_image(target, None, attrs, is_block);
+        render_inner_image(self, target, None, attrs, is_block);
       }
       ImageKind::InlineSvg(Some(inline_svg)) => self.push_str(inline_svg),
       ImageKind::InlineSvg(None) => {
@@ -836,6 +818,56 @@ pub trait HtmlBackend: HtmlBuf {
   fn render_doc_title(&self) -> bool {
     !self.doc_meta().is_true("noheader") && self.doc_meta().show_doc_title()
   }
+}
+
+fn render_inner_image<B: HtmlBackend + ?Sized>(
+  backend: &mut B,
+  target: &str,
+  data_uri: Option<Option<&str>>,
+  attrs: &AttrList,
+  is_block: bool,
+) {
+  backend.push_str(r#"<img src=""#);
+  match data_uri {
+    Some(data_uri) => {
+      backend.push_str("data:image/");
+      if let Some(ext) = file::ext(target) {
+        let mimetype = iff!(ext == "svg", "svg+xml", ext);
+        backend.push_str(mimetype);
+      } else {
+        backend.push_str("application/octet-stream");
+      }
+      backend.push_str(";base64,");
+      if let Some(data) = data_uri {
+        backend.push_str(data);
+      }
+    }
+    None => {
+      if target.starts_with("data:") {
+        backend.push_str(target);
+      } else {
+        backend.push_img_path(target);
+      }
+    }
+  }
+  backend.push_str(r#"" alt=""#);
+  if let Some(alt) = attrs.named("alt").or_else(|| attrs.str_positional_at(0)) {
+    backend.push_str_attr_escaped(alt);
+  } else if let Some(Some(nodes)) = attrs.positional.first() {
+    for s in nodes.plain_text() {
+      backend.push_str_attr_escaped(s);
+    }
+  } else {
+    let alt = file::stem(target).replace(['-', '_'], " ");
+    backend.push_str_attr_escaped(&alt);
+  }
+  backend.push_ch('"');
+  backend.push_named_or_pos_attr("width", 1, attrs);
+  backend.push_named_or_pos_attr("height", 2, attrs);
+  if !is_block {
+    backend.push_named_attr("title", attrs);
+  }
+  backend.push_ch('>');
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

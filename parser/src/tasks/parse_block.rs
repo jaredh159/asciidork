@@ -56,6 +56,8 @@ impl<'arena> Parser<'arena> {
       return match first_token.lexeme.as_str() {
         "image:" => self.parse_image_block(lines, meta),
         "toc:" => self.parse_toc_macro(lines, meta),
+        "audio:" => self.parse_audio_video_macro(Context::Audio, lines, meta),
+        "video:" => self.parse_audio_video_macro(Context::Video, lines, meta),
         _ => self.parse_plugin_block_macro(lines, meta),
       }
       .map(Some);
@@ -519,6 +521,26 @@ impl<'arena> Parser<'arena> {
     }))
   }
 
+  fn parse_audio_video_macro(
+    &mut self,
+    context: BlockContext,
+    mut lines: ContiguousLines<'arena>,
+    meta: ChunkMeta<'arena>,
+  ) -> Result<Block<'arena>> {
+    let mut line = lines.consume_current().unwrap();
+    self.restore_lines(lines);
+    let line_loc = line.loc().unwrap();
+    line.discard(2);
+    let target = line.consume_macro_target(self.bump);
+    let attrs = self.parse_block_macro_attr_list(&mut line)?;
+    Ok(Block {
+      context,
+      content: Content::Empty(EmptyMetadata::AudioVideo { target, attrs }),
+      loc: MultiSourceLocation::spanning(meta.start_loc, line_loc),
+      meta,
+    })
+  }
+
   fn parse_toc_macro(
     &mut self,
     mut lines: ContiguousLines<'arena>,
@@ -558,7 +580,7 @@ impl<'arena> Parser<'arena> {
       line.discard_assert(OpenBracket);
       None
     };
-    let attrs = self.parse_block_attr_list(&mut line)?;
+    let attrs = self.parse_block_macro_attr_list(&mut line)?;
     let mut nodes = InlineNodes::new(self.bump);
     nodes.push(InlineNode {
       content: Inline::Macro(MacroNode::Plugin(Box::new(PluginMacro {

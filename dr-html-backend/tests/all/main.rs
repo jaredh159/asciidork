@@ -5,6 +5,7 @@ mod helpers;
 
 mod eval_adoc;
 mod eval_adoc_cells;
+mod eval_audio_macros;
 mod eval_blocks;
 mod eval_books;
 mod eval_breaks;
@@ -33,6 +34,7 @@ mod eval_tables_dsv;
 mod eval_tables_psv;
 mod eval_toc;
 mod eval_verses;
+mod eval_video_macros;
 mod eval_win_crlf;
 mod eval_xrefs;
 mod eval_xrefs_interdoc;

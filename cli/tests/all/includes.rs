@@ -427,12 +427,10 @@ fn test_image_url_resolution_no_data_uri() {
       // 4. Video absolute URL ignores imagesdir
       :imagesdir: assets
 
-      // TODO: not implemented yet
-      // video::http://example.org/videos/demo.mp4[]
+      video::http://example.org/videos/demo.mp4[]
 
       // 5. Audio absolute URL ignores imagesdir
-      // TODO: not implemented yet
-      // audio::http://example.org/audio/podcast.mp3[]
+      audio::http://example.org/audio/podcast.mp3[]
     "#},
   );
   expect_eq!(
@@ -451,16 +449,17 @@ fn test_image_url_resolution_no_data_uri() {
           <img src="http://cdn.example.org/assets/logo.png" alt="Logo">
         </div>
       </div>
-    "#} // <div class="videoblock">
-        //   <div class="content">
-        //     <video src="http://example.org/videos/demo.mp4" controls>Your browser does not support the video tag.</video>
-        //   </div>
-        // </div>
-        // <div class="audioblock">
-        //   <div class="content">
-        //     <audio src="http://example.org/audio/podcast.mp3" controls>Your browser does not support the audio tag.</audio>
-        //   </div>
-        // </div>
+      <div class="videoblock">
+        <div class="content">
+          <video src="http://example.org/videos/demo.mp4" controls>Your browser does not support the video tag.</video>
+        </div>
+      </div>
+      <div class="audioblock">
+        <div class="content">
+          <audio src="http://example.org/audio/podcast.mp3" controls>Your browser does not support the audio tag.</audio>
+        </div>
+      </div>
+    "#}
   );
 }
 

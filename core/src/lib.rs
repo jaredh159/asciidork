@@ -1,3 +1,5 @@
+pub mod regx;
+
 mod attrs;
 mod doctype;
 mod document_meta;

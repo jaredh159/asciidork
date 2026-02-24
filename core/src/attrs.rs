@@ -56,6 +56,14 @@ pub trait ReadAttr {
     self.get(key).and_then(|v| v.str())
   }
 
+  fn append_str(&self, key: &str, target: &mut String) {
+    if let Some(s) = self.str(key)
+      && !s.is_empty()
+    {
+      target.push_str(s);
+    }
+  }
+
   fn string(&self, key: &str) -> Option<String> {
     self.get(key).and_then(|v| v.str()).map(ToOwned::to_owned)
   }

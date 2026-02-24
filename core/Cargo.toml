@@ -7,6 +7,7 @@ license = "MIT"
 
 [dependencies]
 lazy_static = "1.4.0"
+regex = { version = "1.10.2", features = ["std", "use_std"] }
 
 [lints]
 workspace = true

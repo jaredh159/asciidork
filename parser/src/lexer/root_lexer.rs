@@ -66,6 +66,7 @@ impl<'arena> RootLexer<'arena> {
         | b"indexterm"
         | b"indexterm2"
         | b"anchor"
+        | b"audio"
         | b"icon"
         | b"kbd"
         | b"link"
@@ -75,6 +76,7 @@ impl<'arena> RootLexer<'arena> {
         | b"mailto"
         | b"toc"
         | b"xref"
+        | b"video"
     )
   }
 

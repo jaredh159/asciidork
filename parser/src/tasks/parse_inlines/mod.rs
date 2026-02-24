@@ -152,7 +152,7 @@ impl<'arena> Parser<'arena> {
               "image:" => {
                 let is_uri = line.current_token().kind(UriScheme);
                 let target = line.consume_macro_target(self.bump);
-                let attrs = self.parse_inline_attr_list(&mut line)?;
+                let attrs = self.parse_inline_macro_attr_list(&mut line)?;
                 let kind = self.parse_image_kind(&target, is_uri, &attrs, None)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 acc.push_node(Macro(InlineImage { target, attrs, kind }), macro_loc);
@@ -218,7 +218,7 @@ impl<'arena> Parser<'arena> {
               }
               "mailto:" => {
                 let target = line.consume_macro_target(self.bump);
-                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                let mut attrs = self.parse_inline_macro_attr_list(&mut line)?;
                 macro_loc.end = attrs.loc.end;
                 let linktext = attrs.take_positional(0);
                 let subject_loc = attrs
@@ -271,7 +271,7 @@ impl<'arena> Parser<'arena> {
               }
               "icon:" => {
                 let target = line.consume_macro_target(self.bump);
-                let attrs = self.parse_inline_attr_list(&mut line)?;
+                let attrs = self.parse_inline_macro_attr_list(&mut line)?;
                 finish_macro(&line, &mut macro_loc, line_end, &mut acc.text);
                 acc.push_node(Macro(Icon { target, attrs }), macro_loc);
               }
@@ -310,7 +310,7 @@ impl<'arena> Parser<'arena> {
               }
               "anchor:" => {
                 let id = line.consume_macro_target(self.bump);
-                let mut attrs = self.parse_inline_attr_list(&mut line)?;
+                let mut attrs = self.parse_inline_macro_attr_list(&mut line)?;
                 self.insert_anchor(
                   &id,
                   Anchor {
@@ -343,7 +343,7 @@ impl<'arena> Parser<'arena> {
                   line.discard_assert(OpenBracket);
                   None
                 };
-                let attrs = self.parse_block_attr_list(&mut line)?;
+                let attrs = self.parse_inline_macro_attr_list(&mut line)?;
                 let loc = SourceLocation::spanning(token.loc, attrs.loc);
                 acc.push_node(
                   Macro(Plugin(Box::new(PluginMacro {

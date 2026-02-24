@@ -1192,6 +1192,29 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
+  fn visit_audio_macro(&mut self, target: &SourceString, attrs: &AttrList, block: &Block) {
+    self.open_element("div", &["audioblock"], &block.meta.attrs);
+    self.render_buffered_block_title(block);
+    self.push_str(r#"<div class="content">"#);
+    self.audio_element(&target.src, attrs);
+    self.push_str("</div></div>");
+  }
+
+  #[instrument(skip_all)]
+  fn visit_video_macro(&mut self, target: &SourceString, attrs: &AttrList, block: &Block) {
+    let merged_attrs = PriorityAttrList::new(attrs, &block.meta.attrs);
+    let mut open_tag = OpenTag::new("div", &merged_attrs);
+    open_tag.push_class("videoblock");
+    open_tag.push_opt_class(attrs.named("float"));
+    open_tag.push_opt_prefixed_class(attrs.named("align"), Some("text-"));
+    self.push_open_tag(open_tag);
+    self.render_buffered_block_title(block);
+    self.push_str(r#"<div class="content">"#);
+    self.video_element(target, attrs);
+    self.push_str("</div></div>");
+  }
+
+  #[instrument(skip_all)]
   fn visit_keyboard_macro(&mut self, keys: &[&str]) {
     if keys.len() > 1 {
       self.push_str(r#"<span class="keyseq">"#);

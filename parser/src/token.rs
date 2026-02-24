@@ -254,8 +254,10 @@ impl TokenIs for Token<'_> {
     if !self.is_macro() {
       return false;
     }
-    // TODO: there are more block macros than just these two
-    if matches!(self.lexeme.as_str(), "image:" | "toc:") {
+    if matches!(
+      self.lexeme.as_str(),
+      "image:" | "toc:" | "audio:" | "video:"
+    ) {
       return true;
     }
 

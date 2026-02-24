@@ -148,6 +148,8 @@ pub trait Backend {
   fn exit_compound_block_content(&mut self, children: &[Block], block: &Block);
   fn visit_thematic_break(&mut self, block: &Block);
   fn visit_page_break(&mut self, block: &Block);
+  fn visit_audio_macro(&mut self, target: &SourceString, attrs: &AttrList, block: &Block);
+  fn visit_video_macro(&mut self, target: &SourceString, attrs: &AttrList, block: &Block);
 
   /// inlines
   fn visit_inline_text(&mut self, text: &str);

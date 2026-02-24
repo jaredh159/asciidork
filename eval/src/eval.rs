@@ -407,6 +407,12 @@ fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
       backend.visit_page_break(block);
     }
     (Context::TableOfContents, _) => eval_toc_at(&[TocPosition::Macro], Some(block), ctx, backend),
+    (Context::Audio, Content::Empty(EmptyMetadata::AudioVideo { target, attrs })) => {
+      backend.visit_audio_macro(target, attrs, block);
+    }
+    (Context::Video, Content::Empty(EmptyMetadata::AudioVideo { target, attrs })) => {
+      backend.visit_video_macro(target, attrs, block);
+    }
     (Context::Comment, _) => {}
     _ => {
       dbg!(block.context, &block.content);
