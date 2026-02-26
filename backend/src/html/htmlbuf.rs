@@ -84,6 +84,22 @@ pub trait HtmlBuf {
   fn push_open_tag(&mut self, tag: OpenTag) {
     self.push_str(&tag.finish());
   }
+
+  fn append_link_constraint_attrs(&mut self, attrs: &AttrList) {
+    if let Some(window) = attrs.named("window") {
+      self.push([r#" target=""#, window]);
+      if window == "_blank" || attrs.has_option("noopener") {
+        self.push_str("\" rel=\"noopener");
+      }
+      if attrs.has_option("nofollow") {
+        self.push_str(" nofollow\"");
+      } else {
+        self.push_ch('"');
+      }
+    } else if attrs.has_option("nofollow") {
+      self.push_str(" rel=\"nofollow\"");
+    }
+  }
 }
 
 pub trait AltHtmlBuf: HtmlBuf {

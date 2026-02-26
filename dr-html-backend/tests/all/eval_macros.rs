@@ -55,6 +55,8 @@ assert_html!(
 
     icon:github[alt="GitHub"]
 
+    icon:download[link=https://site.com/cat.png, window=_blank]
+
     icon:github[width=16]
 
     icon:github[link=https://github.com]
@@ -68,6 +70,15 @@ assert_html!(
     </div>
     <div class="paragraph">
       <p><span class="icon"><img src="./images/icons/github.png" alt="GitHub"></span></p>
+    </div>
+    <div class="paragraph">
+      <p>
+        <span class="icon">
+          <a class="image" href="https://site.com/cat.png" target="_blank" rel="noopener">
+           <img src="./images/icons/download.png" alt="download">
+          </a>
+        </span>
+      </p>
     </div>
     <div class="paragraph">
       <p><span class="icon"><img src="./images/icons/github.png" alt="github" width="16"></span></p>

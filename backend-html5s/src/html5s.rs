@@ -1006,9 +1006,7 @@ impl Backend for Html5s {
     let has_link = if let Some(link) = attrs.named("link") {
       self.push_str(r#"<a class="image""#);
       self.push_html_attr("href", link);
-      if let Some(window) = attrs.named("window") {
-        self.push_html_attr("target", window);
-      }
+      self.append_link_constraint_attrs(attrs);
       self.push_str(">");
       true
     } else {
@@ -1316,21 +1314,7 @@ impl Backend for Html5s {
       };
       let href = if *href == "self" { &img_target.src } else { *href };
       self.push([r#"" href=""#, href, r#"""#]);
-      if let Some(window) = img_attrs.named("window") {
-        self.push([r#" target=""#, window, "\""]);
-        if window == "_blank" || img_attrs.has_option("noopener") {
-          self.push_str(" rel=\"noopener");
-        }
-        if img_attrs.has_option("nofollow") {
-          self.push_str(" nofollow\"");
-        } else {
-          self.push_ch('"');
-        }
-      } else if img_attrs.has_option("noopener") {
-        self.push_str(" rel=\"noopener\"");
-      } else if img_attrs.has_option("nofollow") {
-        self.push_str(" rel=\"nofollow\"");
-      }
+      self.append_link_constraint_attrs(img_attrs);
       if self_link {
         let label = self.doc_meta.string_or(
           "html5s-image-self-link-label",

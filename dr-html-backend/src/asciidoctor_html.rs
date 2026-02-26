@@ -1105,9 +1105,7 @@ impl Backend for AsciidoctorHtml {
     let has_link = if let Some(link) = attrs.named("link") {
       self.push_str(r#"<a class="image""#);
       self.push_html_attr("href", link);
-      if let Some(window) = attrs.named("window") {
-        self.push_html_attr("target", window);
-      }
+      self.append_link_constraint_attrs(attrs);
       self.push_str(">");
       true
     } else {

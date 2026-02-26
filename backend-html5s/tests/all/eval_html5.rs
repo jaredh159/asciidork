@@ -165,7 +165,7 @@ assert_html!(
       </a>
     </div>
     <div class="image-block">
-      <a class="image" href="http://www.flickr.com/photos/javh/5448336655" rel="noopener">
+      <a class="image" href="http://www.flickr.com/photos/javh/5448336655">
         <img src="sunset.jpg" alt="sunset">
       </a>
     </div>
@@ -217,24 +217,21 @@ assert_html!(
     // .image-with-loading-lazy
     image:sunset.jpg[loading=lazy]
 
-    // .icon-font
     :icons: font
+
+    // .icon-font
     icon:heart[]
 
     // .icon-font-with-title
-    :icons: font
     icon:heart[title="I <3 Asciidoctor"]
 
     // .icon-font-with-size
-    :icons: font
     icon:shield[2x]
 
     // .icon-font-with-rotate
-    :icons: font
     icon:shield[rotate=90]
 
     // .icon-font-with-flip
-    :icons: font
     icon:shield[flip=vertical]
   "#},
   html! {r##"
