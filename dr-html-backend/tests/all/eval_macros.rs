@@ -200,6 +200,12 @@ assert_html!(
     Press kbd:[F11] to toggle.
 
     Or kbd:[Ctrl+Shift+N] for fun.
+
+    kbd:[\ ]
+
+    kbd:[Ctrl + +]
+
+    kbd:[Ctrl+\]]
   "#},
   html! {r#"
     <div class="paragraph">
@@ -207,6 +213,15 @@ assert_html!(
     </div>
     <div class="paragraph">
       <p>Or <span class="keyseq"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></span> for fun.</p>
+    </div>
+    <div class="paragraph">
+      <p><kbd>\</kbd></p>
+    </div>
+    <div class="paragraph">
+      <p><span class="keyseq"><kbd>Ctrl</kbd>+<kbd>+</kbd></span></p>
+    </div>
+    <div class="paragraph">
+      <p><span class="keyseq"><kbd>Ctrl</kbd>+<kbd>]</kbd></span></p>
     </div>
   "#}
 );
