@@ -894,3 +894,26 @@ assert_html!(
     </figure>
   "#}
 );
+
+assert_inline_html!(
+  btn_macro,
+  "press the btn:[OK] button",
+  r#"press the <kbd class="button"><samp>OK</samp></kbd> button"#
+);
+
+assert_html!(
+  menu_macro,
+  "Select menu:View[Zoom > Reset] to reset the zoom level to the default setting.",
+  html! {r#"
+    <p>
+      Select <kbd class="menuseq"
+        ><kbd class="menu"><samp>View</samp></kbd
+        >&#160;<span class="caret">&#8250;</span>&#32;<kbd class="menu"
+          ><samp>Zoom</samp></kbd
+        >&#160;<span class="caret">&#8250;</span>&#32;<kbd class="menu"
+          ><samp>Reset</samp></kbd
+        ></kbd
+      > to reset the zoom level to the default setting.
+    </p>
+  "#}
+);

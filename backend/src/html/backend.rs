@@ -435,24 +435,6 @@ pub trait HtmlBackend: HtmlBuf {
     }
   }
 
-  fn visit_menu_macro(&mut self, items: &[SourceString]) {
-    let mut items = items.iter();
-    self.push_str(r#"<span class="menuseq"><span class="menu">"#);
-    self.push_str(items.next().unwrap());
-    self.push_str("</span>");
-
-    let last_idx = items.len() - 1;
-    for (idx, item) in items.enumerate() {
-      self.push_str(r#"&#160;&#9656;<span class=""#);
-      if idx == last_idx {
-        self.push(["menuitem\">", item, "</span>"]);
-      } else {
-        self.push(["submenu\">", item, "</span>"]);
-      }
-    }
-    self.push_str("</span>");
-  }
-
   fn prev_footnote_ref_num(&self, id: Option<&SourceString>) -> Option<String> {
     self
       .state()

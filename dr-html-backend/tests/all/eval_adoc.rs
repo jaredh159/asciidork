@@ -234,7 +234,7 @@ assert_html!(
   "select menu:File[Save].",
   html! {r#"
     <div class="paragraph">
-      <p>select <span class="menuseq"><span class="menu">File</span>&#160;&#9656;<span class="menuitem">Save</span></span>.</p>
+      <p>select <span class="menuseq"><b class="menu">File</b>&#160;<b class="caret">&#8250;</b><b class="menuitem">Save</b></span>.</p>
     </div>
   "#}
 );
@@ -246,9 +246,9 @@ assert_html!(
     <div class="paragraph">
       <p>
         select <span class="menuseq"
-          ><span class="menu">File</span>&#160;&#9656;
-          <span class="submenu">Save</span>&#160;&#9656;
-          <span class="menuitem">Reset</span></span
+          ><b class="menu">File</b>&#160;<b class="caret">&#8250;</b>
+          <b class="submenu">Save</b>&#160;<b class="caret">&#8250;</b>
+          <b class="menuitem">Reset</b></span
         >.
       </p>
     </div>

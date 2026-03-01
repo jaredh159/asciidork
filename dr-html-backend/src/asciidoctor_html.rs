@@ -1287,7 +1287,21 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn visit_menu_macro(&mut self, items: &[SourceString]) {
-    HtmlBackend::visit_menu_macro(self, items);
+    let mut items = items.iter();
+    self.push_str(r#"<span class="menuseq"><b class="menu">"#);
+    self.push_str(items.next().unwrap());
+    self.push_str("</b>");
+
+    let last_idx = items.len() - 1;
+    for (idx, item) in items.enumerate() {
+      self.push_str(r#"&#160;<b class="caret">&#8250;</b><b class=""#);
+      if idx == last_idx {
+        self.push(["menuitem\">", item, "</b>"]);
+      } else {
+        self.push(["submenu\">", item, "</b>"]);
+      }
+    }
+    self.push_str("</span>");
   }
 
   #[instrument(skip_all)]

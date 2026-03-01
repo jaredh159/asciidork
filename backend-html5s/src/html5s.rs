@@ -999,7 +999,7 @@ impl Backend for Html5s {
   }
 
   fn visit_button_macro(&mut self, text: &SourceString) {
-    self.push([r#"<b class="button">"#, text, "</b>"])
+    self.push([r#"<kbd class="button"><samp>"#, text, "</samp></kbd>"])
   }
 
   fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList) {
@@ -1049,8 +1049,7 @@ impl Backend for Html5s {
         }
         if let Some(flip) = attrs.named("flip") {
           self.push([r#" fa-flip-"#, flip]);
-        }
-        if let Some(rotate) = attrs.named("rotate") {
+        } else if let Some(rotate) = attrs.named("rotate") {
           self.push([r#" fa-rotate-"#, rotate]);
         }
         attrs.roles.iter().for_each(|role| {
@@ -1213,7 +1212,15 @@ impl Backend for Html5s {
   }
 
   fn visit_menu_macro(&mut self, items: &[SourceString]) {
-    HtmlBackend::visit_menu_macro(self, items);
+    let mut items = items.iter();
+    self.push_str(r#"<kbd class="menuseq"><kbd class="menu"><samp>"#);
+    self.push_str(items.next().unwrap());
+    self.push_str("</samp></kbd>");
+    for item in items {
+      self.push_str(r#"&#160;<span class="caret">&#8250;</span>&#32;<kbd class=""#);
+      self.push(["menu\"><samp>", item, "</samp></kbd>"]);
+    }
+    self.push_str("</kbd>");
   }
 
   fn enter_admonition_block(
