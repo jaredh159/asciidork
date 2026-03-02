@@ -545,6 +545,26 @@ pub trait HtmlBackend: HtmlBuf {
     }
   }
 
+  fn push_admonition_block_textlabel(&mut self, kind: AdmonitionKind, block: &Block) {
+    if let Some(caption) = block.meta.attrs.named("caption") {
+      self.push_str(caption);
+      return;
+    }
+
+    if self.doc_meta().is_false(kind.caption_name()) {
+      return;
+    }
+
+    let mut s = String::new();
+    self.swapbuf(&mut s);
+    if let Some(caption) = self.doc_meta().str(kind.caption_name()) {
+      s.push_str(caption);
+    } else {
+      s.push_str(kind.str());
+    }
+    self.swapbuf(&mut s);
+  }
+
   fn start_enter_ordered_list(&mut self, block: &Block, depth: u8) -> (&'static str, &'static str) {
     let non_dd_depth = depth - self.state().desc_list_depth;
     self.state_mut().interactive_list_stack.push(false);

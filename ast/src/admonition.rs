@@ -29,6 +29,16 @@ impl AdmonitionKind {
       AdmonitionKind::Warning => "Warning",
     }
   }
+
+  pub const fn caption_name(&self) -> &'static str {
+    match self {
+      AdmonitionKind::Tip => "tip-caption",
+      AdmonitionKind::Caution => "caution-caption",
+      AdmonitionKind::Important => "important-caption",
+      AdmonitionKind::Note => "note-caption",
+      AdmonitionKind::Warning => "warning-caption",
+    }
+  }
 }
 
 impl TryFrom<Context> for AdmonitionKind {

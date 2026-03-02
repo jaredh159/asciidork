@@ -1326,18 +1326,23 @@ impl Backend for AsciidoctorHtml {
       if !file::has_ext(custom_icon) {
         self.push_icon_inferred_img_ext();
       }
-      self.push([r#"" alt=""#, kind.str(), r#"">"#]);
+      self.push_str(r#"" alt=""#);
+      self.push_admonition_block_textlabel(kind, block);
+      self.push_str(r#"">"#);
     } else {
       match icon_mode {
         IconMode::Text => {
-          self.push([r#"<div class="title">"#, kind.str(), "</div>"]);
+          self.push_str(r#"<div class="title">"#);
+          self.push_admonition_block_textlabel(kind, block);
+          self.push_str("</div>");
         }
         IconMode::Image => {
-          self.push_admonition_img(kind, icon_uri);
+          self.push_admonition_img(kind, icon_uri, block);
         }
         IconMode::Font => {
           self.push([r#"<i class="fa icon-"#, kind.lowercase_str(), "\" title=\""]);
-          self.push([kind.str(), r#""></i>"#]);
+          self.push_admonition_block_textlabel(kind, block);
+          self.push_str(r#""></i>"#);
         }
       }
     }
@@ -1626,14 +1631,16 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn push_admonition_img(&mut self, kind: AdmonitionKind, data_uri: Option<&str>) {
+  fn push_admonition_img(&mut self, kind: AdmonitionKind, data_uri: Option<&str>, block: &Block) {
     self.push_str(r#"<img src=""#);
     if let Some(data_uri) = data_uri {
       self.push_str(data_uri);
     } else {
       self.push_icon_uri(kind.lowercase_str(), None);
     }
-    self.push([r#"" alt=""#, kind.str(), r#"">"#]);
+    self.push_str(r#"" alt=""#);
+    self.push_admonition_block_textlabel(kind, block);
+    self.push_str(r#"">"#);
   }
 
   fn render_division_start(&mut self, id: &str) {

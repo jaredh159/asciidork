@@ -1247,7 +1247,8 @@ impl Backend for Html5s {
       self.push_str(r#" label-only"#);
     }
     self.push_str(r#""><span class="title-label">"#);
-    self.push([kind.str(), ": </span>"]);
+    self.push_admonition_block_textlabel(kind, block);
+    self.push_str(": </span>");
     if block.has_title() {
       self.render_buffered_block_title(block, false);
     }
