@@ -769,6 +769,18 @@ assert_html!(
 );
 
 assert_html!(
+  pass_macro_emoji_admonition_icon,
+  adoc! {r#"
+    :icons: font
+    :tip-caption: pass:[&#128161;]
+
+    [TIP]
+    It's possible to use Unicode glyphs as admonition icons.
+  "#},
+    contains: r#"<td class="icon"><i class="fa icon-tip" title="&#128161;"></i></td>"#
+);
+
+assert_html!(
   custom_icon_data_uri,
   resolving: b"a",
   adoc! {r#"

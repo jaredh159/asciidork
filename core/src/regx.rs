@@ -19,6 +19,8 @@ lazy_static! {
 lazy_static! {
   pub static ref PASS_DBL_MACRO_ATTR: Regex =
     Regex::new(r#"^pass:([a-z]+(?:,[a-z-]+)*)?\[footnote:(.*)\]\]$"#).unwrap();
+  pub static ref PASS_SIMPLE_ENTITY_MACRO_ATTR: Regex =
+    Regex::new(r#"^pass:\[(&(#\d+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);)\]$"#).unwrap();
 }
 
 // directives

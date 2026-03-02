@@ -147,7 +147,7 @@ impl<'arena> Parser<'arena> {
       } else {
         value_str.to_string()
       };
-      self.mark_pass_footnote_dbl_attr(&mut value_string);
+      self.special_case_pass_macro_wrapped_attrs(&mut value_string);
       AttrValue::String(value_string)
     };
 
@@ -201,25 +201,45 @@ impl<'arena> Parser<'arena> {
     Ok(())
   }
 
-  // mark a special case with a sentinal byte, so the lexer can easily recognize it.
-  // this helps us work around a place where the implementation and semantics
-  // of asciidoctor are basically fundamentally incompatible with our approach
-  // of parse -> AST -> eval. asciidoctor documents externalizing footnotes
-  // with ininline substitutions like this:
-  // ```adoc
-  // :fn-disclaimer2: pass:c,q[footnote:disclaimer2[Opinions are _mine_, and mine *alone*.]]
-  // A bold statement!{fn-disclaimer2}
-  // ```
-  // but this implies transforming the text inside the footnote attr into html first and
-  // holding it as the attr ref, so the footnote can be dropped into context and expanded.
-  // asciidoctor special-cases pass-macros surrounding attr defs to support this, so we
-  // are doing something similar, though for now only supporting nested footnote macros, as
-  // they are the most likely to appear in this trick, as most other macros a) aren't put in
-  // attr refs, and b) don't tend to have inline formatting within the attr list brackets
-  fn mark_pass_footnote_dbl_attr(&self, value: &mut String) {
-    if !value.starts_with("pass:") || !regx::PASS_DBL_MACRO_ATTR.is_match(value) {
+  // we're selectively opting in to some high-value pass-macro wrapping
+  // shenanigans, because they are documented and likely appear frequently
+  // in real world use cases, but these are major implementation leaks and
+  // the asciidoctor spec is trying to move away from these sorts of things.
+  // hese represent places where the implementation and semantics of
+  // asciidoctor are basically fundamentally incompatible with our approach of
+  // parse -> AST -> eval, which is where the asciidoc spec is trying to go too
+  fn special_case_pass_macro_wrapped_attrs(&self, value: &mut String) {
+    if !value.starts_with("pass:") {
       return;
     }
+
+    // simple wrapping of html entities, like `pass:[&#128161;]`
+    // documented method of adding emojis to admonition blocks
+    if let Some(entity) = regx::PASS_SIMPLE_ENTITY_MACRO_ATTR
+      .captures(value)
+      .and_then(|c| c.get(1))
+      .map(|m| m.as_str().to_owned())
+    {
+      *value = entity;
+      return;
+    }
+
+    // mark a special case with a sentinal byte, so the lexer can easily recognize it.
+    // asciidoctor documents externalizing footnotes with ininline substitutions like this:
+    // ```adoc
+    // :fn-disclaimer2: pass:c,q[footnote:disclaimer2[Opinions are _mine_, and mine *alone*.]]
+    // A bold statement!{fn-disclaimer2}
+    // ```
+    // but this implies transforming the text inside the footnote attr into html first and
+    // holding it as the attr ref, so the footnote can be dropped into context and expanded.
+    // asciidoctor special-cases pass-macros surrounding attr defs to support this, so we
+    // are doing something similar, though for now only supporting nested footnote macros, as
+    // they are the most likely to appear in this trick, as most other macros a) aren't put in
+    // attr refs, and b) don't tend to have inline formatting within the attr list brackets
+    if !regx::PASS_DBL_MACRO_ATTR.is_match(value) {
+      return;
+    }
+
     // SAFETY: we just checked that the string starts with `pass:`
     // so we're fine to overwrite the first ascii byte with another
     unsafe {
