@@ -125,7 +125,7 @@ impl<'arena> Parser<'arena> {
         msg.push_str(" - ");
         let offset = directive.first_token.loc.start + msg.len() as u32;
         msg.push_str(directive.line_src.as_str());
-        msg.push_str("+++");
+        msg.push_str("+++\n");
         self.lexer.set_tmp_buf(&msg, BufLoc::Offset(offset));
         Ok(DirectiveAction::ReadNextLine)
       }

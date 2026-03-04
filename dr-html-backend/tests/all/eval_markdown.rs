@@ -85,6 +85,8 @@ assert_html!(
   "#}
 );
 
+// NB: asciidoctor renders this as a compound blockquote, for now
+// we are parsing/rendering same as single quoted paragraph
 assert_html!(
   markdown_quote_implicit_attribution,
   adoc! {r#"
