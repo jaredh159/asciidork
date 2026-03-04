@@ -297,27 +297,37 @@ impl Backend for Html5s {
     let el = if block.has_title() { "figure" } else { "div" };
     self.open_element(el, &["listing-block"], &block.meta.attrs);
     self.render_buffered_block_title(block, false);
-    self.push_str("<pre");
-    let doc_lang = self.doc_meta.string("source-language");
+    let mut html = String::new();
+    self.swapbuf(&mut html);
+    html.push_str("<pre");
+    let doc_lang = self.doc_meta.str("source-language");
     if block.meta.attrs.is_source() || doc_lang.is_some() {
-      self.push_str(" class=\"highlight");
+      html.push_str(" class=\"highlight");
       if block.meta.attrs.has_option("nowrap") {
-        self.push_str(" nowrap");
+        html.push_str(" nowrap");
       }
-      if block.meta.attrs.has_option("numbered") {
-        self.push_str(" linenums");
+      if block.meta.attrs.has_option("numbered")
+        || block.meta.attrs.has_option("linenums")
+        || block.meta.attrs.str_positional_at(2) == Some("linenums")
+      {
+        html.push_str(" linenums");
       }
-      self.push_str("\"><code");
-      if let Some(lang) = block.meta.attrs.source_language() {
-        self.push([" class=\"language-", lang, "\" data-lang=\"", lang, "\""]);
-      } else if let Some(lang) = doc_lang {
-        self.push([" class=\"language-", &lang, "\" data-lang=\"", &lang, "\""]);
+      if let Some(highlighter) = self.doc_meta.str("source-highlighter") {
+        html.push(' ');
+        html.push_str(highlighter);
       }
-      self.push_ch('>');
+      html.push_str("\"><code");
+      if let Some(lang) = block.meta.attrs.source_language().or(doc_lang) {
+        html.push_str(" class=\"language-");
+        html.push_str(lang);
+        html.push_str("\" data-lang=\"");
+        html.push_str(lang);
+        html.push('"');
+      }
       self.state.ephemeral.insert(IsSourceBlock);
-    } else {
-      self.push_ch('>');
     }
+    html.push('>');
+    self.swapbuf(&mut html);
   }
 
   fn exit_listing_block(&mut self, block: &Block) {
