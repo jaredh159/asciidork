@@ -20,11 +20,18 @@ pub struct Callout {
   pub callout_idx: u8,
   /// the reader-facing callout number, i.e. `1` in `<1>`
   pub number: u8,
+  /// was callout contained within wrapping xml comment: `<!--1-->`
+  pub is_xml_wrapped: bool,
 }
 
 impl Callout {
-  pub const fn new(list_idx: u8, callout_idx: u8, number: u8) -> Self {
-    Self { list_idx, callout_idx, number }
+  pub const fn new(list_idx: u8, callout_idx: u8, number: u8, is_xml_wrapped: bool) -> Self {
+    Self {
+      list_idx,
+      callout_idx,
+      number,
+      is_xml_wrapped,
+    }
   }
 }
 
@@ -32,8 +39,8 @@ impl Debug for Callout {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     write!(
       f,
-      "Callout(list_idx: {}, callout_idx: {}, number: {})",
-      self.list_idx, self.callout_idx, self.number
+      "Callout(list_idx: {}, callout_idx: {}, number: {}, is_xml_wrapped: {})",
+      self.list_idx, self.callout_idx, self.number, self.is_xml_wrapped
     )
   }
 }

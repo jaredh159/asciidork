@@ -1066,14 +1066,15 @@ impl Backend for AsciidoctorHtml {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
+
     match self.doc_meta.icon_mode() {
       IconMode::Image => self.push_callout_number_img(callout.number),
       IconMode::Font => self.push_callout_number_font(callout.number),
-      // TODO: asciidoctor also handles special `guard` case
-      //   elsif ::Array === (guard = node.attributes['guard'])
-      //     %(&lt;!--<b class="conum">(#{node.text})</b>--&gt;)
-      // @see https://github.com/asciidoctor/asciidoctor/issues/3319
-      IconMode::Text => self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]),
+      IconMode::Text => {
+        self.push_str(iff!(callout.is_xml_wrapped, "&lt;!--", ""));
+        self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]);
+        self.push_str(iff!(callout.is_xml_wrapped, "--&gt;", ""));
+      }
     }
   }
 

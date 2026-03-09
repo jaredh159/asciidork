@@ -219,7 +219,15 @@ fn test_parse_xml_callout_num() {
     Context::Literal,
     Content::Simple(nodes![
       node!("Hello world!"; 5..17),
-      node!(callout(1, 0, 0), 17..26),
+      node!(
+        CalloutNum(Callout {
+          list_idx: 0,
+          callout_idx: 0,
+          number: 1,
+          is_xml_wrapped: true,
+        }),
+        17..26
+      ),
     ]),
   );
 }
@@ -286,5 +294,6 @@ const fn callout<'arena>(num: u8, list_idx: u8, idx: u8) -> Inline<'arena> {
     list_idx,
     callout_idx: idx,
     number: num,
+    is_xml_wrapped: false,
   })
 }

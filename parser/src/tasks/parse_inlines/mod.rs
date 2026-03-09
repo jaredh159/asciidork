@@ -428,7 +428,8 @@ impl<'arena> Parser<'arena> {
             acc.text.trim_end();
             let loc = SourceLocation::new(acc.text.loc.end, token.loc.end, token.loc.include_depth);
             let number = token.parse_callout_num();
-            acc.push_node(CalloutNum(self.ctx.push_callout(number)), loc);
+            let is_xml = token.lexeme.starts_with("<!--");
+            acc.push_node(CalloutNum(self.ctx.push_callout(number, is_xml)), loc);
           }
 
           CalloutNumber if subs.special_chars() => {

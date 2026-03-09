@@ -997,7 +997,9 @@ impl Backend for Html5s {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
+    self.push_str(iff!(callout.is_xml_wrapped, "&lt;!--", ""));
     self.push([r#"<b class="conum">"#, &num_str!(callout.number), "</b>"]);
+    self.push_str(iff!(callout.is_xml_wrapped, "--&gt;", ""));
   }
 
   fn visit_callout_tuck(&mut self, comment: &str) {
