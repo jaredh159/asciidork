@@ -848,7 +848,7 @@ mod tests {
       "},
       Block {
         meta: ChunkMeta {
-          title: Some(just!("Simple psv table", 1..17)),
+          dot_line_title: Some(just!("Simple psv table", 1..17)),
           ..chunk_meta!(0, 1)
         },
         loc: (18..54).into(),

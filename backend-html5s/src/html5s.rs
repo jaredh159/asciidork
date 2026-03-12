@@ -201,7 +201,7 @@ impl Backend for Html5s {
   }
 
   fn enter_book_part_intro(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str(r#"<section class="open-block partintro">"#);
       self.push_str(r#"<h6 class="block-title">"#);
     } else {
@@ -210,7 +210,7 @@ impl Backend for Html5s {
   }
 
   fn exit_book_part_intro(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str("</section>");
     } else {
       self.push_str("</div>");
@@ -218,7 +218,7 @@ impl Backend for Html5s {
   }
 
   fn enter_book_part_intro_content(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str("</h6>");
     }
     self.push_str(r#"<div class="content">"#);
@@ -1255,7 +1255,7 @@ impl Backend for Html5s {
       _ => self.push_str("doc-notice\">"),
     }
     self.push_str(r#"<h6 class="block-title"#);
-    if block.meta.title.is_none() {
+    if block.meta.title().is_none() {
       self.push_str(r#" label-only"#);
     }
     self.push_str(r#""><span class="title-label">"#);

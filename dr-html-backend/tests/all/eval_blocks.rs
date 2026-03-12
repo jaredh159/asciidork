@@ -127,3 +127,15 @@ assert_html!(
    r#"<div class="title">Figure 2. Image B-Attr</div>"#,
    r#"<div class="title">Figure 3. Image A</div>"#,
 );
+
+assert_html!(
+  title_from_attrlist_used_and_preferred,
+  adoc! {r#"
+    .Dot line title
+    [title="From Attrlist"]
+    ====
+    content
+    ====
+  "#},
+  contains: r#"<div class="title">Example 1. From Attrlist</div>"#
+);

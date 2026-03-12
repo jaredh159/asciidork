@@ -22,6 +22,7 @@ pub trait AttrData {
   fn has_role(&self, role: &str) -> bool;
   fn named(&self, key: &str) -> Option<&str>;
   fn named_with_loc(&self, key: &str) -> Option<(&str, SourceLocation)>;
+  fn named_nodes(&self, key: &str) -> Option<&InlineNodes<'_>>;
   fn ordered_list_custom_number_style(&self) -> Option<&'static str>;
   fn unordered_list_custom_marker_style(&self) -> Option<&'static str>;
   fn block_style(&self, context: BlockContext) -> Option<BlockContext>;
@@ -118,6 +119,10 @@ impl AttrData for AttrList<'_> {
         nodes.single_text().map(|t| (t, loc))
       }
     })
+  }
+
+  fn named_nodes(&self, key: &str) -> Option<&InlineNodes<'_>> {
+    self.named.get(key)
   }
 
   /// https://docs.asciidoctor.org/asciidoc/latest/blocks/#block-style

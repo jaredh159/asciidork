@@ -230,7 +230,7 @@ fn test_parse_delimited_passthrough_block_subs_normal() {
     meta: ChunkMeta {
       attrs: vecb![attrs::named(&[("subs", 1..5, "normal", 6..12)])].into(),
       start_loc: loc!(0..1),
-      title: None,
+      dot_line_title: None,
     },
     context: Context::Passthrough,
     content: Content::Simple(nodes![
@@ -266,7 +266,7 @@ fn test_parse_block_titles() {
     "},
     Block {
       meta: ChunkMeta {
-        title: Some(just!("My Title", 1..9)),
+        dot_line_title: Some(just!("My Title", 1..9)),
         ..chunk_meta!(0, 1)
       },
       context: Context::Paragraph,
@@ -568,7 +568,7 @@ fn test_nested_delimiter_blocks() {
       context: Context::Sidebar,
       content: Content::Compound(vecb![Block {
         meta: ChunkMeta {
-          title: Some(just!("Bar", 7..10)),
+          dot_line_title: Some(just!("Bar", 7..10)),
           ..chunk_meta!(6, 7)
         },
         context: Context::Open,

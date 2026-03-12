@@ -68,6 +68,10 @@ impl AttrData for MultiAttrList<'_> {
     self.0.iter().find_map(|attr| attr.named_with_loc(key))
   }
 
+  fn named_nodes(&self, key: &str) -> Option<&InlineNodes<'_>> {
+    self.0.iter().find_map(|attr| attr.named_nodes(key))
+  }
+
   fn ordered_list_custom_number_style(&self) -> Option<&'static str> {
     self
       .0
@@ -147,6 +151,10 @@ impl AttrData for NoAttrs {
   }
 
   fn named_with_loc(&self, _key: &str) -> Option<(&str, SourceLocation)> {
+    None
+  }
+
+  fn named_nodes(&self, _key: &str) -> Option<&InlineNodes<'_>> {
     None
   }
 

@@ -222,7 +222,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_book_part_intro(&mut self, part: &Part) {
     self.push_str(r#"<div class="openblock partintro">"#);
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str(r#"<div class="title">"#);
     }
   }
@@ -234,7 +234,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_book_part_intro_content(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str("</div>");
     }
     self.push_str(r#"<div class="content">"#);
