@@ -696,3 +696,51 @@ assert_html!(
     </tr>
   "#}
 );
+
+assert_html!(
+  row_of_only_spilled_cell,
+  adoc! {r#"
+    |===
+    |C1 |C2 |C3
+
+    2.3+|span
+    3*|dup
+    |===
+  "#},
+  html! {r#"
+    <table class="tableblock frame-all grid-all stretch">
+      <colgroup>
+        <col style="width: 33.3333%;">
+        <col style="width: 33.3333%;">
+        <col style="width: 33.3333%;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="tableblock halign-left valign-top">C1</th>
+          <th class="tableblock halign-left valign-top">C2</th>
+          <th class="tableblock halign-left valign-top">C3</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tableblock halign-left valign-top" colspan="2" rowspan="3">
+            <p class="tableblock">span</p>
+          </td>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">dup</p>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">dup</p>
+          </td>
+        </tr>
+        <tr>
+          <td class="tableblock halign-left valign-top">
+            <p class="tableblock">dup</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  "#}
+);

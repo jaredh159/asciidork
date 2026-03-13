@@ -37,6 +37,15 @@ impl<'arena> Parser<'arena> {
     let mut cells = bvec![in self.bump];
     std::mem::swap(&mut cells, &mut ctx.spilled_cells);
     let mut num_effective_cells = ctx.row_phantom_cells();
+
+    // check if we need to distrubute spilled cells from last row
+    let remaining_room = ctx.num_cols.saturating_sub(num_effective_cells);
+    ctx.spilled_cells = cells.split_off(remaining_room.min(cells.len()));
+    if cells.len() == remaining_room {
+      ctx.effective_row_idx += 1;
+      return Ok(Some(Row::new(cells)));
+    }
+
     while let Some((cell, dupe)) = self.parse_psv_table_cell(tokens, ctx, cells.len())? {
       if dupe > 1 {
         for _ in 1..dupe {
