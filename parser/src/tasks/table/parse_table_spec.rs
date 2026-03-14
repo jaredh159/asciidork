@@ -105,7 +105,9 @@ impl<'arena> Parser<'arena> {
 
   fn peek_cell_start(&self, tokens: &mut TableTokens, sep: char) -> Option<CellStart> {
     let first_token = tokens.current_mut()?;
-    let first_byte = first_token.lexeme.as_bytes().first()?;
+    if first_token.attr_replacement {
+      return None;
+    }
 
     // no explicit cell spec, but we're sitting on the sep, so infer default
     if first_token.lexeme.starts_with(sep) {
@@ -120,6 +122,7 @@ impl<'arena> Parser<'arena> {
 
     // optimization: words are most common, so reject non-candidates
     if first_token.kind(Word) {
+      let first_byte = first_token.lexeme.as_bytes().first()?;
       match first_byte {
         b'a' | b'd' | b'e' | b'h' | b'l' | b'm' | b's' | b'v' => {}
         _ => return None,

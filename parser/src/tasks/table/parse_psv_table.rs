@@ -322,6 +322,22 @@ mod tests {
   }
 
   #[test]
+  fn attr_replacement_cant_start_cell() {
+    assert_table!(
+      adoc! {r#"
+        |===
+        |one {vbar} ok
+        |===
+      "#},
+      Table {
+        col_widths: ColWidths::new(vecb![w(1)]),
+        rows: vecb![Row::new(vecb![cell!(d: "one | ok", 6..19)])],
+        ..empty_table!()
+      }
+    );
+  }
+
+  #[test]
   fn missing_first_sep_recovers() {
     assert_table_loose!(
       adoc! {r#"
