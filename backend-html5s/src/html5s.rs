@@ -615,21 +615,23 @@ impl Backend for Html5s {
     } else {
       self.push_str("<li>");
     }
-    if item
-      .blocks
-      .first()
-      .is_some_and(|b| !matches!(b.content, BlockContent::List { .. }))
-    {
+    if item.blocks.first().is_some_and(|b| {
+      !matches!(
+        b.content,
+        BlockContent::List { .. } | BlockContent::Empty(..)
+      )
+    }) {
       self.push_str("<p>");
     }
   }
 
   fn exit_list_item_principal(&mut self, item: &ListItem, _list_variant: ListVariant) {
-    if item
-      .blocks
-      .first()
-      .is_some_and(|b| !matches!(b.content, BlockContent::List { .. }))
-    {
+    if item.blocks.first().is_some_and(|b| {
+      !matches!(
+        b.content,
+        BlockContent::List { .. } | BlockContent::Empty(..)
+      )
+    }) {
       self.push_str("</p>");
     }
   }
