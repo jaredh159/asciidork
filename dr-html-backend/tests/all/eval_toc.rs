@@ -292,6 +292,18 @@ test_non_embedded_contains!(
 );
 
 assert_html!(
+  toc_left_embedded_uses_toc_class_not_toc2,
+  adoc! {"
+    = Doc Title
+    :toc: left
+
+    == Section 1
+  "},
+  contains:
+    r#"<div id="toc" class="toc">"#,
+);
+
+assert_html!(
   sections_with_ids_and_anchors,
   adoc! {r#"
     = Document Title
