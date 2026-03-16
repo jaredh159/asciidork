@@ -139,3 +139,19 @@ assert_html!(
   "#},
   contains: r#"<div class="title">Example 1. From Attrlist</div>"#
 );
+
+assert_html!(
+  passthru_block_titles_ignored,
+  adoc! {r#"
+    .foo
+    ++++
+    bar
+    ++++
+
+    .baz
+    ++++
+    qux
+    ++++
+  "#},
+  "barqux"
+);

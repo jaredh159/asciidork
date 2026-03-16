@@ -1435,12 +1435,16 @@ impl Backend for Html5s {
     self.push(["[", &nums, "]</a>"]);
   }
 
-  fn enter_meta_title(&mut self) {
+  fn enter_meta_title(&mut self, _block: &Block) {
     self.start_buffering();
   }
 
-  fn exit_meta_title(&mut self) {
-    self.stop_buffering();
+  fn exit_meta_title(&mut self, block: &Block) {
+    if block.context != BlockContext::Passthrough {
+      self.stop_buffering();
+    } else {
+      self.swap_discard_alt_buffer();
+    }
   }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {

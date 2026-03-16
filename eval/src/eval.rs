@@ -136,9 +136,9 @@ fn eval_section(section: &Section, ctx: &Ctx, backend: &mut impl Backend) {
 
 fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
   if let Some(title) = &block.meta.title() {
-    backend.enter_meta_title();
+    backend.enter_meta_title(block);
     title.iter().for_each(|n| eval_inline(n, ctx, backend));
-    backend.exit_meta_title();
+    backend.exit_meta_title(block);
   }
   match (block.context, &block.content) {
     (Context::Paragraph, Content::Simple(children)) => {

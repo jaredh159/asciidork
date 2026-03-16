@@ -290,13 +290,17 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_meta_title(&mut self) {
+  fn enter_meta_title(&mut self, _block: &Block) {
     self.start_buffering();
   }
 
   #[instrument(skip_all)]
-  fn exit_meta_title(&mut self) {
-    self.stop_buffering();
+  fn exit_meta_title(&mut self, block: &Block) {
+    if block.context != BlockContext::Passthrough {
+      self.stop_buffering();
+    } else {
+      self.swap_discard_alt_buffer();
+    }
   }
 
   #[instrument(skip_all)]
