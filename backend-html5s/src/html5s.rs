@@ -135,6 +135,9 @@ impl Backend for Html5s {
   }
 
   fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    if toc.position == TocPosition::Preamble {
+      self.start_buffering();
+    }
     self.state.ephemeral.insert(InTableOfContents);
     let id = &macro_block
       .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
@@ -235,8 +238,12 @@ impl Backend for Html5s {
   }
 
   fn exit_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
+    let buffered = if !self.alt_html.is_empty() { Some(self.swap_take_buffer()) } else { None };
     if doc_has_title {
       self.push_str("</section>");
+    }
+    if let Some(preamble_toc) = buffered {
+      self.push_str(&preamble_toc);
     }
   }
 

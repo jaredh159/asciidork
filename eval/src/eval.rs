@@ -52,8 +52,8 @@ fn eval_doc_content(ctx: &Ctx, backend: &mut impl Backend) {
       if let Some(blocks) = &content.preamble {
         backend.enter_preamble(ctx.doc.title().is_some(), blocks);
         blocks.iter().for_each(|b| eval_block(b, ctx, backend));
-        backend.exit_preamble(ctx.doc.title().is_some(), blocks);
         eval_toc_at(&[TocPosition::Preamble], None, ctx, backend);
+        backend.exit_preamble(ctx.doc.title().is_some(), blocks);
       }
       content
         .sections
@@ -75,8 +75,8 @@ fn eval_book(book: &MultiPartBook, ctx: &Ctx, backend: &mut impl Backend) {
       .opening_special_sects
       .iter()
       .for_each(|sect| eval_section(sect, ctx, backend));
-    backend.exit_preamble(ctx.doc.title().is_some(), blocks);
     eval_toc_at(&[TocPosition::Preamble], None, ctx, backend);
+    backend.exit_preamble(ctx.doc.title().is_some(), blocks);
   } else {
     book
       .opening_special_sects

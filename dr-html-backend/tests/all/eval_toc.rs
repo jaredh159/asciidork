@@ -133,13 +133,13 @@ assert_html!(
       <div class="sectionbody">
         <div class="paragraph"><p>preamble</p></div>
       </div>
-    </div>
-    <div id="toc" class="toc">
-      <div id="toctitle">Table of Contents</div>
-      <ul class="sectlevel1">
-        <li><a href="#_section_1">Section 1</a></li>
-        <li><a href="#_section_2">Section 2</a></li>
-      </ul>
+      <div id="toc" class="toc">
+        <div id="toctitle">Table of Contents</div>
+        <ul class="sectlevel1">
+          <li><a href="#_section_1">Section 1</a></li>
+          <li><a href="#_section_2">Section 2</a></li>
+        </ul>
+      </div>
     </div>
     <div class="sect1">
       <h2 id="_section_1">Section 1</h2>

@@ -144,6 +144,9 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    if toc.position == TocPosition::Preamble {
+      self.push_str("</div>"); // close preamble section body
+    }
     self.state.ephemeral.insert(InTableOfContents);
     let id = &macro_block
       .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
@@ -163,8 +166,10 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_toc(&mut self, _toc: &TableOfContents) {
-    self.push_str("</div>");
+  fn exit_toc(&mut self, toc: &TableOfContents) {
+    if toc.position != TocPosition::Preamble {
+      self.push_str("</div>");
+    }
     self.on_toc_exit();
     self.state.ephemeral.remove(&InTableOfContents);
   }
