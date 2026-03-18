@@ -6,7 +6,7 @@ pub fn from_meta(current: Substitutions, attrs: &MultiAttrList) -> Substitutions
     return current;
   };
 
-  let mut next = current;
+  let mut next = iff!(subs.contains(['-', '+']), current, Substitutions::none());
   for part in subs.split(',') {
     let len = part.len();
     if len < 4 {
@@ -29,9 +29,19 @@ pub fn from_meta(current: Substitutions, attrs: &MultiAttrList) -> Substitutions
 
     match strategy {
       Strategy::Replace => match step_or_group {
-        StepOrGroup::None => return Substitutions::none(),
-        StepOrGroup::Normal => return Substitutions::normal(),
-        StepOrGroup::Verbatim => return Substitutions::only_special_chars(),
+        StepOrGroup::None => {}
+        StepOrGroup::Normal => {
+          next.insert(Subs::SpecialChars);
+          next.insert(Subs::InlineFormatting);
+          next.insert(Subs::AttrRefs);
+          next.insert(Subs::CharReplacement);
+          next.insert(Subs::Macros);
+          next.insert(Subs::PostReplacement);
+        }
+        StepOrGroup::Verbatim => {
+          next.insert(Subs::SpecialChars);
+          next.insert(Subs::CharReplacement);
+        }
         StepOrGroup::SpecialChars => next.insert(Subs::SpecialChars),
         StepOrGroup::Callouts => next.insert(Subs::Callouts),
         StepOrGroup::Quotes => next.insert(Subs::InlineFormatting),
@@ -48,9 +58,19 @@ pub fn from_meta(current: Substitutions, attrs: &MultiAttrList) -> Substitutions
           _ => unreachable!(),
         };
         match step_or_group {
-          StepOrGroup::None => todo!(),
-          StepOrGroup::Normal => todo!(),
-          StepOrGroup::Verbatim => todo!(),
+          StepOrGroup::None => {}
+          StepOrGroup::Normal => {
+            modify(&mut next, Subs::SpecialChars);
+            modify(&mut next, Subs::InlineFormatting);
+            modify(&mut next, Subs::AttrRefs);
+            modify(&mut next, Subs::CharReplacement);
+            modify(&mut next, Subs::Macros);
+            modify(&mut next, Subs::PostReplacement);
+          }
+          StepOrGroup::Verbatim => {
+            modify(&mut next, Subs::SpecialChars);
+            modify(&mut next, Subs::CharReplacement);
+          }
           StepOrGroup::SpecialChars => {
             modify(&mut next, Subs::SpecialChars);
           }
@@ -63,7 +83,9 @@ pub fn from_meta(current: Substitutions, attrs: &MultiAttrList) -> Substitutions
           StepOrGroup::Attributes => {
             modify(&mut next, Subs::AttrRefs);
           }
-          StepOrGroup::Replacements => todo!(),
+          StepOrGroup::Replacements => {
+            modify(&mut next, Subs::CharReplacement);
+          }
           StepOrGroup::Macros => {
             modify(&mut next, Subs::Macros);
           }

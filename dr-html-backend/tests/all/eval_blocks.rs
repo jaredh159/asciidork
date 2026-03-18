@@ -155,3 +155,22 @@ assert_html!(
   "#},
   "barqux"
 );
+
+assert_html!(
+  custom_subs_multi_replace,
+  adoc! {r#"
+    [source,java,subs="verbatim,quotes"]
+    ----
+    System.out.println("Hello *<name>*")
+    ----
+  "#},
+  html! {r#"
+    <div class="listingblock">
+      <div class="content">
+        <pre class="highlight">
+          <code class="language-java" data-lang="java">System.out.println("Hello <strong>&lt;name&gt;</strong>")</code>
+        </pre>
+      </div>
+    </div>
+  "#}
+);
