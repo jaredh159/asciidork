@@ -831,9 +831,15 @@ impl<'arena> Parser<'arena> {
               }
               _ => {
                 acc.push_node(Discarded, token.loc);
-                // pushing the next token as text prevents recognizing the pattern
-                let next_token = line.consume_current().unwrap();
-                acc.push_text_token(&next_token);
+                while let Some(backslash) = line.consume_if(Backslash) {
+                  acc.push_node(Discarded, backslash.loc);
+                }
+                if !subs.special_chars() || !line.current_token().is_some_and(|t| t.kind(Ampersand))
+                {
+                  // pushing the next token as text prevents recognizing the pattern
+                  let next_token = line.consume_current().unwrap();
+                  acc.push_text_token(&next_token);
+                }
               }
             }
           }

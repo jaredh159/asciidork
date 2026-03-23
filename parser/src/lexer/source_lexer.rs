@@ -634,6 +634,9 @@ impl<'arena> SourceLexer<'arena> {
       if self.peek_n(pos).is_some_and(&f) {
         pos += 1;
       } else if initial_pos < pos && self.peek_n(pos) == Some(b';') {
+        if start >= 1 && self.src.get((start - 1) as usize).copied() == Some(b'\\') {
+          return self.single(Ampersand);
+        }
         self.pos += pos as u32 + 1;
         return self.token(Entity, start, self.pos);
       } else {
