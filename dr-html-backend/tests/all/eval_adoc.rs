@@ -51,6 +51,32 @@ assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
 assert_inline_html!(curvy_end, "a `foo`’ b", "a <code>foo</code>’ b");
 assert_inline_html!(dash_before_bold, "-*5*", "-<strong>5</strong>");
+assert_inline_html!(escaped_ampersands, "\\&sect; \\&foo", "&amp;sect; &amp;foo");
+assert_inline_html!(esc_italics, "\\_foo_ \\\\__bar__", "_foo_ __bar__");
+assert_inline_html!(esc_unconst_em_text, "\\__foo__bar", "__foo__bar");
+assert_inline_html!(esc_unconst_mono_text, "\\``foo``bar", "``foo``bar");
+assert_inline_html!(esc_unconst_strong, "\\\\**foo**", "**foo**");
+assert_inline_html!(esc_unconst_mono, "\\\\``foo``", "``foo``");
+assert_inline_html!(esc_unconst_mark, "\\\\##foo##", "##foo##");
+assert_inline_html!(esc_superscript, "\\^foo^", "^foo^");
+assert_inline_html!(esc_subscript, "\\~foo~", "~foo~");
+
+assert_inline_html!(
+  mark_containing_litmono_with_hashes,
+  "#`+CB###2+`# and #`+CB###3+`#",
+  "<mark><code>CB###2</code></mark> and <mark><code>CB###3</code></mark>"
+);
+
+assert_inline_html!(
+  escaped_mixed_const,
+  "\\*strong* and \\_emph_ and \\`mono`",
+  "*strong* and _emph_ and `mono`"
+);
+assert_inline_html!(
+  escaped_mixed_unconst,
+  "\\^sup^ and \\~sub~",
+  "^sup^ and ~sub~"
+);
 
 assert_inline_html!(
   visible_index_term_shorthand,
