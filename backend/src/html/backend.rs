@@ -435,24 +435,6 @@ pub trait HtmlBackend: HtmlBuf {
     }
   }
 
-  fn visit_menu_macro(&mut self, items: &[SourceString]) {
-    let mut items = items.iter();
-    self.push_str(r#"<span class="menuseq"><span class="menu">"#);
-    self.push_str(items.next().unwrap());
-    self.push_str("</span>");
-
-    let last_idx = items.len() - 1;
-    for (idx, item) in items.enumerate() {
-      self.push_str(r#"&#160;&#9656;<span class=""#);
-      if idx == last_idx {
-        self.push(["menuitem\">", item, "</span>"]);
-      } else {
-        self.push(["submenu\">", item, "</span>"]);
-      }
-    }
-    self.push_str("</span>");
-  }
-
   fn prev_footnote_ref_num(&self, id: Option<&SourceString>) -> Option<String> {
     self
       .state()
@@ -561,6 +543,26 @@ pub trait HtmlBackend: HtmlBuf {
         self.push_str(": ");
       }
     }
+  }
+
+  fn push_admonition_block_textlabel(&mut self, kind: AdmonitionKind, block: &Block) {
+    if let Some(caption) = block.meta.attrs.named("caption") {
+      self.push_str(caption);
+      return;
+    }
+
+    if self.doc_meta().is_false(kind.caption_name()) {
+      return;
+    }
+
+    let mut s = String::new();
+    self.swapbuf(&mut s);
+    if let Some(caption) = self.doc_meta().str(kind.caption_name()) {
+      s.push_str(caption);
+    } else {
+      s.push_str(kind.str());
+    }
+    self.swapbuf(&mut s);
   }
 
   fn start_enter_ordered_list(&mut self, block: &Block, depth: u8) -> (&'static str, &'static str) {

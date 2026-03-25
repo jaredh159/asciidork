@@ -165,7 +165,7 @@ assert_html!(
       </a>
     </div>
     <div class="image-block">
-      <a class="image" href="http://www.flickr.com/photos/javh/5448336655" rel="noopener">
+      <a class="image" href="http://www.flickr.com/photos/javh/5448336655">
         <img src="sunset.jpg" alt="sunset">
       </a>
     </div>
@@ -217,24 +217,21 @@ assert_html!(
     // .image-with-loading-lazy
     image:sunset.jpg[loading=lazy]
 
-    // .icon-font
     :icons: font
+
+    // .icon-font
     icon:heart[]
 
     // .icon-font-with-title
-    :icons: font
     icon:heart[title="I <3 Asciidoctor"]
 
     // .icon-font-with-size
-    :icons: font
     icon:shield[2x]
 
     // .icon-font-with-rotate
-    :icons: font
     icon:shield[rotate=90]
 
     // .icon-font-with-flip
-    :icons: font
     icon:shield[flip=vertical]
   "#},
   html! {r##"
@@ -895,5 +892,28 @@ assert_html!(
       <video src="demo.mp4#t=10,300" width="800" height="600" poster="thumb.png" autoplay muted loop controls>Your browser does not support the video tag.</video>
       <figcaption>Product walkthrough</figcaption>
     </figure>
+  "#}
+);
+
+assert_inline_html!(
+  btn_macro,
+  "press the btn:[OK] button",
+  r#"press the <kbd class="button"><samp>OK</samp></kbd> button"#
+);
+
+assert_html!(
+  menu_macro,
+  "Select menu:View[Zoom > Reset] to reset the zoom level to the default setting.",
+  html! {r#"
+    <p>
+      Select <kbd class="menuseq"
+        ><kbd class="menu"><samp>View</samp></kbd
+        >&#160;<span class="caret">&#8250;</span>&#32;<kbd class="menu"
+          ><samp>Zoom</samp></kbd
+        >&#160;<span class="caret">&#8250;</span>&#32;<kbd class="menu"
+          ><samp>Reset</samp></kbd
+        ></kbd
+      > to reset the zoom level to the default setting.
+    </p>
   "#}
 );

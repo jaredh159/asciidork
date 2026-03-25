@@ -3,14 +3,14 @@ use crate::internal::*;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChunkMeta<'arena> {
   pub attrs: MultiAttrList<'arena>,
-  pub title: Option<InlineNodes<'arena>>,
+  pub dot_line_title: Option<InlineNodes<'arena>>,
   pub start_loc: SourceLocation,
 }
 
 impl<'arena> ChunkMeta<'arena> {
   pub fn empty(start_loc: SourceLocation, bump: &'arena Bump) -> Self {
     Self {
-      title: None,
+      dot_line_title: None,
       attrs: MultiAttrList::new_in(bump),
       start_loc,
     }
@@ -22,7 +22,7 @@ impl<'arena> ChunkMeta<'arena> {
     start_loc: impl Into<SourceLocation>,
   ) -> Self {
     let mut cm = Self {
-      title,
+      dot_line_title: title,
       attrs: attrs.into(),
       start_loc: start_loc.into(),
     };
@@ -33,6 +33,13 @@ impl<'arena> ChunkMeta<'arena> {
   }
 
   pub fn is_empty(&self) -> bool {
-    self.attrs.is_empty() && self.title.is_none()
+    self.attrs.is_empty() && self.dot_line_title.is_none()
+  }
+
+  pub fn title(&self) -> Option<&InlineNodes<'_>> {
+    self
+      .attrs
+      .named_nodes("title")
+      .or(self.dot_line_title.as_ref())
   }
 }

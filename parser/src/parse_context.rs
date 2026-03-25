@@ -130,13 +130,14 @@ impl<'arena> ParseContext<'arena> {
     }
   }
 
-  pub fn push_callout(&mut self, num: Option<u8>) -> Callout {
+  pub fn push_callout(&mut self, num: Option<u8>, is_xml_wrapped: bool) -> Callout {
     let mut callouts = self.callouts.borrow_mut();
     if callouts.is_empty() {
       callouts.push(Callout {
         list_idx: 0,
         callout_idx: 0,
         number: num.unwrap_or(1),
+        is_xml_wrapped,
       });
     } else {
       let last_callout_idx = callouts.len() - 1;
@@ -144,11 +145,13 @@ impl<'arena> ParseContext<'arena> {
       // sentinel for moving to next list
       if last.number == 0 {
         callouts[last_callout_idx].number = num.unwrap_or(1);
+        callouts[last_callout_idx].is_xml_wrapped = is_xml_wrapped;
       } else {
         callouts.push(Callout {
           list_idx: last.list_idx,
           callout_idx: last.callout_idx + 1,
           number: num.unwrap_or(last.number + 1),
+          is_xml_wrapped,
         });
       }
     }
@@ -159,7 +162,7 @@ impl<'arena> ParseContext<'arena> {
     let last = { self.callouts.borrow().last().copied() };
     if let Some(last) = last {
       self.callouts = Rc::new(RefCell::new(
-        bvec![in bump; Callout::new(last.list_idx + 1, 0, 0 )],
+        bvec![in bump; Callout::new(last.list_idx + 1, 0, 0, false)],
       ));
     }
   }

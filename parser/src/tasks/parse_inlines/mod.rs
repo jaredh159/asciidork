@@ -158,16 +158,8 @@ impl<'arena> Parser<'arena> {
                 acc.push_node(Macro(InlineImage { target, attrs, kind }), macro_loc);
               }
               "kbd:" if line.current_is(OpenBracket) => {
-                line.discard_assert(OpenBracket);
-                let keys_src = line.consume_to_string_until(CloseBracket, self.bump);
-                line.discard_assert(CloseBracket);
-                macro_loc.end = keys_src.loc.end + 1;
-                let mut keys = BumpVec::new_in(self.bump);
-                for captures in regx::KBD_MACRO_KEYS.captures_iter(&keys_src).step_by(2) {
-                  let key = captures.get(1).unwrap().as_str();
-                  keys.push(self.string(key));
-                }
-                acc.push_node(Macro(Keyboard { keys, keys_src }), macro_loc);
+                let node = self.parse_kbd_macro(&mut line, &mut macro_loc);
+                acc.push_node(node, macro_loc);
               }
               "footnote:" => {
                 let id = line.consume_optional_macro_target(self.bump);
@@ -436,7 +428,8 @@ impl<'arena> Parser<'arena> {
             acc.text.trim_end();
             let loc = SourceLocation::new(acc.text.loc.end, token.loc.end, token.loc.include_depth);
             let number = token.parse_callout_num();
-            acc.push_node(CalloutNum(self.ctx.push_callout(number)), loc);
+            let is_xml = token.lexeme.starts_with("<!--");
+            acc.push_node(CalloutNum(self.ctx.push_callout(number, is_xml)), loc);
           }
 
           CalloutNumber if subs.special_chars() => {
@@ -838,9 +831,15 @@ impl<'arena> Parser<'arena> {
               }
               _ => {
                 acc.push_node(Discarded, token.loc);
-                // pushing the next token as text prevents recognizing the pattern
-                let next_token = line.consume_current().unwrap();
-                acc.push_text_token(&next_token);
+                while let Some(backslash) = line.consume_if(Backslash) {
+                  acc.push_node(Discarded, backslash.loc);
+                }
+                if !subs.special_chars() || !line.current_token().is_some_and(|t| t.kind(Ampersand))
+                {
+                  // pushing the next token as text prevents recognizing the pattern
+                  let next_token = line.consume_current().unwrap();
+                  acc.push_text_token(&next_token);
+                }
               }
             }
           }
@@ -1042,6 +1041,43 @@ impl<'arena> Parser<'arena> {
       );
       state.push_node(CalloutTuck(tuck), tuck_loc);
     }
+  }
+
+  fn parse_kbd_macro(
+    &mut self,
+    line: &mut Line<'arena>,
+    macro_loc: &mut SourceLocation,
+  ) -> Inline<'arena> {
+    let open_bracket = line.consume_current().unwrap();
+    let mut keys_src_loc = open_bracket.loc.incr();
+    let mut keys_src_str = BumpString::new_in(self.bump);
+    let mut last_kind = None;
+    loop {
+      let Some(peek) = line.current_token() else {
+        break;
+      };
+      match (last_kind, peek.kind) {
+        (_, AttrRef) | (Some(_), Backslash) => {
+          last_kind = Some(line.consume_current().unwrap().kind);
+        }
+        (_, CloseBracket) if last_kind.is_none_or(|k| k != Backslash) => break,
+        _ => {
+          let token = line.consume_current().unwrap();
+          last_kind = Some(token.kind);
+          keys_src_str.push_str(&token.lexeme);
+          keys_src_loc.extend(token.loc);
+        }
+      }
+    }
+    let keys_src = SourceString::new(keys_src_str, keys_src_loc);
+    line.discard_assert(CloseBracket);
+    macro_loc.end = keys_src.loc.end + 1;
+    let mut keys = BumpVec::new_in(self.bump);
+    for captures in regx::KBD_MACRO_KEYS.captures_iter(&keys_src).step_by(2) {
+      let key = captures.get(1).unwrap().as_str();
+      keys.push(self.string(key));
+    }
+    Macro(Keyboard { keys, keys_src })
   }
 }
 

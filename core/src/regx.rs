@@ -19,6 +19,8 @@ lazy_static! {
 lazy_static! {
   pub static ref PASS_DBL_MACRO_ATTR: Regex =
     Regex::new(r#"^pass:([a-z]+(?:,[a-z-]+)*)?\[footnote:(.*)\]\]$"#).unwrap();
+  pub static ref PASS_SIMPLE_ENTITY_MACRO_ATTR: Regex =
+    Regex::new(r#"^pass:\[(&(#\d+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);)\]$"#).unwrap();
 }
 
 // directives
@@ -42,7 +44,7 @@ lazy_static! {
   pub static ref REPEAT_STAR_LI_START: Regex = Regex::new(r#"^\s?(\*+)( |\t)+.+"#).unwrap();
 }
 
-// inlines
+// keyboard macro
 lazy_static! {
   pub static ref KBD_MACRO_KEYS: Regex = Regex::new(r"(?:\s*([^\s,+]+|[,+])\s*)").unwrap();
 }

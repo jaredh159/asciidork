@@ -39,7 +39,7 @@ assert_html!(
     "xml",
     raw_html! {r#"
       &lt;section&gt;
-        &lt;title&gt;Section Title&lt;/title&gt; <b class="conum">(1)</b>
+        &lt;title&gt;Section Title&lt;/title&gt; &lt;!--<b class="conum">(1)</b>--&gt;
       &lt;/section&gt;
     "#}
   )

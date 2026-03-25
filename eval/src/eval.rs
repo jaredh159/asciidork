@@ -52,8 +52,8 @@ fn eval_doc_content(ctx: &Ctx, backend: &mut impl Backend) {
       if let Some(blocks) = &content.preamble {
         backend.enter_preamble(ctx.doc.title().is_some(), blocks);
         blocks.iter().for_each(|b| eval_block(b, ctx, backend));
-        backend.exit_preamble(ctx.doc.title().is_some(), blocks);
         eval_toc_at(&[TocPosition::Preamble], None, ctx, backend);
+        backend.exit_preamble(ctx.doc.title().is_some(), blocks);
       }
       content
         .sections
@@ -75,8 +75,8 @@ fn eval_book(book: &MultiPartBook, ctx: &Ctx, backend: &mut impl Backend) {
       .opening_special_sects
       .iter()
       .for_each(|sect| eval_section(sect, ctx, backend));
-    backend.exit_preamble(ctx.doc.title().is_some(), blocks);
     eval_toc_at(&[TocPosition::Preamble], None, ctx, backend);
+    backend.exit_preamble(ctx.doc.title().is_some(), blocks);
   } else {
     book
       .opening_special_sects
@@ -104,7 +104,7 @@ fn eval_book_part(part: &Part, ctx: &Ctx, backend: &mut impl Backend) {
   backend.exit_book_part_title(&part.title);
   if let Some(blocks) = &part.intro {
     backend.enter_book_part_intro(part);
-    if let Some(title) = &part.title.meta.title {
+    if let Some(title) = &part.title.meta.title() {
       title.iter().for_each(|n| eval_inline(n, ctx, backend));
     }
     backend.enter_book_part_intro_content(part);
@@ -135,10 +135,10 @@ fn eval_section(section: &Section, ctx: &Ctx, backend: &mut impl Backend) {
 }
 
 fn eval_block(block: &Block, ctx: &Ctx, backend: &mut impl Backend) {
-  if let Some(title) = &block.meta.title {
-    backend.enter_meta_title();
+  if let Some(title) = &block.meta.title() {
+    backend.enter_meta_title(block);
     title.iter().for_each(|n| eval_inline(n, ctx, backend));
-    backend.exit_meta_title();
+    backend.exit_meta_title(block);
   }
   match (block.context, &block.content) {
     (Context::Paragraph, Content::Simple(children)) => {

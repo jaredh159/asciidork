@@ -76,9 +76,9 @@ impl<'arena> Parser<'arena> {
       let intro_title = preamble
         .first_mut()
         .filter(|block| block.meta.attrs.has_str_positional("partintro"))
-        .and_then(|block| block.meta.title.take());
-      if title.meta.title.is_none() {
-        title.meta.title = intro_title;
+        .and_then(|block| block.meta.dot_line_title.take());
+      if title.meta.dot_line_title.is_none() {
+        title.meta.dot_line_title = intro_title;
       }
     }
 

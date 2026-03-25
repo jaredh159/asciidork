@@ -127,3 +127,50 @@ assert_html!(
    r#"<div class="title">Figure 2. Image B-Attr</div>"#,
    r#"<div class="title">Figure 3. Image A</div>"#,
 );
+
+assert_html!(
+  title_from_attrlist_used_and_preferred,
+  adoc! {r#"
+    .Dot line title
+    [title="From Attrlist"]
+    ====
+    content
+    ====
+  "#},
+  contains: r#"<div class="title">Example 1. From Attrlist</div>"#
+);
+
+assert_html!(
+  passthru_block_titles_ignored,
+  adoc! {r#"
+    .foo
+    ++++
+    bar
+    ++++
+
+    .baz
+    ++++
+    qux
+    ++++
+  "#},
+  "barqux"
+);
+
+assert_html!(
+  custom_subs_multi_replace,
+  adoc! {r#"
+    [source,java,subs="verbatim,quotes"]
+    ----
+    System.out.println("Hello *<name>*")
+    ----
+  "#},
+  html! {r#"
+    <div class="listingblock">
+      <div class="content">
+        <pre class="highlight">
+          <code class="language-java" data-lang="java">System.out.println("Hello <strong>&lt;name&gt;</strong>")</code>
+        </pre>
+      </div>
+    </div>
+  "#}
+);

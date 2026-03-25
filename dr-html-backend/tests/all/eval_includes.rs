@@ -217,6 +217,26 @@ assert_html!(
 );
 
 assert_html!(
+  include_err_on_missing_file_2,
+  resolving_err: ResolveError::NotFound,
+  adoc! {r#"
+    [,ruby]
+    ----
+    include::app.rb[]
+    ----
+  "#},
+  html! {r#"
+    <div class="listingblock">
+      <div class="content">
+        <pre class="highlight">
+          <code class="language-ruby" data-lang="ruby">Unresolved directive in test.adoc - include::app.rb[]</code>
+        </pre>
+      </div>
+    </div>
+  "#}
+);
+
+assert_html!(
   include_err_on_io,
   resolving_err: ResolveError::Io("permission denied".into()),
   "include::404.adoc[]",

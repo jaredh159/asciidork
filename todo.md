@@ -67,6 +67,12 @@
 - we don't currently support the newline-based ancestor list continuation method, which is
   discouraged and described as fragile:
   https://docs.asciidoctor.org/asciidoc/latest/lists/continuation/#ancestor-list-continuation
+- we don't support officially discouraged "shorthand syntax" for menu macro, probably
+  never will, it seems nuts:
+  https://docs.asciidoctor.org/asciidoc/latest/macros/ui-macros/#menu-macro-syntax
+- for the time being at least, we're not supporting counters, they are discouraged and
+  considered "poorly specificed" in the docs:
+  https://docs.asciidoctor.org/asciidoc/latest/attributes/counters/
 
 ```adoc
 // @see https://asciidoc.zulipchat.com/#narrow/channel/335214-general/topic/.E2.9C.94.20question.20about.20constrained.20mono.20not.20recognized/with/501266389

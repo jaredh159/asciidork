@@ -149,20 +149,10 @@ impl OpenTag {
     if let Some(title) = attrs.named("title") {
       self.push_html_attr("title", title)
     }
-    if let Some(window) = attrs.named("window") {
-      self.push_html_attr("target", window);
-      if window == "_blank" || attrs.has_option("noopener") {
-        self.push_str(" rel=\"noopener");
-        if attrs.has_option("nofollow") {
-          self.push_str(" nofollow\"");
-        } else {
-          self.push_ch('"');
-        }
-      }
-    } else if blank_window_shorthand {
+    if blank_window_shorthand {
       self.push_str(" target=\"_blank\" rel=\"noopener\"");
-    } else if attrs.has_option("nofollow") {
-      self.push_str(" rel=\"nofollow\"");
+    } else {
+      self.append_link_constraint_attrs(attrs);
     }
   }
 

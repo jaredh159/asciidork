@@ -33,6 +33,10 @@ impl SourceLocation {
     Self::new(self.start, self.end + adding, self.include_depth)
   }
 
+  pub fn subtracting_from_start(&self, subtracting: u32) -> SourceLocation {
+    Self::new(self.start - subtracting, self.end, self.include_depth)
+  }
+
   pub fn setting_end(&self, end: u32) -> SourceLocation {
     Self::new(self.start, end, self.include_depth)
   }

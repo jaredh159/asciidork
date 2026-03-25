@@ -67,6 +67,13 @@ impl AttrData for PriorityAttrList<'_> {
       .or_else(|| self.rest.named_with_loc(key))
   }
 
+  fn named_nodes(&self, key: &str) -> Option<&InlineNodes<'_>> {
+    self
+      .priority
+      .named_nodes(key)
+      .or_else(|| self.rest.named_nodes(key))
+  }
+
   fn ordered_list_custom_number_style(&self) -> Option<&'static str> {
     self
       .priority

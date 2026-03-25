@@ -51,6 +51,32 @@ assert_inline_html!(litmono_attr_ref, "`+{name}+`", r#"<code>{name}</code>"#);
 assert_inline_html!(not_implicit_apostrophe, "('foo')", r#"('foo')"#);
 assert_inline_html!(curvy_end, "a `foo`’ b", "a <code>foo</code>’ b");
 assert_inline_html!(dash_before_bold, "-*5*", "-<strong>5</strong>");
+assert_inline_html!(escaped_ampersands, "\\&sect; \\&foo", "&amp;sect; &amp;foo");
+assert_inline_html!(esc_italics, "\\_foo_ \\\\__bar__", "_foo_ __bar__");
+assert_inline_html!(esc_unconst_em_text, "\\__foo__bar", "__foo__bar");
+assert_inline_html!(esc_unconst_mono_text, "\\``foo``bar", "``foo``bar");
+assert_inline_html!(esc_unconst_strong, "\\\\**foo**", "**foo**");
+assert_inline_html!(esc_unconst_mono, "\\\\``foo``", "``foo``");
+assert_inline_html!(esc_unconst_mark, "\\\\##foo##", "##foo##");
+assert_inline_html!(esc_superscript, "\\^foo^", "^foo^");
+assert_inline_html!(esc_subscript, "\\~foo~", "~foo~");
+
+assert_inline_html!(
+  mark_containing_litmono_with_hashes,
+  "#`+CB###2+`# and #`+CB###3+`#",
+  "<mark><code>CB###2</code></mark> and <mark><code>CB###3</code></mark>"
+);
+
+assert_inline_html!(
+  escaped_mixed_const,
+  "\\*strong* and \\_emph_ and \\`mono`",
+  "*strong* and _emph_ and `mono`"
+);
+assert_inline_html!(
+  escaped_mixed_unconst,
+  "\\^sup^ and \\~sub~",
+  "^sup^ and ~sub~"
+);
 
 assert_inline_html!(
   visible_index_term_shorthand,
@@ -234,7 +260,7 @@ assert_html!(
   "select menu:File[Save].",
   html! {r#"
     <div class="paragraph">
-      <p>select <span class="menuseq"><span class="menu">File</span>&#160;&#9656;<span class="menuitem">Save</span></span>.</p>
+      <p>select <span class="menuseq"><b class="menu">File</b>&#160;<b class="caret">&#8250;</b><b class="menuitem">Save</b></span>.</p>
     </div>
   "#}
 );
@@ -246,9 +272,9 @@ assert_html!(
     <div class="paragraph">
       <p>
         select <span class="menuseq"
-          ><span class="menu">File</span>&#160;&#9656;
-          <span class="submenu">Save</span>&#160;&#9656;
-          <span class="menuitem">Reset</span></span
+          ><b class="menu">File</b>&#160;<b class="caret">&#8250;</b>
+          <b class="submenu">Save</b>&#160;<b class="caret">&#8250;</b>
+          <b class="menuitem">Reset</b></span
         >.
       </p>
     </div>
@@ -769,6 +795,18 @@ assert_html!(
 );
 
 assert_html!(
+  pass_macro_emoji_admonition_icon,
+  adoc! {r#"
+    :icons: font
+    :tip-caption: pass:[&#128161;]
+
+    [TIP]
+    It's possible to use Unicode glyphs as admonition icons.
+  "#},
+    contains: r#"<td class="icon"><i class="fa icon-tip" title="&#128161;"></i></td>"#
+);
+
+assert_html!(
   custom_icon_data_uri,
   resolving: b"a",
   adoc! {r#"
@@ -807,6 +845,40 @@ assert_html!(
           <td class="content">
             <div class="paragraph"><p>This is a note!</p></div>
           </td>
+        </tr>
+      </table>
+    </div>
+  "#}
+);
+
+assert_html!(
+  admonition_blocks_custom_captions,
+  adoc! {r#"
+    :note-caption: NB
+
+    [NOTE]
+    ====
+    This is a note!
+    ====
+
+    [caption=trumpsattr]
+    [NOTE]
+    Another note!
+  "#},
+  html! {r#"
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><div class="title">NB</div></td>
+          <td class="content"><div class="paragraph"><p>This is a note!</p></div></td>
+        </tr>
+      </table>
+    </div>
+    <div class="admonitionblock note">
+      <table>
+        <tr>
+          <td class="icon"><div class="title">trumpsattr</div></td>
+          <td class="content">Another note!</td>
         </tr>
       </table>
     </div>

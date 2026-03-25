@@ -140,8 +140,8 @@ pub trait Backend {
   fn visit_asciidoc_table_cell_result(&mut self, cell_backend: Self);
 
   // block content
-  fn enter_meta_title(&mut self);
-  fn exit_meta_title(&mut self);
+  fn enter_meta_title(&mut self, block: &Block);
+  fn exit_meta_title(&mut self, block: &Block);
   fn enter_simple_block_content(&mut self, block: &Block);
   fn exit_simple_block_content(&mut self, block: &Block);
   fn enter_compound_block_content(&mut self, children: &[Block], block: &Block);

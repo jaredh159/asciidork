@@ -423,14 +423,20 @@ impl<'arena> Line<'arena> {
   }
 
   pub fn index_of_seq(&self, specs: &[TokenSpec]) -> Option<usize> {
+    self.index_of_seq_from(specs, 0)
+  }
+
+  fn index_of_seq_from(&self, specs: &[TokenSpec], from: usize) -> Option<usize> {
     assert!(!specs.is_empty());
-    if self.len() < specs.len() {
+    let len = self.len();
+    if len < specs.len() {
       return None;
     }
     let first_spec = specs.first().unwrap();
-    'outer: for (i, token) in self.iter().enumerate() {
+    'outer: for i in from..len {
+      let token = self.tokens.get(i).unwrap();
       if token.satisfies(*first_spec) {
-        if self.len() - i < specs.len() {
+        if len - i < specs.len() {
           return None;
         }
         for (j, spec) in specs.iter().skip(1).enumerate() {
@@ -513,28 +519,51 @@ impl<'arena> Line<'arena> {
     stop_tokens: &[TokenSpec],
     ctx: &InlineCtx,
   ) -> Option<usize> {
-    match self.index_of_seq(stop_tokens) {
-      Some(0) => None,
-      Some(n) => {
-        let next = self.nth_token(n + 1);
-        if next.kind(Word) || self.nth_token(n - 1).is_whitespaceish() {
-          None
-        } else if next.kind(SingleQuote) && stop_tokens == [Kind(Backtick)] {
-          None
-        } else {
-          match ctx.specs() {
-            Some(specs) => self.index_of_seq(specs).map_or(Some(n), |m| {
-              if m < n && !self.nth_token(m).is_attr_replacement() {
-                None
-              } else {
-                Some(n)
-              }
-            }),
-            None => Some(n),
-          }
-        }
+    let mut search_from = 0;
+    loop {
+      let n = match self.index_of_seq_from(stop_tokens, search_from) {
+        Some(0) | None => return None,
+        Some(n) => n,
+      };
+      let next = self.nth_token(n + 1);
+      let prev = self.nth_token(n - 1); // safe: n > 0
+
+      // e.g: `#`+CB###2+`#` - skip past n if it's inside a run of same-kind tokens
+      if stop_tokens.len() == 1
+        && prev.is_some_and(|t| stop_tokens[0] == Kind(t.kind) && !t.is_attr_replacement())
+      {
+        search_from = n + 1;
+        continue;
       }
-      _ => None,
+
+      if next.kind(Word) || prev.is_whitespaceish() {
+        return None;
+      }
+
+      // e.g: `_bar__` - the first _ after the `r` cannot end constrained pair
+      if let Some(token) = next
+        && matches!(token.kind, Underscore | Star | Backtick | Hash)
+        && stop_tokens == [Kind(token.kind)]
+        && !token.is_attr_replacement()
+      {
+        search_from = n + 1;
+        continue;
+      }
+
+      if next.kind(SingleQuote) && stop_tokens == [Kind(Backtick)] {
+        return None;
+      }
+
+      return match ctx.specs() {
+        Some(specs) => self.index_of_seq(specs).map_or(Some(n), |m| {
+          if m < n && !self.nth_token(m).is_attr_replacement() {
+            None
+          } else {
+            Some(n)
+          }
+        }),
+        None => Some(n),
+      };
     }
   }
 
@@ -601,6 +630,13 @@ impl<'arena> Line<'arena> {
       loc.extend(token.loc);
     }
     SourceString::new(s, loc)
+  }
+
+  pub fn consume_if(&mut self, kind: TokenKind) -> Option<Token<'_>> {
+    match self.current_token() {
+      Some(token) if token.kind(kind) => self.consume_current(),
+      _ => None,
+    }
   }
 
   pub fn consume_if_not(&mut self, kind: TokenKind) -> Option<Token<'_>> {
@@ -1202,6 +1238,12 @@ mod tests {
     let cases: Vec<(&str, &[TokenSpec], Option<usize>)> = vec![
       ("foo_ bar", &[Kind(Underscore)], Some(1)),
       ("foo_bar bar", &[Kind(Underscore)], None),
+      // `#` inside passthrough run `###` should not block closing `#` later
+      ("`+CB###2+`#", &[Kind(Hash)], Some(9)),
+      // `_bar__` - the closing _ of a constrained pair can't be the first _ of `__`
+      ("bar__", &[Kind(Underscore)], None),
+      // `#foo##` - same for hash
+      ("foo##", &[Kind(Hash)], None),
     ];
     for (input, specs, expected) in cases {
       let line = read_line!(input);

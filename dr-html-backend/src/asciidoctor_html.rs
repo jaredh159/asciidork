@@ -144,13 +144,16 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    if toc.position == TocPosition::Preamble {
+      self.push_str("</div>"); // close preamble section body
+    }
     self.state.ephemeral.insert(InTableOfContents);
     let id = &macro_block
       .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
       .unwrap_or("toc".to_string());
     self.push([r#"<div id=""#, id, r#"" class=""#]);
     self.push_str(&self.doc_meta.string_or("toc-class", "toc"));
-    if matches!(toc.position, TocPosition::Left | TocPosition::Right) {
+    if !self.doc_meta.embedded && matches!(toc.position, TocPosition::Left | TocPosition::Right) {
       self.push_ch('2'); // `toc2` roughly means "toc-aside", per dr src
     }
     self.push([r#""><div id=""#, id, r#"title""#]);
@@ -163,8 +166,10 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn exit_toc(&mut self, _toc: &TableOfContents) {
-    self.push_str("</div>");
+  fn exit_toc(&mut self, toc: &TableOfContents) {
+    if toc.position != TocPosition::Preamble {
+      self.push_str("</div>");
+    }
     self.on_toc_exit();
     self.state.ephemeral.remove(&InTableOfContents);
   }
@@ -222,7 +227,7 @@ impl Backend for AsciidoctorHtml {
   #[instrument(skip_all)]
   fn enter_book_part_intro(&mut self, part: &Part) {
     self.push_str(r#"<div class="openblock partintro">"#);
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str(r#"<div class="title">"#);
     }
   }
@@ -234,7 +239,7 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn enter_book_part_intro_content(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str("</div>");
     }
     self.push_str(r#"<div class="content">"#);
@@ -290,13 +295,17 @@ impl Backend for AsciidoctorHtml {
   }
 
   #[instrument(skip_all)]
-  fn enter_meta_title(&mut self) {
+  fn enter_meta_title(&mut self, _block: &Block) {
     self.start_buffering();
   }
 
   #[instrument(skip_all)]
-  fn exit_meta_title(&mut self) {
-    self.stop_buffering();
+  fn exit_meta_title(&mut self, block: &Block) {
+    if block.context != BlockContext::Passthrough {
+      self.stop_buffering();
+    } else {
+      self.swap_discard_alt_buffer();
+    }
   }
 
   #[instrument(skip_all)]
@@ -1066,14 +1075,15 @@ impl Backend for AsciidoctorHtml {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
+
     match self.doc_meta.icon_mode() {
       IconMode::Image => self.push_callout_number_img(callout.number),
       IconMode::Font => self.push_callout_number_font(callout.number),
-      // TODO: asciidoctor also handles special `guard` case
-      //   elsif ::Array === (guard = node.attributes['guard'])
-      //     %(&lt;!--<b class="conum">(#{node.text})</b>--&gt;)
-      // @see https://github.com/asciidoctor/asciidoctor/issues/3319
-      IconMode::Text => self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]),
+      IconMode::Text => {
+        self.push_str(iff!(callout.is_xml_wrapped, "&lt;!--", ""));
+        self.push([r#"<b class="conum">("#, &num_str!(callout.number), ")</b>"]);
+        self.push_str(iff!(callout.is_xml_wrapped, "--&gt;", ""));
+      }
     }
   }
 
@@ -1105,9 +1115,7 @@ impl Backend for AsciidoctorHtml {
     let has_link = if let Some(link) = attrs.named("link") {
       self.push_str(r#"<a class="image""#);
       self.push_html_attr("href", link);
-      if let Some(window) = attrs.named("window") {
-        self.push_html_attr("target", window);
-      }
+      self.append_link_constraint_attrs(attrs);
       self.push_str(">");
       true
     } else {
@@ -1289,7 +1297,21 @@ impl Backend for AsciidoctorHtml {
 
   #[instrument(skip_all)]
   fn visit_menu_macro(&mut self, items: &[SourceString]) {
-    HtmlBackend::visit_menu_macro(self, items);
+    let mut items = items.iter();
+    self.push_str(r#"<span class="menuseq"><b class="menu">"#);
+    self.push_str(items.next().unwrap());
+    self.push_str("</b>");
+
+    let last_idx = items.len() - 1;
+    for (idx, item) in items.enumerate() {
+      self.push_str(r#"&#160;<b class="caret">&#8250;</b><b class=""#);
+      if idx == last_idx {
+        self.push(["menuitem\">", item, "</b>"]);
+      } else {
+        self.push(["submenu\">", item, "</b>"]);
+      }
+    }
+    self.push_str("</span>");
   }
 
   #[instrument(skip_all)]
@@ -1314,18 +1336,23 @@ impl Backend for AsciidoctorHtml {
       if !file::has_ext(custom_icon) {
         self.push_icon_inferred_img_ext();
       }
-      self.push([r#"" alt=""#, kind.str(), r#"">"#]);
+      self.push_str(r#"" alt=""#);
+      self.push_admonition_block_textlabel(kind, block);
+      self.push_str(r#"">"#);
     } else {
       match icon_mode {
         IconMode::Text => {
-          self.push([r#"<div class="title">"#, kind.str(), "</div>"]);
+          self.push_str(r#"<div class="title">"#);
+          self.push_admonition_block_textlabel(kind, block);
+          self.push_str("</div>");
         }
         IconMode::Image => {
-          self.push_admonition_img(kind, icon_uri);
+          self.push_admonition_img(kind, icon_uri, block);
         }
         IconMode::Font => {
           self.push([r#"<i class="fa icon-"#, kind.lowercase_str(), "\" title=\""]);
-          self.push([kind.str(), r#""></i>"#]);
+          self.push_admonition_block_textlabel(kind, block);
+          self.push_str(r#""></i>"#);
         }
       }
     }
@@ -1614,14 +1641,16 @@ impl AsciidoctorHtml {
     }
   }
 
-  fn push_admonition_img(&mut self, kind: AdmonitionKind, data_uri: Option<&str>) {
+  fn push_admonition_img(&mut self, kind: AdmonitionKind, data_uri: Option<&str>, block: &Block) {
     self.push_str(r#"<img src=""#);
     if let Some(data_uri) = data_uri {
       self.push_str(data_uri);
     } else {
       self.push_icon_uri(kind.lowercase_str(), None);
     }
-    self.push([r#"" alt=""#, kind.str(), r#"">"#]);
+    self.push_str(r#"" alt=""#);
+    self.push_admonition_block_textlabel(kind, block);
+    self.push_str(r#"">"#);
   }
 
   fn render_division_start(&mut self, id: &str) {

@@ -135,6 +135,9 @@ impl Backend for Html5s {
   }
 
   fn enter_toc(&mut self, toc: &TableOfContents, macro_block: Option<&Block>) {
+    if toc.position == TocPosition::Preamble {
+      self.start_buffering();
+    }
     self.state.ephemeral.insert(InTableOfContents);
     let id = &macro_block
       .and_then(|b| b.meta.attrs.id().map(|id| id.to_string()))
@@ -142,7 +145,7 @@ impl Backend for Html5s {
     self.push([r#"<nav id=""#, id, r#"" class=""#]);
     self.push_str(&self.doc_meta.string_or("toc-class", "toc"));
     self.push_str(r#"" role="doc-toc"#);
-    if matches!(toc.position, TocPosition::Left | TocPosition::Right) {
+    if !self.doc_meta.embedded && matches!(toc.position, TocPosition::Left | TocPosition::Right) {
       self.push_ch('2'); // `toc2` roughly means "toc-aside", per dr src
     }
     let level = self.section_level_stack.last().copied().unwrap_or(0) + 2;
@@ -201,7 +204,7 @@ impl Backend for Html5s {
   }
 
   fn enter_book_part_intro(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str(r#"<section class="open-block partintro">"#);
       self.push_str(r#"<h6 class="block-title">"#);
     } else {
@@ -210,7 +213,7 @@ impl Backend for Html5s {
   }
 
   fn exit_book_part_intro(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str("</section>");
     } else {
       self.push_str("</div>");
@@ -218,7 +221,7 @@ impl Backend for Html5s {
   }
 
   fn enter_book_part_intro_content(&mut self, part: &Part) {
-    if part.title.meta.title.is_some() {
+    if part.title.meta.title().is_some() {
       self.push_str("</h6>");
     }
     self.push_str(r#"<div class="content">"#);
@@ -235,8 +238,12 @@ impl Backend for Html5s {
   }
 
   fn exit_preamble(&mut self, doc_has_title: bool, _blocks: &[Block]) {
+    let buffered = if !self.alt_html.is_empty() { Some(self.swap_take_buffer()) } else { None };
     if doc_has_title {
       self.push_str("</section>");
+    }
+    if let Some(preamble_toc) = buffered {
+      self.push_str(&preamble_toc);
     }
   }
 
@@ -297,27 +304,37 @@ impl Backend for Html5s {
     let el = if block.has_title() { "figure" } else { "div" };
     self.open_element(el, &["listing-block"], &block.meta.attrs);
     self.render_buffered_block_title(block, false);
-    self.push_str("<pre");
-    let doc_lang = self.doc_meta.string("source-language");
+    let mut html = String::new();
+    self.swapbuf(&mut html);
+    html.push_str("<pre");
+    let doc_lang = self.doc_meta.str("source-language");
     if block.meta.attrs.is_source() || doc_lang.is_some() {
-      self.push_str(" class=\"highlight");
+      html.push_str(" class=\"highlight");
       if block.meta.attrs.has_option("nowrap") {
-        self.push_str(" nowrap");
+        html.push_str(" nowrap");
       }
-      if block.meta.attrs.has_option("numbered") {
-        self.push_str(" linenums");
+      if block.meta.attrs.has_option("numbered")
+        || block.meta.attrs.has_option("linenums")
+        || block.meta.attrs.str_positional_at(2) == Some("linenums")
+      {
+        html.push_str(" linenums");
       }
-      self.push_str("\"><code");
-      if let Some(lang) = block.meta.attrs.source_language() {
-        self.push([" class=\"language-", lang, "\" data-lang=\"", lang, "\""]);
-      } else if let Some(lang) = doc_lang {
-        self.push([" class=\"language-", &lang, "\" data-lang=\"", &lang, "\""]);
+      if let Some(highlighter) = self.doc_meta.str("source-highlighter") {
+        html.push(' ');
+        html.push_str(highlighter);
       }
-      self.push_ch('>');
+      html.push_str("\"><code");
+      if let Some(lang) = block.meta.attrs.source_language().or(doc_lang) {
+        html.push_str(" class=\"language-");
+        html.push_str(lang);
+        html.push_str("\" data-lang=\"");
+        html.push_str(lang);
+        html.push('"');
+      }
       self.state.ephemeral.insert(IsSourceBlock);
-    } else {
-      self.push_ch('>');
     }
+    html.push('>');
+    self.swapbuf(&mut html);
   }
 
   fn exit_listing_block(&mut self, block: &Block) {
@@ -605,21 +622,23 @@ impl Backend for Html5s {
     } else {
       self.push_str("<li>");
     }
-    if item
-      .blocks
-      .first()
-      .is_some_and(|b| !matches!(b.content, BlockContent::List { .. }))
-    {
+    if item.blocks.first().is_some_and(|b| {
+      !matches!(
+        b.content,
+        BlockContent::List { .. } | BlockContent::Empty(..)
+      )
+    }) {
       self.push_str("<p>");
     }
   }
 
   fn exit_list_item_principal(&mut self, item: &ListItem, _list_variant: ListVariant) {
-    if item
-      .blocks
-      .first()
-      .is_some_and(|b| !matches!(b.content, BlockContent::List { .. }))
-    {
+    if item.blocks.first().is_some_and(|b| {
+      !matches!(
+        b.content,
+        BlockContent::List { .. } | BlockContent::Empty(..)
+      )
+    }) {
       self.push_str("</p>");
     }
   }
@@ -987,7 +1006,9 @@ impl Backend for Html5s {
     if !self.html.ends_with(' ') {
       self.push_ch(' ');
     }
+    self.push_str(iff!(callout.is_xml_wrapped, "&lt;!--", ""));
     self.push([r#"<b class="conum">"#, &num_str!(callout.number), "</b>"]);
+    self.push_str(iff!(callout.is_xml_wrapped, "--&gt;", ""));
   }
 
   fn visit_callout_tuck(&mut self, comment: &str) {
@@ -999,16 +1020,14 @@ impl Backend for Html5s {
   }
 
   fn visit_button_macro(&mut self, text: &SourceString) {
-    self.push([r#"<b class="button">"#, text, "</b>"])
+    self.push([r#"<kbd class="button"><samp>"#, text, "</samp></kbd>"])
   }
 
   fn visit_icon_macro(&mut self, target: &SourceString, attrs: &AttrList) {
     let has_link = if let Some(link) = attrs.named("link") {
       self.push_str(r#"<a class="image""#);
       self.push_html_attr("href", link);
-      if let Some(window) = attrs.named("window") {
-        self.push_html_attr("target", window);
-      }
+      self.append_link_constraint_attrs(attrs);
       self.push_str(">");
       true
     } else {
@@ -1051,8 +1070,7 @@ impl Backend for Html5s {
         }
         if let Some(flip) = attrs.named("flip") {
           self.push([r#" fa-flip-"#, flip]);
-        }
-        if let Some(rotate) = attrs.named("rotate") {
+        } else if let Some(rotate) = attrs.named("rotate") {
           self.push([r#" fa-rotate-"#, rotate]);
         }
         attrs.roles.iter().for_each(|role| {
@@ -1215,7 +1233,15 @@ impl Backend for Html5s {
   }
 
   fn visit_menu_macro(&mut self, items: &[SourceString]) {
-    HtmlBackend::visit_menu_macro(self, items);
+    let mut items = items.iter();
+    self.push_str(r#"<kbd class="menuseq"><kbd class="menu"><samp>"#);
+    self.push_str(items.next().unwrap());
+    self.push_str("</samp></kbd>");
+    for item in items {
+      self.push_str(r#"&#160;<span class="caret">&#8250;</span>&#32;<kbd class=""#);
+      self.push(["menu\"><samp>", item, "</samp></kbd>"]);
+    }
+    self.push_str("</kbd>");
   }
 
   fn enter_admonition_block(
@@ -1238,11 +1264,12 @@ impl Backend for Html5s {
       _ => self.push_str("doc-notice\">"),
     }
     self.push_str(r#"<h6 class="block-title"#);
-    if block.meta.title.is_none() {
+    if block.meta.title().is_none() {
       self.push_str(r#" label-only"#);
     }
     self.push_str(r#""><span class="title-label">"#);
-    self.push([kind.str(), ": </span>"]);
+    self.push_admonition_block_textlabel(kind, block);
+    self.push_str(": </span>");
     if block.has_title() {
       self.render_buffered_block_title(block, false);
     }
@@ -1316,21 +1343,7 @@ impl Backend for Html5s {
       };
       let href = if *href == "self" { &img_target.src } else { *href };
       self.push([r#"" href=""#, href, r#"""#]);
-      if let Some(window) = img_attrs.named("window") {
-        self.push([r#" target=""#, window, "\""]);
-        if window == "_blank" || img_attrs.has_option("noopener") {
-          self.push_str(" rel=\"noopener");
-        }
-        if img_attrs.has_option("nofollow") {
-          self.push_str(" nofollow\"");
-        } else {
-          self.push_ch('"');
-        }
-      } else if img_attrs.has_option("noopener") {
-        self.push_str(" rel=\"noopener\"");
-      } else if img_attrs.has_option("nofollow") {
-        self.push_str(" rel=\"nofollow\"");
-      }
+      self.append_link_constraint_attrs(img_attrs);
       if self_link {
         let label = self.doc_meta.string_or(
           "html5s-image-self-link-label",
@@ -1431,12 +1444,16 @@ impl Backend for Html5s {
     self.push(["[", &nums, "]</a>"]);
   }
 
-  fn enter_meta_title(&mut self) {
+  fn enter_meta_title(&mut self, _block: &Block) {
     self.start_buffering();
   }
 
-  fn exit_meta_title(&mut self) {
-    self.stop_buffering();
+  fn exit_meta_title(&mut self, block: &Block) {
+    if block.context != BlockContext::Passthrough {
+      self.stop_buffering();
+    } else {
+      self.swap_discard_alt_buffer();
+    }
   }
 
   fn into_result(self) -> Result<Self::Output, Self::Error> {
