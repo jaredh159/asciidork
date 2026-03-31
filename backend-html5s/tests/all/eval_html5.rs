@@ -68,6 +68,32 @@ assert_html!(
   "##}
 );
 
+#[test]
+fn resolved_docinfo_header_and_footer() {
+  let body = standalone_body_with_docinfo!(
+    adoc! {r#"
+    = Document Title
+  "#},
+    crate::helpers::test_backend_factory(),
+    Some(r#"<nav class="navbar">Docs</nav>"#),
+    Some(r##"<a id="top" href="#">Back to top</a>"##),
+  );
+  expect_eq!(
+    body,
+    html! {r##"
+      <body class="article">
+        <nav class="navbar">Docs</nav>
+        <header>
+          <h1>Document Title</h1>
+        </header>
+        <div id="content"></div>
+        <footer><div id="footer-text"></div></footer>
+        <a id="top" href="#">Back to top</a>
+      </body>
+    "##}
+  );
+}
+
 assert_html!(
   example,
   adoc! {r#"

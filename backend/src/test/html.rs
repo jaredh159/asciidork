@@ -114,6 +114,45 @@ macro_rules! assert_standalone_body {
 }
 
 #[macro_export]
+macro_rules! standalone_body_with_docinfo {
+  ($input:expr, $backend:expr, $docinfo_header:expr, $docinfo_footer:expr $(,)?) => {{
+    let parser = ::test_utils::test_parser!($input);
+    let mut document = parser.parse().unwrap().document;
+    document.docinfo.header = $docinfo_header.map(|text| {
+      let mut nodes = ::asciidork_ast::InlineNodes::new(::test_utils::leaked_bump());
+      nodes.push(::asciidork_ast::InlineNode::new(
+        ::asciidork_ast::Inline::Text(::bumpalo::collections::String::from_str_in(
+          text,
+          ::test_utils::leaked_bump(),
+        )),
+        ::asciidork_ast::SourceLocation::default(),
+      ));
+      nodes
+    });
+    document.docinfo.footer = $docinfo_footer.map(|text| {
+      let mut nodes = ::asciidork_ast::InlineNodes::new(::test_utils::leaked_bump());
+      nodes.push(::asciidork_ast::InlineNode::new(
+        ::asciidork_ast::Inline::Text(::bumpalo::collections::String::from_str_in(
+          text,
+          ::test_utils::leaked_bump(),
+        )),
+        ::asciidork_ast::SourceLocation::default(),
+      ));
+      nodes
+    });
+    let html = ::asciidork_eval::eval(&document, $backend).unwrap();
+    let body = html
+      .splitn(2, "<body")
+      .nth(1)
+      .unwrap()
+      .splitn(2, "</body>")
+      .next()
+      .unwrap();
+    format!("<body{body}</body>")
+  }};
+}
+
+#[macro_export]
 macro_rules! test_non_embedded_contains {
   ($name:ident, $input:expr, $needles:expr$(,)?) => {
     #[test]

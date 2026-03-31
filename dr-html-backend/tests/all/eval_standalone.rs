@@ -22,6 +22,55 @@ assert_standalone_body!(
   "#}
 );
 
+#[test]
+fn resolved_docinfo_header_renders_without_header() {
+  let body = standalone_body_with_docinfo!(
+    // helper from crate::helpers
+    adoc! {r#"
+    = Document Title
+    :noheader:
+  "#},
+    crate::helpers::test_backend_factory(),
+    Some(r#"<nav class="navbar">Docs</nav>"#),
+    None,
+  );
+  expect_eq!(
+    body,
+    html! {r#"
+      <body class="article">
+        <nav class="navbar">Docs</nav>
+        <div id="content"></div>
+        <div id="footer"></div>
+      </body>
+    "#}
+  );
+}
+
+#[test]
+fn resolved_docinfo_footer_renders_without_footer() {
+  let body = standalone_body_with_docinfo!(
+    adoc! {r#"
+    = Document Title
+    :nofooter:
+  "#},
+    crate::helpers::test_backend_factory(),
+    None,
+    Some(r##"<a id="top" href="#">Back to top</a>"##),
+  );
+  expect_eq!(
+    body,
+    html! {r##"
+      <body class="article">
+        <div id="header">
+          <h1>Document Title</h1>
+        </div>
+        <div id="content"></div>
+        <a id="top" href="#">Back to top</a>
+      </body>
+    "##}
+  );
+}
+
 assert_standalone_body!(
   normal_doc_structure_win_crlf,
   adoc_win_crlf! {r#"

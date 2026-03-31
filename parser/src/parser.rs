@@ -276,6 +276,8 @@ impl<'arena> Parser<'arena> {
       self.document.content = sectioned.into_doc_content(self.bump);
     }
 
+    self.resolve_docinfo();
+
     // so the backend can see them replayed in decl order
     self.document.meta.clear_doc_attrs();
     self.diagnose_document()?;

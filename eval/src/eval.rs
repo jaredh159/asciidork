@@ -19,7 +19,15 @@ pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
     doc,
     resolving_xref: RefCell::new(false),
   };
+  let render_docinfo = !ctx.doc.meta.embedded;
   backend.enter_document(ctx.doc);
+  if render_docinfo {
+    eval_docinfo(ctx.doc.docinfo.head.as_ref(), &ctx, backend);
+  }
+  backend.enter_body(ctx.doc);
+  if render_docinfo {
+    eval_docinfo(ctx.doc.docinfo.header.as_ref(), &ctx, backend);
+  }
   backend.enter_header();
   if let Some(doc_title) = doc.title() {
     backend.enter_document_title();
@@ -39,7 +47,20 @@ pub fn visit<B: Backend>(doc: &Document, backend: &mut B) {
   eval_doc_content(&ctx, backend);
   backend.enter_footer();
   backend.exit_footer();
+  if render_docinfo {
+    eval_docinfo(ctx.doc.docinfo.footer.as_ref(), &ctx, backend);
+  }
+  backend.exit_body(ctx.doc);
   backend.exit_document(ctx.doc);
+}
+
+fn eval_docinfo<B: Backend>(docinfo: Option<&DocInfoFragment>, ctx: &Ctx, backend: &mut B) {
+  let Some(nodes) = docinfo else {
+    return;
+  };
+  nodes
+    .iter()
+    .for_each(|node| eval_inline(node, ctx, backend));
 }
 
 fn eval_doc_content(ctx: &Ctx, backend: &mut impl Backend) {

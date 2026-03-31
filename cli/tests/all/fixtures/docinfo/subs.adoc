@@ -1,0 +1,9 @@
+= Document Title
+Doc Writer
+:docinfo1:
+:docinfodir: custom
+:docinfosubs: attributes,replacements
+:copyright-owner: OpenDevise
+:bootstrap-version: 3.2.0
+
+Body content.

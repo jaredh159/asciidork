@@ -21,6 +21,8 @@ pub trait Backend {
   // document
   fn enter_document(&mut self, document: &Document);
   fn exit_document(&mut self, document: &Document);
+  fn enter_body(&mut self, _document: &Document) {}
+  fn exit_body(&mut self, _document: &Document) {}
   fn enter_header(&mut self);
   fn exit_header(&mut self);
   fn enter_content(&mut self);
