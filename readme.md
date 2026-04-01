@@ -63,7 +63,7 @@ Be sure to pop the dev tools to see timing info.
 ## Caveats
 
 > [!WARNING]
-> Asciidork is not complete. It implements a sizeable majority of the
+> Asciidork is not complete. It implements the vast majority of the
 > documented behavior of Asciidoc, but there are some unfinished areas,
 > missing error handling, and edge cases yet unfinished.
 
@@ -71,7 +71,6 @@ Known **unfinished or unimplemented** areas include:
 
 - [ ] STEM
 - [ ] Source highlighting
-- [ ] Docinfo files
 
 PRs welcome! 👍
 

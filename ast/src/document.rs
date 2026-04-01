@@ -7,6 +7,7 @@ use crate::internal::*;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Document<'arena> {
   pub meta: DocumentMeta,
+  pub docinfo: DocInfo<'arena>,
   pub header: Option<DocHeader<'arena>>,
   pub content: DocContent<'arena>,
   pub toc: Option<TableOfContents<'arena>>,
@@ -26,6 +27,7 @@ impl<'arena> Document<'arena> {
       toc: None,
       anchors: Rc::new(RefCell::new(HashMap::new())),
       meta: DocumentMeta::default(),
+      docinfo: DocInfo::default(),
       source_filenames: Vec::new(),
     }
   }
@@ -51,6 +53,15 @@ pub struct DocHeader<'arena> {
   pub title: Option<DocTitle<'arena>>,
   pub loc: SourceLocation,
 }
+
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
+pub struct DocInfo<'arena> {
+  pub head: Option<DocInfoFragment<'arena>>,
+  pub header: Option<DocInfoFragment<'arena>>,
+  pub footer: Option<DocInfoFragment<'arena>>,
+}
+
+pub type DocInfoFragment<'arena> = InlineNodes<'arena>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DocTitle<'arena> {

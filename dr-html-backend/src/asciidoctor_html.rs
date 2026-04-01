@@ -55,12 +55,21 @@ impl Backend for AsciidoctorHtml {
     self.render_meta_authors(document.meta.authors());
     self.render_title(document, &document.meta);
     self.render_styles(&document.meta);
-    self.push_str("</head>");
-    self.open_body(document);
   }
 
   #[instrument(skip_all)]
-  fn exit_document(&mut self, _document: &Document) {
+  fn exit_document(&mut self, _document: &Document) {}
+
+  #[instrument(skip_all)]
+  fn enter_body(&mut self, document: &Document) {
+    if self.standalone() {
+      self.push_str("</head>");
+      self.open_body(document);
+    }
+  }
+
+  #[instrument(skip_all)]
+  fn exit_body(&mut self, _document: &Document) {
     if self.standalone() {
       self.push_str("</body></html>");
     }
@@ -113,7 +122,6 @@ impl Backend for AsciidoctorHtml {
         self.push([r#"<div id="footer-text">"#, &label, " ", &rev, "<br></div>"]);
       }
       // TODO: last-update-label
-      // TODO: docinfo
     }
   }
 

@@ -6,6 +6,7 @@ mod parse_callout_lists;
 mod parse_callouts;
 mod parse_description_lists;
 mod parse_doc_content;
+mod parse_docinfo;
 mod parse_ifdefs;
 mod parse_ifevals;
 mod parse_includes;

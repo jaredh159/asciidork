@@ -6,6 +6,7 @@ mod contiguous_lines;
 mod delimiter;
 mod deq;
 mod diagnostic;
+mod docinfo;
 mod lexer;
 mod line;
 mod list_context;

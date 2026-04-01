@@ -28,7 +28,7 @@ mod internal {
     pub use crate::chunk_meta::ChunkMeta;
     pub use crate::col_widths::*;
     pub use crate::doc_content::*;
-    pub use crate::document::{DocHeader, DocTitle, Document};
+    pub use crate::document::{DocHeader, DocInfo, DocInfoFragment, DocTitle, Document};
     pub use crate::inline::{AdjacentNewline, CurlyKind::*, QuoteKind::*, SymbolKind};
     pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpanKind, SpecialCharKind};
     pub use crate::inline::{IndexTerm, IndexTermReference, IndexTermType};
@@ -63,7 +63,7 @@ pub mod prelude {
   pub use crate::chunk_meta::ChunkMeta;
   pub use crate::col_widths::*;
   pub use crate::doc_content::*;
-  pub use crate::document::{DocHeader, DocTitle, Document};
+  pub use crate::document::{DocHeader, DocInfo, DocInfoFragment, DocTitle, Document};
   pub use crate::inline::{CurlyKind, Inline, InlineNode, QuoteKind, SpecialCharKind, SymbolKind};
   pub use crate::inline::{IndexTerm, IndexTermReference, IndexTermType, SpanKind};
   pub use crate::list::{ListItem, ListItemTypeMeta, ListMarker, ListVariant};

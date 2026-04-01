@@ -47,7 +47,7 @@ jobs:
           cargo build
       - uses: actions/setup-node@v4
         with:
-          node-version: '23'
+          node-version: '25.8.2'
       - name: checkout-tck
         run:
           git clone --depth 1

@@ -49,15 +49,22 @@ impl Backend for Html5s {
     self.render_meta_authors(document.meta.authors());
     self.render_title(document, &document.meta);
     self.render_embedded_stylesheet(crate::css::DEFAULT);
-    self.push_str("</head>");
-    self.open_body(document);
-    if let Some(max_width) = document.meta.string("max-width") {
-      self.html.pop();
-      self.push([r#" style="max-width: "#, &max_width, r#";">"#]);
+  }
+
+  fn exit_document(&mut self, _document: &Document) {}
+
+  fn enter_body(&mut self, document: &Document) {
+    if self.standalone() {
+      self.push_str("</head>");
+      self.open_body(document);
+      if let Some(max_width) = document.meta.string("max-width") {
+        self.html.pop();
+        self.push([r#" style="max-width: "#, &max_width, r#";">"#]);
+      }
     }
   }
 
-  fn exit_document(&mut self, _document: &Document) {
+  fn exit_body(&mut self, _document: &Document) {
     if self.standalone() {
       self.push_str("</body></html>");
     }
@@ -108,7 +115,6 @@ impl Backend for Html5s {
       self.push([&label, " ", &revnumber]);
     }
     // TODO: last-update-label
-    // TODO: docinfo
     self.push_str("</div>");
   }
 
