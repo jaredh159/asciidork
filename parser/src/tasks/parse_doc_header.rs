@@ -19,6 +19,9 @@ impl<'arena> Parser<'arena> {
     self.skip_header_doc_attrs(&mut block, &mut header)?;
     self.parse_doc_title_author_revision(&mut block, &mut header)?;
     self.skip_header_doc_attrs(&mut block, &mut header)?;
+    if !block.is_empty() {
+      self.restore_lines(block);
+    }
     self.finalize_doc_header(header);
     Ok(())
   }
