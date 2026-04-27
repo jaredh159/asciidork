@@ -106,6 +106,31 @@ assert_standalone_body!(
 );
 
 assert_standalone_body!(
+  comment_block_between_title_and_author,
+  adoc! {r#"
+    = Document Title
+    ////
+    block comment
+
+    more comment
+    ////
+    Bob Smith
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>Document Title</h1>
+        <div class="details">
+          <span id="author" class="author">Bob Smith</span><br>
+        </div>
+      </div>
+      <div id="content"></div>
+      <div id="footer"></div>
+    </body>
+  "#}
+);
+
+assert_standalone_body!(
   doc_attrs_after_comment,
   adoc! {r#"
     = Document Title

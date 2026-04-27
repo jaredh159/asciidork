@@ -99,6 +99,26 @@ assert_html!(
   "#}
 );
 
+assert_html!(
+  comment_block_between_title_and_author_no_leak,
+  adoc! {r#"
+    = Title
+    ////
+    this should not appear
+
+    neither should this
+    ////
+    Author Name
+
+    visible paragraph
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>visible paragraph</p>
+    </div>
+  "#}
+);
+
 assert_error!(
   unclosed_comment_block,
   adoc! {r#"

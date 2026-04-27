@@ -82,7 +82,11 @@ impl<'arena> Parser<'arena> {
       };
       if next_lines.discard_until(Line::is_comment_block_delimiter) {
         let end_delim = next_lines.consume_current().unwrap();
-        return Ok(end_delim.first_loc());
+        let loc = end_delim.first_loc();
+        // lines is empty at this point (all discarded before entering loop),
+        // so put any remaining lines from next_lines back into it for the caller
+        *lines = next_lines;
+        return Ok(loc);
       }
     }
   }
@@ -154,6 +158,9 @@ impl<'arena> Parser<'arena> {
       subtitle: None, // TODO: subtitle
     });
 
+    // skip comment blocks and line comments between title and author
+    self.skip_header_comments(lines, header)?;
+
     if lines.starts(Word) {
       let author_line = lines.consume_current().unwrap();
       header.loc.extend(author_line.last_loc().unwrap());
@@ -187,6 +194,30 @@ impl<'arena> Parser<'arena> {
       self.document.header = Some(header);
     }
     self.ctx.in_header = false;
+  }
+
+  fn skip_header_comments(
+    &mut self,
+    lines: &mut ContiguousLines<'arena>,
+    header: &mut DocHeader,
+  ) -> Result<()> {
+    loop {
+      if let Some(discarded) = lines.discard_leading_comment_lines() {
+        header.loc.extend(discarded);
+        continue;
+      }
+      if let Some(end) = self.discard_comment_block(lines)? {
+        header.loc.extend(end);
+        if lines.is_empty() {
+          if let Some(new_lines) = self.read_lines()? {
+            *lines = new_lines;
+          }
+        }
+        continue;
+      }
+      break;
+    }
+    Ok(())
   }
 
   fn skip_header_doc_attrs(
@@ -267,6 +298,30 @@ mod tests {
           foobar
         "},
         Some(loc!(0..62)),
+      ),
+      // comment block between title and author
+      (
+        adoc! {"
+          = Title
+          ////
+          comment
+          ////
+          Bob Law
+        "},
+        Some(loc!(0..33)),
+      ),
+      // comment block with blank line between title and author
+      (
+        adoc! {"
+          = Title
+          ////
+          comment
+
+          more comment
+          ////
+          Bob Law
+        "},
+        Some(loc!(0..47)),
       ),
     ];
     for (input, expected) in cases {
