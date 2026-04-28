@@ -208,10 +208,10 @@ impl<'arena> Parser<'arena> {
       }
       if let Some(end) = self.discard_comment_block(lines)? {
         header.loc.extend(end);
-        if lines.is_empty() {
-          if let Some(new_lines) = self.read_lines()? {
-            *lines = new_lines;
-          }
+        if lines.is_empty()
+          && let Some(new_lines) = self.read_lines()?
+        {
+          *lines = new_lines;
         }
         continue;
       }
