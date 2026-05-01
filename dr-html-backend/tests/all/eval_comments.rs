@@ -119,6 +119,28 @@ assert_html!(
   "#}
 );
 
+assert_html!(
+  comment_block_between_title_and_body_not_author,
+  adoc! {r#"
+    = Title
+    ////
+    comment
+    ////
+
+    Not Author
+
+    more body
+  "#},
+  html! {r#"
+    <div class="paragraph">
+      <p>Not Author</p>
+    </div>
+    <div class="paragraph">
+      <p>more body</p>
+    </div>
+  "#}
+);
+
 assert_error!(
   unclosed_comment_block,
   adoc! {r#"
