@@ -215,6 +215,10 @@ impl<'arena> Line<'arena> {
     self.tokens.len()
   }
 
+  pub fn num_tokens_before_trailing_whitespace(&self) -> usize {
+    self.num_tokens() - usize::from(self.last_token().kind(Whitespace))
+  }
+
   pub fn current_is(&self, kind: TokenKind) -> bool {
     self.current_token().kind(kind)
   }
@@ -763,14 +767,13 @@ impl<'arena> Line<'arena> {
     let token = self.nth_token(offset)?;
     let second = self.nth_token(offset + 1);
     let third = self.nth_token(offset + 2);
-
     match token.kind {
       // exclude only the markdown thematic break `* * *`, so that list items
       // whose text starts with bold/strong (e.g. `* *foo*`) are still recognized
       Star
         if second.kind(Whitespace)
           && third.is_some()
-          && !(self.num_tokens() == offset + 5
+          && !(self.num_tokens_before_trailing_whitespace() == offset + 5
             && third.kind(Star)
             && self.nth_token(offset + 3).kind(Whitespace)
             && self.nth_token(offset + 4).kind(Star)) =>
@@ -1117,8 +1120,9 @@ mod tests {
       ("* ", None),
       ("** ", None),
       ("*** ", None),
-      ("- - -", None), // markdown break
-      ("* * *", None), // markdown break
+      ("- - -", None),  // markdown break
+      ("* * *", None),  // markdown break
+      ("* * * ", None), // markdown break
       ("* *foo*", Some(Star(1))),
       ("* *foo* bar", Some(Star(1))),
       ("* **foo**", Some(Star(1))),

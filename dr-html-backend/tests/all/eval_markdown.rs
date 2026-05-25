@@ -193,3 +193,13 @@ assert_html!(
     <div class="paragraph"><p>jam</p></div>
   "#}
 );
+
+assert_html!(
+  markdown_thematic_break_with_trailing_whitespace,
+  concat!("foo\n\n", "* * * ", "\n\nbar\n"),
+  html! {r#"
+    <div class="paragraph"><p>foo</p></div>
+    <hr>
+    <div class="paragraph"><p>bar</p></div>
+  "#}
+);
