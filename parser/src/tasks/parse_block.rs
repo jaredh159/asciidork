@@ -125,24 +125,29 @@ impl<'arena> Parser<'arena> {
       }
       SingleQuote
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 3 && line.starts_with_seq(&[Kind(SingleQuote); 3])
+          line.num_tokens_before_trailing_whitespace() == 3
+            && line.starts_with_seq(&[Kind(SingleQuote); 3])
         }) =>
       {
         return self.parse_break(Context::ThematicBreak, lines, meta);
       }
       Star
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 3 && line.starts_with_seq(&[Kind(Star); 3])
+          line.num_tokens_before_trailing_whitespace() == 3
+            && line.starts_with_seq(&[Kind(Star); 3])
         }) =>
       {
         return self.parse_break(Context::ThematicBreak, lines, meta);
       }
-      Dashes if first_token.len() == 3 && lines.current_satisfies(|l| l.len() == 1) => {
+      Dashes
+        if first_token.len() == 3
+          && lines.current_satisfies(|l| l.num_tokens_before_trailing_whitespace() == 1) =>
+      {
         return self.parse_break(Context::ThematicBreak, lines, meta);
       }
       Dashes
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 5
+          line.num_tokens_before_trailing_whitespace() == 5
             && line.starts_with_seq(&[
               Len(1, Dashes),
               Len(1, Whitespace),
@@ -156,7 +161,7 @@ impl<'arena> Parser<'arena> {
       }
       Star
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 5
+          line.num_tokens_before_trailing_whitespace() == 5
             && line.starts_with_seq(&[
               Kind(Star),
               Len(1, Whitespace),
@@ -170,7 +175,7 @@ impl<'arena> Parser<'arena> {
       }
       LessThan
         if lines.current_satisfies(|line| {
-          line.num_tokens() == 3
+          line.num_tokens_before_trailing_whitespace() == 3
             && line.starts_with_seq(&[Kind(LessThan), Kind(LessThan), Kind(LessThan)])
         }) =>
       {
