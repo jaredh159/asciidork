@@ -1,6 +1,6 @@
 [package]
 name = "asciidork-parser"
-version = "0.38.0"
+version = "0.38.1"
 edition = "2024"
 description = "Asciidork parser"
 license = "MIT"
