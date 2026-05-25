@@ -44,6 +44,24 @@ assert_html!(
 );
 
 assert_html!(
+  list_item_starting_with_bold,
+  adoc! {r#"
+    * *foo* bar
+    * **baz** qux
+    * jim
+  "#},
+  html! {r#"
+    <div class="ulist">
+      <ul>
+        <li><p><strong>foo</strong> bar</p></li>
+        <li><p><strong>baz</strong> qux</p></li>
+        <li><p>jim</p></li>
+      </ul>
+    </div>
+  "#}
+);
+
+assert_html!(
   multiline_list_principle_w_indent,
   adoc! {r#"
     * foo _bar_
