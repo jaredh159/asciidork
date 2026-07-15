@@ -808,7 +808,7 @@ impl<'arena> Parser<'arena> {
             if !line.is_empty() {
               // NB: see `break_in_table` test, we can get here only when
               // we've coalesced tokens including a break in a table cell
-              loc.end = line.discard_assert(TokenKind::Newline).loc.end;
+              line.discard_assert(TokenKind::Newline);
             } else {
               break;
             }

@@ -119,12 +119,11 @@ impl<'arena> Parser<'arena> {
       if line.is_empty() {
         // if we encounter a line like `|===` in the very first paragraph,
         // we know we're not in the header anymore, so any attrs refs can be set properly
-        if self.ctx.in_header
-          && !matches!(
-            token.kind,
-            Colon | EqualSigns | Word | ForwardSlashes | Directive | OpenBracket
-          )
-        {
+        let header_line_start = matches!(
+          token.kind,
+          Colon | EqualSigns | Word | ForwardSlashes | Directive | OpenBracket
+        ) || token.to_delimiter_kind() == Some(DelimiterKind::Comment);
+        if self.ctx.in_header && !header_line_start {
           self.ctx.in_header = false;
         } else if token.kind == Colon && self.ctx.subs.attr_refs() {
           self.try_parse_attr_def(&mut token)?;

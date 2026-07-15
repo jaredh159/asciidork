@@ -105,6 +105,97 @@ assert_standalone_body!(
   "#}
 );
 
+assert_html!(
+  asciidoctor_demo_attr_ref_after_comment_block,
+  adoc! {r#"
+    = Asciidoctor Demo
+    ////
+    Big comment
+
+    more comment
+    ////
+    Dan Allen <thedoc@asciidoctor.org>
+    :library: Asciidoctor
+    :description: Demo
+
+    This is {library}.
+  "#},
+  contains: "<p>This is Asciidoctor.</p>",
+);
+
+assert_standalone_body!(
+  asciidoctor_demo_header_after_comment_block,
+  adoc! {r#"
+    = Asciidoctor Demo
+    ////
+    Big comment
+
+    more comment
+    ////
+    Dan Allen <thedoc@asciidoctor.org>
+    :library: Asciidoctor
+
+    This is {library}.
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>Asciidoctor Demo</h1>
+        <div class="details">
+          <span id="author" class="author">Dan Allen</span><br>
+          <span id="email" class="email"><a href="mailto:thedoc@asciidoctor.org">thedoc@asciidoctor.org</a></span><br>
+        </div>
+      </div>
+      <div id="content">
+        <div class="paragraph">
+          <p>This is Asciidoctor.</p>
+        </div>
+      </div>
+      <div id="footer"></div>
+    </body>
+  "#}
+);
+
+assert_html!(
+  header_attr_before_title_after_comment_block,
+  adoc! {r#"
+    ////
+    preamble comment
+    ////
+    :showtitle:
+    = Hidden Until Set
+
+    visible
+  "#},
+  contains: "<p>visible</p>",
+  r#"<h1>Hidden Until Set</h1>"#,
+);
+
+assert_standalone_body!(
+  comment_block_between_title_and_author,
+  adoc! {r#"
+    = Document Title
+    ////
+    block comment
+
+    more comment
+    ////
+    Bob Smith
+  "#},
+  html! {r#"
+    <body class="article">
+      <div id="header">
+        <h1>Document Title</h1>
+        <div class="details">
+          <span id="author" class="author">Bob Smith</span><br>
+        </div>
+      </div>
+      <div id="content"></div>
+      <div id="footer"></div>
+    </body>
+  "#}
+);
+
 assert_standalone_body!(
   doc_attrs_after_comment,
   adoc! {r#"

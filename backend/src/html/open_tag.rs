@@ -130,9 +130,9 @@ impl OpenTag {
   pub fn push_style(&mut self, style: impl AsRef<str>) {
     if self.styles.is_none() {
       self.styles = Some(style.as_ref().to_string());
-    } else {
-      self.styles.as_mut().unwrap().push_str("; ");
-      self.styles.as_mut().unwrap().push_str(style.as_ref());
+    } else if let Some(styles) = &mut self.styles {
+      styles.push_str("; ");
+      styles.push_str(style.as_ref());
     }
   }
 

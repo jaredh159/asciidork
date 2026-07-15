@@ -1,5 +1,3 @@
-use crate::{assert_asg_doc, assert_asg_inline};
-
 assert_asg_inline!(
   inline_no_markup_single_word, //
   "inline/no-markup/single-word"

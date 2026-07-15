@@ -19,6 +19,9 @@ impl<'arena> Parser<'arena> {
     self.skip_header_doc_attrs(&mut block, &mut header)?;
     self.parse_doc_title_author_revision(&mut block, &mut header)?;
     self.skip_header_doc_attrs(&mut block, &mut header)?;
+    if !block.is_empty() {
+      self.restore_lines(block);
+    }
     self.finalize_doc_header(header);
     Ok(())
   }
@@ -79,7 +82,11 @@ impl<'arena> Parser<'arena> {
       };
       if next_lines.discard_until(Line::is_comment_block_delimiter) {
         let end_delim = next_lines.consume_current().unwrap();
-        return Ok(end_delim.first_loc());
+        let loc = end_delim.first_loc();
+        // lines is empty at this point (all discarded before entering loop),
+        // so put any remaining lines from next_lines back into it for the caller
+        *lines = next_lines;
+        return Ok(loc);
       }
     }
   }
@@ -151,6 +158,9 @@ impl<'arena> Parser<'arena> {
       subtitle: None, // TODO: subtitle
     });
 
+    // skip comment blocks and line comments between title and author
+    self.skip_header_comments(lines, header)?;
+
     if lines.starts(Word) {
       let author_line = lines.consume_current().unwrap();
       header.loc.extend(author_line.last_loc().unwrap());
@@ -186,6 +196,25 @@ impl<'arena> Parser<'arena> {
     self.ctx.in_header = false;
   }
 
+  fn skip_header_comments(
+    &mut self,
+    lines: &mut ContiguousLines<'arena>,
+    header: &mut DocHeader,
+  ) -> Result<()> {
+    loop {
+      if let Some(discarded) = lines.discard_leading_comment_lines() {
+        header.loc.extend(discarded);
+        continue;
+      }
+      if let Some(end) = self.discard_comment_block(lines)? {
+        header.loc.extend(end);
+        continue;
+      }
+      break;
+    }
+    Ok(())
+  }
+
   fn skip_header_doc_attrs(
     &mut self,
     lines: &mut ContiguousLines<'arena>,
@@ -193,7 +222,24 @@ impl<'arena> Parser<'arena> {
   ) -> Result<()> {
     while lines.current_token().kind(AttrDef) {
       let line = lines.consume_current().unwrap();
-      header.loc.end = line.first_loc().unwrap().end;
+      let loc = line.first_loc().unwrap();
+      header.loc.end = loc.end;
+
+      // Attr defs are lexed during line reads; if a comment block delimiter ended
+      // header mode early, ensure header attrs are still registered before skipping.
+      if let Some(def) = self
+        .ctx
+        .attr_defs
+        .iter()
+        .find(|def| def.loc.start == loc.start)
+        && self.document.meta.get(def.name.as_str()).is_none()
+        && let Err(err) = self
+          .document
+          .meta
+          .insert_header_attr(def.name.as_str(), def.value.clone())
+      {
+        self.err_at(err, def.loc)?;
+      }
     }
     Ok(())
   }
@@ -265,6 +311,30 @@ mod tests {
         "},
         Some(loc!(0..62)),
       ),
+      // comment block between title and author
+      (
+        adoc! {"
+          = Title
+          ////
+          comment
+          ////
+          Bob Law
+        "},
+        Some(loc!(0..33)),
+      ),
+      // comment block with blank line between title and author
+      (
+        adoc! {"
+          = Title
+          ////
+          comment
+
+          more comment
+          ////
+          Bob Law
+        "},
+        Some(loc!(0..47)),
+      ),
     ];
     for (input, expected) in cases {
       let mut parser = test_parser!(input);
@@ -275,6 +345,70 @@ mod tests {
         from: input
       );
     }
+  }
+
+  #[test]
+  fn header_attrs_before_title_after_comment_block() {
+    let input = adoc! {"
+      ////
+      preamble comment
+      ////
+      :preset: before-title
+      = Title
+      :preset: after-title
+
+      body
+    "};
+    let parser = test_parser!(input);
+    let document = parser.parse().unwrap().document;
+    expect_eq!(
+      document
+        .meta
+        .get("preset")
+        .and_then(|v| v.str())
+        .map(|s| s.to_string()),
+      Some("after-title".into()),
+      from: input
+    );
+  }
+
+  #[test]
+  fn header_attrs_after_comment_block_with_internal_blank_line() {
+    let input = adoc! {"
+      = Asciidoctor Demo
+      ////
+      Big comment
+
+      more comment
+      ////
+      Dan Allen <thedoc@asciidoctor.org>
+      :library: Asciidoctor
+      :description: Demo
+
+      This is {library}.
+    "};
+    let mut parser = test_parser!(input);
+    parser.parse_document_header().unwrap();
+    expect_eq!(
+      parser
+        .document
+        .meta
+        .get("library")
+        .and_then(|v| v.str())
+        .map(|s| s.to_string()),
+      Some("Asciidoctor".into()),
+      from: input
+    );
+    expect_eq!(
+      parser
+        .document
+        .meta
+        .get("author")
+        .and_then(|v| v.str())
+        .map(|s| s.to_string()),
+      Some("Dan Allen".into()),
+      from: input
+    );
   }
 
   #[test]
