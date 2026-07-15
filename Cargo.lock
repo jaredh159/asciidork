@@ -87,7 +87,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-backend"
-version = "0.38.0"
+version = "0.38.2"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-dr-html-backend"
-version = "0.38.1"
+version = "0.38.2"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -177,7 +177,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-parser"
-version = "0.38.1"
+version = "0.38.2"
 dependencies = [
  "asciidork-ast",
  "asciidork-core",
@@ -194,7 +194,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-tck"
-version = "0.38.0"
+version = "0.38.2"
 dependencies = [
  "asciidork-ast",
  "asciidork-parser",
