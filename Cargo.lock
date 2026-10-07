@@ -137,6 +137,7 @@ dependencies = [
  "pretty_assertions",
  "regex",
  "test-utils",
+ "tracing",
 ]
 
 [[package]]
