@@ -99,7 +99,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-backend-html5s"
-version = "0.38.0"
+version = "0.39.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-cli"
-version = "0.38.0"
+version = "0.39.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend-html5s",
@@ -150,7 +150,7 @@ dependencies = [
 
 [[package]]
 name = "asciidork-dr-html-backend"
-version = "0.38.2"
+version = "0.39.0"
 dependencies = [
  "asciidork-ast",
  "asciidork-backend",
